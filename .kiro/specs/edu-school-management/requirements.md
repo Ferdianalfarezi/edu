@@ -8,7 +8,7 @@ Sistem manajemen sekolah multi-tenant yang terdiri dari dua platform utama:
 
 Guru memiliki akses ke kedua platform (Admin_Panel dan Aplikasi_Mobile) sehingga dapat menggunakan platform yang paling sesuai dengan kebutuhan (misal: menggunakan Admin_Panel jika perangkat mobile tidak tersedia atau untuk kenyamanan layar lebih besar).
 
-Sistem mencakup modul: Absensi, Notifikasi, Tagihan/Billing, Admin & Management, Jadwal Pelajaran, Kenaikan Kelas, dan Rapor Online. Sistem dirancang untuk digunakan oleh beberapa sekolah, masing-masing dengan konfigurasi independen. Setiap sekolah memiliki multi-role access (admin, kepala sekolah, guru, bendahara, orang tua). Pembayaran dilakukan melalui upload bukti transfer oleh orang tua dan diverifikasi oleh bendahara, atau dicatat manual oleh bendahara untuk pembayaran tunai.
+Sistem mencakup modul: Absensi, Notifikasi, Tagihan/Billing, Admin & Management, Jadwal Pelajaran, Kenaikan Kelas, Rapor Online, dan RPP/Modul Ajar. Sistem dirancang untuk digunakan oleh beberapa sekolah, masing-masing dengan konfigurasi independen. Setiap sekolah memiliki multi-role access (admin, kepala sekolah, guru, bendahara, orang tua). Pembayaran dilakukan melalui upload bukti transfer oleh orang tua dan diverifikasi oleh bendahara, atau dicatat manual oleh bendahara untuk pembayaran tunai.
 
 ## Glossary
 
@@ -44,6 +44,9 @@ Sistem mencakup modul: Absensi, Notifikasi, Tagihan/Billing, Admin & Management,
 - **Capaian_Pembelajaran**: Deskripsi naratif tentang pencapaian siswa dalam suatu mata pelajaran (bagian dari Kurikulum Merdeka)
 - **P5**: Projek Penguatan Profil Pelajar Pancasila — komponen penilaian deskriptif dalam Kurikulum Merdeka yang bersifat opsional
 - **Periode_Rapor**: Waktu penilaian: UTS Semester 1, Semester 1, UTS Semester 2, atau Semester 2
+- **Sistem_RPP**: Modul yang mengelola pembuatan, penyimpanan, dan sharing RPP/Modul Ajar antar guru dalam satu sekolah
+- **RPP (Modul Ajar)**: Rencana Pelaksanaan Pembelajaran — dokumen rencana detail per pertemuan yang berisi tujuan pembelajaran, materi, metode, langkah-langkah, dan asesmen. Di Kurikulum Merdeka disebut Modul Ajar
+- **Kategori_RPP**: Label pengelompokan RPP yang dibuat oleh guru dan digunakan bersama (shared pool) dalam satu Tenant
 
 ## Requirements
 
@@ -65,6 +68,8 @@ Sistem mencakup modul: Absensi, Notifikasi, Tagihan/Billing, Admin & Management,
 10. IF record absensi harian untuk kelas pada tanggal tersebut sudah ada, THEN THE Sistem_Absensi SHALL menampilkan data absensi yang sudah diinput dalam mode read-only untuk Guru lain yang terjadwal (kecuali hak edit sesuai Requirement 2)
 11. THE Sistem_Absensi SHALL mengizinkan Guru manapun yang terjadwal untuk kelas tersebut pada hari itu untuk menginput absensi jika belum ada Guru lain yang menginput
 12. IF Guru membuka halaman absensi dan tidak ada kelas yang terjadwal untuk hari tersebut, THEN THE Sistem_Absensi SHALL menampilkan pesan "Tidak ada kelas terjadwal untuk hari ini" dan tidak menampilkan opsi input absensi
+13. IF Guru membuka halaman absensi pada tanggal yang ditandai sebagai hari libur di Konfigurasi_Sekolah, THEN THE Sistem_Absensi SHALL menampilkan peringatan "Hari ini ditandai sebagai hari libur" namun tetap mengizinkan Guru untuk melanjutkan input absensi jika diperlukan
+14. THE Sistem_Absensi SHALL TIDAK menghitung hari libur dalam perhitungan total_hari_efektif secara otomatis (hari libur yang dikonfigurasi akan otomatis dikurangi dari hari efektif)
 
 ### Requirement 2: Edit Absensi
 
@@ -99,9 +104,9 @@ Sistem mencakup modul: Absensi, Notifikasi, Tagihan/Billing, Admin & Management,
 2. WHEN Kepala_Sekolah memilih periode semester dan kelas, THE Sistem_Absensi SHALL menampilkan Rekap_Absensi yang berisi jumlah hadir, izin, sakit, dan alpa per siswa untuk semester tersebut
 3. THE Sistem_Absensi SHALL menghitung persentase kehadiran per siswa sebagai: (jumlah_hadir / total_hari_efektif) × 100
 4. WHEN Kepala_Sekolah meminta export laporan, THE Sistem_Absensi SHALL menghasilkan file laporan dalam format yang dapat diunduh
-5. THE Sistem_Absensi SHALL menyediakan fitur input total hari efektif per bulan yang dapat diisi oleh Admin atau Kepala_Sekolah
-6. THE Sistem_Absensi SHALL menggunakan total hari efektif yang telah diinput untuk menghitung persentase kehadiran per siswa
-7. IF total hari efektif belum diinput untuk bulan tertentu, THEN THE Sistem_Absensi SHALL menampilkan pesan bahwa data hari efektif belum tersedia dan tidak menghitung persentase
+5. THE Sistem_Absensi SHALL menyediakan dua opsi untuk menentukan total hari efektif per bulan: (a) kalkulasi otomatis berdasarkan jumlah hari sekolah dikurangi hari libur yang dikonfigurasi di Konfigurasi_Sekolah, ATAU (b) input manual oleh Admin atau Kepala_Sekolah yang meng-override kalkulasi otomatis
+6. THE Sistem_Absensi SHALL menggunakan total hari efektif (baik hasil kalkulasi otomatis maupun input manual) untuk menghitung persentase kehadiran per siswa
+7. IF total hari efektif belum dapat ditentukan (belum ada konfigurasi hari libur DAN belum diinput manual) untuk bulan tertentu, THEN THE Sistem_Absensi SHALL menampilkan pesan bahwa data hari efektif belum tersedia dan tidak menghitung persentase
 
 ### Requirement 5: Dashboard Absensi untuk Kepala Sekolah
 
@@ -173,6 +178,7 @@ Sistem mencakup modul: Absensi, Notifikasi, Tagihan/Billing, Admin & Management,
 2. THE Sistem_Tagihan SHALL menghitung jumlah bulan berdasarkan tanggal mulai dan tanggal selesai Tahun_Ajaran
 3. IF tagihan untuk bulan tertentu sudah ada untuk siswa tertentu, THEN THE Sistem_Tagihan SHALL melewatkan bulan tersebut dan tidak membuat duplikat
 4. WHEN proses generate selesai, THE Sistem_Tagihan SHALL menampilkan ringkasan: jumlah tagihan yang dibuat, jumlah yang dilewatkan (duplikat), dan total nominal keseluruhan
+5. WHEN tagihan baru di-generate (baik per bulan maupun per tahun ajaran), THE Sistem_Notifikasi SHALL mengirim push notification ke Orang_Tua setiap siswa yang memiliki tagihan baru dengan informasi: nama siswa, bulan tagihan, nominal, dan tanggal jatuh tempo
 
 ### Requirement 11: Upload Bukti Transfer oleh Orang Tua
 
@@ -307,9 +313,9 @@ Sistem mencakup modul: Absensi, Notifikasi, Tagihan/Billing, Admin & Management,
 2. WHEN Admin membuat user baru untuk role admin, guru, bendahara, atau kepala_sekolah, THE Sistem_Admin SHALL menyimpan data: nama, email, nomor telepon, role, dan password terenkripsi
 3. THE Sistem_Admin SHALL membatasi akses fitur berdasarkan role pengguna sesuai matriks berikut:
    - super_admin: manajemen tenant (tambah/hapus sekolah), lihat seluruh data lintas tenant
-   - admin: seluruh fitur dalam Tenant sendiri termasuk Konfigurasi_Sekolah dan manajemen user, export rapor, konfigurasi komponen penilaian, akses melalui Admin_Panel
-   - kepala_sekolah: dashboard absensi, rekap absensi, laporan tagihan, audit trail (read-only), lihat rapor seluruh siswa (read-only), akses melalui Admin_Panel
-   - guru: input dan edit absensi untuk kelas yang ditugaskan berdasarkan Jadwal_Pelajaran, lihat absensi semua kelas (read-only), lihat jadwal mengajar sendiri, input nilai rapor untuk mata pelajaran yang ditugaskan (hanya via Admin_Panel), akses melalui Aplikasi_Mobile dan Admin_Panel
+   - admin: seluruh fitur dalam Tenant sendiri termasuk Konfigurasi_Sekolah dan manajemen user, export rapor, konfigurasi komponen penilaian, lihat dan download RPP seluruh guru (read-only), akses melalui Admin_Panel
+   - kepala_sekolah: dashboard absensi, rekap absensi, laporan tagihan, audit trail (read-only), lihat rapor seluruh siswa (read-only), lihat dan download RPP seluruh guru (read-only), akses melalui Admin_Panel
+   - guru: input dan edit absensi untuk kelas yang ditugaskan berdasarkan Jadwal_Pelajaran, lihat absensi semua kelas (read-only), lihat jadwal mengajar sendiri, input nilai rapor untuk mata pelajaran yang ditugaskan (hanya via Admin_Panel), buat, edit, lihat, dan download RPP/Modul Ajar, akses melalui Aplikasi_Mobile dan Admin_Panel
    - bendahara: seluruh fitur tagihan/billing, verifikasi pembayaran, audit trail, akses melalui Admin_Panel
    - orang_tua: lihat absensi anak, lihat tagihan anak, upload Bukti_Transfer, riwayat notifikasi, preferensi notifikasi, lihat rapor anak, akses melalui Aplikasi_Mobile
 4. IF user tanpa role yang sesuai mencoba mengakses fitur yang tidak diizinkan, THEN THE Sistem_Admin SHALL menolak akses dan mengembalikan HTTP 403 Forbidden
@@ -383,6 +389,7 @@ Sistem mencakup modul: Absensi, Notifikasi, Tagihan/Billing, Admin & Management,
 2. THE Sistem_Konfigurasi SHALL mendukung pengaturan berikut per sekolah: threshold alpa untuk perhatian khusus (default: 3 hari/bulan), nominal SPP per tingkat kelas, tanggal jatuh tempo tagihan default, dan nama sekolah beserta logo
 3. WHEN Admin mengubah konfigurasi sekolah, THE Sistem_Konfigurasi SHALL menyimpan perubahan dan menerapkannya secara langsung tanpa restart sistem
 4. THE Sistem_Konfigurasi SHALL menggunakan nilai default untuk konfigurasi yang belum diatur oleh Admin sekolah
+5. THE Sistem_Konfigurasi SHALL mendukung pengaturan daftar hari libur per sekolah (tanggal-tanggal yang bukan hari efektif)
 
 ### Requirement 23: Multi-Tenant Isolation
 
@@ -405,8 +412,9 @@ Sistem mencakup modul: Absensi, Notifikasi, Tagihan/Billing, Admin & Management,
 1. WHEN Super_Admin menambahkan Tenant baru, THE Sistem_Admin SHALL membuat record sekolah dengan data: nama sekolah, alamat, nomor telepon, dan email kontak
 2. WHEN Super_Admin menambahkan Tenant baru, THE Sistem_Admin SHALL membuat satu user Admin default untuk sekolah tersebut dengan kredensial yang dikirim via email
 3. WHEN Super_Admin menonaktifkan Tenant, THE Sistem_Admin SHALL memblokir seluruh login untuk user dalam Tenant tersebut
-4. THE Sistem_Admin SHALL membatasi akses manajemen Tenant hanya untuk role super_admin
-5. WHEN Super_Admin membuka dashboard, THE Sistem_Admin SHALL menampilkan daftar seluruh Tenant beserta status aktif/nonaktif dan jumlah user
+4. WHEN Super_Admin menonaktifkan Tenant, THE Sistem_Admin SHALL menginvalidasi seluruh access token aktif milik user dalam Tenant tersebut sehingga seluruh user langsung tidak dapat mengakses sistem
+5. THE Sistem_Admin SHALL membatasi akses manajemen Tenant hanya untuk role super_admin
+6. WHEN Super_Admin membuka dashboard, THE Sistem_Admin SHALL menampilkan daftar seluruh Tenant beserta status aktif/nonaktif dan jumlah user
 
 ### Requirement 25: Preferensi Notifikasi Orang Tua
 
@@ -510,13 +518,14 @@ Catatan: Offline mode hanya berlaku untuk Aplikasi_Mobile. WHEN Guru menggunakan
 #### Acceptance Criteria
 
 1. WHEN Admin menonaktifkan user Guru, THE Sistem_Admin SHALL menghapus Guru tersebut dari seluruh Jadwal_Pelajaran aktif
-2. WHEN Guru dihapus dari Jadwal_Pelajaran, THE Sistem_Admin SHALL menampilkan daftar slot jadwal yang menjadi kosong dan memerlukan penggantian guru
-3. THE Sistem_Admin SHALL menandai slot Jadwal_Pelajaran yang kehilangan Guru sebagai "vacant" pada halaman manajemen jadwal
-4. WHEN Admin membuka halaman manajemen jadwal, THE Sistem_Admin SHALL menyoroti (highlight) seluruh slot jadwal berstatus "vacant" yang memerlukan penugasan guru baru
-5. THE Sistem_Admin SHALL menampilkan peringatan kepada Admin: "X slot jadwal kosong, silakan assign guru pengganti" setelah deaktivasi Guru berhasil
-6. WHEN Guru yang dinonaktifkan adalah Wali_Kelas, THE Sistem_Admin SHALL menghapus status Wali_Kelas dari kelas tersebut dan meminta Admin menugaskan Wali_Kelas baru
-7. IF kelas tidak memiliki Wali_Kelas, THEN THE Sistem_Admin SHALL menampilkan peringatan pada halaman manajemen kelas bahwa kelas tersebut belum memiliki wali kelas
-8. THE Sistem_Admin SHALL mengizinkan Wali_Kelas yang baru ditugaskan untuk langsung melanjutkan proses finalisasi rapor yang tertunda
+2. WHEN Admin menonaktifkan user Guru, THE Sistem_Admin SHALL menginvalidasi seluruh access token aktif milik Guru tersebut sehingga Guru langsung tidak dapat mengakses sistem
+3. WHEN Guru dihapus dari Jadwal_Pelajaran, THE Sistem_Admin SHALL menampilkan daftar slot jadwal yang menjadi kosong dan memerlukan penggantian guru
+4. THE Sistem_Admin SHALL menandai slot Jadwal_Pelajaran yang kehilangan Guru sebagai "vacant" pada halaman manajemen jadwal
+5. WHEN Admin membuka halaman manajemen jadwal, THE Sistem_Admin SHALL menyoroti (highlight) seluruh slot jadwal berstatus "vacant" yang memerlukan penugasan guru baru
+6. THE Sistem_Admin SHALL menampilkan peringatan kepada Admin: "X slot jadwal kosong, silakan assign guru pengganti" setelah deaktivasi Guru berhasil
+7. WHEN Guru yang dinonaktifkan adalah Wali_Kelas, THE Sistem_Admin SHALL menghapus status Wali_Kelas dari kelas tersebut dan meminta Admin menugaskan Wali_Kelas baru
+8. IF kelas tidak memiliki Wali_Kelas, THEN THE Sistem_Admin SHALL menampilkan peringatan pada halaman manajemen kelas bahwa kelas tersebut belum memiliki wali kelas
+9. THE Sistem_Admin SHALL mengizinkan Wali_Kelas yang baru ditugaskan untuk langsung melanjutkan proses finalisasi rapor yang tertunda
 
 ### Requirement 33: Lihat Jadwal Mengajar oleh Guru
 
@@ -550,7 +559,7 @@ Catatan: Offline mode hanya berlaku untuk Aplikasi_Mobile. WHEN Guru menggunakan
 #### Acceptance Criteria
 
 1. THE Sistem SHALL menerapkan pagination pada seluruh daftar data dengan default 20 item per halaman
-2. THE Sistem SHALL menerapkan pagination pada: daftar siswa, riwayat notifikasi, riwayat pembayaran, dashboard tunggakan, audit trail, dan daftar verifikasi pembayaran
+2. THE Sistem SHALL menerapkan pagination pada: daftar siswa, riwayat notifikasi, riwayat pembayaran, dashboard tunggakan, audit trail, daftar verifikasi pembayaran, dan daftar RPP
 3. THE Sistem SHALL menyediakan navigasi halaman (next/previous) dan informasi total halaman pada setiap daftar yang menerapkan pagination
 
 ### Requirement 36: Konfigurasi Komponen Penilaian
@@ -624,3 +633,60 @@ Catatan: Offline mode hanya berlaku untuk Aplikasi_Mobile. WHEN Guru menggunakan
 2. THE Sistem_Admin SHALL menyertakan data dalam file export: nama siswa, NISN, seluruh komponen nilai per mata pelajaran, rata-rata, dan peringkat
 3. THE Sistem_Admin SHALL hanya mengizinkan export untuk rapor yang sudah berstatus "final"
 4. THE Sistem_Admin SHALL menyediakan format export generic (tabel standar) yang dapat disesuaikan oleh sekolah untuk kebutuhan dinas masing-masing
+
+### Requirement 41: Buat RPP / Modul Ajar
+
+**User Story:** Sebagai guru, saya ingin membuat RPP (Modul Ajar) yang berisi rencana pembelajaran, sehingga materi saya terdokumentasi dan dapat diakses guru lain sebagai referensi.
+
+#### Acceptance Criteria
+
+1. WHEN Guru membuka halaman buat RPP, THE Sistem_RPP SHALL menyediakan dua opsi input: (a) rich text editor untuk menulis langsung di sistem (mendukung bold, italic, heading, bullet, tabel, dan sisipan gambar), ATAU (b) upload file dalam format PDF, Word (DOC/DOCX), atau PowerPoint (PPT/PPTX)
+2. THE Sistem_RPP SHALL mewajibkan Guru mengisi metadata RPP: judul, mata_pelajaran_id, kategori, dan tahun terbit
+3. THE Sistem_RPP SHALL menyediakan dropdown kategori yang dapat dicari (searchable); WHEN Guru menginputkan kategori yang belum ada, THE Sistem_RPP SHALL membuat Kategori_RPP baru secara otomatis
+4. THE Sistem_RPP SHALL menyimpan Kategori_RPP per Tenant sehingga guru dalam satu sekolah berbagi pool kategori yang sama
+5. WHEN Guru menyimpan RPP, THE Sistem_RPP SHALL mengizinkan penyimpanan sebagai draft (belum visible ke guru lain) atau langsung publish (visible ke seluruh guru, kepala sekolah, dan admin di Tenant yang sama)
+6. WHILE RPP berstatus draft, THE Sistem_RPP SHALL menyembunyikan RPP tersebut dari tampilan pengguna lain; hanya Guru pembuat yang dapat melihat dan mengedit
+7. WHEN Guru mempublish RPP, THE Sistem_RPP SHALL menyimpan tanggal_publish dan membuat RPP visible ke seluruh Guru, Kepala_Sekolah, dan Admin di Tenant yang sama
+8. THE Sistem_RPP SHALL menyimpan data RPP: judul, konten (rich text atau file_path), mata_pelajaran_id, kategori, tahun_terbit, guru_id (pembuat), status (draft/published), tanggal_publish, dan tanggal_last_updated
+9. THE Sistem_RPP SHALL menyediakan fitur buat dan lihat RPP melalui Admin_Panel (web) dan Aplikasi_Mobile
+10. THE Sistem_RPP SHALL memvalidasi bahwa file upload berukuran maksimal 10MB per file
+11. THE Sistem_RPP SHALL membatasi akses RPP hanya dalam Tenant yang sama; pengguna dari Tenant lain tidak dapat melihat RPP
+
+### Requirement 42: Edit dan Hapus RPP
+
+**User Story:** Sebagai guru, saya ingin mengedit atau menghapus RPP yang sudah saya buat, sehingga materi saya selalu up-to-date.
+
+#### Acceptance Criteria
+
+1. THE Sistem_RPP SHALL mengizinkan hanya Guru pembuat untuk mengedit RPP miliknya sendiri
+2. WHEN Guru mengedit RPP yang sudah dipublish, THE Sistem_RPP SHALL memperbarui tanggal_last_updated dan menampilkan keterangan "Terakhir diperbarui pada [tanggal]" pada halaman RPP
+3. THE Sistem_RPP SHALL mengizinkan Guru mengubah status RPP dari published kembali ke draft (RPP menjadi tidak visible ke pengguna lain sampai dipublish ulang)
+4. THE Sistem_RPP SHALL mengizinkan hanya Guru pembuat untuk menghapus RPP miliknya sendiri
+5. WHEN Guru menghapus RPP, THE Sistem_RPP SHALL menghapus RPP tersebut secara permanen beserta file yang terlampir (jika ada)
+6. WHEN Guru menghapus RPP yang sudah difavorit oleh guru lain, THE Sistem_RPP SHALL menghapus referensi favorit dari seluruh Guru yang memfavoritkan RPP tersebut
+
+### Requirement 43: Lihat dan Cari RPP (Portal Materi)
+
+**User Story:** Sebagai guru, saya ingin mencari dan melihat RPP yang dibuat guru lain di sekolah saya, sehingga saya dapat mendapatkan referensi dan inspirasi untuk pembelajaran.
+
+#### Acceptance Criteria
+
+1. WHEN Guru membuka halaman portal RPP, THE Sistem_RPP SHALL menampilkan daftar seluruh RPP yang berstatus published di Tenant (sekolah) yang sama
+2. THE Sistem_RPP SHALL menyediakan filter berdasarkan: kategori, mata pelajaran, dan tahun terbit
+3. THE Sistem_RPP SHALL menyediakan fitur pencarian teks bebas (search) berdasarkan judul RPP
+4. WHEN Guru memilih RPP tertentu, THE Sistem_RPP SHALL menampilkan detail RPP: judul, konten (rich text atau preview file), nama guru pembuat, mata pelajaran, kategori, tahun terbit, tanggal publish, dan tanggal terakhir diperbarui
+5. THE Sistem_RPP SHALL mengizinkan Guru, Kepala_Sekolah, dan Admin untuk mengunduh (download) RPP yang berstatus published dalam format asli (PDF/Word/PPT untuk file upload) atau PDF (untuk konten rich text yang di-generate menjadi PDF)
+6. WHEN Kepala_Sekolah atau Admin membuka portal RPP, THE Sistem_RPP SHALL menampilkan daftar yang sama dengan Guru (seluruh RPP published di Tenant tersebut)
+7. THE Sistem_RPP SHALL mengurutkan daftar RPP berdasarkan tanggal_publish terbaru sebagai default
+
+### Requirement 44: Favorit RPP
+
+**User Story:** Sebagai guru, saya ingin menandai RPP favorit dengan bintang, sehingga saya dapat dengan mudah menemukan kembali materi yang saya anggap berguna.
+
+#### Acceptance Criteria
+
+1. WHEN Guru menekan tombol bintang (favorit) pada RPP yang berstatus published, THE Sistem_RPP SHALL menyimpan RPP tersebut ke daftar favorit Guru
+2. WHEN Guru menekan tombol bintang pada RPP yang sudah difavorit, THE Sistem_RPP SHALL menghapus RPP tersebut dari daftar favorit Guru (toggle)
+3. THE Sistem_RPP SHALL menyediakan halaman "RPP Favorit Saya" yang menampilkan seluruh RPP yang telah ditandai sebagai favorit oleh Guru tersebut
+4. THE Sistem_RPP SHALL menyimpan favorit secara independen per Guru (favorit satu Guru tidak mempengaruhi Guru lain)
+5. WHEN RPP yang difavorit diubah statusnya menjadi draft oleh pembuat, THE Sistem_RPP SHALL menyembunyikan RPP tersebut dari halaman favorit Guru lain sampai dipublish ulang
