@@ -2,10 +2,12 @@
 
 ## Apa Ini?
 
-Sebuah aplikasi digital untuk membantu sekolah mengelola tiga hal penting sehari-hari:
+Sebuah aplikasi digital untuk membantu sekolah mengelola operasional harian:
 1. **Absensi siswa** — pencatatan kehadiran harian
 2. **Pembayaran SPP** — tagihan bulanan dan konfirmasi pembayaran
 3. **Komunikasi ke orang tua** — notifikasi otomatis tentang kehadiran dan pembayaran anak
+4. **Rapor online** — input nilai oleh guru, finalisasi oleh wali kelas, dilihat orang tua
+5. **RPP/Modul Ajar** — portal materi pembelajaran yang dibuat guru dan bisa diakses seluruh guru di sekolah
 
 Sistem ini bisa digunakan oleh **banyak sekolah sekaligus** (multi-tenant), tapi data tiap sekolah benar-benar terpisah dan aman.
 
@@ -17,9 +19,9 @@ Sistem ini bisa digunakan oleh **banyak sekolah sekaligus** (multi-tenant), tapi
 |----------|-----------|--------------|
 | **Admin Sekolah** | Website (laptop/PC) | Kelola data siswa, kelas, guru, tahun ajaran |
 | **Bendahara** | Website (laptop/PC) | Buat tagihan SPP, verifikasi pembayaran, lihat tunggakan |
-| **Kepala Sekolah** | Website (laptop/PC) | Lihat laporan absensi dan keuangan |
-| **Guru** | Aplikasi HP + Website | Input absensi siswa, lihat jadwal mengajar |
-| **Orang Tua** | Aplikasi HP | Lihat absensi anak, bayar SPP, terima notifikasi |
+| **Kepala Sekolah** | Website (laptop/PC) | Lihat laporan absensi, keuangan, dan rapor |
+| **Guru** | Aplikasi HP + Website | Input absensi, input nilai rapor, buat RPP, lihat jadwal |
+| **Orang Tua** | Aplikasi HP | Lihat absensi anak, bayar SPP, lihat rapor, terima notifikasi |
 | **Super Admin** (pemilik platform) | Website | Tambah/hapus sekolah pelanggan |
 
 ---
@@ -35,7 +37,7 @@ Sistem ini bisa digunakan oleh **banyak sekolah sekaligus** (multi-tenant), tapi
 ### 2. Admin Panel (Website)
 - Diakses lewat browser di laptop/PC
 - Untuk admin, bendahara, kepala sekolah, dan guru
-- Guru bisa pakai website sebagai alternatif kalau HP-nya rusak atau lebih nyaman di layar besar
+- Guru bisa pakai website sebagai alternatif kalau HP rusak atau lebih nyaman di layar besar
 
 ---
 
@@ -50,6 +52,7 @@ Sistem ini bisa digunakan oleh **banyak sekolah sekaligus** (multi-tenant), tapi
 4. Guru centang status tiap siswa: **Hadir / Izin / Sakit / Alpa** (tidak hadir tanpa keterangan)
 5. Semua siswa harus diisi — tidak bisa simpan kalau ada yang kosong
 6. Tekan simpan → selesai
+7. Kalau hari itu adalah hari libur yang sudah dikonfigurasi, sistem menampilkan peringatan tapi tetap mengizinkan input
 
 **Aturan penting:**
 - Absensi dicatat **sekali per hari per kelas** (bukan per jam pelajaran)
@@ -70,7 +73,8 @@ Sistem ini bisa digunakan oleh **banyak sekolah sekaligus** (multi-tenant), tapi
 #### Apa yang Dilihat Kepala Sekolah?
 - **Dashboard harian**: ringkasan kehadiran seluruh kelas hari ini
 - **Rekap bulanan/semester**: berapa kali tiap siswa hadir, izin, sakit, alpa
-- **Daftar perhatian khusus**: siswa yang terlalu sering alpa (batasnya bisa diatur per sekolah)
+- **Persentase kehadiran**: dihitung otomatis dari hari efektif (hari libur otomatis dikurangi)
+- **Daftar perhatian khusus**: siswa yang terlalu sering alpa
 - **Export laporan**: unduh data ke file Excel/PDF
 
 #### Apa yang Dilihat Orang Tua?
@@ -83,17 +87,18 @@ Sistem ini bisa digunakan oleh **banyak sekolah sekaligus** (multi-tenant), tapi
 ### 💰 MODUL 2: TAGIHAN & PEMBAYARAN SPP
 
 #### Bagaimana Tagihan Dibuat?
-1. Bendahara bisa buat tagihan **per bulan** atau **sekaligus satu tahun ajaran** (sistem otomatis generate untuk semua siswa)
+1. Bendahara bisa buat tagihan **per bulan** atau **sekaligus satu tahun ajaran**
 2. Nominal SPP bisa berbeda per tingkat kelas (misal: kelas 1-3 = Rp 300.000, kelas 4-6 = Rp 400.000)
-3. Kalau ada siswa baru masuk di tengah tahun, tagihan otomatis dibuat dari bulan masuk sampai akhir tahun ajaran
+3. Siswa baru masuk di tengah tahun → tagihan otomatis dibuat dari bulan masuk sampai akhir tahun ajaran
+4. Orang tua otomatis terima notifikasi saat tagihan baru di-generate
 
 #### Bagaimana Orang Tua Membayar?
 1. Orang tua buka aplikasi → lihat daftar tagihan
 2. Pilih tagihan yang mau dibayar
-3. Transfer uang ke rekening sekolah (di luar aplikasi — via m-banking/ATM)
+3. Transfer uang ke rekening sekolah (via m-banking/ATM)
 4. Kembali ke aplikasi → upload **foto bukti transfer** + isi **jumlah yang dibayar**
 5. Status berubah menjadi "Menunggu Verifikasi"
-6. Selesai — tinggal tunggu bendahara konfirmasi
+6. Tunggu bendahara konfirmasi
 
 **Aturan pembayaran via upload:**
 - Minimal pembayaran: Rp 10.000
@@ -101,44 +106,26 @@ Sistem ini bisa digunakan oleh **banyak sekolah sekaligus** (multi-tenant), tapi
 - Maksimal **2 kali cicilan** per tagihan:
   - Cicilan pertama: berapa saja (minimal Rp 10.000)
   - Cicilan kedua: **harus lunasi seluruh sisa**
-- Foto bukti transfer otomatis dikompres (diperkecil ukurannya) supaya tidak boros penyimpanan
+- Foto bukti transfer otomatis dikompres supaya tidak boros penyimpanan
 - File foto dihapus otomatis setelah 3 tahun (data transaksi tetap tersimpan)
 
 #### Bagaimana Bendahara Memverifikasi?
 1. Bendahara buka halaman verifikasi di website
-2. Muncul daftar pembayaran yang perlu dicek, lengkap dengan foto bukti transfer dan nominal yang diklaim orang tua
-3. Bendahara cek: apakah bukti transfer valid dan jumlahnya sesuai?
-4. Kalau valid → **Approve** (setuju). Status otomatis berubah:
-   - Kalau jumlah = sisa tagihan → status jadi "Lunas"
-   - Kalau jumlah < sisa tagihan → status jadi "Cicilan"
-5. Kalau tidak valid → **Reject** (tolak) + tulis alasan (misal: "foto blur" atau "nominal tidak sesuai")
-6. Orang tua terima notifikasi hasilnya
+2. Muncul daftar pembayaran yang perlu dicek + foto bukti transfer + nominal
+3. Kalau valid → Approve. Status otomatis: jumlah = sisa → "Lunas", jumlah < sisa → "Cicilan"
+4. Kalau tidak valid → Reject + tulis alasan penolakan
+5. Orang tua terima notifikasi hasilnya
 
 #### Pembayaran Tunai di Sekolah
-- Bendahara juga bisa catat pembayaran manual (untuk orang tua yang bayar cash langsung di sekolah)
-- Pembayaran manual **lebih fleksibel**: tidak ada batasan berapa kali cicilan, yang penting totalnya sesuai
-- Setiap pembayaran manual juga tidak boleh melebihi sisa tagihan
+- Bendahara juga bisa catat pembayaran manual (cash). Lebih fleksibel: tidak ada batasan berapa kali cicilan, yang penting totalnya sesuai tagihan.
 
 #### Kelola Tagihan
-- **Hapus tagihan**: hanya bisa kalau belum ada aktivitas pembayaran sama sekali
+- **Hapus tagihan**: hanya bisa kalau belum ada aktivitas pembayaran
 - **Edit nominal**: hanya bisa kalau belum ada pembayaran/cicilan
-- **Batalkan tagihan**: untuk kasus khusus (misal siswa dapat beasiswa) — status berubah jadi "Dibatalkan" dengan alasan tercatat
-
-#### Dashboard Tunggakan
-- Bendahara bisa lihat seluruh siswa yang belum lunas, diurutkan dari yang paling lama nunggak
-- Bisa filter per kelas
-- Bisa export ke Excel/CSV untuk laporan ke yayasan
-
-#### Bukti Pembayaran Digital
-- Setiap pembayaran yang dikonfirmasi, sistem otomatis generate bukti bayar digital
-- Orang tua bisa unduh dalam format PDF
-- Berisi: nama siswa, kelas, bulan, nominal, tanggal bayar, dan nomor referensi unik
+- **Batalkan tagihan**: untuk kasus khusus (misal beasiswa) — hanya kalau belum ada pembayaran
 
 #### Audit Trail (Jejak Aktivitas Keuangan)
-- **Setiap aktivitas** di modul keuangan tercatat: siapa melakukan apa, kapan, dan apa yang berubah
-- Data ini **tidak bisa dihapus atau diubah** (immutable/permanen)
-- Kepala sekolah bisa lihat (read-only) untuk transparansi
-- Contoh yang dicatat: buat tagihan, approve pembayaran, tolak bukti, edit nominal, hapus tagihan, batalkan tagihan
+- Setiap aktivitas di modul keuangan tercatat permanen: siapa melakukan apa, kapan, dan apa yang berubah. Data ini tidak bisa dihapus oleh siapapun.
 
 ---
 
@@ -149,109 +136,105 @@ Sistem ini bisa digunakan oleh **banyak sekolah sekaligus** (multi-tenant), tapi
 |-------|-------------------|
 | Anak tidak hadir (izin/sakit/alpa) | ✅ Otomatis, langsung |
 | Anak hadir | ⚙️ Opsional (default: mati, bisa dinyalakan) |
-| Pembayaran disetujui bendahara | ✅ Otomatis |
-| Pembayaran ditolak bendahara | ✅ Otomatis + alasan penolakan |
+| Tagihan baru di-generate | ✅ Otomatis |
+| Pembayaran disetujui | ✅ Otomatis |
+| Pembayaran ditolak | ✅ Otomatis + alasan |
+| Rapor tersedia | ✅ Otomatis |
 
-**Detail teknis:**
-- Notifikasi muncul sebagai push notification (seperti notif WhatsApp — muncul di layar HP walau app tidak dibuka)
-- Untuk absensi online: dikirim dalam 30 detik
-- Untuk absensi offline (guru input tanpa internet): dikirim setelah data berhasil sync ke server
-- Isi notifikasi: nama anak, status kehadiran, tanggal, kelas, dan waktu dicatat guru
-- Kalau punya banyak anak, notifikasi terpisah per anak
-
-#### Riwayat Notifikasi
-- Orang tua bisa lihat kembali seluruh notifikasi yang pernah diterima
-- Tersimpan minimal 1 tahun ajaran
-
-#### Preferensi Notifikasi
-- Orang tua bisa atur sendiri: mau terima notifikasi hadir atau tidak
-- Bisa diatur per anak (kalau punya lebih dari 1 anak)
+- Notifikasi muncul sebagai push notification di HP (seperti notif WhatsApp)
+- Orang tua bisa atur preferensi per anak
+- Riwayat tersimpan minimal 1 tahun ajaran
 
 ---
 
-### 🏫 MODUL 4: ADMIN & MANAJEMEN
+### 📝 MODUL 4: RAPOR ONLINE
 
-#### Manajemen Siswa
-- Admin input data siswa: nama, NISN (nomor induk), kelas, jenis kelamin, tanggal lahir, alamat, dan data orang tua (nama + nomor HP)
-- Bisa pindahkan siswa ke kelas lain (tercatat riwayatnya)
-- Siswa yang keluar/pindah sekolah di-soft delete (data tetap ada untuk riwayat, tapi tersembunyi dari tampilan aktif)
-- **Pencarian**: cari siswa by nama atau NISN
-- **Filter**: berdasarkan kelas, status (aktif/keluar), tahun ajaran
+#### Bagaimana Rapor Dibuat?
+1. **Guru** input nilai untuk mata pelajaran yang mereka ajar (hanya via website, layar besar lebih nyaman)
+2. Guru bisa simpan sebagai draft atau langsung submit ke wali kelas
+3. **Wali kelas** review seluruh nilai → isi catatan & P5 (opsional) → finalisasi
+4. Saat difinalkan: ranking otomatis dihitung, rapor jadi visible ke orang tua, notifikasi terkirim
 
-#### Manajemen Kelas & Tahun Ajaran
-- Admin buat kelas: nama (misal "1A"), tingkat (misal "1"), wali kelas, kapasitas
-- Admin buat tahun ajaran: nama (misal "2024/2025"), tanggal mulai, tanggal selesai
-- Hanya 1 tahun ajaran aktif per sekolah pada satu waktu
-- **Saat aktifkan tahun ajaran baru**: sistem otomatis copy struktur kelas dari tahun sebelumnya (nama + tingkat sama, siswa dan wali kelas kosong). Admin tinggal edit kalau ada perubahan.
-- Kelas hanya perlu dibuat manual di tahun pertama saat sekolah baru pakai sistem
+#### Periode Rapor
+- UTS Semester 1 (hanya nilai wajib, deskripsi opsional)
+- Semester 1 (nilai + deskripsi wajib)
+- UTS Semester 2
+- Semester 2
 
-#### Kenaikan Kelas Massal
-- Di akhir tahun ajaran, admin bisa naikkan seluruh siswa sekaligus
-- Sistem suggest kelas tujuan otomatis (tingkat +1)
-- Admin bisa exclude siswa tertentu (yang tidak naik kelas)
-- Siswa kelas tertinggi (misal kelas 6) ditandai "lulus" → jadi alumni
-- Riwayat kelas tersimpan: "siswa X di kelas Y selama tahun ajaran Z"
+#### Apa yang Dilihat Orang Tua?
+- Daftar periode rapor yang tersedia
+- Nilai per mata pelajaran + deskripsi capaian
+- Catatan wali kelas
+- P5 (kalau diisi)
+- Peringkat di kelas + rata-rata nilai
 
-#### Manajemen Guru & Mata Pelajaran
-- Admin buat akun guru (nama, email, nomor HP, password)
-- Admin buat daftar mata pelajaran sekolah
-- Satu guru bisa mengajar lebih dari 1 mata pelajaran
-- Kalau guru resign → admin deactivate → guru otomatis dihapus dari jadwal → slot yang kosong ditandai "vacant" supaya admin tahu harus assign guru baru
+#### Konfigurasi Penilaian
+- Template Kurikulum Merdeka sebagai default (bisa dicustom per sekolah)
+- Admin bisa atur: skala nilai (angka/huruf/deskripsi), komponen wajib/opsional
+- Export rapor ke Excel untuk laporan ke dinas
 
-#### Jadwal Pelajaran
-- Admin buat jadwal per kelas per semester: hari, jam mulai, jam selesai, mata pelajaran, guru
-- Jadwal berlaku selama 1 semester (ada tanggal mulai dan selesai)
-- Bisa diedit kapan saja selama semester berjalan
-- Jadwal semester lama tersimpan sebagai arsip
-- **Fungsi utama jadwal**: menentukan guru mana yang boleh input absensi di kelas mana
+#### Kepala Sekolah
+- Bisa lihat rapor semua kelas (draft + final) dengan indikator status
+- Filter berdasarkan kelas, periode, tahun ajaran
 
-#### Onboarding Orang Tua
-- Admin upload file Excel/CSV berisi data siswa + nomor HP orang tua
-- Setelah itu, orang tua langsung bisa login di aplikasi dengan nomor HP tersebut
-- Kalau nomor HP cocok dengan beberapa anak (kakak-beradik), semua anak langsung tampil
-- Kalau anak ada di beberapa sekolah (misal: SD dan SMP milik yayasan yang sama), semua tampil dalam satu aplikasi tanpa perlu pindah akun
+---
+
+### 📚 MODUL 5: RPP / MODUL AJAR (Portal Materi)
+
+#### Apa Ini?
+Portal internal sekolah di mana guru bisa membuat, menyimpan, dan berbagi rencana pembelajaran (RPP/Modul Ajar) dengan sesama guru.
+
+#### Bagaimana Cara Kerjanya?
+1. Guru buat RPP — bisa tulis langsung di sistem (rich text editor) ATAU upload file (PDF/Word/PPT)
+2. Isi metadata: judul, mata pelajaran, kategori, tahun terbit
+3. Simpan sebagai draft (hanya guru pembuat yang bisa lihat) atau langsung publish
+4. Setelah publish: semua guru di sekolah bisa lihat, download, dan favorit
+
+#### Fitur Portal
+- **Search**: cari RPP berdasarkan judul
+- **Filter**: kategori, mata pelajaran, tahun terbit
+- **Favorit**: tandai bintang ⭐ untuk bookmark materi yang berguna
+- **Download**: guru/kepsek/admin bisa download RPP yang sudah dipublish
+- **Kategori**: custom per sekolah (searchable dropdown — kalau belum ada, otomatis terbuat baru)
+
+#### Aturan
+- Hanya guru pembuat yang bisa edit/hapus RPP miliknya
+- RPP hanya terlihat oleh guru di sekolah yang sama (tidak lintas sekolah)
+- Max upload file: 10MB
+
+---
+
+### 🏫 MODUL 6: ADMIN & MANAJEMEN
+
+#### Fitur Admin Utama:
+- Manajemen siswa: tambah, edit, pindah kelas, keluarkan (dengan pencarian dan filter)
+- Manajemen kelas & tahun ajaran: otomatis copy kelas ke tahun baru
+- Assign wali kelas (1 guru = 1 kelas, validasi tidak duplikat)
+- Kenaikan kelas massal: naikkan seluruh kelas sekaligus di akhir tahun
+- Jadwal pelajaran per semester: menentukan guru mana boleh absen di kelas mana
+- Hari libur: admin set tanggal libur, otomatis dikurangi dari hari efektif
+- Onboarding orang tua: upload Excel → orang tua langsung bisa login
+- Bulk create guru: upload Excel → akun guru dibuat massal, password dikirim via email
+- Deaktivasi guru: otomatis hapus dari jadwal dan wali kelas, tandai slot kosong
+- Konfigurasi per sekolah: nominal SPP, batas alpa, tanggal jatuh tempo, dll
 
 #### Login & Keamanan
 | Pengguna | Cara Login | Masa Aktif Sesi |
 |----------|-----------|----------------|
-| Admin/Bendahara/Kepala Sekolah (website) | Email + Password | 24 jam |
-| Guru (website) | Email + Password | 24 jam |
-| Guru (aplikasi HP) | Email + Password | 90 hari |
-| Orang Tua (aplikasi HP) | Nomor HP saja | 1 tahun |
+| Admin/Bendahara/Kepsek (web) | Email + Password | 24 jam |
+| Guru (web) | Email + Password | 24 jam |
+| Guru (HP) | Email + Password | 90 hari |
+| Orang Tua (HP) | Nomor HP saja | 1 tahun |
 
-- Password disimpan terenkripsi (tidak bisa dibaca siapapun, termasuk admin)
-- 5x salah password = akun terkunci 15 menit
-- Lupa password? Reset via email (tersedia di website dan aplikasi HP)
+- Password terenkripsi, 5x salah = lock 15 menit
+- Guru baru wajib ganti password saat login pertama
+- Reset dan ubah password tersedia di web + app
+- Deactivate user/tenant = langsung logout (token diinvalidasi)
 
 #### Multi-Tenant (Multi-Sekolah)
-- Satu sistem bisa dipakai banyak sekolah
-- Data sekolah A **100% terpisah** dari sekolah B
-- Tidak ada kemungkinan sekolah lain melihat data yang bukan miliknya
-- **Pengecualian**: orang tua yang punya anak di 2 sekolah bisa lihat data dari kedua sekolah dalam 1 aplikasi
-
-#### Super Admin (Pemilik Platform)
-- Bisa tambah sekolah baru (otomatis dibuatkan 1 akun admin sekolah)
-- Bisa nonaktifkan sekolah (seluruh user sekolah tersebut tidak bisa login)
-- Dashboard: lihat daftar semua sekolah, status aktif/nonaktif, jumlah user
-
----
-
-### ⚙️ KONFIGURASI PER SEKOLAH
-
-Setiap sekolah bisa atur sendiri:
-- **Batas alpa** untuk daftar perhatian khusus (default: 3 hari/bulan)
-- **Nominal SPP** per tingkat kelas
-- **Tanggal jatuh tempo** tagihan default
-- **Nama dan logo** sekolah
-- **Total hari efektif** per bulan (untuk hitung persentase kehadiran)
-
----
-
-### 📊 FITUR TEKNIS UMUM
-
-- **Pagination**: semua daftar data ditampilkan 20 item per halaman (tidak loading semua sekaligus, supaya cepat)
-- **Kompresi gambar**: foto bukti transfer otomatis diperkecil dan dikonversi ke format WebP (lebih ringan 50-70% dari JPEG)
-- **Retention policy**: file gambar dihapus setelah 3 tahun (data transaksi tetap ada)
+- Data 100% terpisah antar sekolah
+- Orang tua lintas sekolah bisa lihat semua anak dalam 1 app
+- Super admin kelola semua sekolah dari 1 dashboard
 
 ---
 
@@ -261,10 +244,12 @@ Setiap sekolah bisa atur sendiri:
 |-------|-------------------|
 | Absensi | 8 (input, edit, lihat, rekap, dashboard, offline, jadwal, guru pengganti) |
 | Notifikasi | 3 (real-time, riwayat, preferensi) |
-| Tagihan/Billing | 9 (buat tagihan, generate setahun, upload bukti, verifikasi, manual, riwayat, dashboard tunggakan, audit trail, kelola tagihan) |
-| Admin & Manajemen | 12 (siswa, kelas/tahun ajaran, user/role, login, reset password, onboarding, konfigurasi, multi-tenant, super admin, kenaikan kelas, mata pelajaran, deaktivasi guru) |
-| Umum | 3 (lihat jadwal guru, pagination, export laporan) |
-| **Total** | **35 requirements** |
+| Tagihan/Billing | 9 (buat, generate, upload, verifikasi, manual, riwayat, tunggakan, audit, kelola) |
+| Admin & Manajemen | 13 (siswa, kelas, user, login, password, onboarding, config, tenant, super admin, kenaikan, mapel, deaktivasi, hari libur) |
+| Rapor Online | 5 (config penilaian, input nilai, finalisasi, lihat orang tua, export) |
+| RPP/Modul Ajar | 4 (buat, edit/hapus, portal/cari, favorit) |
+| Umum | 2 (lihat jadwal guru, pagination) |
+| **Total** | **44 requirements** |
 
 ---
 
@@ -279,55 +264,60 @@ Orang tua terima notifikasi otomatis
 
 ### Orang Tua Bayar SPP
 ```
-Orang tua buka app → Lihat tagihan belum bayar → 
-Transfer via m-banking → Kembali ke app → 
-Upload foto bukti + isi nominal → Tunggu verifikasi → 
-Bendahara approve → Orang tua terima notifikasi "Lunas"
+Buka app → Lihat tagihan → Transfer via m-banking → 
+Upload foto bukti + nominal → Tunggu verifikasi → 
+Bendahara approve → Terima notifikasi "Lunas"
 ```
 
-### Awal Tahun Ajaran — Setup Sekolah
+### Guru Input Nilai Rapor
 ```
-Admin aktifkan tahun ajaran baru → Kelas ter-copy otomatis → 
+Guru login web → Pilih mapel + kelas + periode → 
+Input nilai per siswa → Submit ke wali kelas → 
+Wali kelas review + finalisasi → Rapor visible ke ortu + notifikasi terkirim
+```
+
+### Guru Buat RPP
+```
+Guru buka portal RPP → Buat baru → Tulis/upload materi → 
+Pilih kategori + mapel → Publish → 
+Guru lain bisa lihat, download, favorit
+```
+
+### Awal Tahun Ajaran
+```
+Admin buat tahun ajaran baru (status: disiapkan) → Kelas ter-copy otomatis → 
 Admin edit kelas jika perlu → Proses kenaikan kelas → 
-Admin buat jadwal semester baru → 
-Bendahara generate tagihan setahun → Sistem siap digunakan
-```
-
-### Sekolah Baru Bergabung
-```
-Super Admin tambah sekolah → Akun admin sekolah otomatis dibuat → 
-Admin login → Buat kelas → Upload data siswa + orang tua (Excel) → 
-Buat jadwal → Bendahara buat tagihan → Orang tua langsung bisa login
+Admin aktifkan tahun ajaran baru → Buat jadwal semester → 
+Bendahara generate tagihan → Sistem siap
 ```
 
 ---
 
-## Apa yang TIDAK Dibangun (Sengaja Ditunda)
+## Apa yang TIDAK Dibangun (Ditunda)
 
-Fitur berikut **sengaja tidak dibuat sekarang** untuk menjaga fokus dan kecepatan development, tapi bisa ditambahkan di masa depan:
-
-- ❌ Payment gateway online (QRIS/VA — orang tua bayar langsung di app)
-- ❌ Absensi guru (hadir/tidak hadir guru)
+- ❌ Payment gateway online (QRIS/VA)
+- ❌ Absensi guru
 - ❌ Absensi via QR code atau RFID
 - ❌ Laporan keuangan ke yayasan
 - ❌ Pengumuman sekolah
 - ❌ Jadwal pelajaran untuk siswa/orang tua
 - ❌ Integrasi Dapodik
 - ❌ Multi-cabang yayasan
-- ❌ Rapor online
-- ❌ Verifikasi OTP via SMS (reserved, bisa diaktifkan nanti)
+- ❌ Verifikasi OTP via SMS (reserved)
 
 ---
 
 ## Kenapa Sistem Ini Bernilai?
 
 1. **Menghemat waktu**: absensi manual 30 menit → digital 2 menit per kelas
-2. **Transparansi**: orang tua langsung tahu anak hadir atau tidak, tanpa tunggu rapor
-3. **Mengurangi tunggakan**: orang tua bisa bayar SPP langsung dari HP, bendahara punya dashboard tunggakan yang jelas
-4. **Aman**: setiap perubahan data keuangan tercatat permanen (audit trail), tidak bisa dihapus
+2. **Transparansi**: orang tua langsung tahu anak hadir atau tidak
+3. **Mengurangi tunggakan**: bayar SPP langsung dari HP
+4. **Aman**: setiap perubahan keuangan tercatat permanen (audit trail)
 5. **Scalable**: satu sistem untuk banyak sekolah, biaya per sekolah rendah
-6. **Mobile-first**: guru dan orang tua cukup pakai HP, tidak perlu laptop
+6. **Mobile-first**: guru dan orang tua cukup pakai HP
+7. **Knowledge sharing**: guru bisa saling berbagi materi pembelajaran via portal RPP
+8. **Rapor digital**: orang tua bisa lihat rapor anak langsung di HP tanpa perlu ke sekolah
 
 ---
 
-*Dokumen ini menjelaskan scope MVP (Minimum Viable Product — versi pertama yang layak dijual). Total 35 requirements yang mencakup seluruh fitur inti untuk operasional harian sekolah.*
+*Dokumen ini menjelaskan scope MVP (Minimum Viable Product — versi pertama yang layak dijual). Total 44 requirements, 8 modul, mencakup seluruh fitur inti untuk operasional harian sekolah.*
