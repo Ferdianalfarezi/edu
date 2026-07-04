@@ -7,18 +7,22 @@ Multi-tenant school management system built with NestJS (TypeScript) backend, Po
 ## Tasks
 
 - [ ] 1. Project scaffolding and infrastructure setup
-  - [ ] 1.1 Initialize NestJS monorepo with core project structure
-    - Create NestJS project with `src/common/`, `src/modules/`, `src/jobs/`, `src/drizzle/` structure
-    - Configure TypeScript, ESLint, Prettier
-    - Install and configure dependencies: `@nestjs/config`, `drizzle-orm`, `drizzle-kit`, `pg`, `@nestjs/bull`, `bull`, `ioredis`, `bcrypt`, `@nestjs/jwt`, `@nestjs/passport`, `passport-jwt`, `class-validator`, `class-transformer`, `sharp`, `@aws-sdk/client-s3`, `firebase-admin`, `fast-check`, `@nestjs/schedule`, `@nestjs/throttler`
-    - Set up environment variable handling (`.env.example`, validation schema)
+  - [ ] 1.1 Initialize monorepo with pnpm workspaces and NestJS backend
+    - Create monorepo root: `pnpm-workspace.yaml` with `apps/*` and `packages/*`
+    - Root `package.json` with `"private": true`, shared dev dependencies (ESLint, Prettier, TypeScript config)
+    - Create folder structure: `apps/api/`, `apps/admin/`, `apps/mobile/`, `packages/shared/`
+    - Initialize NestJS project in `apps/api/` with `src/common/`, `src/modules/`, `src/jobs/`, `src/drizzle/` structure
+    - Configure TypeScript, ESLint, Prettier for `apps/api/`
+    - Install and configure dependencies in `apps/api/`: `@nestjs/config`, `drizzle-orm`, `drizzle-kit`, `pg`, `@nestjs/bull`, `bull`, `ioredis`, `bcrypt`, `@nestjs/jwt`, `@nestjs/passport`, `passport-jwt`, `class-validator`, `class-transformer`, `sharp`, `@aws-sdk/client-s3`, `firebase-admin`, `fast-check`, `@nestjs/schedule`, `@nestjs/throttler`
+    - Set up environment variable handling (`.env.example`, validation schema) in `apps/api/`
     - Configure global API prefix with versioning: `app.setGlobalPrefix('api/v1')` per [ADR-004](../../docs/adr/ADR-004-api-versioning.md)
+    - Create `packages/shared/` with shared TypeScript types (roles, status enums, API interfaces)
     - _Requirements: 23.3, 23.4_
 
   - [ ] 1.2 Configure Drizzle ORM and database connection
-    - Set up Drizzle config (`drizzle.config.ts`) with PostgreSQL driver
+    - Set up Drizzle config (`drizzle.config.ts`) with PostgreSQL driver in `apps/api/`
     - Create database connection module with connection pooling (max: 20, min: 5, idle timeout: 30s)
-    - Configure migration scripts in `package.json`
+    - Configure migration scripts in `apps/api/package.json`
     - Create separate DB roles: superuser for migrations (bypasses RLS), app role with RLS enforced
     - _Requirements: 23.3_
 
@@ -119,19 +123,19 @@ Multi-tenant school management system built with NestJS (TypeScript) backend, Po
     - Per [ADR-005](../../docs/adr/ADR-005-rate-limiting.md)
     - _Requirements: 19.5_
 
-  - [ ] 4.3 Implement token refresh and invalidation
+  - [ ] 4.4 Implement token refresh and invalidation
     - `POST /auth/refresh` — validate refresh token, issue new pair
     - Token blacklist: store JTI in Redis with TTL = remaining lifetime
     - Invalidate all tokens on password change, deactivation, tenant disable
     - _Requirements: 19.8, 20.4, 20.9, 24.4_
 
-  - [ ] 4.4 Implement password reset flow
+  - [ ] 4.5 Implement password reset flow
     - `POST /auth/reset-password/request` — send email with 30-min token
     - `POST /auth/reset-password/confirm` — validate token, set new password, invalidate all tokens
     - `POST /auth/change-password` — require old password, invalidate other sessions
     - _Requirements: 20.1, 20.2, 20.3, 20.4, 20.5, 20.6, 20.7, 20.8, 20.9_
 
-  - [ ] 4.5 Implement TenantInterceptor for automatic tenant_id injection
+  - [ ] 4.6 Implement TenantInterceptor for automatic tenant_id injection
     - Auto-inject `tenant_id` filter on all Drizzle queries for non-super_admin users
     - Auto-set `tenant_id` on all INSERT operations
     - Set PostgreSQL session variable `SET LOCAL app.tenant_id` per request for RLS enforcement per [ADR-001](../../docs/adr/ADR-001-postgresql-rls-tenant-isolation.md)
@@ -139,11 +143,11 @@ Multi-tenant school management system built with NestJS (TypeScript) backend, Po
     - Validate orang_tua cross-tenant access against JWT `tenants[]`
     - _Requirements: 23.1, 23.2, 23.4, 23.5_
 
-  - [ ] 4.6 Write property test for multi-tenant data isolation (Property 1)
+  - [ ] 4.7 Write property test for multi-tenant data isolation (Property 1)
     - **Property 1: Multi-Tenant Data Isolation**
     - **Validates: Requirements 23.1, 23.2, 23.3, 23.4**
 
-  - [ ] 4.7 Write unit tests for auth module
+  - [ ] 4.8 Write unit tests for auth module
     - Test login flows, lockout logic, token generation, refresh, blacklisting
     - Test cross-tenant parent resolution
     - _Requirements: 19.1–19.11_
@@ -591,8 +595,9 @@ Multi-tenant school management system built with NestJS (TypeScript) backend, Po
 
 - [ ] 19. Vue.js admin panel
   - [ ] 19.1 Initialize Vue.js SPA project with Vite
-    - Create project with Vue 3 + TypeScript + Vite
+    - Create project in `apps/admin/` with Vue 3 + TypeScript + Vite
     - Configure router (vue-router), state (Pinia), HTTP client (axios with JWT interceptor)
+    - Import shared types from `packages/shared/`
     - Set up auto-refresh token on 401
     - Implement role-based route guards
     - _Requirements: 18.3, 19.1_
@@ -673,7 +678,7 @@ Multi-tenant school management system built with NestJS (TypeScript) backend, Po
 
 - [ ] 21. Flutter mobile app
   - [ ] 21.1 Initialize Flutter project with core architecture
-    - Set up Flutter project (Android + iOS targets)
+    - Set up Flutter project in `apps/mobile/` (Android + iOS targets)
     - Configure Drift (SQLite) for local DB, connectivity_plus for network monitoring
     - Set up Dio HTTP client with JWT interceptor (auto-refresh)
     - Implement role-based UI routing (guru UI vs orang_tua UI based on JWT role)
@@ -813,8 +818,8 @@ Multi-tenant school management system built with NestJS (TypeScript) backend, Po
     { "id": 1, "tasks": ["1.2", "1.3", "1.4"] },
     { "id": 2, "tasks": ["2.1", "2.2", "2.3", "2.4", "2.5", "2.6", "2.7"] },
     { "id": 3, "tasks": ["2.8", "2.9", "2.10"] },
-    { "id": 4, "tasks": ["4.1", "4.2", "4.3", "4.5"] },
-    { "id": 5, "tasks": ["4.4", "4.6", "4.7"] },
+    { "id": 4, "tasks": ["4.1", "4.2", "4.3", "4.6"] },
+    { "id": 5, "tasks": ["4.4", "4.5", "4.7", "4.8"] },
     { "id": 6, "tasks": ["5.1", "5.2", "5.7", "5.8"] },
     { "id": 7, "tasks": ["5.3", "5.4", "5.5", "5.6"] },
     { "id": 8, "tasks": ["5.9", "7.1"] },
