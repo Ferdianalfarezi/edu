@@ -1,0 +1,11 @@
+# Cloudflare Pages configuration for Vue.js Admin SPA
+# Deploy via: npx wrangler pages deploy dist --project-name=edu-admin
+#
+# Alternatively, connect GitHub repo in Cloudflare Pages dashboard:
+#   Build command: pnpm --filter @edu/admin build
+#   Build output:  apps/admin/dist
+#   Root directory: /
+
+name = "edu-admin"
+compatibility_date = "2024-01-01"
+pages_build_output_dir = "dist"

@@ -1,0 +1,16 @@
+{
+  "name": "@edu/shared",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Shared TypeScript types and interfaces for Edu School Management",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "lint": "eslint \"src/**/*.ts\" --fix"
+  },
+  "devDependencies": {
+    "typescript": "^5.4.0"
+  }
+}

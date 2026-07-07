@@ -1,0 +1,15 @@
+node_modules
+dist
+build
+.git
+.github
+.kiro
+.vscode
+*.md
+!README.md
+.DS_Store
+.env
+.env.*
+coverage
+*.log
+apps/mobile

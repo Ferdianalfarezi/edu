@@ -1,0 +1,23 @@
+# Railway deployment configuration — API service
+# This file configures the primary API service.
+# Per ADR-006: API (1GB RAM, 1 vCPU), Worker (512MB RAM, 0.5 vCPU),
+#              PostgreSQL (1GB RAM), Redis (256MB)
+#
+# Project structure (configure additional services via Railway dashboard):
+#   - api       → this file (Dockerfile)
+#   - worker    → Dockerfile.worker (separate Railway service)
+#   - postgres  → Railway managed PostgreSQL plugin (1GB RAM)
+#   - redis     → Railway managed Redis plugin (256MB)
+#   - admin     → Cloudflare Pages (separate — see deploy/cloudflare-pages.md)
+
+[build]
+builder = "DOCKERFILE"
+dockerfilePath = "Dockerfile"
+
+[deploy]
+healthcheckPath = "/health"
+healthcheckTimeout = 30
+startCommand = "node apps/api/dist/main.js"
+restartPolicyType = "ON_FAILURE"
+restartPolicyMaxRetries = 5
+numReplicas = 1

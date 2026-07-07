@@ -1,0 +1,4 @@
+# Cloudflare Pages SPA routing
+# All paths that don't match a static file are served by index.html
+# Required for Vue Router history mode
+/*  /index.html  200
