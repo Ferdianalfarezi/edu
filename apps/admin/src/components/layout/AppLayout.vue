@@ -139,7 +139,18 @@ const navigation = computed<NavGroup[]>(() => {
 
 function isActive(path: string): boolean {
   if (path === '/') return route.path === '/';
-  return route.path.startsWith(path);
+  // Exact match
+  if (route.path === path) return true;
+  // Prefix match, but only if no other nav item is a more specific match
+  if (route.path.startsWith(path + '/')) {
+    // Check if there's a more specific nav item that matches
+    const allPaths = navigation.value.flatMap((g) => g.items.map((i) => i.path));
+    const hasMoreSpecific = allPaths.some(
+      (other) => other !== path && other.startsWith(path + '/') && route.path.startsWith(other),
+    );
+    return !hasMoreSpecific;
+  }
+  return false;
 }
 
 function handleLogout() {

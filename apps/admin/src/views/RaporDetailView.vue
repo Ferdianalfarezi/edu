@@ -63,9 +63,9 @@ const periodeOptions = [
 
 async function fetchTahunAjaran() {
   try {
-    const { data } = await api.get<{ data: TahunAjaranOption[] }>('/tahun-ajaran');
-    tahunAjaranOptions.value = data.data;
-    const aktif = data.data.find((t: any) => t.status === 'aktif');
+    const { data } = await api.get<TahunAjaranOption[]>('/tahun-ajaran');
+    tahunAjaranOptions.value = data;
+    const aktif = data.find((t: any) => t.status === 'aktif');
     if (aktif) selectedTahunAjaran.value = aktif.id;
   } catch (err) {
     console.error('Failed to fetch tahun ajaran:', err);
@@ -79,7 +79,7 @@ async function fetchKelas() {
   }
   try {
     const { data } = await api.get<{ data: KelasOption[] }>(
-      `/kelas?tahun_ajaran_id=${selectedTahunAjaran.value}`,
+      `/kelas?tahunAjaranId=${selectedTahunAjaran.value}`,
     );
     kelasOptions.value = data.data;
   } catch (err) {

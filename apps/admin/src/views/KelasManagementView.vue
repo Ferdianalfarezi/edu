@@ -61,14 +61,14 @@ const filteredKelas = computed(() => {
 
 async function fetchTahunAjaran() {
   try {
-    const { data } = await api.get<{ data: TahunAjaran[] }>('/tahun-ajaran');
-    tahunAjaranList.value = data.data;
+    const { data } = await api.get<TahunAjaran[]>('/tahun-ajaran');
+    tahunAjaranList.value = data;
     // Default to the active tahun ajaran
-    const active = data.data.find((t) => t.status === 'aktif');
+    const active = data.find((t) => t.status === 'aktif');
     if (active) {
       selectedTahunAjaran.value = active.id;
-    } else if (data.data.length > 0) {
-      selectedTahunAjaran.value = data.data[0].id;
+    } else if (data.length > 0) {
+      selectedTahunAjaran.value = data[0].id;
     }
   } catch (error) {
     console.error('Failed to fetch tahun ajaran:', error);
@@ -80,7 +80,7 @@ async function fetchKelas() {
   try {
     const params: Record<string, string> = {};
     if (selectedTahunAjaran.value) {
-      params.tahun_ajaran_id = selectedTahunAjaran.value;
+      params.tahunAjaranId = selectedTahunAjaran.value;
     }
     const { data } = await api.get<{ data: Kelas[] }>('/kelas', { params });
     kelasList.value = data.data;

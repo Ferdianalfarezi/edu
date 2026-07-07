@@ -48,20 +48,11 @@ async function handleLogin() {
   <div class="min-h-screen flex bg-surface-50">
     <!-- Left: Brand panel -->
     <div
-      class="hidden lg:flex lg:w-1/2 xl:w-[55%] bg-primary-700 relative overflow-hidden items-center justify-center p-12"
+      class="hidden lg:flex lg:w-1/2 xl:w-[60%] relative overflow-hidden items-center justify-center p-12"
+      style="background-image: url('/bg.webp'); background-size: cover; background-position: center"
     >
-      <!-- Subtle geometric background -->
-      <div class="absolute inset-0 opacity-10">
-        <div
-          class="absolute top-0 left-0 w-96 h-96 rounded-full bg-white/20 -translate-x-1/2 -translate-y-1/2"
-        />
-        <div
-          class="absolute bottom-0 right-0 w-[500px] h-[500px] rounded-full bg-white/10 translate-x-1/4 translate-y-1/4"
-        />
-        <div
-          class="absolute top-1/2 left-1/2 w-72 h-72 rounded-full bg-white/5 -translate-x-1/2 -translate-y-1/2"
-        />
-      </div>
+      <!-- Dark overlay for text readability -->
+      <div class="absolute inset-0 bg-black/50" />
 
       <div class="relative z-10 max-w-md text-white">
         <div class="w-12 h-12 rounded-xl bg-white/20 flex items-center justify-center mb-8">
@@ -70,7 +61,7 @@ async function handleLogin() {
         <h1 class="text-3xl font-semibold leading-tight mb-4">
           Kelola sekolah dengan lebih efisien
         </h1>
-        <p class="text-primary-100 text-base leading-relaxed">
+        <p class="text-white/80 text-base leading-relaxed">
           Absensi, pembayaran SPP, rapor, dan komunikasi orang tua — semua dalam satu platform
           terintegrasi.
         </p>

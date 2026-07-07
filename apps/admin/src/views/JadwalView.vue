@@ -172,10 +172,10 @@ async function fetchJadwal() {
   if (!selectedKelasId.value) return;
   loading.value = true;
   try {
-    const { data } = await api.get<{ data: JadwalEntry[] }>('/jadwal', {
-      params: { kelas_id: selectedKelasId.value },
+    const { data } = await api.get<JadwalEntry[]>('/jadwal', {
+      params: { kelasId: selectedKelasId.value },
     });
-    jadwalEntries.value = data.data;
+    jadwalEntries.value = data;
   } catch (error) {
     console.error('Failed to fetch jadwal:', error);
   } finally {
@@ -284,12 +284,12 @@ async function saveJadwal() {
   }
 
   const payload = {
-    kelas_id: selectedKelasId.value,
-    mata_pelajaran_id: form.value.mata_pelajaran_id,
-    guru_id: form.value.guru_id,
+    kelasId: selectedKelasId.value,
+    mataPelajaranId: form.value.mata_pelajaran_id,
+    guruId: form.value.guru_id,
     hari: selectedHari.value,
-    jam_mulai: form.value.jam_mulai,
-    jam_selesai: form.value.jam_selesai,
+    jamMulai: form.value.jam_mulai,
+    jamSelesai: form.value.jam_selesai,
   };
 
   try {
@@ -439,13 +439,13 @@ onMounted(async () => {
         <table class="w-full table-fixed">
           <thead>
             <tr class="border-b border-border bg-surface-50">
-              <th class="px-4 py-3 text-left font-medium text-text-secondary text-xs w-16">
+              <th class="px-4 py-3 text-center font-medium text-text-secondary text-xs w-16">
                 Jam Ke
               </th>
               <th
                 v-for="hari in HARI_LIST"
                 :key="hari"
-                class="px-4 py-3 text-left font-medium text-text-secondary text-xs"
+                class="px-4 py-3 text-center font-medium text-text-secondary text-xs"
               >
                 {{ HARI_LABELS[hari] }}
               </th>
@@ -453,7 +453,9 @@ onMounted(async () => {
           </thead>
           <tbody class="divide-y divide-border">
             <tr v-for="jam in JAM_KE_LIST" :key="jam">
-              <td class="px-4 py-3 text-sm font-semibold text-text-primary bg-surface-50">
+              <td
+                class="px-4 py-3 text-sm font-semibold text-text-primary bg-surface-50 text-center"
+              >
                 {{ jam }}
               </td>
               <td

@@ -69,10 +69,10 @@ const selectedStudentCount = computed(
 
 async function fetchTahunAjaran() {
   try {
-    const { data } = await api.get<{ data: TahunAjaran[] }>('/tahun-ajaran');
-    tahunAjaranList.value = data.data;
+    const { data } = await api.get<TahunAjaran[]>('/tahun-ajaran');
+    tahunAjaranList.value = data;
     // Default target to first prepared tahun ajaran
-    const prepared = data.data.find((t) => t.status === 'disiapkan');
+    const prepared = data.find((t) => t.status === 'disiapkan');
     if (prepared) {
       targetTahunAjaranId.value = prepared.id;
     }
@@ -85,7 +85,7 @@ async function fetchSourceKelas() {
   if (!activeTahunAjaran.value) return;
   try {
     const { data } = await api.get<{ data: Kelas[] }>('/kelas', {
-      params: { tahun_ajaran_id: activeTahunAjaran.value.id },
+      params: { tahunAjaranId: activeTahunAjaran.value.id },
     });
     sourceKelasList.value = data.data;
   } catch (err) {
@@ -100,7 +100,7 @@ async function fetchTargetKelas() {
   }
   try {
     const { data } = await api.get<{ data: Kelas[] }>('/kelas', {
-      params: { tahun_ajaran_id: targetTahunAjaranId.value },
+      params: { tahunAjaranId: targetTahunAjaranId.value },
     });
     targetKelasList.value = data.data;
   } catch (err) {

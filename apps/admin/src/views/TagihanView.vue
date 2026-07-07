@@ -240,8 +240,8 @@ async function fetchKelas() {
 
 async function fetchTahunAjaran() {
   try {
-    const { data } = await api.get<{ data: TahunAjaran[] }>('/tahun-ajaran');
-    tahunAjaranList.value = data.data;
+    const { data } = await api.get<TahunAjaran[]>('/tahun-ajaran');
+    tahunAjaranList.value = data;
   } catch (error) {
     console.error('Failed to fetch tahun ajaran:', error);
   }
