@@ -25,7 +25,7 @@ import { AuthController } from '@/modules/auth/auth.controller';
 import { JwtStrategy } from '@/modules/auth/strategies';
 import { JwtAuthGuard } from '@/common/guards/jwt-auth.guard';
 import { RedisService } from '@/modules/redis/redis.service';
-import { REDIS_CLIENT } from '@/modules/redis/redis.module';
+import { REDIS_CLIENT } from '@/modules/redis/redis.constants';
 import { DRIZZLE } from '@/drizzle/drizzle.module';
 import { QUEUE_NAMES } from '@/modules/queue';
 

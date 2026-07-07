@@ -1,17 +1,16 @@
 import { Global, Module } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
+import { ConfigModule, ConfigService } from '@nestjs/config';
+import Redis from 'ioredis';
 import { RedisService } from './redis.service';
-
-export const REDIS_CLIENT = 'REDIS_CLIENT';
+import { REDIS_CLIENT } from './redis.constants';
 
 @Global()
 @Module({
+  imports: [ConfigModule],
   providers: [
     {
       provide: REDIS_CLIENT,
-      useFactory: async (configService: ConfigService) => {
-        const Redis = (await import('ioredis')).default;
-
+      useFactory: (configService: ConfigService) => {
         // Support REDIS_URL (Railway provides this) or fallback to individual vars
         const redisUrl = configService.get<string>('REDIS_URL');
         if (redisUrl) {

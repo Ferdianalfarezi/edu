@@ -79,19 +79,36 @@ export class FcmService implements OnModuleInit {
 
     if (!projectId || !privateKey || !clientEmail) {
       this.logger.warn('Firebase credentials not configured. Push notifications will be disabled.');
-      this.app = admin.initializeApp();
       return;
     }
 
-    this.app = admin.initializeApp({
-      credential: admin.credential.cert({
-        projectId,
-        privateKey: privateKey.replace(/\\n/g, '\n'),
-        clientEmail,
-      }),
-    });
+    // Skip initialization if using placeholder credentials (dev environment)
+    if (
+      projectId === 'placeholder' ||
+      privateKey === 'placeholder' ||
+      clientEmail?.includes('placeholder')
+    ) {
+      this.logger.warn(
+        'Firebase credentials are placeholders. Push notifications will be disabled.',
+      );
+      return;
+    }
 
-    this.logger.log(`Firebase Admin initialized for project: ${projectId}`);
+    try {
+      this.app = admin.initializeApp({
+        credential: admin.credential.cert({
+          projectId,
+          privateKey: privateKey.replace(/\\n/g, '\n'),
+          clientEmail,
+        }),
+      });
+
+      this.logger.log(`Firebase Admin initialized for project: ${projectId}`);
+    } catch (error) {
+      this.logger.error(
+        `Failed to initialize Firebase: ${error.message}. Push notifications disabled.`,
+      );
+    }
   }
 
   /**
