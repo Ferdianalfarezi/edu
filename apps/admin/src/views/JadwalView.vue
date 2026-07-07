@@ -344,11 +344,11 @@ async function savePengganti() {
   if (!penggantiTarget.value) return;
 
   try {
-    await api.post(`/jadwal/${penggantiTarget.value.id}/guru-pengganti`, {
-      guru_pengganti_id: penggantiForm.value.guru_pengganti_id,
-      alasan: penggantiForm.value.alasan,
-      tanggal_mulai: penggantiForm.value.tanggal_mulai,
-      tanggal_selesai: penggantiForm.value.tanggal_selesai,
+    await api.post('/jadwal/guru-pengganti', {
+      guruPenggantiId: penggantiForm.value.guru_pengganti_id,
+      kelasId: penggantiTarget.value.kelas_id,
+      mataPelajaranId: penggantiTarget.value.mata_pelajaran_id,
+      tanggal: penggantiForm.value.tanggal_mulai,
     });
     showPenggantiModal.value = false;
     await fetchJadwal();
@@ -359,7 +359,9 @@ async function savePengganti() {
 
 async function removePengganti(entry: JadwalEntry) {
   try {
-    await api.delete(`/jadwal/${entry.id}/guru-pengganti`);
+    const penggantiId = entry.guru_pengganti_aktif?.id;
+    if (!penggantiId) return;
+    await api.delete(`/jadwal/guru-pengganti/${penggantiId}`);
     await fetchJadwal();
   } catch (error) {
     console.error('Failed to remove guru pengganti:', error);

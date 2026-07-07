@@ -37,10 +37,10 @@ export class TahunAjaranController {
   /**
    * GET /tahun-ajaran
    * List all tahun ajaran for the tenant.
-   * Accessible by admin and kepala_sekolah.
+   * Accessible by all staff roles (needed across multiple views).
    */
   @Get()
-  @Roles(Role.ADMIN, Role.KEPALA_SEKOLAH)
+  @Roles(Role.ADMIN, Role.KEPALA_SEKOLAH, Role.GURU, Role.BENDAHARA)
   @HttpCode(HttpStatus.OK)
   async findAll(@TenantId() tenantId: string) {
     return this.tahunAjaranService.findAll(tenantId);
@@ -49,10 +49,10 @@ export class TahunAjaranController {
   /**
    * GET /tahun-ajaran/:id
    * Get tahun ajaran detail with class count.
-   * Accessible by admin and kepala_sekolah.
+   * Accessible by all staff roles.
    */
   @Get(':id')
-  @Roles(Role.ADMIN, Role.KEPALA_SEKOLAH)
+  @Roles(Role.ADMIN, Role.KEPALA_SEKOLAH, Role.GURU, Role.BENDAHARA)
   @HttpCode(HttpStatus.OK)
   async findOne(@TenantId() tenantId: string, @Param('id') id: string) {
     return this.tahunAjaranService.findOne(tenantId, id);

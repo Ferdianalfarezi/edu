@@ -142,4 +142,135 @@ export class RaporOverviewService {
 
     return result;
   }
+
+  /**
+   * GET /rapor/view
+   * Returns detailed rapor view for a specific kelas and periode.
+   * Includes overview info and per-siswa grades.
+   */
+  async getRaporView(tenantId: string, kelasId: string, periodeId: string) {
+    if (!kelasId || !periodeId) {
+      return { overview: null, siswa: [] };
+    }
+
+    // Find the rapor record
+    const raporRows = await this.db
+      .select({
+        raporId: rapor.id,
+        kelasId: rapor.kelasId,
+        kelasNama: kelas.nama,
+        periode: rapor.periode,
+        tahunAjaranId: rapor.tahunAjaranId,
+        tahunAjaranNama: tahunAjaran.nama,
+        status: rapor.status,
+        finalizedBy: user.nama,
+        finalizedAt: rapor.finalizedAt,
+      })
+      .from(rapor)
+      .innerJoin(kelas, eq(rapor.kelasId, kelas.id))
+      .innerJoin(tahunAjaran, eq(rapor.tahunAjaranId, tahunAjaran.id))
+      .leftJoin(user, eq(rapor.finalizedBy, user.id))
+      .where(
+        and(
+          eq(rapor.tenantId, tenantId),
+          eq(rapor.kelasId, kelasId),
+          eq(rapor.periode, periodeId as any),
+        ),
+      )
+      .limit(1);
+
+    if (raporRows.length === 0) {
+      return { overview: null, siswa: [] };
+    }
+
+    const raporRecord = raporRows[0];
+
+    // Count students
+    const studentCountResult = await this.db
+      .select({ count: count() })
+      .from(siswa)
+      .where(
+        and(eq(siswa.kelasId, kelasId), eq(siswa.tenantId, tenantId), eq(siswa.status, 'aktif')),
+      );
+    const totalStudents = Number(studentCountResult[0]?.count ?? 0);
+
+    // Count submitted
+    const submittedCountResult = await this.db
+      .select({ count: sql<number>`COUNT(DISTINCT ${raporNilai.siswaId})` })
+      .from(raporNilai)
+      .where(and(eq(raporNilai.raporId, raporRecord.raporId), eq(raporNilai.status, 'submitted')));
+    const submittedCount = Number(submittedCountResult[0]?.count ?? 0);
+
+    const overview = {
+      rapor_id: raporRecord.raporId,
+      kelas_id: raporRecord.kelasId,
+      kelas_nama: raporRecord.kelasNama,
+      periode: raporRecord.periode,
+      tahun_ajaran_id: raporRecord.tahunAjaranId,
+      tahun_ajaran_nama: raporRecord.tahunAjaranNama,
+      status: raporRecord.status,
+      finalized_by: raporRecord.finalizedBy ?? null,
+      finalized_at: raporRecord.finalizedAt ? raporRecord.finalizedAt.toISOString() : null,
+      total_students: totalStudents,
+      submitted_count: submittedCount,
+    };
+
+    // Get per-siswa grades
+    const nilaiRows = await this.db
+      .select({
+        siswaId: raporNilai.siswaId,
+        siswaNama: siswa.nama,
+        mataPelajaranId: raporNilai.mataPelajaranId,
+        komponenNilai: raporNilai.komponenNilai,
+        capaianPembelajaran: raporNilai.capaianPembelajaran,
+        status: raporNilai.status,
+        peringkat: raporNilai.peringkat,
+        rataRata: raporNilai.rataRata,
+        catatanWaliKelas: raporNilai.catatanWaliKelas,
+        p5Deskripsi: raporNilai.p5Deskripsi,
+      })
+      .from(raporNilai)
+      .innerJoin(siswa, eq(raporNilai.siswaId, siswa.id))
+      .where(eq(raporNilai.raporId, raporRecord.raporId))
+      .orderBy(siswa.nama);
+
+    // Group by student
+    const siswaMap = new Map<
+      string,
+      {
+        siswa_id: string;
+        siswa_nama: string;
+        peringkat: number | null;
+        rata_rata: string | null;
+        catatan_wali_kelas: string | null;
+        p5_deskripsi: any;
+        nilai: any[];
+      }
+    >();
+
+    for (const row of nilaiRows) {
+      if (!siswaMap.has(row.siswaId)) {
+        siswaMap.set(row.siswaId, {
+          siswa_id: row.siswaId,
+          siswa_nama: row.siswaNama,
+          peringkat: row.peringkat,
+          rata_rata: row.rataRata,
+          catatan_wali_kelas: row.catatanWaliKelas,
+          p5_deskripsi: row.p5Deskripsi,
+          nilai: [],
+        });
+      }
+      siswaMap.get(row.siswaId)!.nilai.push({
+        mata_pelajaran_id: row.mataPelajaranId,
+        komponen_nilai: row.komponenNilai,
+        capaian_pembelajaran: row.capaianPembelajaran,
+        status: row.status,
+      });
+    }
+
+    return {
+      overview,
+      siswa: Array.from(siswaMap.values()),
+    };
+  }
 }

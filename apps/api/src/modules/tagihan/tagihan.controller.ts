@@ -70,12 +70,12 @@ export class TagihanController {
   /**
    * GET /tagihan/verifikasi
    * List all pending verifications with bukti transfer preview.
-   * Bendahara only.
+   * Bendahara and Admin only.
    *
    * Requirements: 12.1
    */
   @Get('verifikasi')
-  @Roles(Role.BENDAHARA)
+  @Roles(Role.BENDAHARA, Role.ADMIN)
   async getPendingVerifications(@TenantId() tenantId: string) {
     const data = await this.tagihanService.getPendingVerifications(tenantId);
     return { data };
@@ -84,10 +84,10 @@ export class TagihanController {
   /**
    * GET /tagihan/tunggakan/summary
    * Get summary of tunggakan (total count, total amount) for dashboard.
-   * Bendahara and Kepala Sekolah only.
+   * Bendahara, Admin, and Kepala Sekolah only.
    */
   @Get('tunggakan/summary')
-  @Roles(Role.BENDAHARA, Role.KEPALA_SEKOLAH)
+  @Roles(Role.BENDAHARA, Role.KEPALA_SEKOLAH, Role.ADMIN)
   async getTunggakanSummary(@TenantId() tenantId: string, @Query('kelas_id') kelasId?: string) {
     const data = await this.tagihanService.getTunggakanSummary(tenantId, kelasId);
     return data;
@@ -98,15 +98,20 @@ export class TagihanController {
    * List belum_bayar/cicilan tagihan, sorted by jatuh_tempo oldest first.
    * Supports cursor pagination and kelas_id filter.
    * Includes students with status pindah_sekolah/keluar.
-   * Bendahara and Kepala Sekolah only.
+   * Bendahara, Admin, and Kepala Sekolah only.
    *
    * Requirements: 15.1–15.5
    */
   @Get('tunggakan')
-  @Roles(Role.BENDAHARA, Role.KEPALA_SEKOLAH)
+  @Roles(Role.BENDAHARA, Role.KEPALA_SEKOLAH, Role.ADMIN)
   async getTunggakan(@TenantId() tenantId: string, @Query() query: GetTunggakanQueryDto) {
-    const data = await this.tagihanService.getTunggakan(tenantId, query);
-    return { data };
+    const result = await this.tagihanService.getTunggakan(tenantId, query);
+    return {
+      data: result.items,
+      total_tunggakan: result.total_tunggakan,
+      total_count: result.total_count,
+      next_cursor: result.next_cursor,
+    };
   }
 
   /**

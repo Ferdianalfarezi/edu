@@ -29,8 +29,10 @@ interface KategoriRpp {
 
 interface PaginatedResponse {
   data: RppItem[];
-  next_cursor: string | null;
-  has_more: boolean;
+  meta: {
+    has_next: boolean;
+    cursor: string | null;
+  };
 }
 
 const router = useRouter();
@@ -92,8 +94,8 @@ async function fetchRpp(reset = false) {
     } else {
       items.value.push(...data.data);
     }
-    nextCursor.value = data.next_cursor;
-    hasMore.value = data.has_more;
+    nextCursor.value = data.meta.cursor;
+    hasMore.value = data.meta.has_next;
   } catch (e) {
     console.error('Failed to fetch RPP:', e);
   } finally {

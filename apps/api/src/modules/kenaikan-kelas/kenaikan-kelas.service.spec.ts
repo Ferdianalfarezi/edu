@@ -148,10 +148,10 @@ describe('KenaikanKelasService', () => {
 
   describe('promoteStudents', () => {
     const baseDto = {
-      sourceKelasId,
-      targetKelasId,
-      tahunAjaranBaruId,
-      siswaIds: [siswaId1, siswaId2],
+      source_kelas_id: sourceKelasId,
+      target_kelas_id: targetKelasId,
+      target_tahun_ajaran_id: tahunAjaranBaruId,
+      excluded_siswa_ids: [] as string[],
     };
 
     it('should promote students to target class successfully', async () => {
@@ -160,10 +160,10 @@ describe('KenaikanKelasService', () => {
         [{ id: tahunAjaranBaruId, status: 'disiapkan' }],
         // 2. source kelas exists
         [{ id: sourceKelasId, nama: '5A', tingkat: 5, tahunAjaranId: tahunAjaranLamaId }],
-        // 3. target kelas exists and belongs to tahun_ajaran_baru
-        [{ id: targetKelasId, nama: '6A', tingkat: 6, tahunAjaranId: tahunAjaranBaruId }],
-        // 4. active students in source kelas
+        // 3. all active students in source kelas
         [{ id: siswaId1 }, { id: siswaId2 }],
+        // 4. target kelas exists and belongs to tahun_ajaran_baru
+        [{ id: targetKelasId, nama: '6A', tingkat: 6, tahunAjaranId: tahunAjaranBaruId }],
         // 5. update (promote students)
         undefined,
         // 6. insert riwayat_kelas
@@ -173,16 +173,16 @@ describe('KenaikanKelasService', () => {
       const result = await service.promoteStudents(tenantId, baseDto);
 
       expect(result.promoted).toBe(2);
-      expect(result.lulus).toBe(0);
-      expect(result.targetKelas.id).toBe(targetKelasId);
+      expect(result.graduated).toBe(0);
+      expect(result.targetKelas!.id).toBe(targetKelasId);
       expect(result.sourceKelas.id).toBe(sourceKelasId);
     });
 
     it('should mark lulus students as alumni and not move them to target', async () => {
       const dto = {
         ...baseDto,
-        siswaIds: [siswaId1],
-        lulusIds: [siswaId3],
+        excluded_siswa_ids: [],
+        lulus_ids: [siswaId3],
       };
 
       const service = buildService([
@@ -190,11 +190,11 @@ describe('KenaikanKelasService', () => {
         [{ id: tahunAjaranBaruId, status: 'disiapkan' }],
         // 2. source kelas exists
         [{ id: sourceKelasId, nama: '6A', tingkat: 6, tahunAjaranId: tahunAjaranLamaId }],
-        // 3. target kelas exists
+        // 3. all active students in source kelas
+        [{ id: siswaId1 }, { id: siswaId2 }, { id: siswaId3 }],
+        // 4. target kelas exists
         [{ id: targetKelasId, nama: '1A-SMP', tingkat: 7, tahunAjaranId: tahunAjaranBaruId }],
-        // 4. active students in source (for siswaIds validation)
-        [{ id: siswaId1 }],
-        // 5. active students in source (for lulusIds validation)
+        // 5. lulus students validation
         [{ id: siswaId3 }],
         // 6. update promoted students
         undefined,
@@ -206,8 +206,8 @@ describe('KenaikanKelasService', () => {
 
       const result = await service.promoteStudents(tenantId, dto);
 
-      expect(result.promoted).toBe(1);
-      expect(result.lulus).toBe(1);
+      expect(result.promoted).toBe(2);
+      expect(result.graduated).toBe(1);
     });
 
     it('should throw NotFoundException when tahun_ajaran_baru not found', async () => {
@@ -236,7 +236,9 @@ describe('KenaikanKelasService', () => {
         [{ id: tahunAjaranBaruId, status: 'disiapkan' }],
         // 2. source kelas found
         [{ id: sourceKelasId, nama: '5A', tingkat: 5, tahunAjaranId: tahunAjaranLamaId }],
-        // 3. target kelas not found
+        // 3. all active students
+        [{ id: siswaId1 }, { id: siswaId2 }],
+        // 4. target kelas not found
         [],
       ]);
 
@@ -249,49 +251,39 @@ describe('KenaikanKelasService', () => {
         [{ id: tahunAjaranBaruId, status: 'disiapkan' }],
         // 2. source kelas found
         [{ id: sourceKelasId, nama: '5A', tingkat: 5, tahunAjaranId: tahunAjaranLamaId }],
-        // 3. target kelas exists but belongs to a DIFFERENT tahun_ajaran
+        // 3. all active students
+        [{ id: siswaId1 }, { id: siswaId2 }],
+        // 4. target kelas exists but belongs to a DIFFERENT tahun_ajaran
         [{ id: targetKelasId, nama: '6A', tingkat: 6, tahunAjaranId: 'wrong-tahun-ajaran' }],
       ]);
 
       await expect(service.promoteStudents(tenantId, baseDto)).rejects.toThrow(BadRequestException);
     });
 
-    it('should throw BadRequestException when some students are not in source kelas', async () => {
-      const service = buildService([
-        // 1. tahun ajaran found
-        [{ id: tahunAjaranBaruId, status: 'disiapkan' }],
-        // 2. source kelas found
-        [{ id: sourceKelasId, nama: '5A', tingkat: 5, tahunAjaranId: tahunAjaranLamaId }],
-        // 3. target kelas found
-        [{ id: targetKelasId, nama: '6A', tingkat: 6, tahunAjaranId: tahunAjaranBaruId }],
-        // 4. only siswaId1 is active (siswaId2 not found)
-        [{ id: siswaId1 }],
-      ]);
-
-      await expect(service.promoteStudents(tenantId, baseDto)).rejects.toThrow(BadRequestException);
-    });
-
-    it('should throw BadRequestException when student is in both siswaIds and lulusIds', async () => {
+    it('should exclude students from promotion when specified', async () => {
       const dto = {
         ...baseDto,
-        siswaIds: [siswaId1],
-        lulusIds: [siswaId1], // overlap!
+        excluded_siswa_ids: [siswaId2], // exclude siswaId2
       };
 
       const service = buildService([
-        // 1. tahun ajaran found
+        // 1. tahun ajaran baru exists
         [{ id: tahunAjaranBaruId, status: 'disiapkan' }],
-        // 2. source kelas found
-        [{ id: sourceKelasId, nama: '6A', tingkat: 6, tahunAjaranId: tahunAjaranLamaId }],
-        // 3. target kelas found
-        [{ id: targetKelasId, nama: '7A', tingkat: 7, tahunAjaranId: tahunAjaranBaruId }],
-        // 4. active students validation for siswaIds
-        [{ id: siswaId1 }],
-        // 5. active students validation for lulusIds
-        [{ id: siswaId1 }],
+        // 2. source kelas exists
+        [{ id: sourceKelasId, nama: '5A', tingkat: 5, tahunAjaranId: tahunAjaranLamaId }],
+        // 3. all active students in source kelas
+        [{ id: siswaId1 }, { id: siswaId2 }],
+        // 4. target kelas exists
+        [{ id: targetKelasId, nama: '6A', tingkat: 6, tahunAjaranId: tahunAjaranBaruId }],
+        // 5. update (promote siswaId1 only)
+        undefined,
+        // 6. insert riwayat_kelas
+        undefined,
       ]);
 
-      await expect(service.promoteStudents(tenantId, dto)).rejects.toThrow(BadRequestException);
+      const result = await service.promoteStudents(tenantId, dto);
+      expect(result.promoted).toBe(1);
+      expect(result.excluded).toBe(1);
     });
   });
 });

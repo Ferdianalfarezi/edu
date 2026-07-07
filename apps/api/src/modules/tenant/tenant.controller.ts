@@ -84,7 +84,8 @@ export class TenantController {
    */
   @Get()
   @HttpCode(HttpStatus.OK)
-  async listTenants(): Promise<TenantWithStats[]> {
-    return this.tenantService.listTenants();
+  async listTenants() {
+    const tenants = await this.tenantService.listTenants();
+    return { data: tenants };
   }
 }

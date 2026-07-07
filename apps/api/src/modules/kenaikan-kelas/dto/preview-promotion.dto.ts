@@ -1,4 +1,4 @@
-import { IsNotEmpty, IsUUID } from 'class-validator';
+import { IsNotEmpty, IsOptional, IsUUID } from 'class-validator';
 
 /**
  * DTO for previewing class promotion before execution.
@@ -6,9 +6,13 @@ import { IsNotEmpty, IsUUID } from 'class-validator';
 export class PreviewPromotionDto {
   @IsUUID()
   @IsNotEmpty()
-  sourceKelasId: string;
+  source_kelas_id: string;
 
   @IsUUID()
   @IsNotEmpty()
-  tahunAjaranBaruId: string;
+  target_tahun_ajaran_id: string;
+
+  @IsOptional()
+  @IsUUID()
+  target_kelas_id?: string;
 }

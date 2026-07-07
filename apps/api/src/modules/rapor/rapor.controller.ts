@@ -196,16 +196,35 @@ export class RaporController {
   /**
    * GET /rapor/overview
    * Returns all rapor records (draft + final) with status indicator.
-   * Kepala sekolah only — read-only view across all classes.
+   * Admin and Kepala sekolah — read-only view across all classes.
    * Filters: kelas_id, periode, tahun_ajaran_id (all optional).
    * Defaults to active tahun_ajaran if tahun_ajaran_id not provided.
    *
    * Requirements: 38.11, 38.12
    */
   @Get('overview')
-  @Roles(Role.KEPALA_SEKOLAH)
+  @Roles(Role.KEPALA_SEKOLAH, Role.ADMIN)
   async getOverview(@TenantId() tenantId: string, @Query() query: GetRaporOverviewQueryDto) {
     const data = await this.raporOverviewService.getOverview(tenantId, query);
+    return { data };
+  }
+
+  /**
+   * GET /rapor/view
+   * Returns detailed rapor data for a specific kelas and periode.
+   * Includes overview info and per-siswa grades.
+   * Admin and Kepala sekolah only.
+   *
+   * Query: ?kelas_id=UUID&periode_id=string
+   */
+  @Get('view')
+  @Roles(Role.KEPALA_SEKOLAH, Role.ADMIN)
+  async getRaporView(
+    @TenantId() tenantId: string,
+    @Query('kelas_id') kelasId: string,
+    @Query('periode_id') periodeId: string,
+  ) {
+    const data = await this.raporOverviewService.getRaporView(tenantId, kelasId, periodeId);
     return { data };
   }
 

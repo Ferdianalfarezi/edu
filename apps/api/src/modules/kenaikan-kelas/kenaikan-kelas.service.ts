@@ -112,7 +112,7 @@ export class KenaikanKelasService {
    * in the new tahun_ajaran. Does not execute any changes.
    */
   async previewPromotion(tenantId: string, dto: PreviewPromotionDto) {
-    const { sourceKelasId, tahunAjaranBaruId } = dto;
+    const { source_kelas_id: sourceKelasId, target_tahun_ajaran_id: tahunAjaranBaruId } = dto;
 
     // Get source kelas
     const [sourceKelas] = await this.db
@@ -194,7 +194,13 @@ export class KenaikanKelasService {
    * Requirements: 30.2, 30.3, 30.4, 30.5, 30.8, 30.9
    */
   async promoteStudents(tenantId: string, dto: PromoteStudentsDto) {
-    const { sourceKelasId, targetKelasId, tahunAjaranBaruId, siswaIds, lulusIds } = dto;
+    const {
+      source_kelas_id: sourceKelasId,
+      target_kelas_id: targetKelasId,
+      target_tahun_ajaran_id: tahunAjaranBaruId,
+      excluded_siswa_ids: excludedIds = [],
+      lulus_ids: lulusIds,
+    } = dto;
 
     // 1. Validate tahun_ajaran baru exists and belongs to tenant
     const [newTahunAjaran] = await this.db
@@ -223,30 +229,8 @@ export class KenaikanKelasService {
       throw new NotFoundException('Kelas asal tidak ditemukan');
     }
 
-    // 3. Validate target kelas exists AND belongs to tahun_ajaran_baru
-    const [targetKelas] = await this.db
-      .select({
-        id: kelas.id,
-        nama: kelas.nama,
-        tingkat: kelas.tingkat,
-        tahunAjaranId: kelas.tahunAjaranId,
-      })
-      .from(kelas)
-      .where(and(eq(kelas.id, targetKelasId), eq(kelas.tenantId, tenantId)))
-      .limit(1);
-
-    if (!targetKelas) {
-      throw new NotFoundException('Kelas tujuan tidak ditemukan');
-    }
-
-    if (targetKelas.tahunAjaranId !== tahunAjaranBaruId) {
-      throw new BadRequestException(
-        'Kelas tujuan tidak termasuk dalam tahun ajaran baru yang dipilih',
-      );
-    }
-
-    // 4. Validate all siswaIds are active students in the source kelas
-    const activeStudents = await this.db
+    // 3. Get all active students from source kelas
+    const allActiveStudents = await this.db
       .select({ id: siswa.id })
       .from(siswa)
       .where(
@@ -254,22 +238,46 @@ export class KenaikanKelasService {
           eq(siswa.kelasId, sourceKelasId),
           eq(siswa.tenantId, tenantId),
           eq(siswa.status, 'aktif'),
-          inArray(siswa.id, siswaIds),
         ),
       );
 
-    const activeStudentIds = new Set(activeStudents.map((s) => s.id));
-    const invalidIds = siswaIds.filter((id) => !activeStudentIds.has(id));
-    if (invalidIds.length > 0) {
-      throw new BadRequestException(
-        `Beberapa siswa tidak ditemukan atau tidak aktif di kelas asal: ${invalidIds.join(', ')}`,
-      );
+    const excludedSet = new Set(excludedIds);
+    const lulusSet = new Set(lulusIds || []);
+
+    // Derive siswaIds to promote: all active students minus excluded and lulus
+    const siswaIds = allActiveStudents
+      .map((s) => s.id)
+      .filter((id) => !excludedSet.has(id) && !lulusSet.has(id));
+
+    // 4. Validate target kelas exists AND belongs to tahun_ajaran_baru (if provided)
+    let targetKelas: { id: string; nama: string; tingkat: number; tahunAjaranId: string } | null =
+      null;
+    if (targetKelasId) {
+      const [found] = await this.db
+        .select({
+          id: kelas.id,
+          nama: kelas.nama,
+          tingkat: kelas.tingkat,
+          tahunAjaranId: kelas.tahunAjaranId,
+        })
+        .from(kelas)
+        .where(and(eq(kelas.id, targetKelasId), eq(kelas.tenantId, tenantId)))
+        .limit(1);
+
+      if (!found) {
+        throw new NotFoundException('Kelas tujuan tidak ditemukan');
+      }
+
+      if (found.tahunAjaranId !== tahunAjaranBaruId) {
+        throw new BadRequestException(
+          'Kelas tujuan tidak termasuk dalam tahun ajaran baru yang dipilih',
+        );
+      }
+      targetKelas = found;
     }
 
-    // 5. Validate lulusIds (if provided) are also in siswaIds or are separate students in source
-    const lulusSet = new Set(lulusIds || []);
+    // 5. Validate lulusIds (if provided) are active students in source kelas
     if (lulusIds && lulusIds.length > 0) {
-      // lulus_ids should be active students from the source kelas
       const lulusStudents = await this.db
         .select({ id: siswa.id })
         .from(siswa)
@@ -291,25 +299,17 @@ export class KenaikanKelasService {
       }
     }
 
-    // 6. Ensure no overlap: a student cannot be both promoted and graduated
-    const overlapping = siswaIds.filter((id) => lulusSet.has(id));
-    if (overlapping.length > 0) {
-      throw new BadRequestException(
-        'Siswa tidak dapat dipromosikan dan ditandai lulus sekaligus. Pisahkan siswa_ids dan lulus_ids.',
-      );
-    }
-
-    // 7. Execute promotion — move siswaIds to target class
+    // 6. Execute promotion — move siswaIds to target class
     let promotedCount = 0;
-    if (siswaIds.length > 0) {
+    if (siswaIds.length > 0 && targetKelas) {
       await this.db
         .update(siswa)
-        .set({ kelasId: targetKelasId, updatedAt: new Date() })
+        .set({ kelasId: targetKelas.id, updatedAt: new Date() })
         .where(and(eq(siswa.tenantId, tenantId), inArray(siswa.id, siswaIds)));
       promotedCount = siswaIds.length;
     }
 
-    // 8. Mark lulus students as alumni
+    // 7. Mark lulus students as alumni
     let lulusCount = 0;
     if (lulusIds && lulusIds.length > 0) {
       await this.db
@@ -319,7 +319,7 @@ export class KenaikanKelasService {
       lulusCount = lulusIds.length;
     }
 
-    // 9. Record riwayat_kelas for promoted students (their history in the source kelas)
+    // 8. Record riwayat_kelas for promoted students (their history in the source kelas)
     const riwayatRecords = [
       ...siswaIds.map((siswaId) => ({
         tenantId,
@@ -341,12 +341,15 @@ export class KenaikanKelasService {
 
     return {
       promoted: promotedCount,
-      lulus: lulusCount,
-      targetKelas: {
-        id: targetKelas.id,
-        nama: targetKelas.nama,
-        tingkat: targetKelas.tingkat,
-      },
+      excluded: excludedIds.length,
+      graduated: lulusCount,
+      targetKelas: targetKelas
+        ? {
+            id: targetKelas.id,
+            nama: targetKelas.nama,
+            tingkat: targetKelas.tingkat,
+          }
+        : null,
       sourceKelas: {
         id: sourceKelas.id,
         nama: sourceKelas.nama,
