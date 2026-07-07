@@ -1,12 +1,12 @@
 # Railway deployment configuration — Admin Panel (Vue.js SPA)
 # Static site served via nginx
+#
+# IMPORTANT: In Railway dashboard, set this service's config file path to:
+#   railway.admin.toml
 
 [build]
 builder = "DOCKERFILE"
 dockerfilePath = "Dockerfile.admin"
-
-[build.args]
-VITE_API_URL = "${{API_URL}}"
 
 [deploy]
 healthcheckPath = "/"
