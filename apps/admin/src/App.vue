@@ -4,6 +4,7 @@ import { RouterView, useRoute } from 'vue-router';
 import { useAuthStore } from '@/stores/auth';
 import AppLayout from '@/components/layout/AppLayout.vue';
 import ForceChangePasswordModal from '@/components/ForceChangePasswordModal.vue';
+import ToastNotification from '@/components/ui/ToastNotification.vue';
 
 const route = useRoute();
 const authStore = useAuthStore();
@@ -19,4 +20,5 @@ const showLayout = computed(() => {
   </AppLayout>
   <RouterView v-else />
   <ForceChangePasswordModal v-if="authStore.isAuthenticated && authStore.mustChangePassword" />
+  <ToastNotification />
 </template>

@@ -1,5 +1,6 @@
 import axios, { type AxiosError, type AxiosInstance, type InternalAxiosRequestConfig } from 'axios';
 import type { LoginResponse } from '@edu/shared';
+import { useToast } from '@/composables/useToast';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api/v1';
 
@@ -44,7 +45,7 @@ api.interceptors.request.use(
   (error) => Promise.reject(error),
 );
 
-// Response interceptor: auto-refresh on 401
+// Response interceptor: auto-refresh on 401 + global error toast
 api.interceptors.response.use(
   (response) => response,
   async (error: AxiosError) => {
@@ -110,6 +111,24 @@ api.interceptors.response.use(
     }
   },
 );
+
+// Global error toast interceptor — runs after refresh logic
+api.interceptors.response.use(undefined, (error: AxiosError<{ message?: string }>) => {
+  // Don't show toast for 401 that will redirect to login
+  if (error.response?.status === 401) {
+    return Promise.reject(error);
+  }
+
+  const toast = useToast();
+  const message =
+    error.response?.data?.message ||
+    error.response?.statusText ||
+    error.message ||
+    'Terjadi kesalahan pada server';
+
+  toast.error(message);
+  return Promise.reject(error);
+});
 
 function clearTokens() {
   localStorage.removeItem('access_token');

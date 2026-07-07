@@ -20,7 +20,10 @@
     "test:integration": "jest --selectProjects integration",
     "test:watch": "jest --selectProjects unit --watch",
     "test:cov": "jest --selectProjects unit --coverage",
-    "test:e2e": "jest --config ./test/jest-e2e.json"
+    "test:e2e": "jest --config ./test/jest-e2e.json",
+    "test:contract": "jest --config jest.contract-mock.config.ts",
+    "test:contract:real": "CONTRACT_USE_REAL_DB=true jest --config jest.contract-real.config.ts",
+    "test:contract:watch": "jest --config jest.contract-mock.config.ts --watch"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.500.0",
@@ -83,7 +86,8 @@
   "jest": {
     "projects": [
       "<rootDir>/jest.unit.config.ts",
-      "<rootDir>/jest.integration.config.ts"
+      "<rootDir>/jest.integration.config.ts",
+      "<rootDir>/jest.contract-mock.config.ts"
     ]
   }
 }

@@ -4,7 +4,7 @@ import { KonfigurasiController } from './konfigurasi.controller';
 import { HariLiburController } from './hari-libur.controller';
 
 @Module({
-  controllers: [KonfigurasiController, HariLiburController],
+  controllers: [HariLiburController, KonfigurasiController],
   providers: [KonfigurasiService],
   exports: [KonfigurasiService],
 })
