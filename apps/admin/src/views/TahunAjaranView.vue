@@ -72,8 +72,8 @@ function formatDate(dateStr: string): string {
 async function fetchItems() {
   loading.value = true;
   try {
-    const { data } = await api.get<{ data: TahunAjaran[] }>('/tahun-ajaran');
-    items.value = data.data;
+    const { data } = await api.get<TahunAjaran[]>('/tahun-ajaran');
+    items.value = data;
   } catch (error) {
     console.error('Failed to fetch tahun ajaran:', error);
   } finally {

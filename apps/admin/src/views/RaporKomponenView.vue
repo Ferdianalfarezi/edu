@@ -49,8 +49,8 @@ async function fetchItems() {
   loading.value = true;
   error.value = '';
   try {
-    const { data } = await api.get<{ data: KomponenPenilaian[] }>('/rapor/komponen-penilaian');
-    items.value = data.data;
+    const { data } = await api.get<KomponenPenilaian[]>('/rapor/komponen-penilaian');
+    items.value = data;
   } catch (err: any) {
     error.value = err.response?.data?.message || 'Gagal memuat komponen penilaian.';
     console.error('Failed to fetch komponen penilaian:', err);
