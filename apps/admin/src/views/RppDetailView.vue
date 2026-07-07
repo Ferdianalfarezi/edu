@@ -3,7 +3,7 @@ import { ref, computed, onMounted } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import { api } from '@/api/client';
 import { useAuthStore } from '@/stores/auth';
-import { PageHeader, BaseModal } from '@/components/ui';
+import { BaseModal } from '@/components/ui';
 
 interface RppDetail {
   id: string;
