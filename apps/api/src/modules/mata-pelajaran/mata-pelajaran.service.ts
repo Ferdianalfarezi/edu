@@ -37,7 +37,9 @@ export class MataPelajaranService {
   async findAll(tenantId: string) {
     const db = this.drizzleService.db;
 
-    return db.select().from(mataPelajaran).where(eq(mataPelajaran.tenantId, tenantId));
+    const data = await db.select().from(mataPelajaran).where(eq(mataPelajaran.tenantId, tenantId));
+
+    return { data };
   }
 
   /**
