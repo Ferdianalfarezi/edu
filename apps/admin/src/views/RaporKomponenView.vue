@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue';
 import { api } from '@/api/client';
+import { PageHeader, BaseModal } from '@/components/ui';
 
 interface KomponenPenilaian {
   id: string;
@@ -165,307 +166,221 @@ onMounted(fetchItems);
 </script>
 
 <template>
-  <div class="page">
-    <div class="page-header">
-      <div>
-        <h1>Konfigurasi Komponen Penilaian</h1>
-        <p class="page-description">
-          Atur komponen penilaian rapor sesuai kurikulum sekolah. Template default: Kurikulum
-          Merdeka (Nilai Akhir angka 0-100, Capaian Pembelajaran deskripsi naratif).
-        </p>
-      </div>
-      <button class="btn btn-primary" @click="openCreateForm">Tambah Komponen</button>
+  <div class="p-4 lg:p-6 max-w-7xl mx-auto">
+    <PageHeader
+      title="Konfigurasi Komponen Penilaian"
+      description="Atur komponen penilaian rapor sesuai kurikulum sekolah. Template default: Kurikulum Merdeka (Nilai Akhir angka 0-100, Capaian Pembelajaran deskripsi naratif)."
+    >
+      <template #actions>
+        <button
+          class="px-3 py-2 text-sm font-medium text-white bg-primary-600 rounded-lg hover:bg-primary-700 transition-colors"
+          @click="openCreateForm"
+        >
+          Tambah Komponen
+        </button>
+      </template>
+    </PageHeader>
+
+    <div
+      v-if="error"
+      class="p-3 bg-danger-50 border border-danger-500/20 rounded-lg text-sm text-danger-700 mb-4"
+    >
+      {{ error }}
     </div>
 
-    <div v-if="error" class="alert alert-error">{{ error }}</div>
+    <div
+      v-if="!loading && items.length > 0"
+      class="bg-white border border-border rounded-xl overflow-hidden"
+    >
+      <div class="overflow-x-auto">
+        <table class="w-full">
+          <thead class="border-b border-border bg-surface-50">
+            <tr>
+              <th class="px-4 py-3 text-left font-medium text-text-secondary text-xs w-[80px]">
+                Urutan
+              </th>
+              <th class="px-4 py-3 text-left font-medium text-text-secondary text-xs">
+                Nama Komponen
+              </th>
+              <th class="px-4 py-3 text-left font-medium text-text-secondary text-xs">Tipe</th>
+              <th class="px-4 py-3 text-left font-medium text-text-secondary text-xs">Skala</th>
+              <th class="px-4 py-3 text-left font-medium text-text-secondary text-xs">Wajib</th>
+              <th class="px-4 py-3 text-left font-medium text-text-secondary text-xs">Aksi</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-border">
+            <tr v-for="item in items" :key="item.id" class="hover:bg-surface-50 transition-colors">
+              <td class="px-4 py-3 text-sm">{{ item.urutan }}</td>
+              <td class="px-4 py-3 text-sm text-text-primary font-medium">{{ item.nama }}</td>
+              <td class="px-4 py-3 text-sm text-text-secondary">{{ getTipeLabel(item.tipe) }}</td>
+              <td class="px-4 py-3 text-sm text-text-secondary">
+                <span v-if="item.tipe === 'angka'"
+                  >{{ item.skala_min }} - {{ item.skala_max }}</span
+                >
+                <span v-else-if="item.tipe === 'huruf'">A/B/C/D/E</span>
+                <span v-else>-</span>
+              </td>
+              <td class="px-4 py-3">
+                <span
+                  class="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium"
+                  :class="
+                    item.is_wajib
+                      ? 'bg-primary-50 text-primary-700'
+                      : 'bg-surface-100 text-text-secondary'
+                  "
+                >
+                  {{ item.is_wajib ? 'Wajib' : 'Opsional' }}
+                </span>
+              </td>
+              <td class="px-4 py-3">
+                <div class="flex gap-1.5">
+                  <button
+                    class="px-2 py-1 text-xs font-medium rounded-md bg-warning-50 text-warning-700 hover:bg-yellow-200 transition-colors"
+                    @click="openEditForm(item)"
+                  >
+                    Edit
+                  </button>
+                  <button
+                    class="px-2 py-1 text-xs font-medium rounded-md bg-danger-50 text-danger-700 hover:bg-red-200 transition-colors"
+                    @click="openDeleteConfirm(item)"
+                  >
+                    Hapus
+                  </button>
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
 
-    <div class="table-container">
-      <table v-if="!loading && items.length > 0">
-        <thead>
-          <tr>
-            <th>Urutan</th>
-            <th>Nama Komponen</th>
-            <th>Tipe</th>
-            <th>Skala</th>
-            <th>Wajib</th>
-            <th>Aksi</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr v-for="item in items" :key="item.id">
-            <td>{{ item.urutan }}</td>
-            <td>{{ item.nama }}</td>
-            <td>{{ getTipeLabel(item.tipe) }}</td>
-            <td>
-              <span v-if="item.tipe === 'angka'">{{ item.skala_min }} - {{ item.skala_max }}</span>
-              <span v-else-if="item.tipe === 'huruf'">A/B/C/D/E</span>
-              <span v-else>-</span>
-            </td>
-            <td>
-              <span :class="item.is_wajib ? 'badge badge-required' : 'badge badge-optional'">
-                {{ item.is_wajib ? 'Wajib' : 'Opsional' }}
-              </span>
-            </td>
-            <td class="actions-cell">
-              <button class="btn-sm btn-edit" @click="openEditForm(item)">Edit</button>
-              <button class="btn-sm btn-delete" @click="openDeleteConfirm(item)">Hapus</button>
-            </td>
-          </tr>
-        </tbody>
-      </table>
-      <p v-else-if="loading" class="empty-state">Memuat data...</p>
-      <p v-else class="empty-state">
-        Belum ada komponen penilaian. Klik "Tambah Komponen" untuk mengatur format rapor.
-      </p>
+    <div v-else-if="loading" class="text-center py-8">
+      <svg class="w-6 h-6 animate-spin text-primary-500 mx-auto" fill="none" viewBox="0 0 24 24">
+        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
+        <path
+          class="opacity-75"
+          fill="currentColor"
+          d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
+        />
+      </svg>
+      <p class="text-sm text-text-secondary mt-2">Memuat data...</p>
+    </div>
+
+    <div v-else class="text-center text-text-secondary py-8 text-sm">
+      Belum ada komponen penilaian. Klik "Tambah Komponen" untuk mengatur format rapor.
     </div>
 
     <!-- Create/Edit Modal -->
-    <div v-if="showFormModal" class="modal-overlay" @click.self="showFormModal = false">
-      <div class="modal">
-        <h2>{{ editingItem ? 'Edit Komponen' : 'Tambah Komponen Penilaian' }}</h2>
-        <form @submit.prevent="saveItem">
-          <div class="form-group">
-            <label>Nama Komponen</label>
+    <BaseModal
+      :show="showFormModal"
+      :title="editingItem ? 'Edit Komponen' : 'Tambah Komponen Penilaian'"
+      @close="showFormModal = false"
+    >
+      <form @submit.prevent="saveItem">
+        <div class="mb-4">
+          <label class="block text-sm font-medium text-text-primary mb-1.5">Nama Komponen</label>
+          <input
+            v-model="form.nama"
+            type="text"
+            required
+            class="w-full px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
+            placeholder="Contoh: Nilai Akhir, Tugas Harian, UTS"
+          />
+        </div>
+
+        <div class="mb-4">
+          <label class="block text-sm font-medium text-text-primary mb-1.5">Tipe Penilaian</label>
+          <select
+            v-model="form.tipe"
+            class="w-full px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
+            @change="onTipeChange"
+          >
+            <option value="angka">Angka (misal: 0-100)</option>
+            <option value="huruf">Huruf (A/B/C/D/E)</option>
+            <option value="deskripsi">Deskripsi Naratif</option>
+          </select>
+        </div>
+
+        <div v-if="form.tipe === 'angka'" class="grid grid-cols-2 gap-4 mb-4">
+          <div>
+            <label class="block text-sm font-medium text-text-primary mb-1.5">Skala Min</label>
             <input
-              v-model="form.nama"
-              type="text"
-              required
-              class="input"
-              placeholder="Contoh: Nilai Akhir, Tugas Harian, UTS"
+              v-model.number="form.skala_min"
+              type="number"
+              class="w-full px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
             />
           </div>
-
-          <div class="form-group">
-            <label>Tipe Penilaian</label>
-            <select v-model="form.tipe" class="input" @change="onTipeChange">
-              <option value="angka">Angka (misal: 0-100)</option>
-              <option value="huruf">Huruf (A/B/C/D/E)</option>
-              <option value="deskripsi">Deskripsi Naratif</option>
-            </select>
+          <div>
+            <label class="block text-sm font-medium text-text-primary mb-1.5">Skala Max</label>
+            <input
+              v-model.number="form.skala_max"
+              type="number"
+              class="w-full px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
+            />
           </div>
+        </div>
 
-          <div v-if="form.tipe === 'angka'" class="form-row">
-            <div class="form-group">
-              <label>Skala Min</label>
-              <input v-model.number="form.skala_min" type="number" class="input" />
-            </div>
-            <div class="form-group">
-              <label>Skala Max</label>
-              <input v-model.number="form.skala_max" type="number" class="input" />
-            </div>
-          </div>
+        <div class="mb-4">
+          <label class="block text-sm font-medium text-text-primary mb-1.5">Urutan</label>
+          <input
+            v-model.number="form.urutan"
+            type="number"
+            min="0"
+            class="w-full px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
+          />
+        </div>
 
-          <div class="form-group">
-            <label>Urutan</label>
-            <input v-model.number="form.urutan" type="number" min="0" class="input" />
-          </div>
+        <div class="mb-4">
+          <label class="flex items-center gap-2 text-sm text-text-primary cursor-pointer">
+            <input v-model="form.is_wajib" type="checkbox" class="rounded border-border" />
+            Wajib diisi oleh guru
+          </label>
+        </div>
 
-          <div class="form-group checkbox-group">
-            <label>
-              <input v-model="form.is_wajib" type="checkbox" />
-              Wajib diisi oleh guru
-            </label>
-          </div>
+        <p v-if="formError" class="text-xs text-danger-500 mt-1">{{ formError }}</p>
+      </form>
 
-          <p v-if="formError" class="error-text">{{ formError }}</p>
-
-          <div class="modal-actions">
-            <button type="button" class="btn btn-secondary" @click="showFormModal = false">
-              Batal
-            </button>
-            <button type="submit" class="btn btn-primary">Simpan</button>
-          </div>
-        </form>
-      </div>
-    </div>
+      <template #footer>
+        <button
+          type="button"
+          class="px-3 py-2 text-sm font-medium text-text-secondary bg-white border border-border rounded-lg hover:bg-surface-50 transition-colors"
+          @click="showFormModal = false"
+        >
+          Batal
+        </button>
+        <button
+          type="button"
+          class="px-3 py-2 text-sm font-medium text-white bg-primary-600 rounded-lg hover:bg-primary-700 transition-colors"
+          @click="saveItem"
+        >
+          Simpan
+        </button>
+      </template>
+    </BaseModal>
 
     <!-- Delete Confirmation Modal -->
-    <div v-if="showDeleteModal" class="modal-overlay" @click.self="showDeleteModal = false">
-      <div class="modal">
-        <h2>Konfirmasi Hapus</h2>
-        <p>
-          Apakah Anda yakin ingin menghapus komponen
-          <strong>{{ deletingItem?.nama }}</strong
-          >?
-        </p>
-        <p v-if="deleteError" class="error-text">{{ deleteError }}</p>
-        <div class="modal-actions">
-          <button class="btn btn-secondary" @click="showDeleteModal = false">Batal</button>
-          <button class="btn btn-danger" @click="deleteItem">Hapus</button>
-        </div>
-      </div>
-    </div>
+    <BaseModal :show="showDeleteModal" title="Konfirmasi Hapus" @close="showDeleteModal = false">
+      <p class="text-sm text-text-primary">
+        Apakah Anda yakin ingin menghapus komponen
+        <strong>{{ deletingItem?.nama }}</strong
+        >?
+      </p>
+      <p v-if="deleteError" class="text-xs text-danger-500 mt-1">{{ deleteError }}</p>
+
+      <template #footer>
+        <button
+          class="px-3 py-2 text-sm font-medium text-text-secondary bg-white border border-border rounded-lg hover:bg-surface-50 transition-colors"
+          @click="showDeleteModal = false"
+        >
+          Batal
+        </button>
+        <button
+          class="px-4 py-2 text-sm font-medium text-white bg-danger-500 rounded-lg hover:bg-danger-700 transition-colors"
+          @click="deleteItem"
+        >
+          Hapus
+        </button>
+      </template>
+    </BaseModal>
   </div>
 </template>
-
-<style scoped>
-.page {
-  padding: 2rem;
-}
-.page-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  margin-bottom: 1.5rem;
-}
-.page-header h1 {
-  margin: 0;
-  font-size: 1.5rem;
-}
-.page-description {
-  margin: 0.25rem 0 0;
-  color: #6b7280;
-  font-size: 0.875rem;
-}
-.alert {
-  padding: 0.75rem 1rem;
-  border-radius: 6px;
-  margin-bottom: 1rem;
-  font-size: 0.875rem;
-}
-.alert-error {
-  background: #fef2f2;
-  color: #991b1b;
-  border: 1px solid #fecaca;
-}
-.table-container {
-  overflow-x: auto;
-}
-table {
-  width: 100%;
-  border-collapse: collapse;
-}
-th,
-td {
-  padding: 0.75rem;
-  text-align: left;
-  border-bottom: 1px solid #e5e7eb;
-}
-th {
-  font-weight: 600;
-  color: #374151;
-  background: #f9fafb;
-}
-.actions-cell {
-  display: flex;
-  gap: 0.5rem;
-}
-.badge {
-  padding: 0.125rem 0.5rem;
-  border-radius: 9999px;
-  font-size: 0.75rem;
-  font-weight: 500;
-}
-.badge-required {
-  background: #dbeafe;
-  color: #1e40af;
-}
-.badge-optional {
-  background: #f3f4f6;
-  color: #6b7280;
-}
-.btn {
-  padding: 0.5rem 1rem;
-  border: none;
-  border-radius: 6px;
-  font-size: 0.875rem;
-  cursor: pointer;
-  font-weight: 500;
-}
-.btn-primary {
-  background: #2563eb;
-  color: white;
-}
-.btn-primary:hover {
-  background: #1d4ed8;
-}
-.btn-secondary {
-  background: #f3f4f6;
-  color: #374151;
-  border: 1px solid #d1d5db;
-}
-.btn-danger {
-  background: #ef4444;
-  color: white;
-}
-.btn-sm {
-  padding: 0.25rem 0.5rem;
-  border: none;
-  border-radius: 4px;
-  font-size: 0.75rem;
-  cursor: pointer;
-}
-.btn-edit {
-  background: #fef3c7;
-  color: #92400e;
-}
-.btn-delete {
-  background: #fee2e2;
-  color: #991b1b;
-}
-.empty-state {
-  text-align: center;
-  color: #6b7280;
-  padding: 2rem;
-}
-.modal-overlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.4);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 50;
-}
-.modal {
-  background: white;
-  border-radius: 8px;
-  padding: 1.5rem;
-  width: 100%;
-  max-width: 520px;
-}
-.modal h2 {
-  margin: 0 0 1rem;
-  font-size: 1.25rem;
-}
-.form-group {
-  margin-bottom: 1rem;
-}
-.form-group label {
-  display: block;
-  margin-bottom: 0.25rem;
-  font-size: 0.875rem;
-  font-weight: 500;
-  color: #374151;
-}
-.form-group .input {
-  width: 100%;
-  padding: 0.5rem 0.75rem;
-  border: 1px solid #d1d5db;
-  border-radius: 6px;
-  font-size: 0.875rem;
-}
-.form-row {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 1rem;
-}
-.checkbox-group label {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  font-weight: 400;
-  cursor: pointer;
-}
-.modal-actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 0.5rem;
-  margin-top: 1.5rem;
-}
-.error-text {
-  color: #dc2626;
-  font-size: 0.875rem;
-  margin-top: 0.5rem;
-}
-</style>

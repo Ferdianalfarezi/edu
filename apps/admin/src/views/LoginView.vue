@@ -11,6 +11,7 @@ const email = ref('');
 const password = ref('');
 const error = ref('');
 const loading = ref(false);
+const showPassword = ref(false);
 
 async function handleLogin() {
   error.value = '';
@@ -44,137 +45,184 @@ async function handleLogin() {
 </script>
 
 <template>
-  <div class="login-container">
-    <div class="login-card">
-      <h1>Edu Admin Panel</h1>
-      <form @submit.prevent="handleLogin" class="login-form">
-        <div class="form-group">
-          <label for="email">Email</label>
-          <input
-            id="email"
-            v-model="email"
-            type="email"
-            required
-            autocomplete="email"
-            placeholder="email@sekolah.com"
-          />
+  <div class="min-h-screen flex bg-surface-50">
+    <!-- Left: Brand panel -->
+    <div
+      class="hidden lg:flex lg:w-1/2 xl:w-[55%] bg-primary-700 relative overflow-hidden items-center justify-center p-12"
+    >
+      <!-- Subtle geometric background -->
+      <div class="absolute inset-0 opacity-10">
+        <div
+          class="absolute top-0 left-0 w-96 h-96 rounded-full bg-white/20 -translate-x-1/2 -translate-y-1/2"
+        />
+        <div
+          class="absolute bottom-0 right-0 w-[500px] h-[500px] rounded-full bg-white/10 translate-x-1/4 translate-y-1/4"
+        />
+        <div
+          class="absolute top-1/2 left-1/2 w-72 h-72 rounded-full bg-white/5 -translate-x-1/2 -translate-y-1/2"
+        />
+      </div>
+
+      <div class="relative z-10 max-w-md text-white">
+        <div class="w-12 h-12 rounded-xl bg-white/20 flex items-center justify-center mb-8">
+          <span class="text-xl font-bold">E</span>
         </div>
-        <div class="form-group">
-          <label for="password">Password</label>
-          <input
-            id="password"
-            v-model="password"
-            type="password"
-            required
-            autocomplete="current-password"
-            placeholder="Masukkan password"
-          />
+        <h1 class="text-3xl font-semibold leading-tight mb-4">
+          Kelola sekolah dengan lebih efisien
+        </h1>
+        <p class="text-primary-100 text-base leading-relaxed">
+          Absensi, pembayaran SPP, rapor, dan komunikasi orang tua — semua dalam satu platform
+          terintegrasi.
+        </p>
+      </div>
+    </div>
+
+    <!-- Right: Login form -->
+    <div class="flex-1 flex items-center justify-center p-6 sm:p-12">
+      <div class="w-full max-w-sm">
+        <!-- Mobile logo -->
+        <div class="lg:hidden flex items-center gap-2.5 mb-8">
+          <div class="w-9 h-9 rounded-lg bg-primary-600 flex items-center justify-center">
+            <span class="text-white font-semibold">E</span>
+          </div>
+          <span class="font-semibold text-text-primary">Edu Admin</span>
         </div>
-        <p v-if="error" class="error" role="alert">{{ error }}</p>
-        <button type="submit" :disabled="loading">
-          {{ loading ? 'Memproses...' : 'Login' }}
-        </button>
-        <router-link to="/reset-password" class="forgot-link"> Lupa password? </router-link>
-      </form>
+
+        <div class="mb-8">
+          <h2 class="text-xl font-semibold text-text-primary mb-1">Masuk ke akun Anda</h2>
+          <p class="text-sm text-text-secondary">Masukkan email dan password untuk melanjutkan</p>
+        </div>
+
+        <form @submit.prevent="handleLogin" class="space-y-4">
+          <div>
+            <label for="email" class="block text-sm font-medium text-text-primary mb-1.5">
+              Email
+            </label>
+            <input
+              id="email"
+              v-model="email"
+              type="email"
+              required
+              autocomplete="email"
+              placeholder="nama@sekolah.com"
+              class="w-full px-3 py-2.5 text-sm border border-border rounded-lg bg-white placeholder:text-text-tertiary focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-colors"
+            />
+          </div>
+
+          <div>
+            <label for="password" class="block text-sm font-medium text-text-primary mb-1.5">
+              Password
+            </label>
+            <div class="relative">
+              <input
+                id="password"
+                v-model="password"
+                :type="showPassword ? 'text' : 'password'"
+                required
+                autocomplete="current-password"
+                placeholder="Masukkan password"
+                class="w-full px-3 py-2.5 pr-10 text-sm border border-border rounded-lg bg-white placeholder:text-text-tertiary focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-colors"
+              />
+              <button
+                type="button"
+                class="absolute right-3 top-1/2 -translate-y-1/2 text-text-tertiary hover:text-text-secondary"
+                @click="showPassword = !showPassword"
+              >
+                <svg
+                  v-if="!showPassword"
+                  class="w-4 h-4"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                  stroke-width="1.75"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+                  />
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
+                  />
+                </svg>
+                <svg
+                  v-else
+                  class="w-4 h-4"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                  stroke-width="1.75"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21"
+                  />
+                </svg>
+              </button>
+            </div>
+          </div>
+
+          <!-- Error message -->
+          <div
+            v-if="error"
+            class="flex items-start gap-2 p-3 bg-danger-50 border border-danger-500/20 rounded-lg"
+            role="alert"
+          >
+            <svg
+              class="w-4 h-4 text-danger-500 shrink-0 mt-0.5"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+              stroke-width="2"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+              />
+            </svg>
+            <span class="text-sm text-danger-700">{{ error }}</span>
+          </div>
+
+          <button
+            type="submit"
+            :disabled="loading"
+            class="w-full py-2.5 px-4 bg-primary-600 hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed text-white text-sm font-medium rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:ring-offset-2"
+          >
+            <span v-if="loading" class="flex items-center justify-center gap-2">
+              <svg class="w-4 h-4 animate-spin" viewBox="0 0 24 24" fill="none">
+                <circle
+                  class="opacity-25"
+                  cx="12"
+                  cy="12"
+                  r="10"
+                  stroke="currentColor"
+                  stroke-width="4"
+                />
+                <path
+                  class="opacity-75"
+                  fill="currentColor"
+                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
+                />
+              </svg>
+              Memproses...
+            </span>
+            <span v-else>Masuk</span>
+          </button>
+
+          <div class="text-center">
+            <router-link
+              to="/reset-password"
+              class="text-sm text-primary-600 hover:text-primary-700 transition-colors"
+            >
+              Lupa password?
+            </router-link>
+          </div>
+        </form>
+      </div>
     </div>
   </div>
 </template>
-
-<style scoped>
-.login-container {
-  min-height: 100vh;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: #f3f4f6;
-}
-
-.login-card {
-  max-width: 400px;
-  width: 100%;
-  padding: 2rem;
-  background: white;
-  border-radius: 8px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-}
-
-.login-card h1 {
-  text-align: center;
-  margin-bottom: 1.5rem;
-  font-size: 1.5rem;
-  color: #1f2937;
-}
-
-.login-form {
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-}
-
-.form-group {
-  display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
-}
-
-.form-group label {
-  font-size: 0.875rem;
-  font-weight: 500;
-  color: #374151;
-}
-
-.form-group input {
-  padding: 0.625rem 0.75rem;
-  border: 1px solid #d1d5db;
-  border-radius: 6px;
-  font-size: 0.875rem;
-  transition: border-color 0.2s;
-}
-
-.form-group input:focus {
-  outline: none;
-  border-color: #3b82f6;
-  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.15);
-}
-
-.error {
-  color: #dc2626;
-  font-size: 0.8125rem;
-  margin: 0;
-  padding: 0.5rem 0.75rem;
-  background: #fef2f2;
-  border-radius: 4px;
-}
-
-button {
-  padding: 0.75rem;
-  background: #3b82f6;
-  color: white;
-  border: none;
-  border-radius: 6px;
-  font-size: 0.875rem;
-  font-weight: 500;
-  cursor: pointer;
-  transition: background 0.2s;
-}
-
-button:hover:not(:disabled) {
-  background: #2563eb;
-}
-
-button:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
-
-.forgot-link {
-  text-align: center;
-  font-size: 0.8125rem;
-  color: #3b82f6;
-  text-decoration: none;
-}
-
-.forgot-link:hover {
-  text-decoration: underline;
-}
-</style>

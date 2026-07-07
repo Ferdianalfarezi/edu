@@ -2,6 +2,7 @@
 import { ref, computed, onMounted } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import { api } from '@/api/client';
+import { PageHeader } from '@/components/ui';
 
 interface MataPelajaran {
   id: string;
@@ -279,32 +280,54 @@ onMounted(async () => {
 </script>
 
 <template>
-  <div class="page">
-    <div class="page-header">
-      <h1>{{ isEdit ? 'Edit RPP / Modul Ajar' : 'Buat RPP / Modul Ajar' }}</h1>
+  <div class="p-4 lg:p-6 max-w-3xl mx-auto">
+    <PageHeader :title="isEdit ? 'Edit RPP / Modul Ajar' : 'Buat RPP / Modul Ajar'" description="">
+    </PageHeader>
+
+    <div v-if="loading" class="text-center text-text-secondary py-12">
+      <svg class="w-6 h-6 animate-spin text-primary-500 mx-auto" fill="none" viewBox="0 0 24 24">
+        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
+        <path
+          class="opacity-75"
+          fill="currentColor"
+          d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
+        />
+      </svg>
+      <p class="mt-2 text-sm">Memuat data...</p>
     </div>
 
-    <div v-if="loading" class="empty-state">Memuat data...</div>
-
-    <form v-else class="rpp-form" @submit.prevent>
-      <p v-if="error" class="error-text">{{ error }}</p>
+    <form v-else class="space-y-5" @submit.prevent>
+      <div
+        v-if="error"
+        class="p-3 bg-danger-50 border border-danger-500/20 rounded-lg text-sm text-danger-700"
+      >
+        {{ error }}
+      </div>
 
       <!-- Judul -->
-      <div class="form-group">
-        <label>Judul RPP <span class="required">*</span></label>
+      <div>
+        <label class="block text-sm font-medium text-text-primary mb-1.5"
+          >Judul RPP <span class="text-danger-500">*</span></label
+        >
         <input
           v-model="judul"
           type="text"
-          class="input"
+          class="w-full px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
           placeholder="Masukkan judul RPP"
           required
         />
       </div>
 
       <!-- Mata Pelajaran -->
-      <div class="form-group">
-        <label>Mata Pelajaran <span class="required">*</span></label>
-        <select v-model="mataPelajaranId" class="input" required>
+      <div>
+        <label class="block text-sm font-medium text-text-primary mb-1.5"
+          >Mata Pelajaran <span class="text-danger-500">*</span></label
+        >
+        <select
+          v-model="mataPelajaranId"
+          class="w-full px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
+          required
+        >
           <option value="" disabled>Pilih mata pelajaran</option>
           <option v-for="mapel in mataPelajaranList" :key="mapel.id" :value="mapel.id">
             {{ mapel.nama }}
@@ -313,13 +336,15 @@ onMounted(async () => {
       </div>
 
       <!-- Kategori (searchable with auto-create) -->
-      <div class="form-group kategori-group">
-        <label>Kategori <span class="required">*</span></label>
-        <div class="kategori-input-wrapper">
+      <div class="relative">
+        <label class="block text-sm font-medium text-text-primary mb-1.5"
+          >Kategori <span class="text-danger-500">*</span></label
+        >
+        <div class="relative">
           <input
             v-model="kategoriSearch"
             type="text"
-            class="input"
+            class="w-full px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
             placeholder="Cari atau buat kategori baru"
             @input="onKategoriInput"
             @focus="showKategoriDropdown = true"
@@ -327,19 +352,19 @@ onMounted(async () => {
           />
           <div
             v-if="showKategoriDropdown && (filteredKategori.length > 0 || isNewKategori)"
-            class="kategori-dropdown"
+            class="absolute top-full left-0 right-0 bg-white border border-border rounded-lg shadow-lg max-h-[200px] overflow-y-auto z-20"
           >
             <div
               v-for="kat in filteredKategori"
               :key="kat.id"
-              class="kategori-option"
+              class="px-3 py-2 text-sm cursor-pointer hover:bg-surface-50 transition-colors"
               @mousedown.prevent="selectKategori(kat)"
             >
               {{ kat.nama }}
             </div>
             <div
               v-if="isNewKategori"
-              class="kategori-option kategori-new"
+              class="px-3 py-2 text-sm cursor-pointer text-primary-600 border-t border-border hover:bg-surface-50 transition-colors"
               @mousedown.prevent="
                 () => {
                   kategoriId = '';
@@ -354,12 +379,14 @@ onMounted(async () => {
       </div>
 
       <!-- Tahun Terbit -->
-      <div class="form-group">
-        <label>Tahun Terbit <span class="required">*</span></label>
+      <div>
+        <label class="block text-sm font-medium text-text-primary mb-1.5"
+          >Tahun Terbit <span class="text-danger-500">*</span></label
+        >
         <input
           v-model.number="tahunTerbit"
           type="number"
-          class="input"
+          class="w-full px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
           :min="2020"
           :max="2040"
           required
@@ -367,19 +394,29 @@ onMounted(async () => {
       </div>
 
       <!-- Tipe Konten Toggle -->
-      <div class="form-group">
-        <label>Tipe Konten</label>
-        <div class="toggle-group">
+      <div>
+        <label class="block text-sm font-medium text-text-primary mb-1.5">Tipe Konten</label>
+        <div class="flex gap-1 p-1 bg-surface-100 rounded-lg w-fit">
           <button
             type="button"
-            :class="['toggle-btn', kontenType === 'richtext' ? 'active' : '']"
+            :class="[
+              'px-3 py-1.5 text-sm font-medium rounded-md transition-colors',
+              kontenType === 'richtext'
+                ? 'bg-white text-text-primary shadow-xs'
+                : 'text-text-secondary hover:text-text-primary',
+            ]"
             @click="kontenType = 'richtext'"
           >
             ✏️ Tulis Konten
           </button>
           <button
             type="button"
-            :class="['toggle-btn', kontenType === 'file' ? 'active' : '']"
+            :class="[
+              'px-3 py-1.5 text-sm font-medium rounded-md transition-colors',
+              kontenType === 'file'
+                ? 'bg-white text-text-primary shadow-xs'
+                : 'text-text-secondary hover:text-text-primary',
+            ]"
             @click="kontenType = 'file'"
           >
             📁 Upload File
@@ -388,18 +425,28 @@ onMounted(async () => {
       </div>
 
       <!-- Rich Text Editor -->
-      <div v-if="kontenType === 'richtext'" class="form-group">
-        <label>Konten RPP</label>
-        <div class="editor-toolbar">
-          <button type="button" class="toolbar-btn" title="Bold" @click="execCommand('bold')">
+      <div v-if="kontenType === 'richtext'">
+        <label class="block text-sm font-medium text-text-primary mb-1.5">Konten RPP</label>
+        <div class="flex gap-1 p-2 bg-surface-50 border border-border border-b-0 rounded-t-lg">
+          <button
+            type="button"
+            class="w-8 h-8 flex items-center justify-center border border-border rounded-md bg-white hover:bg-surface-50 text-sm"
+            title="Bold"
+            @click="execCommand('bold')"
+          >
             <strong>B</strong>
           </button>
-          <button type="button" class="toolbar-btn" title="Italic" @click="execCommand('italic')">
+          <button
+            type="button"
+            class="w-8 h-8 flex items-center justify-center border border-border rounded-md bg-white hover:bg-surface-50 text-sm"
+            title="Italic"
+            @click="execCommand('italic')"
+          >
             <em>I</em>
           </button>
           <button
             type="button"
-            class="toolbar-btn"
+            class="w-8 h-8 flex items-center justify-center border border-border rounded-md bg-white hover:bg-surface-50 text-sm"
             title="Heading"
             @click="execCommand('formatBlock', 'h3')"
           >
@@ -407,7 +454,7 @@ onMounted(async () => {
           </button>
           <button
             type="button"
-            class="toolbar-btn"
+            class="w-8 h-8 flex items-center justify-center border border-border rounded-md bg-white hover:bg-surface-50 text-sm"
             title="Bullet List"
             @click="execCommand('insertUnorderedList')"
           >
@@ -415,16 +462,23 @@ onMounted(async () => {
           </button>
           <button
             type="button"
-            class="toolbar-btn"
+            class="w-8 h-8 flex items-center justify-center border border-border rounded-md bg-white hover:bg-surface-50 text-sm"
             title="Numbered List"
             @click="execCommand('insertOrderedList')"
           >
             1.
           </button>
-          <button type="button" class="toolbar-btn" title="Table" @click="insertTable">⊞</button>
+          <button
+            type="button"
+            class="w-8 h-8 flex items-center justify-center border border-border rounded-md bg-white hover:bg-surface-50 text-sm"
+            title="Table"
+            @click="insertTable"
+          >
+            ⊞
+          </button>
         </div>
         <div
-          class="editor-content"
+          class="min-h-[300px] p-4 border border-border rounded-b-lg text-sm leading-relaxed focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
           contenteditable="true"
           @input="onEditorInput"
           v-html="konten"
@@ -432,34 +486,57 @@ onMounted(async () => {
       </div>
 
       <!-- File Upload -->
-      <div v-if="kontenType === 'file'" class="form-group">
-        <label>Upload File</label>
+      <div v-if="kontenType === 'file'">
+        <label class="block text-sm font-medium text-text-primary mb-1.5">Upload File</label>
         <div
-          :class="['drop-zone', isDragging ? 'dragging' : '']"
+          :class="[
+            'border-2 border-dashed rounded-xl p-8 text-center transition-colors',
+            isDragging ? 'border-primary-500 bg-primary-50' : 'border-border',
+          ]"
           @dragover.prevent="isDragging = true"
           @dragleave="isDragging = false"
           @drop.prevent="handleDrop"
         >
-          <div v-if="selectedFile" class="file-preview">
-            <span class="file-icon">📄</span>
-            <div class="file-info">
-              <span class="file-name">{{ selectedFile.name }}</span>
-              <span class="file-size">{{ formatFileSize(selectedFile.size) }}</span>
+          <div v-if="selectedFile" class="flex items-center gap-3 justify-center">
+            <span class="text-2xl">📄</span>
+            <div class="text-left">
+              <span class="text-sm font-medium text-text-primary block">{{
+                selectedFile.name
+              }}</span>
+              <span class="text-xs text-text-tertiary">{{
+                formatFileSize(selectedFile.size)
+              }}</span>
             </div>
-            <button type="button" class="btn-remove-file" @click="removeFile">✕</button>
+            <button
+              type="button"
+              class="ml-4 w-6 h-6 flex items-center justify-center bg-danger-50 text-danger-700 rounded-full text-xs hover:bg-danger-50/80 transition-colors"
+              @click="removeFile"
+            >
+              ✕
+            </button>
           </div>
-          <div v-else-if="existingFileName" class="file-preview">
-            <span class="file-icon">📄</span>
-            <div class="file-info">
-              <span class="file-name">{{ existingFileName }}</span>
-              <span class="file-size">(file tersimpan)</span>
+          <div v-else-if="existingFileName" class="flex items-center gap-3 justify-center">
+            <span class="text-2xl">📄</span>
+            <div class="text-left">
+              <span class="text-sm font-medium text-text-primary block">{{
+                existingFileName
+              }}</span>
+              <span class="text-xs text-text-tertiary">(file tersimpan)</span>
             </div>
-            <button type="button" class="btn-remove-file" @click="removeFile">✕</button>
+            <button
+              type="button"
+              class="ml-4 w-6 h-6 flex items-center justify-center bg-danger-50 text-danger-700 rounded-full text-xs hover:bg-danger-50/80 transition-colors"
+              @click="removeFile"
+            >
+              ✕
+            </button>
           </div>
-          <div v-else class="drop-placeholder">
-            <span class="drop-icon">📂</span>
-            <p>Drag & drop file di sini, atau</p>
-            <label class="btn btn-secondary upload-label">
+          <div v-else class="flex flex-col items-center gap-2">
+            <span class="text-3xl">📂</span>
+            <p class="text-sm text-text-secondary">Drag & drop file di sini, atau</p>
+            <label
+              class="px-3 py-2 text-sm font-medium text-text-secondary bg-white border border-border rounded-lg hover:bg-surface-50 transition-colors cursor-pointer"
+            >
               Pilih File
               <input
                 type="file"
@@ -468,24 +545,24 @@ onMounted(async () => {
                 @change="handleFileSelect"
               />
             </label>
-            <p class="drop-hint">PDF, DOC, DOCX, PPT, PPTX — maks. 10MB</p>
+            <p class="text-xs text-text-tertiary">PDF, DOC, DOCX, PPT, PPTX — maks. 10MB</p>
           </div>
         </div>
-        <p v-if="fileError" class="error-text">{{ fileError }}</p>
+        <p v-if="fileError" class="text-xs text-danger-500 mt-1">{{ fileError }}</p>
       </div>
 
       <!-- Actions -->
-      <div class="form-actions">
+      <div class="flex justify-end gap-3 mt-4 pt-4 border-t border-border">
         <button
           type="button"
-          class="btn btn-secondary"
+          class="px-3 py-2 text-sm font-medium text-text-secondary bg-white border border-border rounded-lg hover:bg-surface-50 transition-colors"
           @click="router.push({ name: 'rpp-portal' })"
         >
           Batal
         </button>
         <button
           type="button"
-          class="btn btn-outline"
+          class="px-3 py-2 text-sm font-medium text-primary-600 bg-white border border-primary-600 rounded-lg hover:bg-primary-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           :disabled="saving"
           @click="handleSubmit('draft')"
         >
@@ -493,7 +570,7 @@ onMounted(async () => {
         </button>
         <button
           type="button"
-          class="btn btn-primary"
+          class="px-3 py-2 text-sm font-medium text-white bg-primary-600 rounded-lg hover:bg-primary-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           :disabled="saving"
           @click="handleSubmit('published')"
         >
@@ -503,253 +580,3 @@ onMounted(async () => {
     </form>
   </div>
 </template>
-
-<style scoped>
-.page {
-  padding: 2rem;
-  max-width: 900px;
-}
-.page-header {
-  margin-bottom: 1.5rem;
-}
-.page-header h1 {
-  margin: 0;
-  font-size: 1.5rem;
-}
-.rpp-form {
-  display: flex;
-  flex-direction: column;
-  gap: 1.25rem;
-}
-.form-group {
-  display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
-}
-.form-group label {
-  font-size: 0.875rem;
-  font-weight: 500;
-  color: #374151;
-}
-.required {
-  color: #ef4444;
-}
-.input {
-  padding: 0.5rem 0.75rem;
-  border: 1px solid #d1d5db;
-  border-radius: 6px;
-  font-size: 0.875rem;
-}
-select.input {
-  appearance: auto;
-}
-.toggle-group {
-  display: flex;
-  gap: 0.5rem;
-  margin-top: 0.25rem;
-}
-.toggle-btn {
-  padding: 0.5rem 1rem;
-  border: 1px solid #d1d5db;
-  border-radius: 6px;
-  background: #f9fafb;
-  cursor: pointer;
-  font-size: 0.875rem;
-  transition: all 0.15s;
-}
-.toggle-btn.active {
-  background: #2563eb;
-  color: white;
-  border-color: #2563eb;
-}
-/* Kategori dropdown */
-.kategori-group {
-  position: relative;
-}
-.kategori-input-wrapper {
-  position: relative;
-}
-.kategori-dropdown {
-  position: absolute;
-  top: 100%;
-  left: 0;
-  right: 0;
-  background: white;
-  border: 1px solid #d1d5db;
-  border-radius: 6px;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-  max-height: 200px;
-  overflow-y: auto;
-  z-index: 20;
-}
-.kategori-option {
-  padding: 0.5rem 0.75rem;
-  cursor: pointer;
-  font-size: 0.875rem;
-}
-.kategori-option:hover {
-  background: #f3f4f6;
-}
-.kategori-new {
-  color: #2563eb;
-  border-top: 1px solid #e5e7eb;
-}
-/* Rich text editor */
-.editor-toolbar {
-  display: flex;
-  gap: 0.25rem;
-  padding: 0.5rem;
-  border: 1px solid #d1d5db;
-  border-bottom: none;
-  border-radius: 6px 6px 0 0;
-  background: #f9fafb;
-}
-.toolbar-btn {
-  width: 2rem;
-  height: 2rem;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border: 1px solid #e5e7eb;
-  border-radius: 4px;
-  background: white;
-  cursor: pointer;
-  font-size: 0.875rem;
-}
-.toolbar-btn:hover {
-  background: #e5e7eb;
-}
-.editor-content {
-  min-height: 300px;
-  padding: 1rem;
-  border: 1px solid #d1d5db;
-  border-radius: 0 0 6px 6px;
-  font-size: 0.875rem;
-  line-height: 1.6;
-  outline: none;
-  overflow-y: auto;
-}
-.editor-content:focus {
-  border-color: #2563eb;
-  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.1);
-}
-/* File upload drop zone */
-.drop-zone {
-  border: 2px dashed #d1d5db;
-  border-radius: 8px;
-  padding: 2rem;
-  text-align: center;
-  transition: all 0.15s;
-}
-.drop-zone.dragging {
-  border-color: #2563eb;
-  background: #eff6ff;
-}
-.drop-placeholder {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 0.5rem;
-}
-.drop-icon {
-  font-size: 2rem;
-}
-.drop-placeholder p {
-  margin: 0;
-  color: #6b7280;
-  font-size: 0.875rem;
-}
-.drop-hint {
-  font-size: 0.75rem !important;
-  color: #9ca3af !important;
-}
-.upload-label {
-  cursor: pointer;
-}
-.file-preview {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-}
-.file-icon {
-  font-size: 1.5rem;
-}
-.file-info {
-  display: flex;
-  flex-direction: column;
-}
-.file-name {
-  font-size: 0.875rem;
-  font-weight: 500;
-  color: #111827;
-}
-.file-size {
-  font-size: 0.75rem;
-  color: #6b7280;
-}
-.btn-remove-file {
-  margin-left: auto;
-  background: #fee2e2;
-  color: #991b1b;
-  border: none;
-  width: 1.5rem;
-  height: 1.5rem;
-  border-radius: 50%;
-  cursor: pointer;
-  font-size: 0.75rem;
-}
-/* Form actions */
-.form-actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 0.75rem;
-  margin-top: 1rem;
-  padding-top: 1rem;
-  border-top: 1px solid #e5e7eb;
-}
-.btn {
-  padding: 0.5rem 1rem;
-  border: none;
-  border-radius: 6px;
-  font-size: 0.875rem;
-  cursor: pointer;
-  font-weight: 500;
-}
-.btn-primary {
-  background: #2563eb;
-  color: white;
-}
-.btn-primary:hover {
-  background: #1d4ed8;
-}
-.btn-primary:disabled {
-  background: #93c5fd;
-  cursor: not-allowed;
-}
-.btn-secondary {
-  background: #f3f4f6;
-  color: #374151;
-  border: 1px solid #d1d5db;
-}
-.btn-outline {
-  background: white;
-  color: #2563eb;
-  border: 1px solid #2563eb;
-}
-.btn-outline:hover {
-  background: #eff6ff;
-}
-.btn-outline:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-.empty-state {
-  text-align: center;
-  color: #6b7280;
-  padding: 2rem;
-}
-.error-text {
-  color: #dc2626;
-  font-size: 0.875rem;
-}
-</style>

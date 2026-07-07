@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue';
 import { api } from '@/api/client';
+import { PageHeader, BaseModal } from '@/components/ui';
 
 interface TahunAjaran {
   id: string;
@@ -237,46 +238,93 @@ onMounted(async () => {
 </script>
 
 <template>
-  <div class="page">
-    <div class="page-header">
-      <h1>Kenaikan Kelas</h1>
-    </div>
+  <div class="p-4 lg:p-6 max-w-7xl mx-auto">
+    <PageHeader title="Kenaikan Kelas" />
 
     <!-- Wizard Steps Indicator -->
-    <div class="steps-indicator">
-      <div :class="['step', { active: currentStep >= 1 }]">
-        <span class="step-number">1</span>
-        <span class="step-label">Pilih Kelas</span>
+    <div class="flex items-center justify-center gap-0 mb-6">
+      <div class="flex items-center gap-2">
+        <div
+          :class="[
+            'w-7 h-7 rounded-full flex items-center justify-center text-xs font-semibold',
+            currentStep >= 1 ? 'bg-primary-600 text-white' : 'bg-surface-200 text-text-tertiary',
+          ]"
+        >
+          1
+        </div>
+        <span
+          class="text-sm font-medium"
+          :class="currentStep >= 1 ? 'text-primary-600' : 'text-text-tertiary'"
+          >Pilih Kelas</span
+        >
       </div>
-      <div class="step-line" :class="{ active: currentStep >= 2 }"></div>
-      <div :class="['step', { active: currentStep >= 2 }]">
-        <span class="step-number">2</span>
-        <span class="step-label">Preview Siswa</span>
+      <div
+        :class="['w-12 h-0.5 mx-2', currentStep >= 2 ? 'bg-primary-600' : 'bg-surface-200']"
+      ></div>
+      <div class="flex items-center gap-2">
+        <div
+          :class="[
+            'w-7 h-7 rounded-full flex items-center justify-center text-xs font-semibold',
+            currentStep >= 2 ? 'bg-primary-600 text-white' : 'bg-surface-200 text-text-tertiary',
+          ]"
+        >
+          2
+        </div>
+        <span
+          class="text-sm font-medium"
+          :class="currentStep >= 2 ? 'text-primary-600' : 'text-text-tertiary'"
+          >Preview Siswa</span
+        >
       </div>
-      <div class="step-line" :class="{ active: currentStep >= 3 }"></div>
-      <div :class="['step', { active: currentStep >= 3 }]">
-        <span class="step-number">3</span>
-        <span class="step-label">Konfirmasi</span>
+      <div
+        :class="['w-12 h-0.5 mx-2', currentStep >= 3 ? 'bg-primary-600' : 'bg-surface-200']"
+      ></div>
+      <div class="flex items-center gap-2">
+        <div
+          :class="[
+            'w-7 h-7 rounded-full flex items-center justify-center text-xs font-semibold',
+            currentStep >= 3 ? 'bg-primary-600 text-white' : 'bg-surface-200 text-text-tertiary',
+          ]"
+        >
+          3
+        </div>
+        <span
+          class="text-sm font-medium"
+          :class="currentStep >= 3 ? 'text-primary-600' : 'text-text-tertiary'"
+          >Konfirmasi</span
+        >
       </div>
     </div>
 
     <!-- Step 1: Select Source & Target -->
-    <div v-if="currentStep === 1" class="wizard-step">
-      <h2>Pilih Kelas Asal dan Tujuan</h2>
+    <div v-if="currentStep === 1" class="max-w-xl">
+      <h2 class="text-lg font-semibold text-text-primary mb-4">Pilih Kelas Asal dan Tujuan</h2>
 
-      <div v-if="!activeTahunAjaran" class="alert alert-warning">
+      <div
+        v-if="!activeTahunAjaran"
+        class="p-3 bg-warning-50 border border-warning-500/20 rounded-lg text-sm text-warning-700 mb-4"
+      >
         Tidak ada tahun ajaran aktif. Silakan aktifkan tahun ajaran terlebih dahulu.
       </div>
 
-      <div v-else-if="preparedTahunAjaranList.length === 0" class="alert alert-warning">
+      <div
+        v-else-if="preparedTahunAjaranList.length === 0"
+        class="p-3 bg-warning-50 border border-warning-500/20 rounded-lg text-sm text-warning-700 mb-4"
+      >
         Tidak ada tahun ajaran dengan status "Disiapkan". Buat tahun ajaran baru terlebih dahulu
         sebelum melakukan kenaikan kelas.
       </div>
 
       <template v-else>
-        <div class="form-group">
-          <label>Kelas Asal (Tahun Ajaran: {{ activeTahunAjaran?.nama }})</label>
-          <select v-model="sourceKelasId" class="input" @change="error = ''">
+        <div class="mb-4">
+          <label class="block text-sm font-medium text-text-primary mb-1.5"
+            >Kelas Asal (Tahun Ajaran: {{ activeTahunAjaran?.nama }})</label
+          >
+          <select
+            v-model="sourceKelasId"
+            class="w-full px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
+            @change="error = ''"
+          >
             <option value="">-- Pilih Kelas Asal --</option>
             <option v-for="kelas in sourceKelasList" :key="kelas.id" :value="kelas.id">
               {{ kelas.nama }} (Tingkat {{ kelas.tingkat }})
@@ -284,9 +332,15 @@ onMounted(async () => {
           </select>
         </div>
 
-        <div class="form-group">
-          <label>Tahun Ajaran Tujuan</label>
-          <select v-model="targetTahunAjaranId" class="input" @change="fetchTargetKelas">
+        <div class="mb-4">
+          <label class="block text-sm font-medium text-text-primary mb-1.5"
+            >Tahun Ajaran Tujuan</label
+          >
+          <select
+            v-model="targetTahunAjaranId"
+            class="w-full px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
+            @change="fetchTargetKelas"
+          >
             <option value="">-- Pilih Tahun Ajaran Tujuan --</option>
             <option v-for="ta in preparedTahunAjaranList" :key="ta.id" :value="ta.id">
               {{ ta.nama }}
@@ -294,9 +348,17 @@ onMounted(async () => {
           </select>
         </div>
 
-        <div class="form-group">
-          <label>Kelas Tujuan <span class="optional">(opsional - otomatis tingkat +1)</span></label>
-          <select v-model="targetKelasId" class="input">
+        <div class="mb-4">
+          <label class="block text-sm font-medium text-text-primary mb-1.5"
+            >Kelas Tujuan
+            <span class="text-text-tertiary font-normal"
+              >(opsional - otomatis tingkat +1)</span
+            ></label
+          >
+          <select
+            v-model="targetKelasId"
+            class="w-full px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
+          >
             <option value="">-- Otomatis (Tingkat +1) --</option>
             <option v-for="kelas in targetKelasList" :key="kelas.id" :value="kelas.id">
               {{ kelas.nama }} (Tingkat {{ kelas.tingkat }})
@@ -304,11 +366,11 @@ onMounted(async () => {
           </select>
         </div>
 
-        <p v-if="error" class="error-text">{{ error }}</p>
+        <p v-if="error" class="text-xs text-danger-500 mt-1">{{ error }}</p>
 
-        <div class="wizard-actions">
+        <div class="flex justify-end mt-6">
           <button
-            class="btn btn-primary"
+            class="px-3 py-2 text-sm font-medium text-white bg-primary-600 rounded-lg hover:bg-primary-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             :disabled="!sourceKelasId || !targetTahunAjaranId || loading"
             @click="goToPreview"
           >
@@ -319,51 +381,65 @@ onMounted(async () => {
     </div>
 
     <!-- Step 2: Preview Students -->
-    <div v-if="currentStep === 2" class="wizard-step">
-      <h2>Preview Siswa</h2>
-      <p class="hint">
+    <div v-if="currentStep === 2" class="max-w-xl">
+      <h2 class="text-lg font-semibold text-text-primary mb-2">Preview Siswa</h2>
+      <p class="text-sm text-text-secondary mb-4">
         Centang siswa yang ingin <strong>dikecualikan</strong> dari kenaikan kelas (tidak naik
         kelas).
       </p>
 
-      <div v-if="isHighestGrade" class="alert alert-info">
+      <div
+        v-if="isHighestGrade"
+        class="p-3 bg-primary-50 border border-primary-500/20 rounded-lg text-sm text-primary-700 mb-4"
+      >
         Kelas ini adalah tingkat tertinggi. Siswa yang dipromosikan akan ditandai sebagai
         <strong>Lulus/Alumni</strong>.
       </div>
 
-      <div class="summary-bar">
+      <div class="flex gap-4 p-3 bg-surface-50 rounded-lg mb-4 text-sm text-text-secondary">
         <span>Total siswa: {{ previewStudents.length }}</span>
         <span>Naik kelas: {{ selectedStudentCount }}</span>
         <span>Dikecualikan: {{ excludedStudentIds.size }}</span>
       </div>
 
-      <div class="student-list">
+      <div
+        class="bg-white border border-border rounded-xl overflow-hidden max-h-[400px] overflow-y-auto"
+      >
         <div
           v-for="student in previewStudents"
           :key="student.id"
-          :class="['student-item', { excluded: excludedStudentIds.has(student.id) }]"
+          :class="[
+            'px-4 py-3 border-b border-border last:border-b-0',
+            excludedStudentIds.has(student.id) ? 'bg-danger-50' : '',
+          ]"
         >
-          <label class="checkbox-label">
+          <label class="flex items-center gap-3 cursor-pointer text-sm">
             <input
               type="checkbox"
               :checked="excludedStudentIds.has(student.id)"
               @change="toggleExclude(student.id)"
+              class="rounded border-border"
             />
-            <span class="student-name">{{ student.nama }}</span>
-            <span v-if="student.nisn" class="student-nisn">{{ student.nisn }}</span>
+            <span class="flex-1 text-text-primary">{{ student.nama }}</span>
+            <span v-if="student.nisn" class="text-xs text-text-tertiary">{{ student.nisn }}</span>
           </label>
         </div>
-        <p v-if="previewStudents.length === 0" class="empty-state">
-          Tidak ada siswa aktif di kelas ini.
-        </p>
+        <div v-if="previewStudents.length === 0" class="py-12 text-center">
+          <p class="text-sm text-text-tertiary">Tidak ada siswa aktif di kelas ini.</p>
+        </div>
       </div>
 
-      <p v-if="error" class="error-text">{{ error }}</p>
+      <p v-if="error" class="text-xs text-danger-500 mt-1">{{ error }}</p>
 
-      <div class="wizard-actions">
-        <button class="btn btn-secondary" @click="goBackToStep1">← Kembali</button>
+      <div class="flex justify-between mt-6">
         <button
-          class="btn btn-primary"
+          class="px-3 py-2 text-sm font-medium text-text-secondary bg-white border border-border rounded-lg hover:bg-surface-50 transition-colors"
+          @click="goBackToStep1"
+        >
+          ← Kembali
+        </button>
+        <button
+          class="px-3 py-2 text-sm font-medium text-white bg-primary-600 rounded-lg hover:bg-primary-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           :disabled="selectedStudentCount === 0"
           @click="goToConfirmation"
         >
@@ -373,328 +449,86 @@ onMounted(async () => {
     </div>
 
     <!-- Step 3: Confirm and Execute -->
-    <div v-if="currentStep === 3" class="wizard-step">
-      <h2>Konfirmasi Kenaikan Kelas</h2>
+    <div v-if="currentStep === 3" class="max-w-xl">
+      <h2 class="text-lg font-semibold text-text-primary mb-4">Konfirmasi Kenaikan Kelas</h2>
 
-      <div v-if="!executionResult" class="confirmation-details">
-        <div class="detail-row">
-          <span class="detail-label">Kelas Asal:</span>
-          <span class="detail-value">{{ getSourceKelasName() }}</span>
+      <div v-if="!executionResult" class="bg-surface-50 rounded-lg p-4 divide-y divide-border">
+        <div class="flex justify-between py-2 text-sm">
+          <span class="text-text-secondary">Kelas Asal:</span>
+          <span class="font-medium text-text-primary">{{ getSourceKelasName() }}</span>
         </div>
-        <div class="detail-row">
-          <span class="detail-label">Kelas Tujuan:</span>
-          <span class="detail-value">{{ getTargetKelasName() }}</span>
+        <div class="flex justify-between py-2 text-sm">
+          <span class="text-text-secondary">Kelas Tujuan:</span>
+          <span class="font-medium text-text-primary">{{ getTargetKelasName() }}</span>
         </div>
-        <div class="detail-row">
-          <span class="detail-label">Tahun Ajaran Tujuan:</span>
-          <span class="detail-value">{{ getTargetTahunAjaranName() }}</span>
+        <div class="flex justify-between py-2 text-sm">
+          <span class="text-text-secondary">Tahun Ajaran Tujuan:</span>
+          <span class="font-medium text-text-primary">{{ getTargetTahunAjaranName() }}</span>
         </div>
-        <div class="detail-row">
-          <span class="detail-label">Siswa Naik Kelas:</span>
-          <span class="detail-value">{{ selectedStudentCount }} siswa</span>
+        <div class="flex justify-between py-2 text-sm">
+          <span class="text-text-secondary">Siswa Naik Kelas:</span>
+          <span class="font-medium text-text-primary">{{ selectedStudentCount }} siswa</span>
         </div>
-        <div v-if="excludedStudentIds.size > 0" class="detail-row">
-          <span class="detail-label">Siswa Dikecualikan:</span>
-          <span class="detail-value">{{ excludedStudentIds.size }} siswa</span>
+        <div v-if="excludedStudentIds.size > 0" class="flex justify-between py-2 text-sm">
+          <span class="text-text-secondary">Siswa Dikecualikan:</span>
+          <span class="font-medium text-text-primary">{{ excludedStudentIds.size }} siswa</span>
         </div>
-        <div v-if="isHighestGrade" class="detail-row">
-          <span class="detail-label">Status Setelah Proses:</span>
-          <span class="detail-value status-badge-alumni">Lulus / Alumni</span>
+        <div v-if="isHighestGrade" class="flex justify-between py-2 text-sm">
+          <span class="text-text-secondary">Status Setelah Proses:</span>
+          <span
+            class="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-primary-50 text-primary-700"
+            >Lulus / Alumni</span
+          >
         </div>
       </div>
 
       <!-- Success Result -->
-      <div v-if="executionResult" class="result-box">
-        <div class="result-icon">✓</div>
-        <h3>{{ successMessage }}</h3>
-        <div class="result-details">
-          <p>
+      <div
+        v-if="executionResult"
+        class="text-center p-6 bg-success-50 border border-success-500/20 rounded-xl"
+      >
+        <div
+          class="w-12 h-12 rounded-full bg-success-700 text-white flex items-center justify-center text-xl mx-auto mb-3"
+        >
+          ✓
+        </div>
+        <h3 class="text-lg font-semibold text-success-700 mb-3">{{ successMessage }}</h3>
+        <div class="space-y-1 mb-4">
+          <p class="text-sm text-text-primary">
             Siswa naik kelas: <strong>{{ executionResult.promoted }}</strong>
           </p>
-          <p v-if="executionResult.excluded > 0">
+          <p v-if="executionResult.excluded > 0" class="text-sm text-text-primary">
             Siswa dikecualikan: <strong>{{ executionResult.excluded }}</strong>
           </p>
-          <p v-if="executionResult.graduated > 0">
+          <p v-if="executionResult.graduated > 0" class="text-sm text-text-primary">
             Siswa lulus/alumni: <strong>{{ executionResult.graduated }}</strong>
           </p>
         </div>
-        <button class="btn btn-primary" @click="resetWizard">Proses Kelas Lain</button>
+        <button
+          class="px-3 py-2 text-sm font-medium text-white bg-primary-600 rounded-lg hover:bg-primary-700 transition-colors"
+          @click="resetWizard"
+        >
+          Proses Kelas Lain
+        </button>
       </div>
 
-      <p v-if="error" class="error-text">{{ error }}</p>
+      <p v-if="error" class="text-xs text-danger-500 mt-1">{{ error }}</p>
 
-      <div v-if="!executionResult" class="wizard-actions">
-        <button class="btn btn-secondary" @click="goBackToStep2">← Kembali</button>
-        <button class="btn btn-primary" :disabled="executing" @click="executePromotion">
+      <div v-if="!executionResult" class="flex justify-between mt-6">
+        <button
+          class="px-3 py-2 text-sm font-medium text-text-secondary bg-white border border-border rounded-lg hover:bg-surface-50 transition-colors"
+          @click="goBackToStep2"
+        >
+          ← Kembali
+        </button>
+        <button
+          class="px-3 py-2 text-sm font-medium text-white bg-primary-600 rounded-lg hover:bg-primary-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          :disabled="executing"
+          @click="executePromotion"
+        >
           {{ executing ? 'Memproses...' : 'Proses Kenaikan Kelas' }}
         </button>
       </div>
     </div>
   </div>
 </template>
-
-<style scoped>
-.page {
-  padding: 2rem;
-}
-.page-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 1.5rem;
-}
-.page-header h1 {
-  margin: 0;
-  font-size: 1.5rem;
-}
-
-/* Steps Indicator */
-.steps-indicator {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin-bottom: 2rem;
-  gap: 0;
-}
-.step {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  color: #9ca3af;
-}
-.step.active {
-  color: #2563eb;
-}
-.step-number {
-  width: 28px;
-  height: 28px;
-  border-radius: 50%;
-  background: #e5e7eb;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 0.75rem;
-  font-weight: 600;
-}
-.step.active .step-number {
-  background: #2563eb;
-  color: white;
-}
-.step-label {
-  font-size: 0.875rem;
-  font-weight: 500;
-}
-.step-line {
-  width: 60px;
-  height: 2px;
-  background: #e5e7eb;
-  margin: 0 0.5rem;
-}
-.step-line.active {
-  background: #2563eb;
-}
-
-/* Wizard Step Content */
-.wizard-step {
-  max-width: 640px;
-}
-.wizard-step h2 {
-  font-size: 1.125rem;
-  margin: 0 0 1rem;
-}
-.wizard-actions {
-  display: flex;
-  justify-content: space-between;
-  margin-top: 1.5rem;
-}
-
-/* Form */
-.form-group {
-  margin-bottom: 1rem;
-}
-.form-group label {
-  display: block;
-  margin-bottom: 0.25rem;
-  font-size: 0.875rem;
-  font-weight: 500;
-  color: #374151;
-}
-.input {
-  width: 100%;
-  padding: 0.5rem 0.75rem;
-  border: 1px solid #d1d5db;
-  border-radius: 6px;
-  font-size: 0.875rem;
-}
-.optional {
-  color: #9ca3af;
-  font-weight: 400;
-}
-
-/* Alerts */
-.alert {
-  padding: 0.75rem 1rem;
-  border-radius: 6px;
-  font-size: 0.875rem;
-  margin-bottom: 1rem;
-}
-.alert-warning {
-  background: #fef3c7;
-  color: #92400e;
-  border: 1px solid #fde68a;
-}
-.alert-info {
-  background: #dbeafe;
-  color: #1e40af;
-  border: 1px solid #bfdbfe;
-}
-
-/* Summary Bar */
-.summary-bar {
-  display: flex;
-  gap: 1.5rem;
-  padding: 0.75rem 1rem;
-  background: #f9fafb;
-  border-radius: 6px;
-  margin-bottom: 1rem;
-  font-size: 0.875rem;
-  color: #374151;
-}
-
-/* Student List */
-.student-list {
-  max-height: 400px;
-  overflow-y: auto;
-  border: 1px solid #e5e7eb;
-  border-radius: 6px;
-}
-.student-item {
-  padding: 0.5rem 0.75rem;
-  border-bottom: 1px solid #f3f4f6;
-}
-.student-item:last-child {
-  border-bottom: none;
-}
-.student-item.excluded {
-  background: #fef2f2;
-}
-.checkbox-label {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  cursor: pointer;
-  font-size: 0.875rem;
-}
-.student-name {
-  flex: 1;
-}
-.student-nisn {
-  color: #6b7280;
-  font-size: 0.75rem;
-}
-
-/* Confirmation Details */
-.confirmation-details {
-  background: #f9fafb;
-  border-radius: 8px;
-  padding: 1rem 1.25rem;
-}
-.detail-row {
-  display: flex;
-  justify-content: space-between;
-  padding: 0.5rem 0;
-  border-bottom: 1px solid #e5e7eb;
-  font-size: 0.875rem;
-}
-.detail-row:last-child {
-  border-bottom: none;
-}
-.detail-label {
-  color: #6b7280;
-}
-.detail-value {
-  font-weight: 500;
-  color: #111827;
-}
-.status-badge-alumni {
-  background: #ede9fe;
-  color: #5b21b6;
-  padding: 0.1rem 0.5rem;
-  border-radius: 4px;
-  font-size: 0.75rem;
-}
-
-/* Result */
-.result-box {
-  text-align: center;
-  padding: 2rem;
-  background: #f0fdf4;
-  border-radius: 8px;
-  border: 1px solid #bbf7d0;
-}
-.result-icon {
-  width: 48px;
-  height: 48px;
-  border-radius: 50%;
-  background: #22c55e;
-  color: white;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 1.5rem;
-  margin: 0 auto 1rem;
-}
-.result-box h3 {
-  margin: 0 0 1rem;
-  color: #166534;
-}
-.result-details {
-  margin-bottom: 1.5rem;
-}
-.result-details p {
-  margin: 0.25rem 0;
-  font-size: 0.875rem;
-  color: #374151;
-}
-
-/* Buttons */
-.btn {
-  padding: 0.5rem 1rem;
-  border: none;
-  border-radius: 6px;
-  font-size: 0.875rem;
-  cursor: pointer;
-  font-weight: 500;
-}
-.btn-primary {
-  background: #2563eb;
-  color: white;
-}
-.btn-primary:hover {
-  background: #1d4ed8;
-}
-.btn-primary:disabled {
-  background: #93c5fd;
-  cursor: not-allowed;
-}
-.btn-secondary {
-  background: #f3f4f6;
-  color: #374151;
-  border: 1px solid #d1d5db;
-}
-.empty-state {
-  text-align: center;
-  color: #6b7280;
-  padding: 2rem;
-}
-.hint {
-  color: #6b7280;
-  font-size: 0.875rem;
-  margin-bottom: 1rem;
-}
-.error-text {
-  color: #dc2626;
-  font-size: 0.875rem;
-  margin-top: 0.5rem;
-}
-</style>

@@ -68,31 +68,45 @@ function goToLogin() {
 </script>
 
 <template>
-  <div class="reset-confirm-container">
-    <div class="reset-confirm-card">
-      <h1>Atur Password Baru</h1>
+  <div class="min-h-screen flex items-center justify-center bg-surface-50 px-4">
+    <div class="w-full max-w-[400px] bg-white border border-border rounded-xl p-8 shadow-sm">
+      <h1 class="text-center text-xl font-semibold text-text-primary mb-6">Atur Password Baru</h1>
 
       <template v-if="tokenMissing">
-        <div class="error-box">
-          <p>
+        <div class="text-center p-4 bg-danger-50 rounded-lg mb-4">
+          <p class="text-sm text-danger-700">
             Tautan reset password tidak valid. Silakan minta tautan baru dari halaman reset
             password.
           </p>
         </div>
-        <router-link to="/reset-password" class="back-link"> Minta tautan reset baru </router-link>
+        <router-link
+          to="/reset-password"
+          class="block text-center text-xs text-primary-600 hover:underline"
+        >
+          Minta tautan reset baru
+        </router-link>
       </template>
 
       <template v-else-if="success">
-        <div class="success-message">
-          <p>Password berhasil diubah! Silakan login dengan password baru Anda.</p>
+        <div class="text-center p-4 bg-success-50 rounded-lg mb-4">
+          <p class="text-sm text-success-700">
+            Password berhasil diubah! Silakan login dengan password baru Anda.
+          </p>
         </div>
-        <button @click="goToLogin" class="login-btn">Login</button>
+        <button
+          @click="goToLogin"
+          class="w-full px-3 py-2 text-sm font-medium text-white bg-primary-600 rounded-lg hover:bg-primary-700 transition-colors"
+        >
+          Login
+        </button>
       </template>
 
       <template v-else>
-        <form @submit.prevent="handleSubmit" class="reset-form">
-          <div class="form-group">
-            <label for="new-password">Password Baru</label>
+        <form @submit.prevent="handleSubmit" class="flex flex-col gap-4">
+          <div>
+            <label for="new-password" class="block text-sm font-medium text-text-primary mb-1.5"
+              >Password Baru</label
+            >
             <input
               id="new-password"
               v-model="newPassword"
@@ -101,11 +115,16 @@ function goToLogin() {
               autocomplete="new-password"
               placeholder="Minimal 8 karakter"
               minlength="8"
+              class="w-full px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
             />
-            <span v-if="passwordTooShort" class="field-error"> Password minimal 8 karakter </span>
+            <span v-if="passwordTooShort" class="text-xs text-danger-500 mt-1"
+              >Password minimal 8 karakter</span
+            >
           </div>
-          <div class="form-group">
-            <label for="confirm-password">Konfirmasi Password</label>
+          <div>
+            <label for="confirm-password" class="block text-sm font-medium text-text-primary mb-1.5"
+              >Konfirmasi Password</label
+            >
             <input
               id="confirm-password"
               v-model="confirmPassword"
@@ -113,157 +132,36 @@ function goToLogin() {
               required
               autocomplete="new-password"
               placeholder="Ketik ulang password"
+              class="w-full px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
             />
-            <span v-if="passwordMismatch" class="field-error"> Password tidak cocok </span>
+            <span v-if="passwordMismatch" class="text-xs text-danger-500 mt-1"
+              >Password tidak cocok</span
+            >
           </div>
-          <p v-if="error" class="error" role="alert">{{ error }}</p>
-          <button type="submit" :disabled="!canSubmit">
+          <p
+            v-if="error"
+            class="text-xs text-danger-500 bg-danger-50 rounded-md px-3 py-2"
+            role="alert"
+          >
+            {{ error }}
+          </p>
+          <button
+            type="submit"
+            :disabled="!canSubmit"
+            class="w-full px-3 py-2 text-sm font-medium text-white bg-primary-600 rounded-lg hover:bg-primary-700 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+          >
             {{ loading ? 'Menyimpan...' : 'Simpan Password Baru' }}
           </button>
         </form>
       </template>
 
-      <router-link v-if="!success && !tokenMissing" to="/login" class="back-link">
+      <router-link
+        v-if="!success && !tokenMissing"
+        to="/login"
+        class="block text-center mt-4 text-xs text-primary-600 hover:underline"
+      >
         &larr; Kembali ke halaman login
       </router-link>
     </div>
   </div>
 </template>
-
-<style scoped>
-.reset-confirm-container {
-  min-height: 100vh;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: #f3f4f6;
-}
-
-.reset-confirm-card {
-  max-width: 400px;
-  width: 100%;
-  padding: 2rem;
-  background: white;
-  border-radius: 8px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-}
-
-.reset-confirm-card h1 {
-  text-align: center;
-  margin-bottom: 1.5rem;
-  font-size: 1.5rem;
-  color: #1f2937;
-}
-
-.reset-form {
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-}
-
-.form-group {
-  display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
-}
-
-.form-group label {
-  font-size: 0.875rem;
-  font-weight: 500;
-  color: #374151;
-}
-
-.form-group input {
-  padding: 0.625rem 0.75rem;
-  border: 1px solid #d1d5db;
-  border-radius: 6px;
-  font-size: 0.875rem;
-  transition: border-color 0.2s;
-}
-
-.form-group input:focus {
-  outline: none;
-  border-color: #3b82f6;
-  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.15);
-}
-
-.field-error {
-  color: #dc2626;
-  font-size: 0.75rem;
-}
-
-.error {
-  color: #dc2626;
-  font-size: 0.8125rem;
-  margin: 0;
-  padding: 0.5rem 0.75rem;
-  background: #fef2f2;
-  border-radius: 4px;
-}
-
-.error-box {
-  text-align: center;
-  padding: 1rem;
-  background: #fef2f2;
-  border-radius: 6px;
-  margin-bottom: 1rem;
-}
-
-.error-box p {
-  color: #dc2626;
-  font-size: 0.875rem;
-  margin: 0;
-}
-
-.success-message {
-  text-align: center;
-  padding: 1rem;
-  background: #f0fdf4;
-  border-radius: 6px;
-  margin-bottom: 1rem;
-}
-
-.success-message p {
-  color: #166534;
-  font-size: 0.875rem;
-  margin: 0;
-}
-
-button {
-  padding: 0.75rem;
-  background: #3b82f6;
-  color: white;
-  border: none;
-  border-radius: 6px;
-  font-size: 0.875rem;
-  font-weight: 500;
-  cursor: pointer;
-  transition: background 0.2s;
-}
-
-button:hover:not(:disabled) {
-  background: #2563eb;
-}
-
-button:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
-
-.login-btn {
-  width: 100%;
-}
-
-.back-link {
-  display: block;
-  text-align: center;
-  margin-top: 1rem;
-  font-size: 0.8125rem;
-  color: #3b82f6;
-  text-decoration: none;
-}
-
-.back-link:hover {
-  text-decoration: underline;
-}
-</style>

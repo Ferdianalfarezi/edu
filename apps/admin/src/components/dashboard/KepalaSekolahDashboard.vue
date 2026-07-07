@@ -11,7 +11,6 @@ interface AbsensiSummaryPerKelas {
   alpa: number;
   total_siswa: number;
 }
-
 interface AlpaAlert {
   siswa_id: string;
   siswa_nama: string;
@@ -19,17 +18,10 @@ interface AlpaAlert {
   total_alpa: number;
   threshold: number;
 }
-
 interface AbsensiDashboardResponse {
   tanggal: string;
   summary_per_kelas: AbsensiSummaryPerKelas[];
-  total: {
-    hadir: number;
-    izin: number;
-    sakit: number;
-    alpa: number;
-    total_siswa: number;
-  };
+  total: { hadir: number; izin: number; sakit: number; alpa: number; total_siswa: number };
   alpa_alerts: AlpaAlert[];
 }
 
@@ -62,7 +54,7 @@ async function fetchDashboard() {
     dashboardData.value = data;
   } catch (err: unknown) {
     error.value = 'Gagal memuat data dashboard absensi.';
-    console.error('Failed to fetch absensi dashboard:', err);
+    console.error(err);
   } finally {
     loading.value = false;
   }
@@ -72,210 +64,134 @@ onMounted(fetchDashboard);
 </script>
 
 <template>
-  <div class="kepala-sekolah-dashboard">
-    <h2>Dashboard Absensi</h2>
-    <p class="subtitle">{{ todayFormatted }}</p>
+  <div>
+    <p class="text-sm text-text-tertiary mb-5">{{ todayFormatted }}</p>
 
-    <div v-if="loading" class="loading">Memuat data...</div>
+    <!-- Loading -->
+    <div v-if="loading" class="grid grid-cols-2 sm:grid-cols-5 gap-3">
+      <div
+        v-for="i in 5"
+        :key="i"
+        class="bg-white border border-border rounded-xl p-4 animate-pulse"
+      >
+        <div class="h-4 bg-surface-200 rounded w-12 mb-2" />
+        <div class="h-6 bg-surface-200 rounded w-8" />
+      </div>
+    </div>
 
-    <div v-else-if="error" class="error">
-      <p>{{ error }}</p>
-      <button @click="fetchDashboard">Coba Lagi</button>
+    <!-- Error -->
+    <div v-else-if="error" class="bg-white border border-border rounded-xl p-8 text-center">
+      <p class="text-sm text-text-secondary mb-3">{{ error }}</p>
+      <button
+        @click="fetchDashboard"
+        class="text-sm font-medium text-primary-600 hover:text-primary-700"
+      >
+        Coba lagi
+      </button>
     </div>
 
     <template v-else-if="dashboardData">
       <!-- Summary Cards -->
-      <div class="summary-cards">
-        <div class="card card-hadir">
-          <span class="card-value">{{ dashboardData.total.hadir }}</span>
-          <span class="card-label">Hadir</span>
+      <div class="grid grid-cols-2 sm:grid-cols-5 gap-3 mb-6">
+        <div class="bg-white border border-border rounded-xl p-4">
+          <p class="text-xs text-text-tertiary mb-1">Hadir</p>
+          <p class="text-xl font-semibold text-success-700">{{ dashboardData.total.hadir }}</p>
         </div>
-        <div class="card card-izin">
-          <span class="card-value">{{ dashboardData.total.izin }}</span>
-          <span class="card-label">Izin</span>
+        <div class="bg-white border border-border rounded-xl p-4">
+          <p class="text-xs text-text-tertiary mb-1">Izin</p>
+          <p class="text-xl font-semibold text-warning-700">{{ dashboardData.total.izin }}</p>
         </div>
-        <div class="card card-sakit">
-          <span class="card-value">{{ dashboardData.total.sakit }}</span>
-          <span class="card-label">Sakit</span>
+        <div class="bg-white border border-border rounded-xl p-4">
+          <p class="text-xs text-text-tertiary mb-1">Sakit</p>
+          <p class="text-xl font-semibold text-primary-700">{{ dashboardData.total.sakit }}</p>
         </div>
-        <div class="card card-alpa">
-          <span class="card-value">{{ dashboardData.total.alpa }}</span>
-          <span class="card-label">Alpa</span>
+        <div class="bg-white border border-border rounded-xl p-4">
+          <p class="text-xs text-text-tertiary mb-1">Alpa</p>
+          <p class="text-xl font-semibold text-danger-700">{{ dashboardData.total.alpa }}</p>
         </div>
-        <div class="card card-percentage">
-          <span class="card-value">{{ attendancePercentage }}%</span>
-          <span class="card-label">Kehadiran</span>
+        <div class="bg-white border border-border rounded-xl p-4">
+          <p class="text-xs text-text-tertiary mb-1">Kehadiran</p>
+          <p class="text-xl font-semibold text-text-primary">{{ attendancePercentage }}%</p>
         </div>
       </div>
 
       <!-- Alpa Alerts -->
-      <div v-if="dashboardData.alpa_alerts.length > 0" class="alpa-alerts">
-        <h3>⚠️ Perhatian Khusus (Alpa Melebihi Threshold)</h3>
-        <table>
-          <thead>
-            <tr>
-              <th>Nama Siswa</th>
-              <th>Kelas</th>
-              <th>Total Alpa</th>
-              <th>Threshold</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-for="alert in dashboardData.alpa_alerts" :key="alert.siswa_id">
-              <td>{{ alert.siswa_nama }}</td>
-              <td>{{ alert.kelas_nama }}</td>
-              <td class="text-danger">{{ alert.total_alpa }}</td>
-              <td>{{ alert.threshold }}</td>
-            </tr>
-          </tbody>
-        </table>
+      <div
+        v-if="dashboardData.alpa_alerts.length > 0"
+        class="bg-danger-50 border border-danger-500/20 rounded-xl p-4 mb-6"
+      >
+        <h3 class="text-sm font-semibold text-danger-700 mb-3 flex items-center gap-2">
+          <svg
+            class="w-4 h-4"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+            stroke-width="2"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+            />
+          </svg>
+          Perhatian Khusus (Alpa Melebihi Batas)
+        </h3>
+        <div class="overflow-x-auto">
+          <table class="w-full text-sm">
+            <thead>
+              <tr class="text-left">
+                <th class="pb-2 font-medium text-danger-700/70 text-xs">Siswa</th>
+                <th class="pb-2 font-medium text-danger-700/70 text-xs">Kelas</th>
+                <th class="pb-2 font-medium text-danger-700/70 text-xs">Alpa</th>
+                <th class="pb-2 font-medium text-danger-700/70 text-xs">Batas</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-danger-500/10">
+              <tr v-for="alert in dashboardData.alpa_alerts" :key="alert.siswa_id">
+                <td class="py-2 text-danger-700">{{ alert.siswa_nama }}</td>
+                <td class="py-2 text-danger-700/70">{{ alert.kelas_nama }}</td>
+                <td class="py-2 font-semibold text-danger-700">{{ alert.total_alpa }}</td>
+                <td class="py-2 text-danger-700/70">{{ alert.threshold }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
       </div>
 
       <!-- Per-class breakdown -->
-      <div class="per-kelas">
-        <h3>Ringkasan Per Kelas</h3>
-        <table>
-          <thead>
-            <tr>
-              <th>Kelas</th>
-              <th>Hadir</th>
-              <th>Izin</th>
-              <th>Sakit</th>
-              <th>Alpa</th>
-              <th>Total</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-for="kelas in dashboardData.summary_per_kelas" :key="kelas.kelas_id">
-              <td>{{ kelas.kelas_nama }}</td>
-              <td>{{ kelas.hadir }}</td>
-              <td>{{ kelas.izin }}</td>
-              <td>{{ kelas.sakit }}</td>
-              <td>{{ kelas.alpa }}</td>
-              <td>{{ kelas.total_siswa }}</td>
-            </tr>
-          </tbody>
-        </table>
+      <div class="bg-white border border-border rounded-xl overflow-hidden">
+        <div class="px-4 py-3 border-b border-border">
+          <h3 class="text-sm font-semibold text-text-primary">Ringkasan Per Kelas</h3>
+        </div>
+        <div class="overflow-x-auto">
+          <table class="w-full text-sm">
+            <thead>
+              <tr class="border-b border-border bg-surface-50">
+                <th class="px-4 py-2.5 text-left font-medium text-text-secondary text-xs">Kelas</th>
+                <th class="px-4 py-2.5 text-left font-medium text-text-secondary text-xs">Hadir</th>
+                <th class="px-4 py-2.5 text-left font-medium text-text-secondary text-xs">Izin</th>
+                <th class="px-4 py-2.5 text-left font-medium text-text-secondary text-xs">Sakit</th>
+                <th class="px-4 py-2.5 text-left font-medium text-text-secondary text-xs">Alpa</th>
+                <th class="px-4 py-2.5 text-left font-medium text-text-secondary text-xs">Total</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-border">
+              <tr
+                v-for="kelas in dashboardData.summary_per_kelas"
+                :key="kelas.kelas_id"
+                class="hover:bg-surface-50 transition-colors"
+              >
+                <td class="px-4 py-2.5 font-medium text-text-primary">{{ kelas.kelas_nama }}</td>
+                <td class="px-4 py-2.5 text-success-700">{{ kelas.hadir }}</td>
+                <td class="px-4 py-2.5 text-warning-700">{{ kelas.izin }}</td>
+                <td class="px-4 py-2.5 text-primary-700">{{ kelas.sakit }}</td>
+                <td class="px-4 py-2.5 text-danger-700">{{ kelas.alpa }}</td>
+                <td class="px-4 py-2.5 text-text-secondary">{{ kelas.total_siswa }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
       </div>
     </template>
   </div>
 </template>
-
-<style scoped>
-.kepala-sekolah-dashboard {
-  max-width: 1000px;
-}
-
-.subtitle {
-  color: #64748b;
-  margin-bottom: 1.5rem;
-}
-
-.summary-cards {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-  gap: 1rem;
-  margin-bottom: 2rem;
-}
-
-.card {
-  padding: 1.25rem;
-  border-radius: 8px;
-  text-align: center;
-  display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
-}
-
-.card-value {
-  font-size: 1.75rem;
-  font-weight: 700;
-}
-
-.card-label {
-  font-size: 0.875rem;
-  color: #475569;
-}
-
-.card-hadir {
-  background: #dcfce7;
-}
-.card-izin {
-  background: #fef3c7;
-}
-.card-sakit {
-  background: #e0e7ff;
-}
-.card-alpa {
-  background: #fee2e2;
-}
-.card-percentage {
-  background: #f1f5f9;
-}
-
-.alpa-alerts {
-  margin-bottom: 2rem;
-  padding: 1rem;
-  background: #fef2f2;
-  border: 1px solid #fecaca;
-  border-radius: 8px;
-}
-
-.alpa-alerts h3 {
-  margin-bottom: 1rem;
-  font-size: 1rem;
-}
-
-table {
-  width: 100%;
-  border-collapse: collapse;
-}
-
-th,
-td {
-  padding: 0.625rem 0.75rem;
-  text-align: left;
-  border-bottom: 1px solid #e2e8f0;
-}
-
-th {
-  font-weight: 600;
-  font-size: 0.8125rem;
-  color: #475569;
-  text-transform: uppercase;
-}
-
-.text-danger {
-  color: #dc2626;
-  font-weight: 600;
-}
-
-.per-kelas h3 {
-  margin-bottom: 1rem;
-  font-size: 1rem;
-}
-
-.loading {
-  padding: 2rem;
-  text-align: center;
-  color: #64748b;
-}
-
-.error {
-  padding: 1.5rem;
-  background: #fef2f2;
-  border: 1px solid #fecaca;
-  border-radius: 8px;
-  text-align: center;
-}
-
-.error button {
-  margin-top: 0.75rem;
-  padding: 0.5rem 1rem;
-  background: #3b82f6;
-  color: white;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-}
-</style>

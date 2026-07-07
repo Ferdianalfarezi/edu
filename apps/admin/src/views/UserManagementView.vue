@@ -2,6 +2,7 @@
 import { ref, reactive, computed, onMounted } from 'vue';
 import { Role } from '@edu/shared';
 import { api } from '@/api/client';
+import { PageHeader, BaseModal } from '@/components/ui';
 
 interface User {
   id: string;
@@ -204,23 +205,43 @@ onMounted(fetchUsers);
 </script>
 
 <template>
-  <div class="page">
-    <div class="page-header">
-      <h1>Manajemen User</h1>
-      <div class="actions">
-        <button class="btn btn-secondary" @click="openImportModal">Import Guru (CSV)</button>
-        <button class="btn btn-primary" @click="openCreateForm">Tambah User</button>
-      </div>
-    </div>
+  <div class="p-4 lg:p-6 max-w-7xl mx-auto">
+    <PageHeader title="Manajemen User" description="">
+      <template #actions>
+        <button
+          class="px-3 py-2 text-sm font-medium text-text-secondary bg-white border border-border rounded-lg hover:bg-surface-50 transition-colors"
+          @click="openImportModal"
+        >
+          Import Guru (CSV)
+        </button>
+        <button
+          class="px-3 py-2 text-sm font-medium text-white bg-primary-600 rounded-lg hover:bg-primary-700 transition-colors"
+          @click="openCreateForm"
+        >
+          Tambah User
+        </button>
+      </template>
+    </PageHeader>
 
     <!-- Filters -->
-    <div class="filters">
-      <input v-model="search" type="text" placeholder="Cari nama atau email..." class="input" />
-      <select v-model="filterRole" class="input">
+    <div class="flex flex-wrap gap-3 mb-4">
+      <input
+        v-model="search"
+        type="text"
+        placeholder="Cari nama atau email..."
+        class="w-full px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 sm:w-auto sm:min-w-[200px]"
+      />
+      <select
+        v-model="filterRole"
+        class="w-full px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 sm:w-auto"
+      >
         <option value="">Semua Role</option>
         <option v-for="role in staffRoles" :key="role" :value="role">{{ role }}</option>
       </select>
-      <select v-model="filterStatus" class="input">
+      <select
+        v-model="filterStatus"
+        class="w-full px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 sm:w-auto"
+      >
         <option value="">Semua Status</option>
         <option value="active">Aktif</option>
         <option value="inactive">Nonaktif</option>
@@ -228,336 +249,245 @@ onMounted(fetchUsers);
     </div>
 
     <!-- Table -->
-    <div class="table-container">
-      <table v-if="!loading && filteredUsers.length > 0">
-        <thead>
-          <tr>
-            <th>Nama</th>
-            <th>Email</th>
-            <th>Role</th>
-            <th>Status</th>
-            <th>Aksi</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr v-for="user in filteredUsers" :key="user.id">
-            <td>{{ user.nama }}</td>
-            <td>{{ user.email }}</td>
-            <td>
-              <span class="badge">{{ user.role }}</span>
-            </td>
-            <td>
-              <span :class="['status', user.is_active ? 'status-active' : 'status-inactive']">
-                {{ user.is_active ? 'Aktif' : 'Nonaktif' }}
-              </span>
-            </td>
-            <td class="actions-cell">
-              <button class="btn-sm btn-edit" @click="openEditForm(user)">Edit</button>
-              <button class="btn-sm btn-delete" @click="openDeleteConfirm(user)">Hapus</button>
-            </td>
-          </tr>
-        </tbody>
-      </table>
-      <p v-else-if="loading" class="empty-state">Memuat data...</p>
-      <p v-else class="empty-state">Tidak ada user ditemukan.</p>
+    <div class="bg-white border border-border rounded-xl overflow-hidden">
+      <div class="overflow-x-auto">
+        <table v-if="!loading && filteredUsers.length > 0" class="w-full">
+          <thead class="border-b border-border bg-surface-50">
+            <tr>
+              <th class="px-4 py-3 text-left font-medium text-text-secondary text-xs">Nama</th>
+              <th class="px-4 py-3 text-left font-medium text-text-secondary text-xs">Email</th>
+              <th class="px-4 py-3 text-left font-medium text-text-secondary text-xs">Role</th>
+              <th class="px-4 py-3 text-left font-medium text-text-secondary text-xs">Status</th>
+              <th class="px-4 py-3 text-left font-medium text-text-secondary text-xs">Aksi</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-border">
+            <tr
+              v-for="user in filteredUsers"
+              :key="user.id"
+              class="hover:bg-surface-50 transition-colors"
+            >
+              <td class="px-4 py-3 text-sm text-text-primary">{{ user.nama }}</td>
+              <td class="px-4 py-3 text-sm text-text-secondary">{{ user.email }}</td>
+              <td class="px-4 py-3">
+                <span
+                  class="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-primary-50 text-primary-600"
+                  >{{ user.role }}</span
+                >
+              </td>
+              <td class="px-4 py-3">
+                <span
+                  :class="[
+                    'inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium',
+                    user.is_active
+                      ? 'bg-success-50 text-success-700'
+                      : 'bg-danger-50 text-danger-700',
+                  ]"
+                >
+                  {{ user.is_active ? 'Aktif' : 'Nonaktif' }}
+                </span>
+              </td>
+              <td class="px-4 py-3">
+                <div class="flex gap-2">
+                  <button
+                    class="px-2 py-1 text-xs font-medium text-warning-700 bg-warning-50 rounded-md hover:bg-warning-50/80 transition-colors"
+                    @click="openEditForm(user)"
+                  >
+                    Edit
+                  </button>
+                  <button
+                    class="px-2 py-1 text-xs font-medium text-danger-700 bg-danger-50 rounded-md hover:bg-danger-50/80 transition-colors"
+                    @click="openDeleteConfirm(user)"
+                  >
+                    Hapus
+                  </button>
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <p v-if="loading" class="text-center text-text-secondary py-8">Memuat data...</p>
+      <p
+        v-else-if="filteredUsers.length === 0 && !loading"
+        class="text-center text-text-secondary py-8"
+      >
+        Tidak ada user ditemukan.
+      </p>
     </div>
 
     <!-- Create/Edit Modal -->
-    <div v-if="showFormModal" class="modal-overlay" @click.self="showFormModal = false">
-      <div class="modal">
-        <h2>{{ editingUser ? 'Edit User' : 'Tambah User' }}</h2>
-        <form @submit.prevent="saveUser">
-          <div class="form-group">
-            <label>Nama</label>
-            <input v-model="form.nama" type="text" required class="input" />
-          </div>
-          <div class="form-group">
-            <label>Email</label>
-            <input v-model="form.email" type="email" required class="input" />
-          </div>
-          <div class="form-group">
-            <label>Telepon</label>
-            <input v-model="form.phone" type="text" class="input" />
-          </div>
-          <div class="form-group">
-            <label>Role</label>
-            <select v-model="form.role" required class="input">
-              <option value="" disabled>Pilih Role</option>
-              <option v-for="role in staffRoles" :key="role" :value="role">{{ role }}</option>
-            </select>
-          </div>
-          <div class="form-group">
-            <label class="checkbox-label">
-              <input v-model="form.is_active" type="checkbox" />
-              Aktif
-            </label>
-          </div>
-          <div class="modal-actions">
-            <button type="button" class="btn btn-secondary" @click="showFormModal = false">
-              Batal
-            </button>
-            <button type="submit" class="btn btn-primary">Simpan</button>
-          </div>
-        </form>
-      </div>
-    </div>
+    <BaseModal
+      :show="showFormModal"
+      :title="editingUser ? 'Edit User' : 'Tambah User'"
+      @close="showFormModal = false"
+      size="lg"
+    >
+      <form @submit.prevent="saveUser">
+        <div class="mb-4">
+          <label class="block text-sm font-medium text-text-primary mb-1.5">Nama</label>
+          <input
+            v-model="form.nama"
+            type="text"
+            required
+            class="w-full px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
+          />
+        </div>
+        <div class="mb-4">
+          <label class="block text-sm font-medium text-text-primary mb-1.5">Email</label>
+          <input
+            v-model="form.email"
+            type="email"
+            required
+            class="w-full px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
+          />
+        </div>
+        <div class="mb-4">
+          <label class="block text-sm font-medium text-text-primary mb-1.5">Telepon</label>
+          <input
+            v-model="form.phone"
+            type="text"
+            class="w-full px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
+          />
+        </div>
+        <div class="mb-4">
+          <label class="block text-sm font-medium text-text-primary mb-1.5">Role</label>
+          <select
+            v-model="form.role"
+            required
+            class="w-full px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
+          >
+            <option value="" disabled>Pilih Role</option>
+            <option v-for="role in staffRoles" :key="role" :value="role">{{ role }}</option>
+          </select>
+        </div>
+        <div class="mb-4">
+          <label
+            class="flex items-center gap-2 text-sm font-medium text-text-primary cursor-pointer"
+          >
+            <input v-model="form.is_active" type="checkbox" class="rounded border-border" />
+            Aktif
+          </label>
+        </div>
+      </form>
+      <template #footer>
+        <button
+          type="button"
+          class="px-3 py-2 text-sm font-medium text-text-secondary bg-white border border-border rounded-lg hover:bg-surface-50 transition-colors"
+          @click="showFormModal = false"
+        >
+          Batal
+        </button>
+        <button
+          type="button"
+          class="px-3 py-2 text-sm font-medium text-white bg-primary-600 rounded-lg hover:bg-primary-700 transition-colors"
+          @click="saveUser"
+        >
+          Simpan
+        </button>
+      </template>
+    </BaseModal>
 
     <!-- Delete Confirmation Modal -->
-    <div v-if="showDeleteModal" class="modal-overlay" @click.self="showDeleteModal = false">
-      <div class="modal">
-        <h2>Konfirmasi Hapus</h2>
-        <p>
-          Apakah Anda yakin ingin menghapus user <strong>{{ deletingUser?.nama }}</strong
-          >?
-        </p>
-        <div class="modal-actions">
-          <button class="btn btn-secondary" @click="showDeleteModal = false">Batal</button>
-          <button class="btn btn-danger" @click="deleteUser">Hapus</button>
-        </div>
-      </div>
-    </div>
+    <BaseModal
+      :show="showDeleteModal"
+      title="Konfirmasi Hapus"
+      @close="showDeleteModal = false"
+      size="lg"
+    >
+      <p class="text-sm text-text-secondary">
+        Apakah Anda yakin ingin menghapus user <strong>{{ deletingUser?.nama }}</strong
+        >?
+      </p>
+      <template #footer>
+        <button
+          class="px-3 py-2 text-sm font-medium text-text-secondary bg-white border border-border rounded-lg hover:bg-surface-50 transition-colors"
+          @click="showDeleteModal = false"
+        >
+          Batal
+        </button>
+        <button
+          class="px-4 py-2 text-sm font-medium text-white bg-danger-500 rounded-lg hover:bg-danger-700 transition-colors"
+          @click="deleteUser"
+        >
+          Hapus
+        </button>
+      </template>
+    </BaseModal>
 
     <!-- Import CSV Modal -->
-    <div v-if="showImportModal" class="modal-overlay" @click.self="showImportModal = false">
-      <div class="modal modal-lg">
-        <h2>Import Guru dari CSV</h2>
-        <p class="hint">
-          Format CSV: kolom wajib <code>nama</code>, <code>email</code>, dan
-          <code>mata_pelajaran</code> (opsional).
-        </p>
+    <BaseModal
+      :show="showImportModal"
+      title="Import Guru dari CSV"
+      @close="showImportModal = false"
+      size="lg"
+    >
+      <p class="text-sm text-text-secondary mb-4">
+        Format CSV: kolom wajib
+        <code class="px-1 py-0.5 bg-surface-100 rounded text-xs">nama</code>,
+        <code class="px-1 py-0.5 bg-surface-100 rounded text-xs">email</code>, dan
+        <code class="px-1 py-0.5 bg-surface-100 rounded text-xs">mata_pelajaran</code> (opsional).
+      </p>
 
-        <div class="form-group">
-          <label>Pilih File CSV</label>
-          <input type="file" accept=".csv" @change="handleFileSelect" class="input" />
-        </div>
+      <div class="mb-4">
+        <label class="block text-sm font-medium text-text-primary mb-1.5">Pilih File CSV</label>
+        <input
+          type="file"
+          accept=".csv"
+          @change="handleFileSelect"
+          class="w-full px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
+        />
+      </div>
 
-        <div v-if="importErrors.length > 0" class="errors">
-          <p v-for="(err, i) in importErrors" :key="i" class="error-text">{{ err }}</p>
-        </div>
+      <div
+        v-if="importErrors.length > 0"
+        class="p-3 bg-danger-50 border border-danger-500/20 rounded-lg text-sm text-danger-700 mb-4"
+      >
+        <p v-for="(err, i) in importErrors" :key="i">{{ err }}</p>
+      </div>
 
-        <div v-if="importPreview.length > 0" class="preview">
-          <h3>Preview (maks 10 baris pertama)</h3>
-          <table>
-            <thead>
+      <div v-if="importPreview.length > 0" class="mt-4">
+        <h3 class="text-sm font-medium text-text-primary mb-2">Preview (maks 10 baris pertama)</h3>
+        <div class="overflow-x-auto border border-border rounded-lg">
+          <table class="w-full">
+            <thead class="border-b border-border bg-surface-50">
               <tr>
-                <th>Nama</th>
-                <th>Email</th>
-                <th>Mata Pelajaran</th>
+                <th class="px-4 py-3 text-left font-medium text-text-secondary text-xs">Nama</th>
+                <th class="px-4 py-3 text-left font-medium text-text-secondary text-xs">Email</th>
+                <th class="px-4 py-3 text-left font-medium text-text-secondary text-xs">
+                  Mata Pelajaran
+                </th>
               </tr>
             </thead>
-            <tbody>
-              <tr v-for="(row, i) in importPreview" :key="i">
-                <td>{{ row.nama }}</td>
-                <td>{{ row.email }}</td>
-                <td>{{ row.mata_pelajaran }}</td>
+            <tbody class="divide-y divide-border">
+              <tr
+                v-for="(row, i) in importPreview"
+                :key="i"
+                class="hover:bg-surface-50 transition-colors"
+              >
+                <td class="px-4 py-3 text-sm">{{ row.nama }}</td>
+                <td class="px-4 py-3 text-sm">{{ row.email }}</td>
+                <td class="px-4 py-3 text-sm">{{ row.mata_pelajaran }}</td>
               </tr>
             </tbody>
           </table>
         </div>
-
-        <div class="modal-actions">
-          <button class="btn btn-secondary" @click="showImportModal = false">Batal</button>
-          <button
-            class="btn btn-primary"
-            :disabled="!importFile || importErrors.length > 0 || importing"
-            @click="importCsv"
-          >
-            {{ importing ? 'Mengimport...' : 'Import' }}
-          </button>
-        </div>
       </div>
-    </div>
+      <template #footer>
+        <button
+          class="px-3 py-2 text-sm font-medium text-text-secondary bg-white border border-border rounded-lg hover:bg-surface-50 transition-colors"
+          @click="showImportModal = false"
+        >
+          Batal
+        </button>
+        <button
+          class="px-3 py-2 text-sm font-medium text-white bg-primary-600 rounded-lg hover:bg-primary-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          :disabled="!importFile || importErrors.length > 0 || importing"
+          @click="importCsv"
+        >
+          {{ importing ? 'Mengimport...' : 'Import' }}
+        </button>
+      </template>
+    </BaseModal>
   </div>
 </template>
-
-<style scoped>
-.page {
-  padding: 2rem;
-}
-.page-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 1.5rem;
-}
-.page-header h1 {
-  margin: 0;
-  font-size: 1.5rem;
-}
-.actions {
-  display: flex;
-  gap: 0.5rem;
-}
-.filters {
-  display: flex;
-  gap: 0.75rem;
-  margin-bottom: 1rem;
-  flex-wrap: wrap;
-}
-.input {
-  padding: 0.5rem 0.75rem;
-  border: 1px solid #d1d5db;
-  border-radius: 6px;
-  font-size: 0.875rem;
-}
-.table-container {
-  overflow-x: auto;
-}
-table {
-  width: 100%;
-  border-collapse: collapse;
-}
-th,
-td {
-  padding: 0.75rem;
-  text-align: left;
-  border-bottom: 1px solid #e5e7eb;
-}
-th {
-  font-weight: 600;
-  color: #374151;
-  background: #f9fafb;
-}
-.badge {
-  background: #e0e7ff;
-  color: #3730a3;
-  padding: 0.2rem 0.5rem;
-  border-radius: 4px;
-  font-size: 0.75rem;
-  font-weight: 500;
-}
-.status {
-  padding: 0.2rem 0.5rem;
-  border-radius: 4px;
-  font-size: 0.75rem;
-  font-weight: 500;
-}
-.status-active {
-  background: #d1fae5;
-  color: #065f46;
-}
-.status-inactive {
-  background: #fee2e2;
-  color: #991b1b;
-}
-.actions-cell {
-  display: flex;
-  gap: 0.5rem;
-}
-.btn {
-  padding: 0.5rem 1rem;
-  border: none;
-  border-radius: 6px;
-  font-size: 0.875rem;
-  cursor: pointer;
-  font-weight: 500;
-}
-.btn-primary {
-  background: #2563eb;
-  color: white;
-}
-.btn-primary:hover {
-  background: #1d4ed8;
-}
-.btn-primary:disabled {
-  background: #93c5fd;
-  cursor: not-allowed;
-}
-.btn-secondary {
-  background: #f3f4f6;
-  color: #374151;
-  border: 1px solid #d1d5db;
-}
-.btn-danger {
-  background: #ef4444;
-  color: white;
-}
-.btn-sm {
-  padding: 0.25rem 0.5rem;
-  border: none;
-  border-radius: 4px;
-  font-size: 0.75rem;
-  cursor: pointer;
-}
-.btn-edit {
-  background: #fef3c7;
-  color: #92400e;
-}
-.btn-delete {
-  background: #fee2e2;
-  color: #991b1b;
-}
-.empty-state {
-  text-align: center;
-  color: #6b7280;
-  padding: 2rem;
-}
-.modal-overlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.4);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 50;
-}
-.modal {
-  background: white;
-  border-radius: 8px;
-  padding: 1.5rem;
-  width: 100%;
-  max-width: 480px;
-  max-height: 90vh;
-  overflow-y: auto;
-}
-.modal-lg {
-  max-width: 640px;
-}
-.modal h2 {
-  margin: 0 0 1rem;
-  font-size: 1.25rem;
-}
-.form-group {
-  margin-bottom: 1rem;
-}
-.form-group label {
-  display: block;
-  margin-bottom: 0.25rem;
-  font-size: 0.875rem;
-  font-weight: 500;
-  color: #374151;
-}
-.form-group .input {
-  width: 100%;
-}
-.checkbox-label {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-}
-.modal-actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 0.5rem;
-  margin-top: 1.5rem;
-}
-.hint {
-  color: #6b7280;
-  font-size: 0.875rem;
-  margin-bottom: 1rem;
-}
-.preview {
-  margin-top: 1rem;
-}
-.preview h3 {
-  font-size: 0.875rem;
-  margin-bottom: 0.5rem;
-}
-.errors {
-  margin-top: 0.5rem;
-}
-.error-text {
-  color: #dc2626;
-  font-size: 0.875rem;
-}
-</style>

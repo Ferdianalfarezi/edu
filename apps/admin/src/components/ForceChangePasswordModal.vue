@@ -47,17 +47,26 @@ async function handleChangePassword() {
 
 <template>
   <Teleport to="body">
-    <div class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="modal-title">
-      <div class="modal-content">
-        <h2 id="modal-title">Ubah Password</h2>
-        <p class="modal-description">
+    <div
+      class="fixed inset-0 bg-black/40 backdrop-blur-[2px] flex items-center justify-center z-[9999] p-4"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="modal-title"
+    >
+      <div class="bg-white rounded-xl shadow-lg max-w-md w-full p-6">
+        <h2 id="modal-title" class="text-base font-semibold text-text-primary mb-1">
+          Ubah Password
+        </h2>
+        <p class="text-sm text-text-secondary mb-5 leading-relaxed">
           Anda diharuskan mengubah password sebelum melanjutkan. Ini terjadi karena password Anda
           dibuat secara otomatis oleh admin.
         </p>
 
-        <form @submit.prevent="handleChangePassword" class="change-form">
-          <div class="form-group">
-            <label for="old-password">Password Lama</label>
+        <form @submit.prevent="handleChangePassword" class="space-y-4">
+          <div>
+            <label for="old-password" class="block text-sm font-medium text-text-primary mb-1.5"
+              >Password Lama</label
+            >
             <input
               id="old-password"
               v-model="oldPassword"
@@ -65,10 +74,13 @@ async function handleChangePassword() {
               required
               autocomplete="current-password"
               placeholder="Masukkan password saat ini"
+              class="w-full px-3 py-2.5 text-sm border border-border rounded-lg bg-white placeholder:text-text-tertiary focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-colors"
             />
           </div>
-          <div class="form-group">
-            <label for="new-password">Password Baru</label>
+          <div>
+            <label for="new-password" class="block text-sm font-medium text-text-primary mb-1.5"
+              >Password Baru</label
+            >
             <input
               id="new-password"
               v-model="newPassword"
@@ -77,11 +89,16 @@ async function handleChangePassword() {
               autocomplete="new-password"
               placeholder="Minimal 8 karakter"
               minlength="8"
+              class="w-full px-3 py-2.5 text-sm border border-border rounded-lg bg-white placeholder:text-text-tertiary focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-colors"
             />
-            <span v-if="passwordTooShort" class="field-error"> Password minimal 8 karakter </span>
+            <p v-if="passwordTooShort" class="text-xs text-danger-500 mt-1">
+              Password minimal 8 karakter
+            </p>
           </div>
-          <div class="form-group">
-            <label for="confirm-password">Konfirmasi Password Baru</label>
+          <div>
+            <label for="confirm-password" class="block text-sm font-medium text-text-primary mb-1.5"
+              >Konfirmasi Password Baru</label
+            >
             <input
               id="confirm-password"
               v-model="confirmPassword"
@@ -89,11 +106,37 @@ async function handleChangePassword() {
               required
               autocomplete="new-password"
               placeholder="Ketik ulang password baru"
+              class="w-full px-3 py-2.5 text-sm border border-border rounded-lg bg-white placeholder:text-text-tertiary focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-colors"
             />
-            <span v-if="passwordMismatch" class="field-error"> Password tidak cocok </span>
+            <p v-if="passwordMismatch" class="text-xs text-danger-500 mt-1">Password tidak cocok</p>
           </div>
-          <p v-if="error" class="error" role="alert">{{ error }}</p>
-          <button type="submit" :disabled="!canSubmit">
+
+          <div
+            v-if="error"
+            class="flex items-start gap-2 p-3 bg-danger-50 border border-danger-500/20 rounded-lg"
+            role="alert"
+          >
+            <svg
+              class="w-4 h-4 text-danger-500 shrink-0 mt-0.5"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+              stroke-width="2"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+              />
+            </svg>
+            <span class="text-sm text-danger-700">{{ error }}</span>
+          </div>
+
+          <button
+            type="submit"
+            :disabled="!canSubmit"
+            class="w-full py-2.5 px-4 bg-primary-600 hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed text-white text-sm font-medium rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:ring-offset-2 mt-2"
+          >
             {{ loading ? 'Menyimpan...' : 'Ubah Password' }}
           </button>
         </form>
@@ -101,105 +144,3 @@ async function handleChangePassword() {
     </div>
   </Teleport>
 </template>
-
-<style scoped>
-.modal-overlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.5);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 9999;
-}
-
-.modal-content {
-  background: white;
-  border-radius: 12px;
-  padding: 2rem;
-  max-width: 420px;
-  width: calc(100% - 2rem);
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
-}
-
-.modal-content h2 {
-  margin: 0 0 0.5rem;
-  font-size: 1.25rem;
-  color: #1f2937;
-}
-
-.modal-description {
-  color: #6b7280;
-  font-size: 0.8125rem;
-  margin-bottom: 1.5rem;
-  line-height: 1.5;
-}
-
-.change-form {
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-}
-
-.form-group {
-  display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
-}
-
-.form-group label {
-  font-size: 0.875rem;
-  font-weight: 500;
-  color: #374151;
-}
-
-.form-group input {
-  padding: 0.625rem 0.75rem;
-  border: 1px solid #d1d5db;
-  border-radius: 6px;
-  font-size: 0.875rem;
-  transition: border-color 0.2s;
-}
-
-.form-group input:focus {
-  outline: none;
-  border-color: #3b82f6;
-  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.15);
-}
-
-.field-error {
-  color: #dc2626;
-  font-size: 0.75rem;
-}
-
-.error {
-  color: #dc2626;
-  font-size: 0.8125rem;
-  margin: 0;
-  padding: 0.5rem 0.75rem;
-  background: #fef2f2;
-  border-radius: 4px;
-}
-
-button {
-  padding: 0.75rem;
-  background: #3b82f6;
-  color: white;
-  border: none;
-  border-radius: 6px;
-  font-size: 0.875rem;
-  font-weight: 500;
-  cursor: pointer;
-  transition: background 0.2s;
-  margin-top: 0.5rem;
-}
-
-button:hover:not(:disabled) {
-  background: #2563eb;
-}
-
-button:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
-</style>

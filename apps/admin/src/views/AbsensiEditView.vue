@@ -3,6 +3,7 @@ import { ref, computed, onMounted, watch } from 'vue';
 import { api } from '@/api/client';
 import { useAuthStore } from '@/stores/auth';
 import { Role } from '@edu/shared';
+import { PageHeader, BaseModal } from '@/components/ui';
 
 interface Kelas {
   id: string;
@@ -192,20 +193,25 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="page">
-    <div class="page-header">
-      <h1>Edit Absensi</h1>
-    </div>
+  <div class="p-4 lg:p-6 max-w-7xl mx-auto">
+    <PageHeader title="Edit Absensi" />
 
     <!-- Filter Bar -->
-    <div class="filter-bar">
-      <div class="form-group-inline">
-        <label>Tanggal:</label>
-        <input v-model="selectedTanggal" type="date" class="input date-input" />
+    <div class="flex flex-wrap items-center gap-3 mb-4">
+      <div class="flex items-center gap-2">
+        <label class="text-sm font-medium text-text-primary">Tanggal:</label>
+        <input
+          v-model="selectedTanggal"
+          type="date"
+          class="px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 min-w-[160px]"
+        />
       </div>
-      <div class="form-group-inline">
-        <label>Kelas:</label>
-        <select v-model="selectedKelasId" class="input select-input">
+      <div class="flex items-center gap-2">
+        <label class="text-sm font-medium text-text-primary">Kelas:</label>
+        <select
+          v-model="selectedKelasId"
+          class="px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 max-w-xs min-w-[200px]"
+        >
           <option value="" disabled>Pilih Kelas</option>
           <option v-for="kelas in kelasList" :key="kelas.id" :value="kelas.id">
             {{ kelas.nama }}
@@ -215,412 +221,213 @@ onMounted(() => {
     </div>
 
     <!-- Loading -->
-    <div v-if="loading" class="loading">Memuat data absensi...</div>
+    <div v-if="loading" class="text-center py-8">
+      <svg class="w-6 h-6 animate-spin text-primary-500 mx-auto" fill="none" viewBox="0 0 24 24">
+        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
+        <path
+          class="opacity-75"
+          fill="currentColor"
+          d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
+        />
+      </svg>
+      <p class="text-sm text-text-secondary mt-2">Memuat data absensi...</p>
+    </div>
 
     <!-- Absensi Table -->
-    <div v-else-if="absensiList.length > 0" class="table-container">
-      <table class="absensi-table">
-        <thead>
-          <tr>
-            <th class="col-no">No</th>
-            <th class="col-nama">Nama Siswa</th>
-            <th class="col-nisn">NISN</th>
-            <th class="col-status">Status</th>
-            <th class="col-guru">Diinput Oleh</th>
-            <th class="col-actions">Aksi</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr v-for="(item, index) in absensiList" :key="item.id">
-            <td class="col-no">{{ index + 1 }}</td>
-            <td class="col-nama">{{ item.siswa_nama }}</td>
-            <td class="col-nisn">{{ item.siswa_nisn || '-' }}</td>
-            <td class="col-status">
-              <span class="status-badge" :style="{ background: STATUS_COLORS[item.status] }">
-                {{ STATUS_LABELS[item.status] }}
-              </span>
-            </td>
-            <td class="col-guru">{{ item.guru_nama }}</td>
-            <td class="col-actions">
-              <button v-if="canEdit" class="btn btn-sm btn-edit" @click="openEditModal(item)">
-                Edit
-              </button>
-              <button class="btn btn-sm btn-audit" @click="openAuditModal(item)">Log</button>
-            </td>
-          </tr>
-        </tbody>
-      </table>
+    <div
+      v-else-if="absensiList.length > 0"
+      class="bg-white border border-border rounded-xl overflow-hidden"
+    >
+      <div class="overflow-x-auto">
+        <table class="w-full">
+          <thead class="border-b border-border bg-surface-50">
+            <tr>
+              <th class="px-4 py-3 font-medium text-text-secondary text-xs w-[50px] text-center">
+                No
+              </th>
+              <th class="px-4 py-3 text-left font-medium text-text-secondary text-xs">
+                Nama Siswa
+              </th>
+              <th class="px-4 py-3 text-left font-medium text-text-secondary text-xs w-[120px]">
+                NISN
+              </th>
+              <th class="px-4 py-3 text-left font-medium text-text-secondary text-xs w-[100px]">
+                Status
+              </th>
+              <th class="px-4 py-3 text-left font-medium text-text-secondary text-xs w-[150px]">
+                Diinput Oleh
+              </th>
+              <th class="px-4 py-3 text-left font-medium text-text-secondary text-xs w-[130px]">
+                Aksi
+              </th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-border">
+            <tr
+              v-for="(item, index) in absensiList"
+              :key="item.id"
+              class="hover:bg-surface-50 transition-colors"
+            >
+              <td class="px-4 py-3 text-sm text-center">{{ index + 1 }}</td>
+              <td class="px-4 py-3 text-sm text-text-primary">{{ item.siswa_nama }}</td>
+              <td class="px-4 py-3 text-sm text-text-secondary">{{ item.siswa_nisn || '-' }}</td>
+              <td class="px-4 py-3">
+                <span
+                  class="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium"
+                  :style="{ background: STATUS_COLORS[item.status] }"
+                >
+                  {{ STATUS_LABELS[item.status] }}
+                </span>
+              </td>
+              <td class="px-4 py-3 text-sm text-text-secondary">{{ item.guru_nama }}</td>
+              <td class="px-4 py-3">
+                <div class="flex gap-1.5">
+                  <button
+                    v-if="canEdit"
+                    class="px-2 py-1 text-xs font-medium rounded-md bg-warning-50 text-warning-700 hover:bg-yellow-200 transition-colors"
+                    @click="openEditModal(item)"
+                  >
+                    Edit
+                  </button>
+                  <button
+                    class="px-2 py-1 text-xs font-medium rounded-md bg-primary-50 text-primary-700 hover:bg-primary-100 transition-colors"
+                    @click="openAuditModal(item)"
+                  >
+                    Log
+                  </button>
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
     </div>
 
     <!-- Empty state -->
-    <div v-else-if="selectedKelasId && !loading" class="empty-state">
+    <div
+      v-else-if="selectedKelasId && !loading"
+      class="text-center text-text-secondary py-8 text-sm"
+    >
       Belum ada data absensi untuk kelas dan tanggal yang dipilih.
     </div>
-    <div v-else class="empty-state">Pilih kelas dan tanggal untuk melihat data absensi.</div>
+    <div v-else class="text-center text-text-secondary py-8 text-sm">
+      Pilih kelas dan tanggal untuk melihat data absensi.
+    </div>
 
     <!-- Edit Modal -->
-    <div v-if="showEditModal" class="modal-overlay" @click.self="showEditModal = false">
-      <div class="modal">
-        <h2>Edit Status Absensi</h2>
-        <p class="modal-subtitle" v-if="editingItem">
-          {{ editingItem.siswa_nama }} — {{ selectedTanggal }}
-        </p>
+    <BaseModal :show="showEditModal" title="Edit Status Absensi" @close="showEditModal = false">
+      <p class="text-sm text-text-secondary mb-4" v-if="editingItem">
+        {{ editingItem.siswa_nama }} — {{ selectedTanggal }}
+      </p>
 
-        <div class="form-group">
-          <label>Status Kehadiran</label>
-          <div class="status-group-vertical">
-            <label
-              v-for="status in STATUS_OPTIONS"
-              :key="status"
-              class="status-option"
-              :class="{ 'status-selected': editStatus === status }"
-              :style="editStatus === status ? { background: STATUS_COLORS[status] } : {}"
-            >
-              <input type="radio" :value="status" v-model="editStatus" class="sr-only" />
-              {{ STATUS_LABELS[status] }}
-            </label>
-          </div>
-        </div>
-
-        <p v-if="editError" class="error-text">{{ editError }}</p>
-        <p v-if="editSuccess" class="success-text">{{ editSuccess }}</p>
-
-        <div class="modal-actions">
-          <button class="btn btn-secondary" @click="showEditModal = false">Batal</button>
-          <button class="btn btn-primary" :disabled="editSubmitting" @click="saveEdit">
-            {{ editSubmitting ? 'Menyimpan...' : 'Simpan' }}
-          </button>
+      <div class="mb-4">
+        <label class="block text-sm font-medium text-text-primary mb-1.5">Status Kehadiran</label>
+        <div class="flex flex-wrap gap-2">
+          <label
+            v-for="status in STATUS_OPTIONS"
+            :key="status"
+            class="inline-flex items-center px-3 py-2 rounded-lg text-sm font-medium cursor-pointer border-2 transition-all select-none"
+            :class="
+              editStatus === status
+                ? 'border-transparent font-semibold'
+                : 'border-border hover:border-text-tertiary'
+            "
+            :style="editStatus === status ? { background: STATUS_COLORS[status] } : {}"
+          >
+            <input type="radio" :value="status" v-model="editStatus" class="sr-only" />
+            {{ STATUS_LABELS[status] }}
+          </label>
         </div>
       </div>
-    </div>
+
+      <p v-if="editError" class="text-xs text-danger-500 mt-1">{{ editError }}</p>
+      <p v-if="editSuccess" class="text-xs text-success-700 mt-1">{{ editSuccess }}</p>
+
+      <template #footer>
+        <button
+          class="px-3 py-2 text-sm font-medium text-text-secondary bg-white border border-border rounded-lg hover:bg-surface-50 transition-colors"
+          @click="showEditModal = false"
+        >
+          Batal
+        </button>
+        <button
+          class="px-3 py-2 text-sm font-medium text-white bg-primary-600 rounded-lg hover:bg-primary-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          :disabled="editSubmitting"
+          @click="saveEdit"
+        >
+          {{ editSubmitting ? 'Menyimpan...' : 'Simpan' }}
+        </button>
+      </template>
+    </BaseModal>
 
     <!-- Audit Log Modal -->
-    <div v-if="showAuditModal" class="modal-overlay" @click.self="showAuditModal = false">
-      <div class="modal modal-wide">
-        <h2>Riwayat Perubahan</h2>
-        <p class="modal-subtitle">{{ auditSiswaName }}</p>
+    <BaseModal
+      :show="showAuditModal"
+      title="Riwayat Perubahan"
+      @close="showAuditModal = false"
+      size="lg"
+    >
+      <p class="text-sm text-text-secondary mb-4">{{ auditSiswaName }}</p>
 
-        <div v-if="loadingAudit" class="loading">Memuat audit log...</div>
+      <div v-if="loadingAudit" class="text-center py-4">
+        <svg class="w-6 h-6 animate-spin text-primary-500 mx-auto" fill="none" viewBox="0 0 24 24">
+          <circle
+            class="opacity-25"
+            cx="12"
+            cy="12"
+            r="10"
+            stroke="currentColor"
+            stroke-width="4"
+          />
+          <path
+            class="opacity-75"
+            fill="currentColor"
+            d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
+          />
+        </svg>
+      </div>
 
-        <div v-else-if="auditLog.length > 0" class="audit-list">
-          <div v-for="entry in auditLog" :key="entry.id" class="audit-entry">
-            <div class="audit-header">
-              <span class="audit-user">{{ entry.user_nama }}</span>
-              <span class="audit-role">({{ entry.role }})</span>
-              <span class="audit-time">{{ formatDateTime(entry.created_at) }}</span>
-            </div>
-            <div class="audit-change">
-              <span
-                class="status-badge status-badge-sm"
-                :style="{ background: STATUS_COLORS[entry.status_sebelum] }"
-              >
-                {{ STATUS_LABELS[entry.status_sebelum] || entry.status_sebelum }}
-              </span>
-              <span class="audit-arrow">→</span>
-              <span
-                class="status-badge status-badge-sm"
-                :style="{ background: STATUS_COLORS[entry.status_sesudah] }"
-              >
-                {{ STATUS_LABELS[entry.status_sesudah] || entry.status_sesudah }}
-              </span>
-            </div>
+      <div v-else-if="auditLog.length > 0" class="flex flex-col gap-2">
+        <div
+          v-for="entry in auditLog"
+          :key="entry.id"
+          class="p-3 bg-surface-50 rounded-lg border-l-3 border-primary-500 mb-2"
+        >
+          <div class="flex items-center gap-1.5 mb-1.5 text-xs">
+            <span class="font-semibold text-text-primary">{{ entry.user_nama }}</span>
+            <span class="text-text-tertiary">({{ entry.role }})</span>
+            <span class="ml-auto text-text-tertiary">{{ formatDateTime(entry.created_at) }}</span>
+          </div>
+          <div class="flex items-center gap-2">
+            <span
+              class="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium"
+              :style="{ background: STATUS_COLORS[entry.status_sebelum] }"
+            >
+              {{ STATUS_LABELS[entry.status_sebelum] || entry.status_sebelum }}
+            </span>
+            <span class="text-text-secondary font-semibold">→</span>
+            <span
+              class="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium"
+              :style="{ background: STATUS_COLORS[entry.status_sesudah] }"
+            >
+              {{ STATUS_LABELS[entry.status_sesudah] || entry.status_sesudah }}
+            </span>
           </div>
         </div>
-
-        <div v-else class="empty-state-sm">Belum ada riwayat perubahan.</div>
-
-        <div class="modal-actions">
-          <button class="btn btn-secondary" @click="showAuditModal = false">Tutup</button>
-        </div>
       </div>
-    </div>
+
+      <div v-else class="text-center text-text-tertiary py-4 text-sm">
+        Belum ada riwayat perubahan.
+      </div>
+
+      <template #footer>
+        <button
+          class="px-3 py-2 text-sm font-medium text-text-secondary bg-white border border-border rounded-lg hover:bg-surface-50 transition-colors"
+          @click="showAuditModal = false"
+        >
+          Tutup
+        </button>
+      </template>
+    </BaseModal>
   </div>
 </template>
-
-<style scoped>
-.page {
-  padding: 2rem;
-}
-.page-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 1.5rem;
-}
-.page-header h1 {
-  margin: 0;
-  font-size: 1.5rem;
-}
-.filter-bar {
-  display: flex;
-  gap: 1.5rem;
-  margin-bottom: 1.5rem;
-  align-items: center;
-  flex-wrap: wrap;
-}
-.form-group-inline {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-}
-.form-group-inline label {
-  font-size: 0.875rem;
-  font-weight: 500;
-  color: #374151;
-}
-.input {
-  padding: 0.5rem 0.75rem;
-  border: 1px solid #d1d5db;
-  border-radius: 6px;
-  font-size: 0.875rem;
-}
-.select-input {
-  min-width: 200px;
-}
-.date-input {
-  min-width: 160px;
-}
-
-/* Table */
-.table-container {
-  overflow-x: auto;
-}
-.absensi-table {
-  width: 100%;
-  border-collapse: collapse;
-}
-.absensi-table th,
-.absensi-table td {
-  padding: 0.625rem 0.75rem;
-  text-align: left;
-  border-bottom: 1px solid #e5e7eb;
-}
-.absensi-table th {
-  background: #f9fafb;
-  font-weight: 600;
-  font-size: 0.8125rem;
-  color: #374151;
-}
-.col-no {
-  width: 50px;
-  text-align: center;
-}
-.col-nisn {
-  width: 120px;
-}
-.col-status {
-  width: 100px;
-}
-.col-guru {
-  width: 150px;
-}
-.col-actions {
-  width: 130px;
-}
-
-/* Status badge */
-.status-badge {
-  display: inline-block;
-  padding: 0.25rem 0.6rem;
-  border-radius: 12px;
-  font-size: 0.75rem;
-  font-weight: 600;
-}
-.status-badge-sm {
-  font-size: 0.7rem;
-  padding: 0.2rem 0.5rem;
-}
-
-/* Buttons */
-.btn {
-  padding: 0.5rem 1rem;
-  border: none;
-  border-radius: 6px;
-  font-size: 0.875rem;
-  cursor: pointer;
-  font-weight: 500;
-}
-.btn-sm {
-  padding: 0.3rem 0.6rem;
-  font-size: 0.75rem;
-}
-.btn-primary {
-  background: #2563eb;
-  color: white;
-}
-.btn-primary:hover:not(:disabled) {
-  background: #1d4ed8;
-}
-.btn-primary:disabled {
-  background: #93c5fd;
-  cursor: not-allowed;
-}
-.btn-secondary {
-  background: #f3f4f6;
-  color: #374151;
-  border: 1px solid #d1d5db;
-}
-.btn-edit {
-  background: #fef3c7;
-  color: #92400e;
-}
-.btn-edit:hover {
-  background: #fde68a;
-}
-.btn-audit {
-  background: #e0e7ff;
-  color: #3730a3;
-}
-.btn-audit:hover {
-  background: #c7d2fe;
-}
-
-/* Modal */
-.modal-overlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.4);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 50;
-}
-.modal {
-  background: white;
-  border-radius: 8px;
-  padding: 1.5rem;
-  width: 100%;
-  max-width: 480px;
-  max-height: 90vh;
-  overflow-y: auto;
-}
-.modal-wide {
-  max-width: 600px;
-}
-.modal h2 {
-  margin: 0 0 0.25rem;
-  font-size: 1.25rem;
-}
-.modal-subtitle {
-  margin: 0 0 1rem;
-  font-size: 0.875rem;
-  color: #6b7280;
-}
-.modal-actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 0.5rem;
-  margin-top: 1.5rem;
-}
-.form-group {
-  margin-bottom: 1rem;
-}
-.form-group label {
-  display: block;
-  margin-bottom: 0.5rem;
-  font-size: 0.875rem;
-  font-weight: 500;
-  color: #374151;
-}
-
-/* Status options in edit modal */
-.status-group-vertical {
-  display: flex;
-  gap: 0.5rem;
-  flex-wrap: wrap;
-}
-.status-option {
-  display: inline-flex;
-  align-items: center;
-  padding: 0.5rem 1rem;
-  border-radius: 8px;
-  font-size: 0.875rem;
-  font-weight: 500;
-  cursor: pointer;
-  border: 2px solid #e5e7eb;
-  transition: all 0.15s;
-  user-select: none;
-}
-.status-option:hover {
-  border-color: #9ca3af;
-}
-.status-selected {
-  border-color: transparent;
-  font-weight: 600;
-}
-.sr-only {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  overflow: hidden;
-  clip: rect(0, 0, 0, 0);
-  white-space: nowrap;
-  border-width: 0;
-}
-
-/* Audit log */
-.audit-list {
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
-}
-.audit-entry {
-  padding: 0.75rem;
-  background: #f9fafb;
-  border-radius: 6px;
-  border-left: 3px solid #6366f1;
-}
-.audit-header {
-  display: flex;
-  align-items: center;
-  gap: 0.4rem;
-  margin-bottom: 0.4rem;
-  font-size: 0.8125rem;
-}
-.audit-user {
-  font-weight: 600;
-  color: #1f2937;
-}
-.audit-role {
-  color: #6b7280;
-}
-.audit-time {
-  margin-left: auto;
-  color: #9ca3af;
-  font-size: 0.75rem;
-}
-.audit-change {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-}
-.audit-arrow {
-  color: #6b7280;
-  font-weight: 600;
-}
-
-.error-text {
-  color: #dc2626;
-  font-size: 0.875rem;
-}
-.success-text {
-  color: #16a34a;
-  font-size: 0.875rem;
-}
-.loading {
-  text-align: center;
-  padding: 2rem;
-  color: #6b7280;
-}
-.empty-state {
-  text-align: center;
-  color: #6b7280;
-  padding: 2rem;
-}
-.empty-state-sm {
-  text-align: center;
-  color: #9ca3af;
-  padding: 1rem;
-  font-size: 0.875rem;
-}
-</style>

@@ -3,6 +3,7 @@ import { ref, reactive, onMounted, watch } from 'vue';
 import { StatusSiswa } from '@edu/shared';
 import type { PaginatedResponse } from '@edu/shared';
 import { api } from '@/api/client';
+import { PageHeader, BaseModal } from '@/components/ui';
 
 interface Siswa {
   id: string;
@@ -37,13 +38,11 @@ interface Kelas {
   nama: string;
   tingkat: number;
 }
-
 interface TahunAjaran {
   id: string;
   nama: string;
   status: string;
 }
-
 interface ImportConflict {
   row: number;
   nisn: string;
@@ -51,7 +50,6 @@ interface ImportConflict {
   existing_nama: string;
   action: 'update' | 'skip';
 }
-
 interface ImportPreviewRow {
   nama: string;
   nisn: string;
@@ -60,32 +58,26 @@ interface ImportPreviewRow {
   telepon_wali: string;
 }
 
-// Data
 const siswaList = ref<Siswa[]>([]);
 const kelasList = ref<Kelas[]>([]);
 const tahunAjaranList = ref<TahunAjaran[]>([]);
 const loading = ref(false);
 const totalCount = ref(0);
-
-// Pagination
 const cursor = ref<string | null>(null);
 const hasNext = ref(false);
 const pageSize = 20;
 
-// Filters
 const search = ref('');
 const filterKelas = ref('');
 const filterStatus = ref<StatusSiswa | ''>('');
 const filterTahunAjaran = ref('');
 
-// Modal state
 const showFormModal = ref(false);
 const showDeleteModal = ref(false);
 const showImportModal = ref(false);
 const editingSiswa = ref<Siswa | null>(null);
 const deletingSiswa = ref<Siswa | null>(null);
 
-// Form
 const form = reactive<SiswaForm>({
   nama: '',
   nisn: '',
@@ -99,11 +91,9 @@ const form = reactive<SiswaForm>({
 const formErrors = ref<Record<string, string>>({});
 const saving = ref(false);
 
-// Delete form
 const deleteReason = ref('');
 const deleteStatus = ref<StatusSiswa>(StatusSiswa.PINDAH_SEKOLAH);
 
-// CSV Import state
 const importFile = ref<File | null>(null);
 const importPreview = ref<ImportPreviewRow[]>([]);
 const importConflicts = ref<ImportConflict[]>([]);
@@ -124,12 +114,9 @@ const deleteStatusOptions = [
   { value: StatusSiswa.KELUAR, label: 'Keluar' },
 ];
 
-// Fetch functions
 async function fetchSiswa(resetCursor = true) {
   loading.value = true;
-  if (resetCursor) {
-    cursor.value = null;
-  }
+  if (resetCursor) cursor.value = null;
   try {
     const params: Record<string, string | number> = { limit: pageSize };
     if (cursor.value) params.cursor = cursor.value;
@@ -137,18 +124,11 @@ async function fetchSiswa(resetCursor = true) {
     if (filterKelas.value) params.kelas_id = filterKelas.value;
     if (filterStatus.value) params.status = filterStatus.value;
     if (filterTahunAjaran.value) params.tahun_ajaran_id = filterTahunAjaran.value;
-
     const { data } = await api.get<PaginatedResponse<Siswa>>('/siswa', { params });
-    if (resetCursor) {
-      siswaList.value = data.data;
-    } else {
-      siswaList.value = [...siswaList.value, ...data.data];
-    }
+    siswaList.value = resetCursor ? data.data : [...siswaList.value, ...data.data];
     hasNext.value = data.meta.has_next;
     cursor.value = data.meta.cursor;
-    if (data.meta.total !== undefined) {
-      totalCount.value = data.meta.total;
-    }
+    if (data.meta.total !== undefined) totalCount.value = data.meta.total;
   } catch (error) {
     console.error('Failed to fetch siswa:', error);
   } finally {
@@ -175,73 +155,57 @@ async function fetchTahunAjaran() {
 }
 
 function loadMore() {
-  if (hasNext.value && !loading.value) {
-    fetchSiswa(false);
-  }
+  if (hasNext.value && !loading.value) fetchSiswa(false);
 }
 
-// Debounced search
 let searchTimeout: ReturnType<typeof setTimeout> | null = null;
 watch(search, () => {
   if (searchTimeout) clearTimeout(searchTimeout);
   searchTimeout = setTimeout(() => fetchSiswa(), 300);
 });
+watch([filterKelas, filterStatus, filterTahunAjaran], () => fetchSiswa());
 
-watch([filterKelas, filterStatus, filterTahunAjaran], () => {
-  fetchSiswa();
-});
-
-// Form functions
 function validateForm(): boolean {
   formErrors.value = {};
-
-  if (!form.nama.trim()) {
-    formErrors.value.nama = 'Nama wajib diisi';
-  }
-  if (!form.nisn.trim()) {
-    formErrors.value.nisn = 'NISN wajib diisi';
-  } else if (!/^\d+$/.test(form.nisn.trim())) {
-    formErrors.value.nisn = 'NISN hanya boleh berisi angka';
-  }
-  if (!form.kelas_id) {
-    formErrors.value.kelas_id = 'Kelas wajib dipilih';
-  }
-  if (!form.telepon_wali.trim()) {
-    formErrors.value.telepon_wali = 'Telepon wali wajib diisi';
-  } else if (!/^[\d+\-\s]+$/.test(form.telepon_wali.trim())) {
+  if (!form.nama.trim()) formErrors.value.nama = 'Nama wajib diisi';
+  if (!form.nisn.trim()) formErrors.value.nisn = 'NISN wajib diisi';
+  else if (!/^\d+$/.test(form.nisn.trim())) formErrors.value.nisn = 'NISN hanya boleh berisi angka';
+  if (!form.kelas_id) formErrors.value.kelas_id = 'Kelas wajib dipilih';
+  if (!form.telepon_wali.trim()) formErrors.value.telepon_wali = 'Telepon wali wajib diisi';
+  else if (!/^[\d+\-\s]+$/.test(form.telepon_wali.trim()))
     formErrors.value.telepon_wali = 'Format telepon tidak valid';
-  }
-  if (!form.nama_wali.trim()) {
-    formErrors.value.nama_wali = 'Nama wali wajib diisi';
-  }
-
+  if (!form.nama_wali.trim()) formErrors.value.nama_wali = 'Nama wali wajib diisi';
   return Object.keys(formErrors.value).length === 0;
 }
 
 function openCreateForm() {
   editingSiswa.value = null;
-  form.nama = '';
-  form.nisn = '';
-  form.kelas_id = '';
-  form.jenis_kelamin = '';
-  form.tanggal_lahir = '';
-  form.alamat = '';
-  form.nama_wali = '';
-  form.telepon_wali = '';
+  Object.assign(form, {
+    nama: '',
+    nisn: '',
+    kelas_id: '',
+    jenis_kelamin: '',
+    tanggal_lahir: '',
+    alamat: '',
+    nama_wali: '',
+    telepon_wali: '',
+  });
   formErrors.value = {};
   showFormModal.value = true;
 }
 
 function openEditForm(siswa: Siswa) {
   editingSiswa.value = siswa;
-  form.nama = siswa.nama;
-  form.nisn = siswa.nisn;
-  form.kelas_id = siswa.kelas_id;
-  form.jenis_kelamin = siswa.jenis_kelamin || '';
-  form.tanggal_lahir = siswa.tanggal_lahir || '';
-  form.alamat = siswa.alamat || '';
-  form.nama_wali = siswa.orang_tua_nama || '';
-  form.telepon_wali = siswa.orang_tua_phone || '';
+  Object.assign(form, {
+    nama: siswa.nama,
+    nisn: siswa.nisn,
+    kelas_id: siswa.kelas_id,
+    jenis_kelamin: siswa.jenis_kelamin || '',
+    tanggal_lahir: siswa.tanggal_lahir || '',
+    alamat: siswa.alamat || '',
+    nama_wali: siswa.orang_tua_nama || '',
+    telepon_wali: siswa.orang_tua_phone || '',
+  });
   formErrors.value = {};
   showFormModal.value = true;
 }
@@ -255,7 +219,6 @@ function openDeleteConfirm(siswa: Siswa) {
 
 async function saveSiswa() {
   if (!validateForm()) return;
-
   saving.value = true;
   const payload = {
     nama: form.nama.trim(),
@@ -267,21 +230,15 @@ async function saveSiswa() {
     nama_wali: form.nama_wali.trim(),
     telepon_wali: form.telepon_wali.trim(),
   };
-
   try {
-    if (editingSiswa.value) {
-      await api.patch(`/siswa/${editingSiswa.value.id}`, payload);
-    } else {
-      await api.post('/siswa', payload);
-    }
+    if (editingSiswa.value) await api.patch(`/siswa/${editingSiswa.value.id}`, payload);
+    else await api.post('/siswa', payload);
     showFormModal.value = false;
     await fetchSiswa();
   } catch (error: any) {
-    if (error.response?.status === 409) {
+    if (error.response?.status === 409)
       formErrors.value.nisn = 'NISN sudah terdaftar di sekolah ini';
-    } else {
-      console.error('Failed to save siswa:', error);
-    }
+    else console.error('Failed to save siswa:', error);
   } finally {
     saving.value = false;
   }
@@ -289,7 +246,6 @@ async function saveSiswa() {
 
 async function deleteSiswa() {
   if (!deletingSiswa.value) return;
-
   try {
     await api.patch(`/siswa/${deletingSiswa.value.id}/soft-delete`, {
       status: deleteStatus.value,
@@ -303,7 +259,6 @@ async function deleteSiswa() {
   }
 }
 
-// CSV Import functions
 function openImportModal() {
   importFile.value = null;
   importPreview.value = [];
@@ -318,16 +273,12 @@ function handleFileSelect(event: Event) {
   const target = event.target as HTMLInputElement;
   const file = target.files?.[0];
   if (!file) return;
-
   if (!file.name.endsWith('.csv')) {
     importErrors.value = ['File harus berformat CSV'];
     return;
   }
-
   importFile.value = file;
   importErrors.value = [];
-
-  // Parse CSV for local preview
   const reader = new FileReader();
   reader.onload = (e) => {
     const text = e.target?.result as string;
@@ -336,19 +287,16 @@ function handleFileSelect(event: Event) {
       importErrors.value = ['File harus memiliki header dan minimal 1 baris data'];
       return;
     }
-
     const header = lines[0].split(',').map((h) => h.trim().toLowerCase());
     const namaIdx = header.indexOf('nama');
     const nisnIdx = header.indexOf('nisn');
     const kelasIdx = header.indexOf('kelas');
     const namaWaliIdx = header.indexOf('nama_wali');
     const teleponWaliIdx = header.indexOf('telepon_wali');
-
     if (namaIdx === -1 || nisnIdx === -1) {
       importErrors.value = ['Kolom wajib: nama, nisn'];
       return;
     }
-
     importErrors.value = [];
     importPreview.value = lines.slice(1, 11).map((line) => {
       const cols = line.split(',').map((c) => c.trim());
@@ -368,11 +316,9 @@ function handleFileSelect(event: Event) {
 async function uploadCsvForImport() {
   if (!importFile.value) return;
   importing.value = true;
-
   try {
     const formData = new FormData();
     formData.append('file', importFile.value);
-
     const { data } = await api.post<{
       conflicts: ImportConflict[];
       preview_count: number;
@@ -380,23 +326,12 @@ async function uploadCsvForImport() {
     }>('/siswa/import-csv/preview', formData, {
       headers: { 'Content-Type': 'multipart/form-data' },
     });
-
     if (data.conflicts && data.conflicts.length > 0) {
-      importConflicts.value = data.conflicts.map((c) => ({
-        ...c,
-        action: 'skip' as const,
-      }));
+      importConflicts.value = data.conflicts.map((c) => ({ ...c, action: 'skip' as const }));
       importStep.value = 'conflicts';
-    } else {
-      // No conflicts, proceed to import
-      await executeImport();
-    }
+    } else await executeImport();
   } catch (error: any) {
-    if (error.response?.data?.errors) {
-      importErrors.value = error.response.data.errors;
-    } else {
-      importErrors.value = ['Gagal memproses file CSV'];
-    }
+    importErrors.value = error.response?.data?.errors || ['Gagal memproses file CSV'];
   } finally {
     importing.value = false;
   }
@@ -405,35 +340,21 @@ async function uploadCsvForImport() {
 async function executeImport() {
   if (!importFile.value) return;
   importing.value = true;
-
   try {
     const formData = new FormData();
     formData.append('file', importFile.value);
-
-    // Send conflict resolutions
-    const resolutions = importConflicts.value.map((c) => ({
-      nisn: c.nisn,
-      action: c.action,
-    }));
+    const resolutions = importConflicts.value.map((c) => ({ nisn: c.nisn, action: c.action }));
     formData.append('resolutions', JSON.stringify(resolutions));
-
-    const { data } = await api.post<{
-      created: number;
-      updated: number;
-      skipped: number;
-    }>('/siswa/import-csv', formData, {
-      headers: { 'Content-Type': 'multipart/form-data' },
-    });
-
+    const { data } = await api.post<{ created: number; updated: number; skipped: number }>(
+      '/siswa/import-csv',
+      formData,
+      { headers: { 'Content-Type': 'multipart/form-data' } },
+    );
     importResult.value = data;
     importStep.value = 'done';
     await fetchSiswa();
   } catch (error: any) {
-    if (error.response?.data?.errors) {
-      importErrors.value = error.response.data.errors;
-    } else {
-      importErrors.value = ['Gagal mengimport data siswa'];
-    }
+    importErrors.value = error.response?.data?.errors || ['Gagal mengimport data siswa'];
   } finally {
     importing.value = false;
   }
@@ -442,24 +363,8 @@ async function executeImport() {
 function setAllConflictActions(action: 'update' | 'skip') {
   importConflicts.value = importConflicts.value.map((c) => ({ ...c, action }));
 }
-
 function getStatusLabel(status: StatusSiswa): string {
-  const found = statusOptions.find((o) => o.value === status);
-  return found?.label || status;
-}
-
-function getStatusClass(status: StatusSiswa): string {
-  switch (status) {
-    case StatusSiswa.AKTIF:
-      return 'status-active';
-    case StatusSiswa.PINDAH_SEKOLAH:
-    case StatusSiswa.KELUAR:
-      return 'status-inactive';
-    case StatusSiswa.ALUMNI:
-      return 'status-alumni';
-    default:
-      return '';
-  }
+  return statusOptions.find((o) => o.value === status)?.label || status;
 }
 
 onMounted(() => {
@@ -470,621 +375,583 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="page">
-    <div class="page-header">
-      <h1>Manajemen Siswa</h1>
-      <div class="actions">
-        <button class="btn btn-secondary" @click="openImportModal">Import CSV</button>
-        <button class="btn btn-primary" @click="openCreateForm">Tambah Siswa</button>
-      </div>
-    </div>
+  <div class="p-4 lg:p-6 max-w-7xl mx-auto">
+    <PageHeader
+      title="Manajemen Siswa"
+      description="Kelola data siswa, import CSV, dan status kesiswaan."
+    >
+      <template #actions>
+        <button
+          @click="openImportModal"
+          class="px-3 py-2 text-sm font-medium text-text-secondary bg-white border border-border rounded-lg hover:bg-surface-50 transition-colors"
+        >
+          Import CSV
+        </button>
+        <button
+          @click="openCreateForm"
+          class="px-3 py-2 text-sm font-medium text-white bg-primary-600 rounded-lg hover:bg-primary-700 transition-colors"
+        >
+          Tambah Siswa
+        </button>
+      </template>
+    </PageHeader>
 
     <!-- Filters -->
-    <div class="filters">
-      <input
-        v-model="search"
-        type="text"
-        placeholder="Cari nama atau NISN..."
-        class="input search-input"
-      />
-      <select v-model="filterKelas" class="input">
+    <div class="flex flex-wrap gap-2 mb-4">
+      <div class="relative flex-1 min-w-[200px] max-w-xs">
+        <svg
+          class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text-tertiary"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+          stroke-width="1.75"
+        >
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+          />
+        </svg>
+        <input
+          v-model="search"
+          type="text"
+          placeholder="Cari nama atau NISN..."
+          class="w-full pl-9 pr-3 py-2 text-sm border border-border rounded-lg bg-white placeholder:text-text-tertiary focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-colors"
+        />
+      </div>
+      <select
+        v-model="filterKelas"
+        class="px-3 py-2 text-sm border border-border rounded-lg bg-white text-text-primary focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
+      >
         <option value="">Semua Kelas</option>
         <option v-for="kelas in kelasList" :key="kelas.id" :value="kelas.id">
           {{ kelas.nama }}
         </option>
       </select>
-      <select v-model="filterStatus" class="input">
+      <select
+        v-model="filterStatus"
+        class="px-3 py-2 text-sm border border-border rounded-lg bg-white text-text-primary focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
+      >
         <option value="">Semua Status</option>
         <option v-for="opt in statusOptions" :key="opt.value" :value="opt.value">
           {{ opt.label }}
         </option>
       </select>
-      <select v-model="filterTahunAjaran" class="input">
+      <select
+        v-model="filterTahunAjaran"
+        class="px-3 py-2 text-sm border border-border rounded-lg bg-white text-text-primary focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
+      >
         <option value="">Semua Tahun Ajaran</option>
-        <option v-for="ta in tahunAjaranList" :key="ta.id" :value="ta.id">
-          {{ ta.nama }}
-        </option>
+        <option v-for="ta in tahunAjaranList" :key="ta.id" :value="ta.id">{{ ta.nama }}</option>
       </select>
     </div>
 
     <!-- Table -->
-    <div class="table-container">
-      <table v-if="!loading && siswaList.length > 0">
-        <thead>
-          <tr>
-            <th>Nama</th>
-            <th>NISN</th>
-            <th>Kelas</th>
-            <th>Jenis Kelamin</th>
-            <th>Wali</th>
-            <th>Status</th>
-            <th>Aksi</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr v-for="siswa in siswaList" :key="siswa.id">
-            <td>{{ siswa.nama }}</td>
-            <td>{{ siswa.nisn }}</td>
-            <td>{{ siswa.kelas_nama || '-' }}</td>
-            <td>
-              {{
-                siswa.jenis_kelamin === 'L'
-                  ? 'Laki-laki'
-                  : siswa.jenis_kelamin === 'P'
-                    ? 'Perempuan'
-                    : '-'
-              }}
-            </td>
-            <td>{{ siswa.orang_tua_nama || '-' }}</td>
-            <td>
-              <span :class="['status', getStatusClass(siswa.status)]">
-                {{ getStatusLabel(siswa.status) }}
-              </span>
-            </td>
-            <td class="actions-cell">
-              <button class="btn-sm btn-edit" @click="openEditForm(siswa)">Edit</button>
-              <button
-                v-if="siswa.status === 'aktif'"
-                class="btn-sm btn-delete"
-                @click="openDeleteConfirm(siswa)"
-              >
-                Nonaktifkan
-              </button>
-            </td>
-          </tr>
-        </tbody>
-      </table>
-      <p v-else-if="loading" class="empty-state">Memuat data...</p>
-      <p v-else class="empty-state">Tidak ada siswa ditemukan.</p>
+    <div class="bg-white border border-border rounded-xl overflow-hidden">
+      <div class="overflow-x-auto">
+        <table v-if="!loading && siswaList.length > 0" class="w-full text-sm">
+          <thead>
+            <tr class="border-b border-border">
+              <th class="text-left px-4 py-3 font-medium text-text-secondary bg-surface-50">
+                Nama
+              </th>
+              <th class="text-left px-4 py-3 font-medium text-text-secondary bg-surface-50">
+                NISN
+              </th>
+              <th class="text-left px-4 py-3 font-medium text-text-secondary bg-surface-50">
+                Kelas
+              </th>
+              <th class="text-left px-4 py-3 font-medium text-text-secondary bg-surface-50">JK</th>
+              <th class="text-left px-4 py-3 font-medium text-text-secondary bg-surface-50">
+                Wali
+              </th>
+              <th class="text-left px-4 py-3 font-medium text-text-secondary bg-surface-50">
+                Status
+              </th>
+              <th class="text-right px-4 py-3 font-medium text-text-secondary bg-surface-50">
+                Aksi
+              </th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-border">
+            <tr
+              v-for="siswa in siswaList"
+              :key="siswa.id"
+              class="hover:bg-surface-50 transition-colors"
+            >
+              <td class="px-4 py-3 font-medium text-text-primary">{{ siswa.nama }}</td>
+              <td class="px-4 py-3 text-text-secondary font-mono text-xs">{{ siswa.nisn }}</td>
+              <td class="px-4 py-3 text-text-secondary">{{ siswa.kelas_nama || '-' }}</td>
+              <td class="px-4 py-3 text-text-secondary">
+                {{ siswa.jenis_kelamin === 'L' ? 'L' : siswa.jenis_kelamin === 'P' ? 'P' : '-' }}
+              </td>
+              <td class="px-4 py-3 text-text-secondary">{{ siswa.orang_tua_nama || '-' }}</td>
+              <td class="px-4 py-3">
+                <span
+                  :class="[
+                    'inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium',
+                    siswa.status === 'aktif' ? 'bg-success-50 text-success-700' : '',
+                    siswa.status === 'pindah_sekolah' || siswa.status === 'keluar'
+                      ? 'bg-danger-50 text-danger-700'
+                      : '',
+                    siswa.status === 'alumni' ? 'bg-primary-50 text-primary-700' : '',
+                  ]"
+                >
+                  {{ getStatusLabel(siswa.status) }}
+                </span>
+              </td>
+              <td class="px-4 py-3 text-right">
+                <div class="flex items-center justify-end gap-1">
+                  <button
+                    @click="openEditForm(siswa)"
+                    class="p-1.5 rounded-md text-text-tertiary hover:text-primary-600 hover:bg-primary-50 transition-colors"
+                    title="Edit"
+                  >
+                    <svg
+                      class="w-4 h-4"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                      stroke-width="1.75"
+                    >
+                      <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"
+                      />
+                    </svg>
+                  </button>
+                  <button
+                    v-if="siswa.status === 'aktif'"
+                    @click="openDeleteConfirm(siswa)"
+                    class="p-1.5 rounded-md text-text-tertiary hover:text-danger-700 hover:bg-danger-50 transition-colors"
+                    title="Nonaktifkan"
+                  >
+                    <svg
+                      class="w-4 h-4"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                      stroke-width="1.75"
+                    >
+                      <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"
+                      />
+                    </svg>
+                  </button>
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
 
-      <!-- Load More -->
-      <div v-if="hasNext && !loading" class="load-more">
-        <button class="btn btn-secondary" @click="loadMore">Muat Lebih Banyak</button>
+        <!-- Loading -->
+        <div v-else-if="loading" class="p-12 text-center">
+          <svg
+            class="w-6 h-6 animate-spin text-primary-500 mx-auto"
+            viewBox="0 0 24 24"
+            fill="none"
+          >
+            <circle
+              class="opacity-25"
+              cx="12"
+              cy="12"
+              r="10"
+              stroke="currentColor"
+              stroke-width="4"
+            />
+            <path
+              class="opacity-75"
+              fill="currentColor"
+              d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
+            />
+          </svg>
+          <p class="text-sm text-text-tertiary mt-2">Memuat data...</p>
+        </div>
+
+        <!-- Empty -->
+        <div v-else class="p-12 text-center">
+          <svg
+            class="w-10 h-10 text-surface-300 mx-auto mb-3"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+            stroke-width="1"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"
+            />
+          </svg>
+          <p class="text-sm text-text-tertiary">Tidak ada siswa ditemukan.</p>
+        </div>
+      </div>
+
+      <!-- Load more -->
+      <div v-if="hasNext && !loading" class="px-4 py-3 border-t border-border text-center">
+        <button
+          @click="loadMore"
+          class="text-sm font-medium text-primary-600 hover:text-primary-700 transition-colors"
+        >
+          Muat lebih banyak
+        </button>
       </div>
     </div>
 
     <!-- Create/Edit Modal -->
-    <div v-if="showFormModal" class="modal-overlay" @click.self="showFormModal = false">
-      <div class="modal modal-lg">
-        <h2>{{ editingSiswa ? 'Edit Siswa' : 'Tambah Siswa' }}</h2>
-        <form @submit.prevent="saveSiswa">
-          <div class="form-row">
-            <div class="form-group">
-              <label>Nama Lengkap <span class="required">*</span></label>
-              <input v-model="form.nama" type="text" class="input" />
-              <span v-if="formErrors.nama" class="error-text">{{ formErrors.nama }}</span>
-            </div>
-            <div class="form-group">
-              <label>NISN <span class="required">*</span></label>
-              <input v-model="form.nisn" type="text" class="input" />
-              <span v-if="formErrors.nisn" class="error-text">{{ formErrors.nisn }}</span>
-            </div>
+    <BaseModal
+      :show="showFormModal"
+      :title="editingSiswa ? 'Edit Siswa' : 'Tambah Siswa'"
+      size="lg"
+      @close="showFormModal = false"
+    >
+      <form @submit.prevent="saveSiswa" class="space-y-4">
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label class="block text-sm font-medium text-text-primary mb-1.5"
+              >Nama Lengkap <span class="text-danger-500">*</span></label
+            >
+            <input
+              v-model="form.nama"
+              type="text"
+              class="w-full px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
+            />
+            <p v-if="formErrors.nama" class="text-xs text-danger-500 mt-1">{{ formErrors.nama }}</p>
           </div>
-
-          <div class="form-row">
-            <div class="form-group">
-              <label>Kelas <span class="required">*</span></label>
-              <select v-model="form.kelas_id" class="input">
-                <option value="" disabled>Pilih Kelas</option>
-                <option v-for="kelas in kelasList" :key="kelas.id" :value="kelas.id">
-                  {{ kelas.nama }}
-                </option>
-              </select>
-              <span v-if="formErrors.kelas_id" class="error-text">{{ formErrors.kelas_id }}</span>
-            </div>
-            <div class="form-group">
-              <label>Jenis Kelamin</label>
-              <select v-model="form.jenis_kelamin" class="input">
-                <option value="">Pilih</option>
-                <option value="L">Laki-laki</option>
-                <option value="P">Perempuan</option>
-              </select>
-            </div>
+          <div>
+            <label class="block text-sm font-medium text-text-primary mb-1.5"
+              >NISN <span class="text-danger-500">*</span></label
+            >
+            <input
+              v-model="form.nisn"
+              type="text"
+              class="w-full px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
+            />
+            <p v-if="formErrors.nisn" class="text-xs text-danger-500 mt-1">{{ formErrors.nisn }}</p>
           </div>
-
-          <div class="form-row">
-            <div class="form-group">
-              <label>Tanggal Lahir</label>
-              <input v-model="form.tanggal_lahir" type="date" class="input" />
-            </div>
-            <div class="form-group">
-              <label>Alamat</label>
-              <input v-model="form.alamat" type="text" class="input" />
-            </div>
+        </div>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label class="block text-sm font-medium text-text-primary mb-1.5"
+              >Kelas <span class="text-danger-500">*</span></label
+            >
+            <select
+              v-model="form.kelas_id"
+              class="w-full px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
+            >
+              <option value="" disabled>Pilih Kelas</option>
+              <option v-for="kelas in kelasList" :key="kelas.id" :value="kelas.id">
+                {{ kelas.nama }}
+              </option>
+            </select>
+            <p v-if="formErrors.kelas_id" class="text-xs text-danger-500 mt-1">
+              {{ formErrors.kelas_id }}
+            </p>
           </div>
+          <div>
+            <label class="block text-sm font-medium text-text-primary mb-1.5">Jenis Kelamin</label>
+            <select
+              v-model="form.jenis_kelamin"
+              class="w-full px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
+            >
+              <option value="">Pilih</option>
+              <option value="L">Laki-laki</option>
+              <option value="P">Perempuan</option>
+            </select>
+          </div>
+        </div>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label class="block text-sm font-medium text-text-primary mb-1.5">Tanggal Lahir</label>
+            <input
+              v-model="form.tanggal_lahir"
+              type="date"
+              class="w-full px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
+            />
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-text-primary mb-1.5">Alamat</label>
+            <input
+              v-model="form.alamat"
+              type="text"
+              class="w-full px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
+            />
+          </div>
+        </div>
 
-          <hr class="divider" />
-          <h3 class="section-title">Data Orang Tua / Wali</h3>
-
-          <div class="form-row">
-            <div class="form-group">
-              <label>Nama Wali <span class="required">*</span></label>
-              <input v-model="form.nama_wali" type="text" class="input" />
-              <span v-if="formErrors.nama_wali" class="error-text">{{ formErrors.nama_wali }}</span>
+        <div class="border-t border-border pt-4 mt-4">
+          <h3 class="text-sm font-semibold text-text-primary mb-3">Data Orang Tua / Wali</h3>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label class="block text-sm font-medium text-text-primary mb-1.5"
+                >Nama Wali <span class="text-danger-500">*</span></label
+              >
+              <input
+                v-model="form.nama_wali"
+                type="text"
+                class="w-full px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
+              />
+              <p v-if="formErrors.nama_wali" class="text-xs text-danger-500 mt-1">
+                {{ formErrors.nama_wali }}
+              </p>
             </div>
-            <div class="form-group">
-              <label>Telepon Wali <span class="required">*</span></label>
+            <div>
+              <label class="block text-sm font-medium text-text-primary mb-1.5"
+                >Telepon Wali <span class="text-danger-500">*</span></label
+              >
               <input
                 v-model="form.telepon_wali"
                 type="text"
                 placeholder="08xxxxxxxxxx"
-                class="input"
+                class="w-full px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
               />
-              <span v-if="formErrors.telepon_wali" class="error-text">{{
-                formErrors.telepon_wali
-              }}</span>
+              <p v-if="formErrors.telepon_wali" class="text-xs text-danger-500 mt-1">
+                {{ formErrors.telepon_wali }}
+              </p>
             </div>
           </div>
+        </div>
+      </form>
+      <template #footer>
+        <button
+          @click="showFormModal = false"
+          class="px-4 py-2 text-sm font-medium text-text-secondary bg-white border border-border rounded-lg hover:bg-surface-50 transition-colors"
+        >
+          Batal
+        </button>
+        <button
+          @click="saveSiswa"
+          :disabled="saving"
+          class="px-4 py-2 text-sm font-medium text-white bg-primary-600 rounded-lg hover:bg-primary-700 disabled:opacity-50 transition-colors"
+        >
+          {{ saving ? 'Menyimpan...' : 'Simpan' }}
+        </button>
+      </template>
+    </BaseModal>
 
-          <div class="modal-actions">
-            <button type="button" class="btn btn-secondary" @click="showFormModal = false">
-              Batal
-            </button>
-            <button type="submit" class="btn btn-primary" :disabled="saving">
-              {{ saving ? 'Menyimpan...' : 'Simpan' }}
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
-
-    <!-- Delete (Soft-Delete) Confirmation Modal -->
-    <div v-if="showDeleteModal" class="modal-overlay" @click.self="showDeleteModal = false">
-      <div class="modal">
-        <h2>Nonaktifkan Siswa</h2>
-        <p>
-          Anda akan menonaktifkan siswa <strong>{{ deletingSiswa?.nama }}</strong
+    <!-- Delete Modal -->
+    <BaseModal :show="showDeleteModal" title="Nonaktifkan Siswa" @close="showDeleteModal = false">
+      <div class="space-y-4">
+        <p class="text-sm text-text-secondary">
+          Anda akan menonaktifkan siswa
+          <strong class="text-text-primary">{{ deletingSiswa?.nama }}</strong
           >. Data siswa tetap tersimpan untuk keperluan riwayat.
         </p>
-
-        <div class="form-group">
-          <label>Status Baru <span class="required">*</span></label>
-          <select v-model="deleteStatus" class="input">
+        <div>
+          <label class="block text-sm font-medium text-text-primary mb-1.5"
+            >Status Baru <span class="text-danger-500">*</span></label
+          >
+          <select
+            v-model="deleteStatus"
+            class="w-full px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
+          >
             <option v-for="opt in deleteStatusOptions" :key="opt.value" :value="opt.value">
               {{ opt.label }}
             </option>
           </select>
         </div>
-
-        <div class="form-group">
-          <label>Alasan</label>
-          <textarea v-model="deleteReason" class="input textarea" placeholder="Alasan (opsional)" />
-        </div>
-
-        <div class="modal-actions">
-          <button class="btn btn-secondary" @click="showDeleteModal = false">Batal</button>
-          <button class="btn btn-danger" @click="deleteSiswa">Nonaktifkan</button>
+        <div>
+          <label class="block text-sm font-medium text-text-primary mb-1.5"
+            >Alasan (opsional)</label
+          >
+          <textarea
+            v-model="deleteReason"
+            rows="2"
+            class="w-full px-3 py-2 text-sm border border-border rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
+            placeholder="Alasan nonaktifkan..."
+          />
         </div>
       </div>
-    </div>
+      <template #footer>
+        <button
+          @click="showDeleteModal = false"
+          class="px-4 py-2 text-sm font-medium text-text-secondary bg-white border border-border rounded-lg hover:bg-surface-50 transition-colors"
+        >
+          Batal
+        </button>
+        <button
+          @click="deleteSiswa"
+          class="px-4 py-2 text-sm font-medium text-white bg-danger-500 rounded-lg hover:bg-danger-700 transition-colors"
+        >
+          Nonaktifkan
+        </button>
+      </template>
+    </BaseModal>
 
     <!-- Import CSV Modal -->
-    <div v-if="showImportModal" class="modal-overlay" @click.self="showImportModal = false">
-      <div class="modal modal-xl">
-        <h2>Import Siswa dari CSV</h2>
-
-        <!-- Step: Upload -->
-        <div v-if="importStep === 'upload'">
-          <p class="hint">
-            Format CSV: kolom wajib <code>nama</code>, <code>nisn</code>. Kolom opsional:
-            <code>kelas</code>, <code>jenis_kelamin</code>, <code>tanggal_lahir</code>,
-            <code>alamat</code>, <code>nama_wali</code>, <code>telepon_wali</code>.
-          </p>
-
-          <div class="form-group">
-            <label>Pilih File CSV</label>
-            <input type="file" accept=".csv" @change="handleFileSelect" class="input" />
-          </div>
-
-          <div v-if="importErrors.length > 0" class="errors">
-            <p v-for="(err, i) in importErrors" :key="i" class="error-text">{{ err }}</p>
-          </div>
+    <BaseModal
+      :show="showImportModal"
+      title="Import Siswa dari CSV"
+      size="xl"
+      @close="showImportModal = false"
+    >
+      <!-- Upload Step -->
+      <div v-if="importStep === 'upload'" class="space-y-4">
+        <p class="text-sm text-text-secondary">
+          Format CSV: kolom wajib
+          <code class="px-1 py-0.5 bg-surface-100 rounded text-xs">nama</code>,
+          <code class="px-1 py-0.5 bg-surface-100 rounded text-xs">nisn</code>. Kolom opsional:
+          kelas, jenis_kelamin, tanggal_lahir, alamat, nama_wali, telepon_wali.
+        </p>
+        <div>
+          <label class="block text-sm font-medium text-text-primary mb-1.5">Pilih File CSV</label>
+          <input
+            type="file"
+            accept=".csv"
+            @change="handleFileSelect"
+            class="w-full text-sm text-text-secondary file:mr-3 file:py-2 file:px-3 file:rounded-lg file:border file:border-border file:bg-white file:text-sm file:font-medium file:text-text-primary hover:file:bg-surface-50"
+          />
         </div>
-
-        <!-- Step: Preview -->
-        <div v-if="importStep === 'preview'">
-          <h3>Preview (maks 10 baris pertama)</h3>
-          <div class="table-container">
-            <table>
-              <thead>
-                <tr>
-                  <th>Nama</th>
-                  <th>NISN</th>
-                  <th>Kelas</th>
-                  <th>Nama Wali</th>
-                  <th>Telepon Wali</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr v-for="(row, i) in importPreview" :key="i">
-                  <td>{{ row.nama }}</td>
-                  <td>{{ row.nisn }}</td>
-                  <td>{{ row.kelas }}</td>
-                  <td>{{ row.nama_wali }}</td>
-                  <td>{{ row.telepon_wali }}</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-
-          <div v-if="importErrors.length > 0" class="errors">
-            <p v-for="(err, i) in importErrors" :key="i" class="error-text">{{ err }}</p>
-          </div>
+        <div v-if="importErrors.length > 0" class="p-3 bg-danger-50 rounded-lg">
+          <p v-for="(err, i) in importErrors" :key="i" class="text-xs text-danger-700">{{ err }}</p>
         </div>
+      </div>
 
-        <!-- Step: Conflicts -->
-        <div v-if="importStep === 'conflicts'">
-          <h3>Konflik NISN Ditemukan</h3>
-          <p class="hint">Beberapa NISN sudah terdaftar. Pilih aksi untuk setiap konflik:</p>
+      <!-- Preview Step -->
+      <div v-if="importStep === 'preview'" class="space-y-4">
+        <h3 class="text-sm font-semibold text-text-primary">Preview (maks 10 baris pertama)</h3>
+        <div class="overflow-x-auto border border-border rounded-lg">
+          <table class="w-full text-sm">
+            <thead>
+              <tr class="border-b border-border bg-surface-50">
+                <th class="px-3 py-2 text-left font-medium text-text-secondary">Nama</th>
+                <th class="px-3 py-2 text-left font-medium text-text-secondary">NISN</th>
+                <th class="px-3 py-2 text-left font-medium text-text-secondary">Kelas</th>
+                <th class="px-3 py-2 text-left font-medium text-text-secondary">Nama Wali</th>
+                <th class="px-3 py-2 text-left font-medium text-text-secondary">Telepon Wali</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-border">
+              <tr v-for="(row, i) in importPreview" :key="i">
+                <td class="px-3 py-2">{{ row.nama }}</td>
+                <td class="px-3 py-2 font-mono text-xs">{{ row.nisn }}</td>
+                <td class="px-3 py-2">{{ row.kelas }}</td>
+                <td class="px-3 py-2">{{ row.nama_wali }}</td>
+                <td class="px-3 py-2">{{ row.telepon_wali }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
 
-          <div class="conflict-actions-bulk">
-            <button class="btn btn-sm btn-secondary" @click="setAllConflictActions('update')">
+      <!-- Conflicts Step -->
+      <div v-if="importStep === 'conflicts'" class="space-y-4">
+        <div class="flex items-center justify-between">
+          <h3 class="text-sm font-semibold text-text-primary">Konflik NISN Ditemukan</h3>
+          <div class="flex gap-2">
+            <button
+              @click="setAllConflictActions('update')"
+              class="text-xs px-2 py-1 rounded border border-border hover:bg-surface-50"
+            >
               Update Semua
             </button>
-            <button class="btn btn-sm btn-secondary" @click="setAllConflictActions('skip')">
+            <button
+              @click="setAllConflictActions('skip')"
+              class="text-xs px-2 py-1 rounded border border-border hover:bg-surface-50"
+            >
               Lewati Semua
             </button>
           </div>
-
-          <div class="table-container">
-            <table>
-              <thead>
-                <tr>
-                  <th>Baris</th>
-                  <th>NISN</th>
-                  <th>Nama (CSV)</th>
-                  <th>Nama (Existing)</th>
-                  <th>Aksi</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr v-for="(conflict, i) in importConflicts" :key="i">
-                  <td>{{ conflict.row }}</td>
-                  <td>{{ conflict.nisn }}</td>
-                  <td>{{ conflict.nama }}</td>
-                  <td>{{ conflict.existing_nama }}</td>
-                  <td>
-                    <select v-model="conflict.action" class="input input-sm">
-                      <option value="update">Update</option>
-                      <option value="skip">Lewati</option>
-                    </select>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
         </div>
-
-        <!-- Step: Done -->
-        <div v-if="importStep === 'done' && importResult">
-          <div class="import-result">
-            <h3>Import Selesai</h3>
-            <div class="result-summary">
-              <div class="result-item result-created">
-                <span class="result-number">{{ importResult.created }}</span>
-                <span class="result-label">Ditambahkan</span>
-              </div>
-              <div class="result-item result-updated">
-                <span class="result-number">{{ importResult.updated }}</span>
-                <span class="result-label">Diperbarui</span>
-              </div>
-              <div class="result-item result-skipped">
-                <span class="result-number">{{ importResult.skipped }}</span>
-                <span class="result-label">Dilewati</span>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div class="modal-actions">
-          <button
-            v-if="importStep !== 'done'"
-            class="btn btn-secondary"
-            @click="showImportModal = false"
-          >
-            Batal
-          </button>
-          <button
-            v-if="importStep === 'done'"
-            class="btn btn-primary"
-            @click="showImportModal = false"
-          >
-            Tutup
-          </button>
-          <button
-            v-if="importStep === 'preview'"
-            class="btn btn-primary"
-            :disabled="importing || importErrors.length > 0"
-            @click="uploadCsvForImport"
-          >
-            {{ importing ? 'Memproses...' : 'Proses Import' }}
-          </button>
-          <button
-            v-if="importStep === 'conflicts'"
-            class="btn btn-primary"
-            :disabled="importing"
-            @click="executeImport"
-          >
-            {{ importing ? 'Mengimport...' : 'Konfirmasi Import' }}
-          </button>
+        <div class="overflow-x-auto border border-border rounded-lg">
+          <table class="w-full text-sm">
+            <thead>
+              <tr class="border-b border-border bg-surface-50">
+                <th class="px-3 py-2 text-left font-medium text-text-secondary">Baris</th>
+                <th class="px-3 py-2 text-left font-medium text-text-secondary">NISN</th>
+                <th class="px-3 py-2 text-left font-medium text-text-secondary">Nama (CSV)</th>
+                <th class="px-3 py-2 text-left font-medium text-text-secondary">Nama (Existing)</th>
+                <th class="px-3 py-2 text-left font-medium text-text-secondary">Aksi</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-border">
+              <tr v-for="(conflict, i) in importConflicts" :key="i">
+                <td class="px-3 py-2">{{ conflict.row }}</td>
+                <td class="px-3 py-2 font-mono text-xs">{{ conflict.nisn }}</td>
+                <td class="px-3 py-2">{{ conflict.nama }}</td>
+                <td class="px-3 py-2">{{ conflict.existing_nama }}</td>
+                <td class="px-3 py-2">
+                  <select
+                    v-model="conflict.action"
+                    class="px-2 py-1 text-xs border border-border rounded"
+                  >
+                    <option value="update">Update</option>
+                    <option value="skip">Lewati</option>
+                  </select>
+                </td>
+              </tr>
+            </tbody>
+          </table>
         </div>
       </div>
-    </div>
+
+      <!-- Done Step -->
+      <div v-if="importStep === 'done' && importResult" class="text-center py-6">
+        <div
+          class="w-12 h-12 rounded-full bg-success-50 flex items-center justify-center mx-auto mb-4"
+        >
+          <svg
+            class="w-6 h-6 text-success-500"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+            stroke-width="2"
+          >
+            <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+          </svg>
+        </div>
+        <h3 class="text-base font-semibold text-text-primary mb-4">Import Selesai</h3>
+        <div class="flex justify-center gap-6">
+          <div class="text-center">
+            <p class="text-2xl font-semibold text-success-700">{{ importResult.created }}</p>
+            <p class="text-xs text-text-tertiary">Ditambahkan</p>
+          </div>
+          <div class="text-center">
+            <p class="text-2xl font-semibold text-warning-700">{{ importResult.updated }}</p>
+            <p class="text-xs text-text-tertiary">Diperbarui</p>
+          </div>
+          <div class="text-center">
+            <p class="text-2xl font-semibold text-text-tertiary">{{ importResult.skipped }}</p>
+            <p class="text-xs text-text-tertiary">Dilewati</p>
+          </div>
+        </div>
+      </div>
+
+      <template #footer>
+        <button
+          v-if="importStep !== 'done'"
+          @click="showImportModal = false"
+          class="px-4 py-2 text-sm font-medium text-text-secondary bg-white border border-border rounded-lg hover:bg-surface-50 transition-colors"
+        >
+          Batal
+        </button>
+        <button
+          v-if="importStep === 'done'"
+          @click="showImportModal = false"
+          class="px-4 py-2 text-sm font-medium text-white bg-primary-600 rounded-lg hover:bg-primary-700 transition-colors"
+        >
+          Tutup
+        </button>
+        <button
+          v-if="importStep === 'preview'"
+          :disabled="importing || importErrors.length > 0"
+          @click="uploadCsvForImport"
+          class="px-4 py-2 text-sm font-medium text-white bg-primary-600 rounded-lg hover:bg-primary-700 disabled:opacity-50 transition-colors"
+        >
+          {{ importing ? 'Memproses...' : 'Proses Import' }}
+        </button>
+        <button
+          v-if="importStep === 'conflicts'"
+          :disabled="importing"
+          @click="executeImport"
+          class="px-4 py-2 text-sm font-medium text-white bg-primary-600 rounded-lg hover:bg-primary-700 disabled:opacity-50 transition-colors"
+        >
+          {{ importing ? 'Mengimport...' : 'Konfirmasi Import' }}
+        </button>
+      </template>
+    </BaseModal>
   </div>
 </template>
-
-<style scoped>
-.page {
-  padding: 2rem;
-}
-.page-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 1.5rem;
-}
-.page-header h1 {
-  margin: 0;
-  font-size: 1.5rem;
-}
-.actions {
-  display: flex;
-  gap: 0.5rem;
-}
-.filters {
-  display: flex;
-  gap: 0.75rem;
-  margin-bottom: 1rem;
-  flex-wrap: wrap;
-}
-.search-input {
-  min-width: 200px;
-}
-.input {
-  padding: 0.5rem 0.75rem;
-  border: 1px solid #d1d5db;
-  border-radius: 6px;
-  font-size: 0.875rem;
-}
-.input-sm {
-  padding: 0.25rem 0.5rem;
-  font-size: 0.75rem;
-}
-.textarea {
-  min-height: 60px;
-  resize: vertical;
-}
-.table-container {
-  overflow-x: auto;
-}
-table {
-  width: 100%;
-  border-collapse: collapse;
-}
-th,
-td {
-  padding: 0.75rem;
-  text-align: left;
-  border-bottom: 1px solid #e5e7eb;
-}
-th {
-  font-weight: 600;
-  color: #374151;
-  background: #f9fafb;
-}
-.status {
-  padding: 0.2rem 0.5rem;
-  border-radius: 4px;
-  font-size: 0.75rem;
-  font-weight: 500;
-}
-.status-active {
-  background: #d1fae5;
-  color: #065f46;
-}
-.status-inactive {
-  background: #fee2e2;
-  color: #991b1b;
-}
-.status-alumni {
-  background: #e0e7ff;
-  color: #3730a3;
-}
-.actions-cell {
-  display: flex;
-  gap: 0.5rem;
-}
-.btn {
-  padding: 0.5rem 1rem;
-  border: none;
-  border-radius: 6px;
-  font-size: 0.875rem;
-  cursor: pointer;
-  font-weight: 500;
-}
-.btn-primary {
-  background: #2563eb;
-  color: white;
-}
-.btn-primary:hover {
-  background: #1d4ed8;
-}
-.btn-primary:disabled {
-  background: #93c5fd;
-  cursor: not-allowed;
-}
-.btn-secondary {
-  background: #f3f4f6;
-  color: #374151;
-  border: 1px solid #d1d5db;
-}
-.btn-danger {
-  background: #ef4444;
-  color: white;
-}
-.btn-sm {
-  padding: 0.25rem 0.5rem;
-  border: none;
-  border-radius: 4px;
-  font-size: 0.75rem;
-  cursor: pointer;
-}
-.btn-edit {
-  background: #fef3c7;
-  color: #92400e;
-}
-.btn-delete {
-  background: #fee2e2;
-  color: #991b1b;
-}
-.empty-state {
-  text-align: center;
-  color: #6b7280;
-  padding: 2rem;
-}
-.load-more {
-  text-align: center;
-  padding: 1rem;
-}
-.modal-overlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.4);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 50;
-}
-.modal {
-  background: white;
-  border-radius: 8px;
-  padding: 1.5rem;
-  width: 100%;
-  max-width: 480px;
-  max-height: 90vh;
-  overflow-y: auto;
-}
-.modal-lg {
-  max-width: 640px;
-}
-.modal-xl {
-  max-width: 800px;
-}
-.modal h2 {
-  margin: 0 0 1rem;
-  font-size: 1.25rem;
-}
-.form-group {
-  margin-bottom: 1rem;
-}
-.form-group label {
-  display: block;
-  margin-bottom: 0.25rem;
-  font-size: 0.875rem;
-  font-weight: 500;
-  color: #374151;
-}
-.form-group .input {
-  width: 100%;
-}
-.form-row {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 1rem;
-}
-.required {
-  color: #ef4444;
-}
-.divider {
-  border: none;
-  border-top: 1px solid #e5e7eb;
-  margin: 1.5rem 0 1rem;
-}
-.section-title {
-  font-size: 0.95rem;
-  font-weight: 600;
-  margin: 0 0 1rem;
-  color: #374151;
-}
-.modal-actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 0.5rem;
-  margin-top: 1.5rem;
-}
-.hint {
-  color: #6b7280;
-  font-size: 0.875rem;
-  margin-bottom: 1rem;
-}
-.errors {
-  margin-top: 0.5rem;
-}
-.error-text {
-  color: #dc2626;
-  font-size: 0.75rem;
-  display: block;
-  margin-top: 0.25rem;
-}
-.conflict-actions-bulk {
-  display: flex;
-  gap: 0.5rem;
-  margin-bottom: 1rem;
-}
-.import-result {
-  text-align: center;
-  padding: 1rem 0;
-}
-.result-summary {
-  display: flex;
-  justify-content: center;
-  gap: 2rem;
-  margin-top: 1rem;
-}
-.result-item {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  padding: 1rem;
-  border-radius: 8px;
-  min-width: 100px;
-}
-.result-created {
-  background: #d1fae5;
-}
-.result-updated {
-  background: #fef3c7;
-}
-.result-skipped {
-  background: #f3f4f6;
-}
-.result-number {
-  font-size: 1.5rem;
-  font-weight: 700;
-}
-.result-label {
-  font-size: 0.75rem;
-  color: #6b7280;
-  margin-top: 0.25rem;
-}
-</style>

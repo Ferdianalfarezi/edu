@@ -1,12 +1,22 @@
 <script setup lang="ts">
-import { RouterView } from 'vue-router';
+import { computed } from 'vue';
+import { RouterView, useRoute } from 'vue-router';
 import { useAuthStore } from '@/stores/auth';
+import AppLayout from '@/components/layout/AppLayout.vue';
 import ForceChangePasswordModal from '@/components/ForceChangePasswordModal.vue';
 
+const route = useRoute();
 const authStore = useAuthStore();
+
+const showLayout = computed(() => {
+  return authStore.isAuthenticated && !route.meta.guest;
+});
 </script>
 
 <template>
-  <RouterView />
+  <AppLayout v-if="showLayout">
+    <RouterView />
+  </AppLayout>
+  <RouterView v-else />
   <ForceChangePasswordModal v-if="authStore.isAuthenticated && authStore.mustChangePassword" />
 </template>

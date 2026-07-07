@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue';
 import { api } from '@/api/client';
+import { PageHeader, BaseModal } from '@/components/ui';
 
 // Types
 interface Kelas {
@@ -390,446 +391,330 @@ onMounted(async () => {
 </script>
 
 <template>
-  <div class="page">
-    <div class="page-header">
-      <h1>Manajemen Jadwal Pelajaran</h1>
-    </div>
+  <div class="p-4 lg:p-6 max-w-7xl mx-auto">
+    <PageHeader title="Manajemen Jadwal Pelajaran" />
 
     <!-- Kelas Selector -->
-    <div class="filter-bar">
-      <div class="form-group-inline">
-        <label>Kelas:</label>
-        <select v-model="selectedKelasId" class="input select-input">
-          <option value="" disabled>Pilih Kelas</option>
-          <option v-for="kelas in kelasList" :key="kelas.id" :value="kelas.id">
-            {{ kelas.nama }}
-          </option>
-        </select>
-      </div>
+    <div class="flex items-center gap-3 mb-4">
+      <label class="text-sm font-medium text-text-primary">Kelas:</label>
+      <select
+        v-model="selectedKelasId"
+        class="w-full px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 max-w-xs"
+      >
+        <option value="" disabled>Pilih Kelas</option>
+        <option v-for="kelas in kelasList" :key="kelas.id" :value="kelas.id">
+          {{ kelas.nama }}
+        </option>
+      </select>
     </div>
 
     <!-- Schedule Grid -->
-    <div class="table-container" v-if="selectedKelasId">
-      <p v-if="loading" class="empty-state">Memuat jadwal...</p>
-      <table v-else class="schedule-grid">
-        <thead>
-          <tr>
-            <th class="jam-col">Jam Ke</th>
-            <th v-for="hari in HARI_LIST" :key="hari">{{ HARI_LABELS[hari] }}</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr v-for="jam in JAM_KE_LIST" :key="jam">
-            <td class="jam-col">{{ jam }}</td>
-            <td
-              v-for="hari in HARI_LIST"
-              :key="`${jam}-${hari}`"
-              :class="[
-                'schedule-cell',
-                { 'cell-vacant': isVacant(gridData[jam][hari]) },
-                { 'cell-pengganti': hasPengganti(gridData[jam][hari]) },
-              ]"
-              @click="handleCellClick(jam, hari)"
-            >
-              <template v-if="gridData[jam][hari]">
-                <div class="cell-mapel">{{ getCellMapel(gridData[jam][hari]) }}</div>
-                <div class="cell-guru">{{ getCellGuru(gridData[jam][hari]) }}</div>
-                <div v-if="hasPengganti(gridData[jam][hari])" class="cell-pengganti-badge">
-                  🔄 {{ getCellPenggantiNama(gridData[jam][hari]) }}
-                </div>
-              </template>
-              <template v-else>
-                <div class="cell-vacant-label">Kosong</div>
-              </template>
-            </td>
-          </tr>
-        </tbody>
-      </table>
+    <div v-if="selectedKelasId" class="bg-white border border-border rounded-xl overflow-hidden">
+      <div v-if="loading" class="py-12 text-center">
+        <svg
+          class="w-6 h-6 animate-spin text-primary-500 mx-auto"
+          xmlns="http://www.w3.org/2000/svg"
+          fill="none"
+          viewBox="0 0 24 24"
+        >
+          <circle
+            class="opacity-25"
+            cx="12"
+            cy="12"
+            r="10"
+            stroke="currentColor"
+            stroke-width="4"
+          ></circle>
+          <path
+            class="opacity-75"
+            fill="currentColor"
+            d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
+          ></path>
+        </svg>
+        <p class="text-sm text-text-tertiary mt-2">Memuat jadwal...</p>
+      </div>
+      <div v-else class="overflow-x-auto">
+        <table class="w-full table-fixed">
+          <thead>
+            <tr class="border-b border-border bg-surface-50">
+              <th class="px-4 py-3 text-left font-medium text-text-secondary text-xs w-16">
+                Jam Ke
+              </th>
+              <th
+                v-for="hari in HARI_LIST"
+                :key="hari"
+                class="px-4 py-3 text-left font-medium text-text-secondary text-xs"
+              >
+                {{ HARI_LABELS[hari] }}
+              </th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-border">
+            <tr v-for="jam in JAM_KE_LIST" :key="jam">
+              <td class="px-4 py-3 text-sm font-semibold text-text-primary bg-surface-50">
+                {{ jam }}
+              </td>
+              <td
+                v-for="hari in HARI_LIST"
+                :key="`${jam}-${hari}`"
+                :class="[
+                  'p-2 border border-border text-center text-xs cursor-pointer hover:bg-primary-50 transition-colors align-top min-h-[60px]',
+                  isVacant(gridData[jam][hari]) && gridData[jam][hari] === null ? '' : '',
+                  isVacant(gridData[jam][hari]) && gridData[jam][hari] !== null
+                    ? 'bg-warning-50'
+                    : '',
+                  hasPengganti(gridData[jam][hari]) ? 'bg-primary-50' : '',
+                ]"
+                @click="handleCellClick(jam, hari)"
+              >
+                <template v-if="gridData[jam][hari]">
+                  <div class="font-semibold text-text-primary mb-0.5">
+                    {{ getCellMapel(gridData[jam][hari]) }}
+                  </div>
+                  <div class="text-text-tertiary text-[10px]">
+                    {{ getCellGuru(gridData[jam][hari]) }}
+                  </div>
+                  <div
+                    v-if="hasPengganti(gridData[jam][hari])"
+                    class="mt-1 text-[10px] text-primary-700 font-medium"
+                  >
+                    🔄 {{ getCellPenggantiNama(gridData[jam][hari]) }}
+                  </div>
+                </template>
+                <template v-else>
+                  <div class="text-warning-700 font-medium italic">Kosong</div>
+                </template>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
     </div>
-    <p v-else class="empty-state">Pilih kelas untuk melihat jadwal.</p>
+    <div v-else class="py-12 text-center">
+      <p class="text-sm text-text-tertiary">Pilih kelas untuk melihat jadwal.</p>
+    </div>
 
     <!-- Create/Edit Jadwal Modal -->
-    <div v-if="showFormModal" class="modal-overlay" @click.self="showFormModal = false">
-      <div class="modal">
-        <h2>{{ editingEntry ? 'Edit Jadwal' : 'Tambah Jadwal' }}</h2>
-        <p class="modal-subtitle">{{ HARI_LABELS[selectedHari] }} — Jam ke-{{ selectedJamKe }}</p>
-        <form @submit.prevent="saveJadwal">
-          <div class="form-group">
-            <label>Mata Pelajaran</label>
-            <select v-model="form.mata_pelajaran_id" class="input" required>
-              <option value="" disabled>Pilih Mata Pelajaran</option>
-              <option v-for="mapel in mataPelajaranList" :key="mapel.id" :value="mapel.id">
-                {{ mapel.nama }}
-              </option>
-            </select>
-          </div>
-          <div class="form-group">
-            <label>Guru</label>
-            <select v-model="form.guru_id" class="input" required>
-              <option value="" disabled>Pilih Guru</option>
-              <option v-for="guru in guruList" :key="guru.id" :value="guru.id">
-                {{ guru.nama }}
-              </option>
-            </select>
-          </div>
-          <div class="form-row">
-            <div class="form-group">
-              <label>Jam Mulai</label>
-              <input v-model="form.jam_mulai" type="time" class="input" required />
-            </div>
-            <div class="form-group">
-              <label>Jam Selesai</label>
-              <input v-model="form.jam_selesai" type="time" class="input" required />
-            </div>
-          </div>
-          <p v-if="formError" class="error-text">{{ formError }}</p>
-          <div class="modal-actions">
-            <button
-              v-if="editingEntry"
-              type="button"
-              class="btn btn-danger"
-              @click="handleConfirmDelete"
-            >
-              Hapus
-            </button>
-            <button
-              v-if="editingEntry"
-              type="button"
-              class="btn btn-info"
-              @click="handleOpenPengganti"
-            >
-              Assign Pengganti
-            </button>
-            <div class="spacer"></div>
-            <button type="button" class="btn btn-secondary" @click="showFormModal = false">
-              Batal
-            </button>
-            <button type="submit" class="btn btn-primary">Simpan</button>
-          </div>
-        </form>
-      </div>
-    </div>
-
-    <!-- Delete Confirmation Modal -->
-    <div v-if="showDeleteModal" class="modal-overlay" @click.self="showDeleteModal = false">
-      <div class="modal">
-        <h2>Konfirmasi Hapus</h2>
-        <p>Apakah Anda yakin ingin menghapus jadwal ini?</p>
-        <div v-if="deletingEntry" class="delete-info">
-          <p><strong>Hari:</strong> {{ HARI_LABELS[deletingEntry.hari] }}</p>
-          <p>
-            <strong>Mata Pelajaran:</strong>
-            {{
-              deletingEntry.mata_pelajaran?.nama || getMapelNama(deletingEntry.mata_pelajaran_id)
-            }}
-          </p>
-          <p>
-            <strong>Guru:</strong>
-            {{ deletingEntry.guru?.nama || getGuruNama(deletingEntry.guru_id) }}
-          </p>
+    <BaseModal
+      :show="showFormModal"
+      :title="editingEntry ? 'Edit Jadwal' : 'Tambah Jadwal'"
+      @close="showFormModal = false"
+      size="lg"
+    >
+      <p class="text-sm text-text-secondary mb-4">
+        {{ HARI_LABELS[selectedHari] }} — Jam ke-{{ selectedJamKe }}
+      </p>
+      <form @submit.prevent="saveJadwal">
+        <div class="mb-4">
+          <label class="block text-sm font-medium text-text-primary mb-1.5">Mata Pelajaran</label>
+          <select
+            v-model="form.mata_pelajaran_id"
+            class="w-full px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
+            required
+          >
+            <option value="" disabled>Pilih Mata Pelajaran</option>
+            <option v-for="mapel in mataPelajaranList" :key="mapel.id" :value="mapel.id">
+              {{ mapel.nama }}
+            </option>
+          </select>
         </div>
-        <div class="modal-actions">
-          <button class="btn btn-secondary" @click="showDeleteModal = false">Batal</button>
-          <button class="btn btn-danger" @click="deleteJadwal">Hapus</button>
+        <div class="mb-4">
+          <label class="block text-sm font-medium text-text-primary mb-1.5">Guru</label>
+          <select
+            v-model="form.guru_id"
+            class="w-full px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
+            required
+          >
+            <option value="" disabled>Pilih Guru</option>
+            <option v-for="guru in guruList" :key="guru.id" :value="guru.id">
+              {{ guru.nama }}
+            </option>
+          </select>
         </div>
-      </div>
-    </div>
-
-    <!-- Guru Pengganti Modal -->
-    <div v-if="showPenggantiModal" class="modal-overlay" @click.self="showPenggantiModal = false">
-      <div class="modal">
-        <h2>Assign Guru Pengganti</h2>
-        <p class="modal-subtitle" v-if="penggantiTarget">
-          {{
-            penggantiTarget.mata_pelajaran?.nama || getMapelNama(penggantiTarget.mata_pelajaran_id)
-          }}
-          — {{ HARI_LABELS[penggantiTarget.hari] }}
-        </p>
-
-        <!-- Show current pengganti if exists -->
-        <div v-if="penggantiTarget?.guru_pengganti_aktif" class="current-pengganti">
-          <p>
-            <strong>Guru Pengganti Aktif:</strong>
-            {{ penggantiTarget.guru_pengganti_aktif.guru_pengganti_nama }}
-          </p>
-          <button class="btn btn-sm btn-danger" @click="handleRemovePengganti">
-            Hapus Pengganti
-          </button>
-        </div>
-
-        <form @submit.prevent="savePengganti">
-          <div class="form-group">
-            <label>Guru Pengganti</label>
-            <select v-model="penggantiForm.guru_pengganti_id" class="input" required>
-              <option value="" disabled>Pilih Guru Pengganti</option>
-              <option v-for="guru in guruList" :key="guru.id" :value="guru.id">
-                {{ guru.nama }}
-              </option>
-            </select>
-          </div>
-          <div class="form-group">
-            <label>Alasan</label>
+        <div class="flex gap-4">
+          <div class="flex-1 mb-4">
+            <label class="block text-sm font-medium text-text-primary mb-1.5">Jam Mulai</label>
             <input
-              v-model="penggantiForm.alasan"
-              type="text"
-              class="input"
+              v-model="form.jam_mulai"
+              type="time"
+              class="w-full px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
               required
-              placeholder="Guru utama berhalangan, sakit, dll"
             />
           </div>
-          <div class="form-row">
-            <div class="form-group">
-              <label>Tanggal Mulai</label>
-              <input v-model="penggantiForm.tanggal_mulai" type="date" class="input" required />
-            </div>
-            <div class="form-group">
-              <label>Tanggal Selesai</label>
-              <input v-model="penggantiForm.tanggal_selesai" type="date" class="input" required />
-            </div>
+          <div class="flex-1 mb-4">
+            <label class="block text-sm font-medium text-text-primary mb-1.5">Jam Selesai</label>
+            <input
+              v-model="form.jam_selesai"
+              type="time"
+              class="w-full px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
+              required
+            />
           </div>
-          <p v-if="penggantiError" class="error-text">{{ penggantiError }}</p>
-          <div class="modal-actions">
-            <button type="button" class="btn btn-secondary" @click="showPenggantiModal = false">
-              Batal
-            </button>
-            <button type="submit" class="btn btn-primary">Simpan</button>
-          </div>
-        </form>
+        </div>
+        <p v-if="formError" class="text-xs text-danger-500 mt-1">{{ formError }}</p>
+      </form>
+      <template #footer>
+        <div class="flex items-center gap-2 w-full">
+          <button
+            v-if="editingEntry"
+            type="button"
+            class="px-4 py-2 text-sm font-medium text-white bg-danger-500 rounded-lg hover:bg-danger-700 transition-colors"
+            @click="handleConfirmDelete"
+          >
+            Hapus
+          </button>
+          <button
+            v-if="editingEntry"
+            type="button"
+            class="px-3 py-2 text-sm font-medium text-white bg-primary-600 rounded-lg hover:bg-primary-700 transition-colors"
+            @click="handleOpenPengganti"
+          >
+            Assign Pengganti
+          </button>
+          <div class="flex-1"></div>
+          <button
+            type="button"
+            class="px-3 py-2 text-sm font-medium text-text-secondary bg-white border border-border rounded-lg hover:bg-surface-50 transition-colors"
+            @click="showFormModal = false"
+          >
+            Batal
+          </button>
+          <button
+            type="button"
+            class="px-3 py-2 text-sm font-medium text-white bg-primary-600 rounded-lg hover:bg-primary-700 transition-colors"
+            @click="saveJadwal"
+          >
+            Simpan
+          </button>
+        </div>
+      </template>
+    </BaseModal>
+
+    <!-- Delete Confirmation Modal -->
+    <BaseModal :show="showDeleteModal" title="Konfirmasi Hapus" @close="showDeleteModal = false">
+      <p class="text-sm text-text-primary mb-3">Apakah Anda yakin ingin menghapus jadwal ini?</p>
+      <div v-if="deletingEntry" class="bg-surface-50 rounded-lg p-3 text-sm space-y-1">
+        <p><strong>Hari:</strong> {{ HARI_LABELS[deletingEntry.hari] }}</p>
+        <p>
+          <strong>Mata Pelajaran:</strong>
+          {{ deletingEntry.mata_pelajaran?.nama || getMapelNama(deletingEntry.mata_pelajaran_id) }}
+        </p>
+        <p>
+          <strong>Guru:</strong>
+          {{ deletingEntry.guru?.nama || getGuruNama(deletingEntry.guru_id) }}
+        </p>
       </div>
-    </div>
+      <template #footer>
+        <button
+          class="px-3 py-2 text-sm font-medium text-text-secondary bg-white border border-border rounded-lg hover:bg-surface-50 transition-colors"
+          @click="showDeleteModal = false"
+        >
+          Batal
+        </button>
+        <button
+          class="px-4 py-2 text-sm font-medium text-white bg-danger-500 rounded-lg hover:bg-danger-700 transition-colors"
+          @click="deleteJadwal"
+        >
+          Hapus
+        </button>
+      </template>
+    </BaseModal>
+
+    <!-- Guru Pengganti Modal -->
+    <BaseModal
+      :show="showPenggantiModal"
+      title="Assign Guru Pengganti"
+      @close="showPenggantiModal = false"
+      size="lg"
+    >
+      <p class="text-sm text-text-secondary mb-4" v-if="penggantiTarget">
+        {{
+          penggantiTarget.mata_pelajaran?.nama || getMapelNama(penggantiTarget.mata_pelajaran_id)
+        }}
+        — {{ HARI_LABELS[penggantiTarget.hari] }}
+      </p>
+
+      <!-- Show current pengganti if exists -->
+      <div
+        v-if="penggantiTarget?.guru_pengganti_aktif"
+        class="flex items-center justify-between p-3 bg-primary-50 border border-primary-500/20 rounded-lg mb-4 text-sm"
+      >
+        <p class="text-primary-700">
+          <strong>Guru Pengganti Aktif:</strong>
+          {{ penggantiTarget.guru_pengganti_aktif.guru_pengganti_nama }}
+        </p>
+        <button
+          class="px-2 py-1 text-xs font-medium text-danger-700 bg-danger-50 rounded-md hover:bg-danger-50/80 transition-colors"
+          @click="handleRemovePengganti"
+        >
+          Hapus Pengganti
+        </button>
+      </div>
+
+      <form @submit.prevent="savePengganti">
+        <div class="mb-4">
+          <label class="block text-sm font-medium text-text-primary mb-1.5">Guru Pengganti</label>
+          <select
+            v-model="penggantiForm.guru_pengganti_id"
+            class="w-full px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
+            required
+          >
+            <option value="" disabled>Pilih Guru Pengganti</option>
+            <option v-for="guru in guruList" :key="guru.id" :value="guru.id">
+              {{ guru.nama }}
+            </option>
+          </select>
+        </div>
+        <div class="mb-4">
+          <label class="block text-sm font-medium text-text-primary mb-1.5">Alasan</label>
+          <input
+            v-model="penggantiForm.alasan"
+            type="text"
+            class="w-full px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
+            required
+            placeholder="Guru utama berhalangan, sakit, dll"
+          />
+        </div>
+        <div class="flex gap-4">
+          <div class="flex-1 mb-4">
+            <label class="block text-sm font-medium text-text-primary mb-1.5">Tanggal Mulai</label>
+            <input
+              v-model="penggantiForm.tanggal_mulai"
+              type="date"
+              class="w-full px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
+              required
+            />
+          </div>
+          <div class="flex-1 mb-4">
+            <label class="block text-sm font-medium text-text-primary mb-1.5"
+              >Tanggal Selesai</label
+            >
+            <input
+              v-model="penggantiForm.tanggal_selesai"
+              type="date"
+              class="w-full px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
+              required
+            />
+          </div>
+        </div>
+        <p v-if="penggantiError" class="text-xs text-danger-500 mt-1">{{ penggantiError }}</p>
+      </form>
+      <template #footer>
+        <button
+          type="button"
+          class="px-3 py-2 text-sm font-medium text-text-secondary bg-white border border-border rounded-lg hover:bg-surface-50 transition-colors"
+          @click="showPenggantiModal = false"
+        >
+          Batal
+        </button>
+        <button
+          type="button"
+          class="px-3 py-2 text-sm font-medium text-white bg-primary-600 rounded-lg hover:bg-primary-700 transition-colors"
+          @click="savePengganti"
+        >
+          Simpan
+        </button>
+      </template>
+    </BaseModal>
   </div>
 </template>
-
-<style scoped>
-.page {
-  padding: 2rem;
-}
-.page-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 1.5rem;
-}
-.page-header h1 {
-  margin: 0;
-  font-size: 1.5rem;
-}
-.filter-bar {
-  display: flex;
-  gap: 1rem;
-  margin-bottom: 1.5rem;
-  align-items: center;
-}
-.form-group-inline {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-}
-.form-group-inline label {
-  font-size: 0.875rem;
-  font-weight: 500;
-  color: #374151;
-}
-.select-input {
-  min-width: 200px;
-}
-.table-container {
-  overflow-x: auto;
-}
-.schedule-grid {
-  width: 100%;
-  border-collapse: collapse;
-  table-layout: fixed;
-}
-.schedule-grid th,
-.schedule-grid td {
-  padding: 0.5rem;
-  text-align: center;
-  border: 1px solid #e5e7eb;
-  vertical-align: top;
-}
-.schedule-grid th {
-  font-weight: 600;
-  color: #374151;
-  background: #f9fafb;
-  font-size: 0.875rem;
-}
-.jam-col {
-  width: 60px;
-  font-weight: 600;
-  background: #f9fafb;
-}
-.schedule-cell {
-  cursor: pointer;
-  min-height: 60px;
-  transition: background-color 0.15s;
-  font-size: 0.75rem;
-}
-.schedule-cell:hover {
-  background: #eff6ff;
-}
-.cell-vacant {
-  background: #fef9c3;
-}
-.cell-vacant:hover {
-  background: #fef08a;
-}
-.cell-pengganti {
-  background: #dbeafe;
-}
-.cell-pengganti:hover {
-  background: #bfdbfe;
-}
-.cell-mapel {
-  font-weight: 600;
-  color: #1f2937;
-  margin-bottom: 2px;
-}
-.cell-guru {
-  color: #6b7280;
-  font-size: 0.7rem;
-}
-.cell-pengganti-badge {
-  margin-top: 4px;
-  font-size: 0.65rem;
-  color: #1d4ed8;
-  font-weight: 500;
-}
-.cell-vacant-label {
-  color: #92400e;
-  font-weight: 500;
-  font-style: italic;
-}
-.empty-state {
-  text-align: center;
-  color: #6b7280;
-  padding: 2rem;
-}
-.modal-overlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.4);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 50;
-}
-.modal {
-  background: white;
-  border-radius: 8px;
-  padding: 1.5rem;
-  width: 100%;
-  max-width: 520px;
-  max-height: 90vh;
-  overflow-y: auto;
-}
-.modal h2 {
-  margin: 0 0 0.25rem;
-  font-size: 1.25rem;
-}
-.modal-subtitle {
-  margin: 0 0 1rem;
-  font-size: 0.875rem;
-  color: #6b7280;
-}
-.form-group {
-  margin-bottom: 1rem;
-}
-.form-group label {
-  display: block;
-  margin-bottom: 0.25rem;
-  font-size: 0.875rem;
-  font-weight: 500;
-  color: #374151;
-}
-.form-row {
-  display: flex;
-  gap: 1rem;
-}
-.form-row .form-group {
-  flex: 1;
-}
-.input {
-  width: 100%;
-  padding: 0.5rem 0.75rem;
-  border: 1px solid #d1d5db;
-  border-radius: 6px;
-  font-size: 0.875rem;
-}
-.modal-actions {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  margin-top: 1.5rem;
-  flex-wrap: wrap;
-}
-.spacer {
-  flex: 1;
-}
-.btn {
-  padding: 0.5rem 1rem;
-  border: none;
-  border-radius: 6px;
-  font-size: 0.875rem;
-  cursor: pointer;
-  font-weight: 500;
-}
-.btn-primary {
-  background: #2563eb;
-  color: white;
-}
-.btn-primary:hover {
-  background: #1d4ed8;
-}
-.btn-secondary {
-  background: #f3f4f6;
-  color: #374151;
-  border: 1px solid #d1d5db;
-}
-.btn-danger {
-  background: #ef4444;
-  color: white;
-}
-.btn-danger:hover {
-  background: #dc2626;
-}
-.btn-info {
-  background: #3b82f6;
-  color: white;
-}
-.btn-info:hover {
-  background: #2563eb;
-}
-.btn-sm {
-  padding: 0.25rem 0.5rem;
-  font-size: 0.75rem;
-}
-.error-text {
-  color: #dc2626;
-  font-size: 0.875rem;
-  margin-top: 0.5rem;
-}
-.delete-info {
-  background: #f9fafb;
-  border-radius: 6px;
-  padding: 0.75rem;
-  margin: 0.75rem 0;
-  font-size: 0.875rem;
-}
-.delete-info p {
-  margin: 0.25rem 0;
-}
-.current-pengganti {
-  background: #dbeafe;
-  border-radius: 6px;
-  padding: 0.75rem;
-  margin-bottom: 1rem;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  font-size: 0.875rem;
-}
-.current-pengganti p {
-  margin: 0;
-}
-</style>

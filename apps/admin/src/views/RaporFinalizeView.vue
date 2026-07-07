@@ -2,6 +2,7 @@
 import { ref, onMounted, watch, computed } from 'vue';
 import { api } from '@/api/client';
 import { PeriodeRapor } from '@edu/shared';
+import { PageHeader, BaseModal } from '@/components/ui';
 
 interface KelasOption {
   id: string;
@@ -144,7 +145,6 @@ async function finalize() {
   successMessage.value = '';
 
   try {
-    // Save catatan and P5 first
     await api.post('/rapor/nilai/catatan', {
       kelas_id: selectedKelas.value,
       periode_rapor_id: selectedPeriode.value,
@@ -155,7 +155,6 @@ async function finalize() {
       })),
     });
 
-    // Finalize
     await api.post(`/rapor/kelas/${selectedKelas.value}/periode/${selectedPeriode.value}/finalize`);
 
     successMessage.value =
@@ -184,14 +183,14 @@ async function revertFinalize() {
   }
 }
 
-function getStatusClass(status: string): string {
+function getStatusBadgeClass(status: string): string {
   switch (status) {
     case 'submitted':
-      return 'badge-submitted';
+      return 'bg-success-50 text-success-700';
     case 'draft':
-      return 'badge-draft';
+      return 'bg-warning-50 text-warning-700';
     default:
-      return 'badge-not-started';
+      return 'bg-surface-100 text-text-secondary';
   }
 }
 
@@ -214,27 +213,30 @@ onMounted(fetchKelas);
 </script>
 
 <template>
-  <div class="page">
-    <div class="page-header">
-      <h1>Finalisasi Rapor</h1>
-      <p class="page-description">
-        Review status input nilai dari guru, tambahkan P5 dan catatan wali kelas, lalu finalkan
-        rapor.
-      </p>
-    </div>
+  <div class="p-4 lg:p-6 max-w-7xl mx-auto">
+    <PageHeader
+      title="Finalisasi Rapor"
+      description="Review status input nilai dari guru, tambahkan P5 dan catatan wali kelas, lalu finalkan rapor."
+    />
 
     <!-- Filters -->
-    <div class="filter-bar">
-      <div class="filter-group">
-        <label>Kelas (Wali Kelas)</label>
-        <select v-model="selectedKelas" class="input">
+    <div class="flex flex-wrap items-center gap-3 mb-4">
+      <div class="flex flex-col gap-1 min-w-[200px]">
+        <label class="text-sm font-medium text-text-primary">Kelas (Wali Kelas)</label>
+        <select
+          v-model="selectedKelas"
+          class="px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
+        >
           <option value="" disabled>Pilih kelas</option>
           <option v-for="k in kelasOptions" :key="k.id" :value="k.id">{{ k.nama }}</option>
         </select>
       </div>
-      <div class="filter-group">
-        <label>Periode</label>
-        <select v-model="selectedPeriode" class="input">
+      <div class="flex flex-col gap-1 min-w-[200px]">
+        <label class="text-sm font-medium text-text-primary">Periode</label>
+        <select
+          v-model="selectedPeriode"
+          class="px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
+        >
           <option value="" disabled>Pilih periode</option>
           <option v-for="p in periodeOptions" :key="p.value" :value="p.value">
             {{ p.label }}
@@ -243,14 +245,37 @@ onMounted(fetchKelas);
       </div>
     </div>
 
-    <div v-if="error" class="alert alert-error">{{ error }}</div>
-    <div v-if="successMessage" class="alert alert-success">{{ successMessage }}</div>
+    <div
+      v-if="error"
+      class="p-3 bg-danger-50 border border-danger-500/20 rounded-lg text-sm text-danger-700 mb-4"
+    >
+      {{ error }}
+    </div>
+    <div
+      v-if="successMessage"
+      class="p-3 bg-success-50 border border-success-500/20 rounded-lg text-sm text-success-700 mb-4"
+    >
+      {{ successMessage }}
+    </div>
 
-    <div v-if="loading" class="empty-state">Memuat data...</div>
+    <div v-if="loading" class="text-center py-8">
+      <svg class="w-6 h-6 animate-spin text-primary-500 mx-auto" fill="none" viewBox="0 0 24 24">
+        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
+        <path
+          class="opacity-75"
+          fill="currentColor"
+          d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
+        />
+      </svg>
+      <p class="text-sm text-text-secondary mt-2">Memuat data...</p>
+    </div>
 
     <template v-else-if="selectedKelas && selectedPeriode && mapelStatuses.length > 0">
       <!-- Rapor Status Banner -->
-      <div v-if="isFinalized" class="alert alert-info">
+      <div
+        v-if="isFinalized"
+        class="p-3 bg-primary-50 border border-primary-500/20 rounded-lg text-sm text-primary-700 mb-4"
+      >
         <strong>Status: Final</strong> — Rapor sudah difinalkan pada
         {{
           raporStatus && raporStatus.finalized_at
@@ -260,71 +285,107 @@ onMounted(fetchKelas);
       </div>
 
       <!-- Status Mata Pelajaran -->
-      <section class="section">
-        <h2>Status Input Nilai per Mata Pelajaran</h2>
-        <div class="status-grid">
-          <div v-for="m in mapelStatuses" :key="m.mata_pelajaran_id" class="status-card">
-            <div class="status-card-header">
-              <span class="mapel-name">{{ m.mata_pelajaran_nama }}</span>
-              <span :class="['badge', getStatusClass(m.status)]">
+      <section class="mb-6">
+        <h2 class="text-lg font-semibold text-text-primary mb-3">
+          Status Input Nilai per Mata Pelajaran
+        </h2>
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 mb-4">
+          <div
+            v-for="m in mapelStatuses"
+            :key="m.mata_pelajaran_id"
+            class="bg-white border border-border rounded-lg p-3"
+          >
+            <div class="flex justify-between items-center">
+              <span class="font-semibold text-sm text-text-primary">{{
+                m.mata_pelajaran_nama
+              }}</span>
+              <span
+                class="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium"
+                :class="getStatusBadgeClass(m.status)"
+              >
                 {{ getStatusLabel(m.status) }}
               </span>
             </div>
-            <p class="guru-name">Guru: {{ m.guru_nama }}</p>
+            <p class="text-xs text-text-secondary mt-1">Guru: {{ m.guru_nama }}</p>
           </div>
         </div>
 
-        <div v-if="!allSubmitted" class="alert alert-warning">
+        <div
+          v-if="!allSubmitted"
+          class="p-3 bg-warning-50 border border-warning-500/20 rounded-lg text-sm text-warning-700 mb-4"
+        >
           Belum semua guru submit nilai. Finalisasi belum dapat dilakukan.
         </div>
       </section>
 
       <!-- Siswa Overview & Catatan -->
-      <section v-if="allSubmitted && siswaRapors.length > 0" class="section">
-        <h2>Data Siswa & Catatan Wali Kelas</h2>
-        <div class="table-container">
-          <table>
-            <thead>
-              <tr>
-                <th>No</th>
-                <th>Nama Siswa</th>
-                <th>Rata-rata</th>
-                <th>Peringkat</th>
-                <th>Catatan Wali Kelas</th>
-                <th>P5</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr v-for="(siswa, idx) in siswaRapors" :key="siswa.siswa_id">
-                <td>{{ idx + 1 }}</td>
-                <td>{{ siswa.siswa_nama }}</td>
-                <td>{{ siswa.rata_rata !== null ? siswa.rata_rata.toFixed(1) : '-' }}</td>
-                <td>{{ siswa.peringkat ?? '-' }}</td>
-                <td>
-                  <textarea
-                    v-model="siswa.catatan_wali_kelas"
-                    class="input-cell textarea-cell"
-                    :disabled="isFinalized"
-                    rows="2"
-                    placeholder="Catatan tentang siswa..."
-                  />
-                </td>
-                <td>
-                  <button class="btn-sm btn-p5" :disabled="isFinalized" @click="openP5Modal(idx)">
-                    {{ siswa.p5_deskripsi ? 'Edit P5' : 'Isi P5' }}
-                  </button>
-                </td>
-              </tr>
-            </tbody>
-          </table>
+      <section v-if="allSubmitted && siswaRapors.length > 0" class="mb-6">
+        <h2 class="text-lg font-semibold text-text-primary mb-3">
+          Data Siswa & Catatan Wali Kelas
+        </h2>
+        <div class="bg-white border border-border rounded-xl overflow-hidden">
+          <div class="overflow-x-auto">
+            <table class="w-full">
+              <thead class="border-b border-border bg-surface-50">
+                <tr>
+                  <th class="px-4 py-3 text-left font-medium text-text-secondary text-xs">No</th>
+                  <th class="px-4 py-3 text-left font-medium text-text-secondary text-xs">
+                    Nama Siswa
+                  </th>
+                  <th class="px-4 py-3 text-left font-medium text-text-secondary text-xs">
+                    Rata-rata
+                  </th>
+                  <th class="px-4 py-3 text-left font-medium text-text-secondary text-xs">
+                    Peringkat
+                  </th>
+                  <th class="px-4 py-3 text-left font-medium text-text-secondary text-xs">
+                    Catatan Wali Kelas
+                  </th>
+                  <th class="px-4 py-3 text-left font-medium text-text-secondary text-xs">P5</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-border">
+                <tr
+                  v-for="(siswa, idx) in siswaRapors"
+                  :key="siswa.siswa_id"
+                  class="hover:bg-surface-50 transition-colors"
+                >
+                  <td class="px-4 py-3 text-sm">{{ idx + 1 }}</td>
+                  <td class="px-4 py-3 text-sm text-text-primary">{{ siswa.siswa_nama }}</td>
+                  <td class="px-4 py-3 text-sm">
+                    {{ siswa.rata_rata !== null ? siswa.rata_rata.toFixed(1) : '-' }}
+                  </td>
+                  <td class="px-4 py-3 text-sm">{{ siswa.peringkat ?? '-' }}</td>
+                  <td class="px-4 py-3">
+                    <textarea
+                      v-model="siswa.catatan_wali_kelas"
+                      class="w-full min-w-[150px] px-2 py-1.5 text-xs border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 resize-y"
+                      :disabled="isFinalized"
+                      rows="2"
+                      placeholder="Catatan tentang siswa..."
+                    />
+                  </td>
+                  <td class="px-4 py-3">
+                    <button
+                      class="px-2 py-1 text-xs font-medium rounded-md bg-purple-50 text-purple-700 hover:bg-purple-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      :disabled="isFinalized"
+                      @click="openP5Modal(idx)"
+                    >
+                      {{ siswa.p5_deskripsi ? 'Edit P5' : 'Isi P5' }}
+                    </button>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
         </div>
       </section>
 
       <!-- Action Buttons -->
-      <div class="actions-bar">
+      <div class="flex justify-end gap-3 mt-4 pt-4 border-t border-border">
         <button
           v-if="isFinalized"
-          class="btn btn-warning"
+          class="px-3 py-2 text-sm font-medium text-white bg-warning-500 rounded-lg hover:bg-warning-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           :disabled="saving"
           @click="revertFinalize"
         >
@@ -332,7 +393,7 @@ onMounted(fetchKelas);
         </button>
         <button
           v-else
-          class="btn btn-primary"
+          class="px-3 py-2 text-sm font-medium text-white bg-primary-600 rounded-lg hover:bg-primary-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           :disabled="saving || !allSubmitted"
           @click="finalize"
         >
@@ -341,294 +402,57 @@ onMounted(fetchKelas);
       </div>
     </template>
 
-    <div v-else-if="selectedKelas && selectedPeriode && !loading" class="empty-state">
+    <div
+      v-else-if="selectedKelas && selectedPeriode && !loading"
+      class="text-center text-text-secondary py-8 text-sm"
+    >
       Tidak ada data rapor untuk kelas dan periode ini.
     </div>
-    <div v-else-if="!selectedKelas || !selectedPeriode" class="empty-state">
+    <div
+      v-else-if="!selectedKelas || !selectedPeriode"
+      class="text-center text-text-secondary py-8 text-sm"
+    >
       Pilih kelas dan periode untuk melihat status rapor.
     </div>
 
     <!-- P5 Modal -->
-    <div v-if="showP5Modal" class="modal-overlay" @click.self="showP5Modal = false">
-      <div class="modal modal-wide">
-        <h2>P5 - Profil Pelajar Pancasila</h2>
-        <p class="modal-description">
-          Isi deskripsi naratif per dimensi (opsional). Kosongkan jika tidak relevan.
-        </p>
-        <div class="p5-form">
-          <div v-for="(item, idx) in p5Form" :key="idx" class="p5-item">
-            <label>{{ item.dimensi }}</label>
-            <textarea
-              v-model="item.deskripsi"
-              class="input"
-              rows="2"
-              placeholder="Deskripsi naratif..."
-            />
-          </div>
-        </div>
-        <div class="modal-actions">
-          <button class="btn btn-secondary" @click="showP5Modal = false">Batal</button>
-          <button class="btn btn-primary" @click="saveP5">Simpan</button>
+    <BaseModal
+      :show="showP5Modal"
+      title="P5 - Profil Pelajar Pancasila"
+      @close="showP5Modal = false"
+      size="lg"
+    >
+      <p class="text-sm text-text-secondary mb-4">
+        Isi deskripsi naratif per dimensi (opsional). Kosongkan jika tidak relevan.
+      </p>
+      <div class="flex flex-col gap-3">
+        <div v-for="(item, idx) in p5Form" :key="idx">
+          <label class="block text-sm font-medium text-text-primary mb-1.5">{{
+            item.dimensi
+          }}</label>
+          <textarea
+            v-model="item.deskripsi"
+            class="w-full px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
+            rows="2"
+            placeholder="Deskripsi naratif..."
+          />
         </div>
       </div>
-    </div>
+
+      <template #footer>
+        <button
+          class="px-3 py-2 text-sm font-medium text-text-secondary bg-white border border-border rounded-lg hover:bg-surface-50 transition-colors"
+          @click="showP5Modal = false"
+        >
+          Batal
+        </button>
+        <button
+          class="px-3 py-2 text-sm font-medium text-white bg-primary-600 rounded-lg hover:bg-primary-700 transition-colors"
+          @click="saveP5"
+        >
+          Simpan
+        </button>
+      </template>
+    </BaseModal>
   </div>
 </template>
-
-<style scoped>
-.page {
-  padding: 2rem;
-}
-.page-header {
-  margin-bottom: 1.5rem;
-}
-.page-header h1 {
-  margin: 0;
-  font-size: 1.5rem;
-}
-.page-description {
-  margin: 0.25rem 0 0;
-  color: #6b7280;
-  font-size: 0.875rem;
-}
-.filter-bar {
-  display: flex;
-  gap: 1rem;
-  margin-bottom: 1.5rem;
-  flex-wrap: wrap;
-}
-.filter-group {
-  display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
-  min-width: 200px;
-}
-.filter-group label {
-  font-size: 0.875rem;
-  font-weight: 500;
-  color: #374151;
-}
-.input {
-  padding: 0.5rem 0.75rem;
-  border: 1px solid #d1d5db;
-  border-radius: 6px;
-  font-size: 0.875rem;
-}
-.section {
-  margin-bottom: 2rem;
-}
-.section h2 {
-  font-size: 1.125rem;
-  margin: 0 0 1rem;
-  color: #1f2937;
-}
-.status-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-  gap: 0.75rem;
-  margin-bottom: 1rem;
-}
-.status-card {
-  border: 1px solid #e5e7eb;
-  border-radius: 8px;
-  padding: 0.75rem 1rem;
-  background: #fff;
-}
-.status-card-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-.mapel-name {
-  font-weight: 600;
-  font-size: 0.875rem;
-  color: #1f2937;
-}
-.guru-name {
-  margin: 0.25rem 0 0;
-  font-size: 0.8125rem;
-  color: #6b7280;
-}
-.alert {
-  padding: 0.75rem 1rem;
-  border-radius: 6px;
-  margin-bottom: 1rem;
-  font-size: 0.875rem;
-}
-.alert-error {
-  background: #fef2f2;
-  color: #991b1b;
-  border: 1px solid #fecaca;
-}
-.alert-success {
-  background: #f0fdf4;
-  color: #166534;
-  border: 1px solid #bbf7d0;
-}
-.alert-info {
-  background: #eff6ff;
-  color: #1e40af;
-  border: 1px solid #bfdbfe;
-}
-.alert-warning {
-  background: #fffbeb;
-  color: #92400e;
-  border: 1px solid #fde68a;
-}
-.badge {
-  padding: 0.125rem 0.5rem;
-  border-radius: 9999px;
-  font-size: 0.6875rem;
-  font-weight: 500;
-}
-.badge-submitted {
-  background: #d1fae5;
-  color: #065f46;
-}
-.badge-draft {
-  background: #fef3c7;
-  color: #92400e;
-}
-.badge-not-started {
-  background: #f3f4f6;
-  color: #6b7280;
-}
-.table-container {
-  overflow-x: auto;
-}
-table {
-  width: 100%;
-  border-collapse: collapse;
-}
-th,
-td {
-  padding: 0.5rem 0.75rem;
-  text-align: left;
-  border-bottom: 1px solid #e5e7eb;
-  vertical-align: top;
-}
-th {
-  font-weight: 600;
-  color: #374151;
-  background: #f9fafb;
-  font-size: 0.8125rem;
-}
-.input-cell {
-  width: 100%;
-  min-width: 150px;
-  padding: 0.375rem 0.5rem;
-  border: 1px solid #d1d5db;
-  border-radius: 4px;
-  font-size: 0.8125rem;
-}
-.textarea-cell {
-  resize: vertical;
-}
-.btn-sm {
-  padding: 0.25rem 0.5rem;
-  border: none;
-  border-radius: 4px;
-  font-size: 0.75rem;
-  cursor: pointer;
-}
-.btn-p5 {
-  background: #ede9fe;
-  color: #5b21b6;
-}
-.btn-p5:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-.actions-bar {
-  display: flex;
-  justify-content: flex-end;
-  gap: 0.75rem;
-  margin-top: 1.5rem;
-  padding-top: 1rem;
-  border-top: 1px solid #e5e7eb;
-}
-.btn {
-  padding: 0.5rem 1rem;
-  border: none;
-  border-radius: 6px;
-  font-size: 0.875rem;
-  cursor: pointer;
-  font-weight: 500;
-}
-.btn:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-.btn-primary {
-  background: #2563eb;
-  color: white;
-}
-.btn-primary:hover:not(:disabled) {
-  background: #1d4ed8;
-}
-.btn-secondary {
-  background: #f3f4f6;
-  color: #374151;
-  border: 1px solid #d1d5db;
-}
-.btn-warning {
-  background: #f59e0b;
-  color: white;
-}
-.btn-warning:hover:not(:disabled) {
-  background: #d97706;
-}
-.modal-overlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.4);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 50;
-}
-.modal {
-  background: white;
-  border-radius: 8px;
-  padding: 1.5rem;
-  width: 100%;
-  max-width: 520px;
-  max-height: 80vh;
-  overflow-y: auto;
-}
-.modal-wide {
-  max-width: 640px;
-}
-.modal h2 {
-  margin: 0 0 0.5rem;
-  font-size: 1.25rem;
-}
-.modal-description {
-  margin: 0 0 1rem;
-  color: #6b7280;
-  font-size: 0.875rem;
-}
-.p5-form {
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
-}
-.p5-item label {
-  display: block;
-  font-size: 0.8125rem;
-  font-weight: 500;
-  color: #374151;
-  margin-bottom: 0.25rem;
-}
-.modal-actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 0.5rem;
-  margin-top: 1.5rem;
-}
-.empty-state {
-  text-align: center;
-  color: #6b7280;
-  padding: 2rem;
-}
-</style>

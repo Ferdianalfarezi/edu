@@ -2,6 +2,7 @@
 import { ref, computed, onMounted, watch } from 'vue';
 import { api } from '@/api/client';
 import { PeriodeRapor } from '@edu/shared';
+import { PageHeader } from '@/components/ui';
 
 interface MapelOption {
   id: string;
@@ -65,7 +66,6 @@ const canSubmit = computed(() => {
       const komponen = komponenList.value.find((kp) => kp.id === k.komponen_id);
       if (!komponen) return true;
       if (!komponen.is_wajib) return true;
-      // For UTS, deskripsi is optional
       if (isUTS.value && komponen.tipe === 'deskripsi') return true;
       return k.nilai !== null && k.nilai !== '';
     });
@@ -206,32 +206,40 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="page">
-    <div class="page-header">
-      <h1>Input Nilai Rapor</h1>
-    </div>
+  <div class="p-4 lg:p-6 max-w-7xl mx-auto">
+    <PageHeader title="Input Nilai Rapor" />
 
     <!-- Filters -->
-    <div class="filter-bar">
-      <div class="filter-group">
-        <label>Mata Pelajaran</label>
-        <select v-model="selectedMapel" class="input">
+    <div class="flex flex-wrap items-center gap-3 mb-4">
+      <div class="flex flex-col gap-1 min-w-[200px]">
+        <label class="text-sm font-medium text-text-primary">Mata Pelajaran</label>
+        <select
+          v-model="selectedMapel"
+          class="px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
+        >
           <option value="" disabled>Pilih mata pelajaran</option>
           <option v-for="m in mapelOptions" :key="m.id" :value="m.id">{{ m.nama }}</option>
         </select>
       </div>
 
-      <div class="filter-group">
-        <label>Kelas</label>
-        <select v-model="selectedKelas" class="input" :disabled="!selectedMapel">
+      <div class="flex flex-col gap-1 min-w-[200px]">
+        <label class="text-sm font-medium text-text-primary">Kelas</label>
+        <select
+          v-model="selectedKelas"
+          class="px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
+          :disabled="!selectedMapel"
+        >
           <option value="" disabled>Pilih kelas</option>
           <option v-for="k in kelasOptions" :key="k.id" :value="k.id">{{ k.nama }}</option>
         </select>
       </div>
 
-      <div class="filter-group">
-        <label>Periode</label>
-        <select v-model="selectedPeriode" class="input">
+      <div class="flex flex-col gap-1 min-w-[200px]">
+        <label class="text-sm font-medium text-text-primary">Periode</label>
+        <select
+          v-model="selectedPeriode"
+          class="px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
+        >
           <option value="" disabled>Pilih periode</option>
           <option v-for="p in periodeOptions" :key="p.value" :value="p.value">
             {{ p.label }}
@@ -240,105 +248,164 @@ onMounted(() => {
       </div>
     </div>
 
-    <div v-if="error" class="alert alert-error">{{ error }}</div>
-    <div v-if="successMessage" class="alert alert-success">{{ successMessage }}</div>
+    <div
+      v-if="error"
+      class="p-3 bg-danger-50 border border-danger-500/20 rounded-lg text-sm text-danger-700 mb-4"
+    >
+      {{ error }}
+    </div>
+    <div
+      v-if="successMessage"
+      class="p-3 bg-success-50 border border-success-500/20 rounded-lg text-sm text-success-700 mb-4"
+    >
+      {{ successMessage }}
+    </div>
 
     <!-- Nilai Table -->
-    <div v-if="loadingNilai" class="empty-state">Memuat data nilai...</div>
+    <div v-if="loadingNilai" class="text-center py-8">
+      <svg class="w-6 h-6 animate-spin text-primary-500 mx-auto" fill="none" viewBox="0 0 24 24">
+        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
+        <path
+          class="opacity-75"
+          fill="currentColor"
+          d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
+        />
+      </svg>
+      <p class="text-sm text-text-secondary mt-2">Memuat data nilai...</p>
+    </div>
 
-    <div v-else-if="nilaiData.length > 0 && komponenList.length > 0" class="table-container">
-      <div v-if="isRaporFinalized" class="alert alert-info">
+    <div v-else-if="nilaiData.length > 0 && komponenList.length > 0">
+      <div
+        v-if="isRaporFinalized"
+        class="p-3 bg-primary-50 border border-primary-500/20 rounded-lg text-sm text-primary-700 mb-4"
+      >
         Rapor sudah difinalkan. Nilai tidak dapat diedit.
       </div>
 
-      <table>
-        <thead>
-          <tr>
-            <th class="sticky-col">No</th>
-            <th class="sticky-col-2">Nama Siswa</th>
-            <th v-for="k in komponenList" :key="k.id">
-              {{ k.nama }}
-              <span v-if="k.is_wajib" class="required-mark">*</span>
-              <br />
-              <small class="komponen-hint">
-                <template v-if="k.tipe === 'angka'">({{ k.skala_min }}-{{ k.skala_max }})</template>
-                <template v-else-if="k.tipe === 'huruf'">(A/B/C/D/E)</template>
-                <template v-else>(Deskripsi)</template>
-              </small>
-            </th>
-            <th v-if="!isUTS">Capaian Pembelajaran</th>
-            <th>Status</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr v-for="(siswa, sIdx) in nilaiData" :key="siswa.siswa_id">
-            <td class="sticky-col">{{ sIdx + 1 }}</td>
-            <td class="sticky-col-2">{{ siswa.siswa_nama }}</td>
-            <td v-for="(komponen, kIdx) in komponenList" :key="komponen.id">
-              <template v-if="komponen.tipe === 'deskripsi'">
-                <textarea
-                  v-model="siswa.komponen[kIdx].nilai"
-                  class="input-cell textarea-cell"
-                  :disabled="isRaporFinalized"
-                  rows="2"
-                  :placeholder="isUTS ? 'Opsional' : 'Deskripsi'"
-                />
-              </template>
-              <template v-else-if="komponen.tipe === 'huruf'">
-                <select
-                  v-model="siswa.komponen[kIdx].nilai"
-                  class="input-cell"
-                  :disabled="isRaporFinalized"
+      <div class="bg-white border border-border rounded-xl overflow-hidden">
+        <div class="overflow-x-auto">
+          <table class="w-full min-w-[800px]">
+            <thead class="border-b border-border bg-surface-50">
+              <tr>
+                <th
+                  class="px-4 py-3 text-left font-medium text-text-secondary text-xs sticky left-0 bg-surface-50 z-10 w-[40px]"
                 >
-                  <option value="">-</option>
-                  <option value="A">A</option>
-                  <option value="B">B</option>
-                  <option value="C">C</option>
-                  <option value="D">D</option>
-                  <option value="E">E</option>
-                </select>
-              </template>
-              <template v-else>
-                <input
-                  v-model.number="siswa.komponen[kIdx].nilai"
-                  :type="getInputType(komponen)"
-                  class="input-cell"
-                  :disabled="isRaporFinalized"
-                  :min="komponen.skala_min ?? undefined"
-                  :max="komponen.skala_max ?? undefined"
-                  @blur="validateNilaiAngka(sIdx, kIdx)"
-                />
-              </template>
-            </td>
-            <td v-if="!isUTS">
-              <textarea
-                v-model="siswa.capaian_pembelajaran"
-                class="input-cell textarea-cell"
-                :disabled="isRaporFinalized"
-                rows="2"
-                placeholder="Deskripsi capaian"
-              />
-            </td>
-            <td>
-              <span
-                :class="
-                  siswa.status === 'submitted' ? 'badge badge-submitted' : 'badge badge-draft'
-                "
+                  No
+                </th>
+                <th
+                  class="px-4 py-3 text-left font-medium text-text-secondary text-xs sticky left-[40px] bg-surface-50 z-10 min-w-[150px]"
+                >
+                  Nama Siswa
+                </th>
+                <th
+                  v-for="k in komponenList"
+                  :key="k.id"
+                  class="px-4 py-3 text-left font-medium text-text-secondary text-xs whitespace-nowrap"
+                >
+                  {{ k.nama }}
+                  <span v-if="k.is_wajib" class="text-danger-500">*</span>
+                  <br />
+                  <small class="text-text-tertiary font-normal">
+                    <template v-if="k.tipe === 'angka'"
+                      >({{ k.skala_min }}-{{ k.skala_max }})</template
+                    >
+                    <template v-else-if="k.tipe === 'huruf'">(A/B/C/D/E)</template>
+                    <template v-else>(Deskripsi)</template>
+                  </small>
+                </th>
+                <th
+                  v-if="!isUTS"
+                  class="px-4 py-3 text-left font-medium text-text-secondary text-xs"
+                >
+                  Capaian Pembelajaran
+                </th>
+                <th class="px-4 py-3 text-left font-medium text-text-secondary text-xs">Status</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-border">
+              <tr
+                v-for="(siswa, sIdx) in nilaiData"
+                :key="siswa.siswa_id"
+                class="hover:bg-surface-50 transition-colors"
               >
-                {{ siswa.status === 'submitted' ? 'Submitted' : 'Draft' }}
-              </span>
-            </td>
-          </tr>
-        </tbody>
-      </table>
+                <td class="px-4 py-3 text-sm sticky left-0 bg-white z-1">{{ sIdx + 1 }}</td>
+                <td class="px-4 py-3 text-sm text-text-primary sticky left-[40px] bg-white z-1">
+                  {{ siswa.siswa_nama }}
+                </td>
+                <td v-for="(komponen, kIdx) in komponenList" :key="komponen.id" class="px-4 py-3">
+                  <template v-if="komponen.tipe === 'deskripsi'">
+                    <textarea
+                      v-model="siswa.komponen[kIdx].nilai"
+                      class="w-full min-w-[150px] px-2 py-1.5 text-xs border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 resize-y"
+                      :disabled="isRaporFinalized"
+                      rows="2"
+                      :placeholder="isUTS ? 'Opsional' : 'Deskripsi'"
+                    />
+                  </template>
+                  <template v-else-if="komponen.tipe === 'huruf'">
+                    <select
+                      v-model="siswa.komponen[kIdx].nilai"
+                      class="w-full min-w-[80px] px-2 py-1.5 text-xs border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
+                      :disabled="isRaporFinalized"
+                    >
+                      <option value="">-</option>
+                      <option value="A">A</option>
+                      <option value="B">B</option>
+                      <option value="C">C</option>
+                      <option value="D">D</option>
+                      <option value="E">E</option>
+                    </select>
+                  </template>
+                  <template v-else>
+                    <input
+                      v-model.number="siswa.komponen[kIdx].nilai"
+                      :type="getInputType(komponen)"
+                      class="w-full min-w-[80px] px-2 py-1.5 text-xs border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
+                      :disabled="isRaporFinalized"
+                      :min="komponen.skala_min ?? undefined"
+                      :max="komponen.skala_max ?? undefined"
+                      @blur="validateNilaiAngka(sIdx, kIdx)"
+                    />
+                  </template>
+                </td>
+                <td v-if="!isUTS" class="px-4 py-3">
+                  <textarea
+                    v-model="siswa.capaian_pembelajaran"
+                    class="w-full min-w-[150px] px-2 py-1.5 text-xs border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 resize-y"
+                    :disabled="isRaporFinalized"
+                    rows="2"
+                    placeholder="Deskripsi capaian"
+                  />
+                </td>
+                <td class="px-4 py-3">
+                  <span
+                    class="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium"
+                    :class="
+                      siswa.status === 'submitted'
+                        ? 'bg-success-50 text-success-700'
+                        : 'bg-warning-50 text-warning-700'
+                    "
+                  >
+                    {{ siswa.status === 'submitted' ? 'Submitted' : 'Draft' }}
+                  </span>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
 
       <!-- Action buttons -->
-      <div v-if="!isRaporFinalized" class="actions-bar">
-        <button class="btn btn-secondary" :disabled="saving" @click="saveNilai('draft')">
+      <div v-if="!isRaporFinalized" class="flex justify-end gap-3 mt-4 pt-4 border-t border-border">
+        <button
+          class="px-3 py-2 text-sm font-medium text-text-secondary bg-white border border-border rounded-lg hover:bg-surface-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          :disabled="saving"
+          @click="saveNilai('draft')"
+        >
           {{ saving ? 'Menyimpan...' : 'Simpan Draft' }}
         </button>
         <button
-          class="btn btn-primary"
+          class="px-3 py-2 text-sm font-medium text-white bg-primary-600 rounded-lg hover:bg-primary-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           :disabled="saving || !canSubmit"
           @click="saveNilai('submitted')"
         >
@@ -349,181 +416,16 @@ onMounted(() => {
 
     <div
       v-else-if="selectedMapel && selectedKelas && selectedPeriode && !loadingNilai"
-      class="empty-state"
+      class="text-center text-text-secondary py-8 text-sm"
     >
       Tidak ada data siswa untuk kelas dan periode ini.
     </div>
 
-    <div v-else-if="!selectedMapel || !selectedKelas || !selectedPeriode" class="empty-state">
+    <div
+      v-else-if="!selectedMapel || !selectedKelas || !selectedPeriode"
+      class="text-center text-text-secondary py-8 text-sm"
+    >
       Pilih mata pelajaran, kelas, dan periode untuk mulai input nilai.
     </div>
   </div>
 </template>
-
-<style scoped>
-.page {
-  padding: 2rem;
-}
-.page-header {
-  margin-bottom: 1.5rem;
-}
-.page-header h1 {
-  margin: 0;
-  font-size: 1.5rem;
-}
-.filter-bar {
-  display: flex;
-  gap: 1rem;
-  margin-bottom: 1.5rem;
-  flex-wrap: wrap;
-}
-.filter-group {
-  display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
-  min-width: 200px;
-}
-.filter-group label {
-  font-size: 0.875rem;
-  font-weight: 500;
-  color: #374151;
-}
-.input {
-  padding: 0.5rem 0.75rem;
-  border: 1px solid #d1d5db;
-  border-radius: 6px;
-  font-size: 0.875rem;
-}
-.alert {
-  padding: 0.75rem 1rem;
-  border-radius: 6px;
-  margin-bottom: 1rem;
-  font-size: 0.875rem;
-}
-.alert-error {
-  background: #fef2f2;
-  color: #991b1b;
-  border: 1px solid #fecaca;
-}
-.alert-success {
-  background: #f0fdf4;
-  color: #166534;
-  border: 1px solid #bbf7d0;
-}
-.alert-info {
-  background: #eff6ff;
-  color: #1e40af;
-  border: 1px solid #bfdbfe;
-}
-.table-container {
-  overflow-x: auto;
-}
-table {
-  width: 100%;
-  border-collapse: collapse;
-  min-width: 800px;
-}
-th,
-td {
-  padding: 0.5rem 0.75rem;
-  text-align: left;
-  border-bottom: 1px solid #e5e7eb;
-  vertical-align: top;
-}
-th {
-  font-weight: 600;
-  color: #374151;
-  background: #f9fafb;
-  font-size: 0.8125rem;
-  white-space: nowrap;
-}
-.sticky-col {
-  position: sticky;
-  left: 0;
-  background: white;
-  z-index: 1;
-  width: 40px;
-}
-.sticky-col-2 {
-  position: sticky;
-  left: 40px;
-  background: white;
-  z-index: 1;
-  min-width: 150px;
-}
-thead .sticky-col,
-thead .sticky-col-2 {
-  background: #f9fafb;
-  z-index: 2;
-}
-.required-mark {
-  color: #dc2626;
-}
-.komponen-hint {
-  color: #9ca3af;
-  font-weight: 400;
-}
-.input-cell {
-  width: 100%;
-  min-width: 80px;
-  padding: 0.375rem 0.5rem;
-  border: 1px solid #d1d5db;
-  border-radius: 4px;
-  font-size: 0.8125rem;
-}
-.textarea-cell {
-  min-width: 150px;
-  resize: vertical;
-}
-.badge {
-  padding: 0.125rem 0.5rem;
-  border-radius: 9999px;
-  font-size: 0.6875rem;
-  font-weight: 500;
-}
-.badge-draft {
-  background: #fef3c7;
-  color: #92400e;
-}
-.badge-submitted {
-  background: #d1fae5;
-  color: #065f46;
-}
-.actions-bar {
-  display: flex;
-  justify-content: flex-end;
-  gap: 0.75rem;
-  margin-top: 1.5rem;
-  padding-top: 1rem;
-  border-top: 1px solid #e5e7eb;
-}
-.btn {
-  padding: 0.5rem 1rem;
-  border: none;
-  border-radius: 6px;
-  font-size: 0.875rem;
-  cursor: pointer;
-  font-weight: 500;
-}
-.btn:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-.btn-primary {
-  background: #2563eb;
-  color: white;
-}
-.btn-primary:hover:not(:disabled) {
-  background: #1d4ed8;
-}
-.btn-secondary {
-  background: #f3f4f6;
-  color: #374151;
-  border: 1px solid #d1d5db;
-}
-.empty-state {
-  text-align: center;
-  color: #6b7280;
-  padding: 2rem;
-}
-</style>
