@@ -24,7 +24,7 @@ import { CreateKomponenPenilaianDto, UpdateKomponenPenilaianDto } from './dto';
  * Only admin role can manage these configurations.
  * Requirements: 36.1–36.6
  */
-@Controller('rapor/komponen')
+@Controller('rapor/komponen-penilaian')
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Roles(Role.ADMIN)
 export class KomponenPenilaianController {

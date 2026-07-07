@@ -78,6 +78,11 @@ export class AuditTrailService {
     const limit = query.limit ?? 20;
     const conditions: ReturnType<typeof eq>[] = [eq(auditTrail.tenantId, tenantId)];
 
+    // Filter by tagihan_id (entity_id)
+    if (query.tagihan_id) {
+      conditions.push(eq(auditTrail.entityId, query.tagihan_id));
+    }
+
     // Cursor: fetch entries older than the cursor entry
     if (query.cursor) {
       const [cursorEntry] = await db

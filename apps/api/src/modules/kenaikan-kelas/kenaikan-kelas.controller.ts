@@ -5,7 +5,7 @@ import { RolesGuard } from '@/common/guards/roles.guard';
 import { Roles } from '@/common/decorators/roles.decorator';
 import { TenantId } from '@/common/decorators/tenant-id.decorator';
 import { KenaikanKelasService } from './kenaikan-kelas.service';
-import { PromoteStudentsDto } from './dto';
+import { PromoteStudentsDto, PreviewPromotionDto } from './dto';
 
 @Controller('kenaikan-kelas')
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -28,7 +28,19 @@ export class KenaikanKelasController {
   }
 
   /**
-   * POST /kenaikan-kelas
+   * POST /kenaikan-kelas/preview
+   * Preview promotion: validates data and returns student list with target info
+   * without actually executing the promotion.
+   *
+   * Requirements: 30.1, 30.7
+   */
+  @Post('preview')
+  async previewPromotion(@TenantId() tenantId: string, @Body() dto: PreviewPromotionDto) {
+    return this.kenaikanKelasService.previewPromotion(tenantId, dto);
+  }
+
+  /**
+   * POST /kenaikan-kelas/execute
    * Mass promote selected students to target class in new tahun_ajaran.
    * - Move siswa_ids to target_kelas_id
    * - For lulus_ids: set siswa.status = 'lulus' (alumni)
@@ -37,7 +49,7 @@ export class KenaikanKelasController {
    *
    * Requirements: 30.2, 30.3, 30.5, 30.8, 30.9
    */
-  @Post()
+  @Post('execute')
   async promoteStudents(@TenantId() tenantId: string, @Body() dto: PromoteStudentsDto) {
     return this.kenaikanKelasService.promoteStudents(tenantId, dto);
   }

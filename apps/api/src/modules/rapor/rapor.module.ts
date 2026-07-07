@@ -8,6 +8,7 @@ import { RaporOverviewService } from './rapor-overview.service';
 import { RaporOrangTuaService } from './rapor-orangtua.service';
 import { RaporFinalizationService } from './rapor-finalization.service';
 import { RaporExportService } from './rapor-export.service';
+import { RaporWaliService } from './rapor-wali.service';
 import { KomponenPenilaianService } from './komponen-penilaian.service';
 import { QUEUE_NAMES } from '@/modules/queue/queue.constants';
 
@@ -22,6 +23,7 @@ import { QUEUE_NAMES } from '@/modules/queue/queue.constants';
     RaporOrangTuaService,
     RaporFinalizationService,
     RaporExportService,
+    RaporWaliService,
     KomponenPenilaianService,
   ],
   exports: [
@@ -30,6 +32,7 @@ import { QUEUE_NAMES } from '@/modules/queue/queue.constants';
     RaporOrangTuaService,
     RaporFinalizationService,
     RaporExportService,
+    RaporWaliService,
     KomponenPenilaianService,
   ],
 })

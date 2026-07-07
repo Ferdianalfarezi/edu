@@ -6,7 +6,7 @@ import { kelas } from '@/drizzle/schema/kelas';
 import { siswa } from '@/drizzle/schema/siswa';
 import { tahunAjaran } from '@/drizzle/schema/tahun-ajaran';
 import { riwayatKelas } from '@/drizzle/schema/konfigurasi';
-import { PromoteStudentsDto } from './dto';
+import { PromoteStudentsDto, PreviewPromotionDto } from './dto';
 
 @Injectable()
 export class KenaikanKelasService {
@@ -105,7 +105,84 @@ export class KenaikanKelasService {
     };
   }
 
-  // ─── POST /kenaikan-kelas ─────────────────────────────────────
+  // ─── POST /kenaikan-kelas/preview ─────────────────────────────
+
+  /**
+   * Preview promotion: returns students from sourceKelas and finds target class
+   * in the new tahun_ajaran. Does not execute any changes.
+   */
+  async previewPromotion(tenantId: string, dto: PreviewPromotionDto) {
+    const { sourceKelasId, tahunAjaranBaruId } = dto;
+
+    // Get source kelas
+    const [sourceKelas] = await this.db
+      .select({
+        id: kelas.id,
+        nama: kelas.nama,
+        tingkat: kelas.tingkat,
+        tahunAjaranId: kelas.tahunAjaranId,
+      })
+      .from(kelas)
+      .where(and(eq(kelas.id, sourceKelasId), eq(kelas.tenantId, tenantId)))
+      .limit(1);
+
+    if (!sourceKelas) {
+      throw new NotFoundException('Kelas asal tidak ditemukan');
+    }
+
+    // Get active students in source class
+    const students = await this.db
+      .select({
+        siswaId: siswa.id,
+        nama: siswa.nama,
+        nisn: siswa.nisn,
+      })
+      .from(siswa)
+      .where(
+        and(
+          eq(siswa.kelasId, sourceKelasId),
+          eq(siswa.tenantId, tenantId),
+          eq(siswa.status, 'aktif'),
+        ),
+      );
+
+    // Find target class at tingkat+1 in new tahun ajaran
+    const targetTingkat = sourceKelas.tingkat + 1;
+    const [targetKelas] = await this.db
+      .select({
+        id: kelas.id,
+        nama: kelas.nama,
+        tingkat: kelas.tingkat,
+      })
+      .from(kelas)
+      .where(
+        and(
+          eq(kelas.tenantId, tenantId),
+          eq(kelas.tahunAjaranId, tahunAjaranBaruId),
+          eq(kelas.tingkat, targetTingkat),
+        ),
+      )
+      .limit(1);
+
+    return {
+      students: students.map((s) => ({
+        siswa_id: s.siswaId,
+        nama: s.nama,
+        nisn: s.nisn,
+      })),
+      source_kelas: {
+        id: sourceKelas.id,
+        nama: sourceKelas.nama,
+        tingkat: sourceKelas.tingkat,
+      },
+      target_kelas: targetKelas
+        ? { id: targetKelas.id, nama: targetKelas.nama, tingkat: targetKelas.tingkat }
+        : null,
+      is_highest_grade: !targetKelas,
+    };
+  }
+
+  // ─── POST /kenaikan-kelas/execute ─────────────────────────────────────
 
   /**
    * Mass promote students to a target class in a new tahun_ajaran.

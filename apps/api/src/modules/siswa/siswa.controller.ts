@@ -77,6 +77,7 @@ export class SiswaController {
 
   /**
    * PATCH /siswa/:id/keluar
+   * PATCH /siswa/:id/soft-delete (alias)
    * Soft-delete: mark student as pindah_sekolah or keluar.
    * Records tanggal_keluar, alasan_keluar, processed_by.
    * Checks parent access revocation when all children leave.
@@ -89,6 +90,85 @@ export class SiswaController {
     @Body() dto: SoftDeleteSiswaDto,
   ) {
     return this.siswaService.softDeleteSiswa(tenantId, id, dto, currentUser.id);
+  }
+
+  @Patch(':id/soft-delete')
+  async softDeleteSiswaAlias(
+    @TenantId() tenantId: string,
+    @Param('id', ParseUUIDPipe) id: string,
+    @CurrentUser() currentUser: RequestUser,
+    @Body() dto: SoftDeleteSiswaDto,
+  ) {
+    return this.siswaService.softDeleteSiswa(tenantId, id, dto, currentUser.id);
+  }
+
+  /**
+   * POST /siswa/import-csv/preview
+   * Preview CSV import: validates and detects conflicts without persisting.
+   */
+  @Post('import-csv/preview')
+  @UseInterceptors(
+    FileInterceptor('file', {
+      limits: { fileSize: 2 * 1024 * 1024 },
+      fileFilter: (_req, file, cb) => {
+        if (
+          file.mimetype === 'text/csv' ||
+          file.mimetype === 'application/vnd.ms-excel' ||
+          file.originalname.endsWith('.csv')
+        ) {
+          cb(null, true);
+        } else {
+          cb(new BadRequestException('Hanya file CSV yang diperbolehkan'), false);
+        }
+      },
+    }),
+  )
+  async importCsvPreview(@TenantId() tenantId: string, @UploadedFile() file: Express.Multer.File) {
+    if (!file) {
+      throw new BadRequestException('File CSV wajib diupload');
+    }
+    const csvContent = file.buffer.toString('utf-8');
+    return this.siswaService.importCsvPreview(tenantId, csvContent);
+  }
+
+  /**
+   * POST /siswa/import-csv
+   * Execute CSV import with conflict resolutions.
+   */
+  @Post('import-csv')
+  @UseInterceptors(
+    FileInterceptor('file', {
+      limits: { fileSize: 2 * 1024 * 1024 },
+      fileFilter: (_req, file, cb) => {
+        if (
+          file.mimetype === 'text/csv' ||
+          file.mimetype === 'application/vnd.ms-excel' ||
+          file.originalname.endsWith('.csv')
+        ) {
+          cb(null, true);
+        } else {
+          cb(new BadRequestException('Hanya file CSV yang diperbolehkan'), false);
+        }
+      },
+    }),
+  )
+  async importCsv(
+    @TenantId() tenantId: string,
+    @CurrentUser() currentUser: RequestUser,
+    @UploadedFile() file: Express.Multer.File,
+    @Body('resolutions') resolutions?: string,
+  ) {
+    if (!file) {
+      throw new BadRequestException('File CSV wajib diupload');
+    }
+    const csvContent = file.buffer.toString('utf-8');
+    const parsedResolutions = resolutions ? JSON.parse(resolutions) : [];
+    return this.siswaService.importCsvExecute(
+      tenantId,
+      csvContent,
+      currentUser.id,
+      parsedResolutions,
+    );
   }
 
   /**

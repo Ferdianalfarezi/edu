@@ -37,6 +37,20 @@ export class RppService {
   ) {}
 
   /**
+   * List all RPP categories for a tenant.
+   */
+  async listKategori(tenantId: string) {
+    return this.db
+      .select({
+        id: kategoriRpp.id,
+        nama: kategoriRpp.nama,
+      })
+      .from(kategoriRpp)
+      .where(eq(kategoriRpp.tenantId, tenantId))
+      .orderBy(kategoriRpp.nama);
+  }
+
+  /**
    * Create a new RPP entry.
    * - For richtext: konten field contains HTML.
    * - For file: file is uploaded to R2 storage.

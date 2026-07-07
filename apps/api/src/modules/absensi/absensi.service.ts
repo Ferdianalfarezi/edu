@@ -1152,4 +1152,30 @@ export class AbsensiService {
 
     return !!result;
   }
+
+  // ─── Audit Log ──────────────────────────────────────────────────
+
+  /**
+   * Get audit log entries for a specific absensi record.
+   * Requirements: 2.5, 2.6
+   */
+  async getAuditLog(tenantId: string, absensiId: string) {
+    const db = this.drizzleService.db;
+
+    const results = await db
+      .select({
+        id: absensiAudit.id,
+        absensiId: absensiAudit.absensiId,
+        userId: absensiAudit.userId,
+        role: absensiAudit.role,
+        statusSebelum: absensiAudit.statusSebelum,
+        statusSesudah: absensiAudit.statusSesudah,
+        createdAt: absensiAudit.createdAt,
+      })
+      .from(absensiAudit)
+      .where(eq(absensiAudit.absensiId, absensiId))
+      .orderBy(sql`${absensiAudit.createdAt} DESC`);
+
+    return { data: results };
+  }
 }

@@ -156,7 +156,7 @@ async function finalize() {
     });
 
     // Finalize
-    await api.patch(`/rapor/finalize/${selectedKelas.value}/${selectedPeriode.value}`);
+    await api.post(`/rapor/kelas/${selectedKelas.value}/periode/${selectedPeriode.value}/finalize`);
 
     successMessage.value =
       'Rapor berhasil difinalkan. Rapor sekarang dapat dilihat oleh orang tua.';

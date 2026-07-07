@@ -30,12 +30,25 @@ import {
   CancelTagihanDto,
   GetTunggakanQueryDto,
   ExportTagihanQueryDto,
+  ListTagihanQueryDto,
 } from './dto';
 
 @Controller('tagihan')
 @UseGuards(JwtAuthGuard, RolesGuard)
 export class TagihanController {
   constructor(private readonly tagihanService: TagihanService) {}
+
+  /**
+   * GET /tagihan
+   * List all tagihan with cursor-pagination and filters.
+   * Bendahara and Admin only.
+   */
+  @Get()
+  @Roles(Role.BENDAHARA, Role.ADMIN)
+  async listTagihan(@TenantId() tenantId: string, @Query() query: ListTagihanQueryDto) {
+    const data = await this.tagihanService.listTagihan(tenantId, query);
+    return data;
+  }
 
   /**
    * POST /tagihan/generate
@@ -66,6 +79,18 @@ export class TagihanController {
   async getPendingVerifications(@TenantId() tenantId: string) {
     const data = await this.tagihanService.getPendingVerifications(tenantId);
     return { data };
+  }
+
+  /**
+   * GET /tagihan/tunggakan/summary
+   * Get summary of tunggakan (total count, total amount) for dashboard.
+   * Bendahara and Kepala Sekolah only.
+   */
+  @Get('tunggakan/summary')
+  @Roles(Role.BENDAHARA, Role.KEPALA_SEKOLAH)
+  async getTunggakanSummary(@TenantId() tenantId: string, @Query('kelas_id') kelasId?: string) {
+    const data = await this.tagihanService.getTunggakanSummary(tenantId, kelasId);
+    return data;
   }
 
   /**

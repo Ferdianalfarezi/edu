@@ -19,7 +19,7 @@ import { TenantId } from '@/common/decorators/tenant-id.decorator';
 import { KonfigurasiService } from './konfigurasi.service';
 import { CreateHariLiburDto } from './dto';
 
-@Controller('hari-libur')
+@Controller('konfigurasi/hari-libur')
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Roles(Role.ADMIN, Role.KEPALA_SEKOLAH)
 export class HariLiburController {

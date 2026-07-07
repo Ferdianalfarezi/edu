@@ -36,6 +36,17 @@ export class RppController {
   constructor(private readonly rppService: RppService) {}
 
   /**
+   * GET /rpp/kategori
+   * List all RPP categories for the tenant.
+   */
+  @Get('kategori')
+  @Roles(Role.GURU, Role.KEPALA_SEKOLAH, Role.ADMIN)
+  async listKategori(@TenantId() tenantId: string) {
+    const data = await this.rppService.listKategori(tenantId);
+    return { data };
+  }
+
+  /**
    * GET /rpp
    * List published RPP in the same tenant (portal view).
    * Cursor-paginated, sorted by tanggal_publish DESC.
