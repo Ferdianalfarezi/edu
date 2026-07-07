@@ -25,7 +25,6 @@ import { CreateSiswaDto, UpdateSiswaDto, SoftDeleteSiswaDto, ListSiswaQueryDto }
 
 @Controller('siswa')
 @UseGuards(JwtAuthGuard, RolesGuard)
-@Roles(Role.ADMIN)
 export class SiswaController {
   constructor(private readonly siswaService: SiswaService) {}
 
@@ -35,6 +34,7 @@ export class SiswaController {
    * Per ADR-002: checks global phone deduplication for orang_tua.
    */
   @Post()
+  @Roles(Role.ADMIN)
   async createSiswa(
     @TenantId() tenantId: string,
     @CurrentUser() currentUser: RequestUser,
@@ -47,8 +47,10 @@ export class SiswaController {
    * GET /siswa
    * List students within tenant. Cursor-paginated.
    * Supports search by name/NISN, filter by kelas/status/tahun_ajaran.
+   * Accessible by admin, guru, kepala_sekolah (guru needs for absensi/rapor views).
    */
   @Get()
+  @Roles(Role.ADMIN, Role.GURU, Role.KEPALA_SEKOLAH)
   async listSiswa(@TenantId() tenantId: string, @Query() query: ListSiswaQueryDto) {
     return this.siswaService.listSiswa(tenantId, query);
   }
@@ -56,8 +58,10 @@ export class SiswaController {
   /**
    * GET /siswa/:id
    * Get single student detail.
+   * Accessible by admin, guru, kepala_sekolah.
    */
   @Get(':id')
+  @Roles(Role.ADMIN, Role.GURU, Role.KEPALA_SEKOLAH)
   async getSiswa(@TenantId() tenantId: string, @Param('id', ParseUUIDPipe) id: string) {
     return this.siswaService.getSiswaById(tenantId, id);
   }
@@ -67,6 +71,7 @@ export class SiswaController {
    * Update student data.
    */
   @Patch(':id')
+  @Roles(Role.ADMIN)
   async updateSiswa(
     @TenantId() tenantId: string,
     @Param('id', ParseUUIDPipe) id: string,
@@ -83,6 +88,7 @@ export class SiswaController {
    * Checks parent access revocation when all children leave.
    */
   @Patch(':id/keluar')
+  @Roles(Role.ADMIN)
   async softDeleteSiswa(
     @TenantId() tenantId: string,
     @Param('id', ParseUUIDPipe) id: string,
@@ -93,6 +99,7 @@ export class SiswaController {
   }
 
   @Patch(':id/soft-delete')
+  @Roles(Role.ADMIN)
   async softDeleteSiswaAlias(
     @TenantId() tenantId: string,
     @Param('id', ParseUUIDPipe) id: string,
@@ -107,6 +114,7 @@ export class SiswaController {
    * Preview CSV import: validates and detects conflicts without persisting.
    */
   @Post('import-csv/preview')
+  @Roles(Role.ADMIN)
   @UseInterceptors(
     FileInterceptor('file', {
       limits: { fileSize: 2 * 1024 * 1024 },
@@ -136,6 +144,7 @@ export class SiswaController {
    * Execute CSV import with conflict resolutions.
    */
   @Post('import-csv')
+  @Roles(Role.ADMIN)
   @UseInterceptors(
     FileInterceptor('file', {
       limits: { fileSize: 2 * 1024 * 1024 },
@@ -177,6 +186,7 @@ export class SiswaController {
    * CSV format: nama, nisn, jenis_kelamin, tanggal_lahir, orang_tua_nama, orang_tua_phone, kelas_id
    */
   @Post('bulk-import')
+  @Roles(Role.ADMIN)
   @UseInterceptors(
     FileInterceptor('file', {
       limits: { fileSize: 2 * 1024 * 1024 }, // 2MB max for CSV

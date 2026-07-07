@@ -2,29 +2,31 @@ import { IsArray, IsNotEmpty, IsOptional, IsUUID, ArrayMinSize } from 'class-val
 
 /**
  * DTO for mass class promotion (kenaikan kelas massal).
- * - siswa_ids: students to promote to target_kelas_id
- * - lulus_ids: highest-grade students to mark as lulus/alumni
+ * Frontend sends excluded_siswa_ids (students NOT to promote).
+ * All active students in source_kelas_id MINUS excluded_siswa_ids will be promoted.
+ *
+ * Requirements: 30.2, 30.3
  */
 export class PromoteStudentsDto {
   @IsUUID()
   @IsNotEmpty()
-  sourceKelasId: string;
+  source_kelas_id: string;
+
+  @IsOptional()
+  @IsUUID()
+  target_kelas_id?: string;
 
   @IsUUID()
   @IsNotEmpty()
-  targetKelasId: string;
-
-  @IsUUID()
-  @IsNotEmpty()
-  tahunAjaranBaruId: string;
-
-  @IsArray()
-  @ArrayMinSize(1)
-  @IsUUID('4', { each: true })
-  siswaIds: string[];
+  target_tahun_ajaran_id: string;
 
   @IsOptional()
   @IsArray()
   @IsUUID('4', { each: true })
-  lulusIds?: string[];
+  excluded_siswa_ids?: string[];
+
+  @IsOptional()
+  @IsArray()
+  @IsUUID('4', { each: true })
+  lulus_ids?: string[];
 }

@@ -33,15 +33,22 @@ export class AbsensiController {
 
   /**
    * GET /absensi/kelas-hari-ini
-   * Returns the guru's scheduled classes for today.
-   * Used by mobile app to show which classes need attendance input.
+   * Returns the guru's scheduled classes for today (or specified date).
+   * Used by mobile app and admin panel to show which classes need attendance input.
+   *
+   * Query params:
+   * - tanggal (optional): YYYY-MM-DD format, defaults to today
    *
    * Requirements: 1.1, 1.12
    */
   @Get('kelas-hari-ini')
   @Roles(Role.GURU, Role.KEPALA_SEKOLAH)
-  async getKelasHariIni(@TenantId() tenantId: string, @CurrentUser('id') guruId: string) {
-    return this.absensiService.getKelasHariIni(tenantId, guruId);
+  async getKelasHariIni(
+    @TenantId() tenantId: string,
+    @CurrentUser('id') guruId: string,
+    @Query('tanggal') tanggal?: string,
+  ) {
+    return this.absensiService.getKelasHariIni(tenantId, guruId, tanggal);
   }
 
   /**

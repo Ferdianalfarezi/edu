@@ -20,7 +20,6 @@ import { CreateKelasDto, UpdateKelasDto, ListKelasQueryDto } from './dto';
 
 @Controller('kelas')
 @UseGuards(JwtAuthGuard, RolesGuard)
-@Roles(Role.ADMIN)
 export class KelasController {
   constructor(private readonly kelasService: KelasService) {}
 
@@ -30,6 +29,7 @@ export class KelasController {
    * Optionally assign a wali_kelas (guru).
    */
   @Post()
+  @Roles(Role.ADMIN)
   async createKelas(@TenantId() tenantId: string, @Body() dto: CreateKelasDto) {
     return this.kelasService.createKelas(tenantId, dto);
   }
@@ -38,8 +38,10 @@ export class KelasController {
    * GET /kelas
    * List all classes within the tenant.
    * Supports filtering by tahun_ajaran_id and cursor pagination.
+   * Accessible by all staff roles (needed for absensi, jadwal, tagihan, rapor views).
    */
   @Get()
+  @Roles(Role.ADMIN, Role.GURU, Role.KEPALA_SEKOLAH, Role.BENDAHARA)
   async listKelas(@TenantId() tenantId: string, @Query() query: ListKelasQueryDto) {
     return this.kelasService.listKelas(tenantId, query);
   }
@@ -47,8 +49,10 @@ export class KelasController {
   /**
    * GET /kelas/:id
    * Get class detail with student count.
+   * Accessible by all staff roles.
    */
   @Get(':id')
+  @Roles(Role.ADMIN, Role.GURU, Role.KEPALA_SEKOLAH, Role.BENDAHARA)
   async getKelas(@TenantId() tenantId: string, @Param('id', ParseUUIDPipe) id: string) {
     return this.kelasService.getKelasById(tenantId, id);
   }
@@ -58,6 +62,7 @@ export class KelasController {
    * Update class data (nama, tingkat, wali_kelas, kapasitas).
    */
   @Patch(':id')
+  @Roles(Role.ADMIN)
   async updateKelas(
     @TenantId() tenantId: string,
     @Param('id', ParseUUIDPipe) id: string,
@@ -71,6 +76,7 @@ export class KelasController {
    * Delete a class only if no active students are enrolled.
    */
   @Delete(':id')
+  @Roles(Role.ADMIN)
   async deleteKelas(@TenantId() tenantId: string, @Param('id', ParseUUIDPipe) id: string) {
     return this.kelasService.deleteKelas(tenantId, id);
   }

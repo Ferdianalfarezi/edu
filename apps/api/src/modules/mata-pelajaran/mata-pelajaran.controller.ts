@@ -19,7 +19,6 @@ import { CreateMataPelajaranDto, UpdateMataPelajaranDto } from './dto';
 
 @Controller('mata-pelajaran')
 @UseGuards(JwtAuthGuard, RolesGuard)
-@Roles(Role.ADMIN)
 export class MataPelajaranController {
   constructor(private readonly mataPelajaranService: MataPelajaranService) {}
 
@@ -29,6 +28,7 @@ export class MataPelajaranController {
    * Requirements: 31.1, 31.2
    */
   @Post()
+  @Roles(Role.ADMIN)
   async create(@TenantId() tenantId: string, @Body() dto: CreateMataPelajaranDto) {
     return this.mataPelajaranService.create(tenantId, dto);
   }
@@ -36,9 +36,11 @@ export class MataPelajaranController {
   /**
    * GET /mata-pelajaran
    * List all subjects for the current tenant.
+   * Accessible by all staff roles (needed for jadwal, rapor, rpp views).
    * Requirements: 31.2
    */
   @Get()
+  @Roles(Role.ADMIN, Role.GURU, Role.KEPALA_SEKOLAH, Role.BENDAHARA)
   async findAll(@TenantId() tenantId: string) {
     return this.mataPelajaranService.findAll(tenantId);
   }
@@ -46,8 +48,10 @@ export class MataPelajaranController {
   /**
    * GET /mata-pelajaran/:id
    * Get a single subject by ID.
+   * Accessible by all staff roles.
    */
   @Get(':id')
+  @Roles(Role.ADMIN, Role.GURU, Role.KEPALA_SEKOLAH, Role.BENDAHARA)
   async findOne(@TenantId() tenantId: string, @Param('id', ParseUUIDPipe) id: string) {
     return this.mataPelajaranService.findOne(tenantId, id);
   }
@@ -57,6 +61,7 @@ export class MataPelajaranController {
    * Update a subject (nama, kode).
    */
   @Patch(':id')
+  @Roles(Role.ADMIN)
   async update(
     @TenantId() tenantId: string,
     @Param('id', ParseUUIDPipe) id: string,
@@ -71,6 +76,7 @@ export class MataPelajaranController {
    * Requirements: 31.3, 31.4
    */
   @Delete(':id')
+  @Roles(Role.ADMIN)
   async remove(@TenantId() tenantId: string, @Param('id', ParseUUIDPipe) id: string) {
     return this.mataPelajaranService.remove(tenantId, id);
   }

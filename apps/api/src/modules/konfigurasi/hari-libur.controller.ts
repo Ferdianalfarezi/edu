@@ -32,7 +32,8 @@ export class HariLiburController {
   @Get()
   async getHariLibur(@TenantId() tenantId: string, @Query('year') year?: string) {
     const parsedYear = year ? parseInt(year, 10) : undefined;
-    return this.konfigurasiService.getHariLibur(tenantId, parsedYear);
+    const data = await this.konfigurasiService.getHariLibur(tenantId, parsedYear);
+    return { data };
   }
 
   /**

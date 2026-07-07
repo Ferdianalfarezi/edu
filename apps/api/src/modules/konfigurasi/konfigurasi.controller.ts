@@ -25,24 +25,44 @@ export class KonfigurasiController {
 
   /**
    * GET /konfigurasi
-   * Return all config keys for tenant with defaults applied for missing keys.
+   * Return all config keys for tenant as structured data.
+   * Response: { data: { batas_ketidakhadiran_notifikasi, nominal_spp, tanggal_jatuh_tempo, ... } }
    */
   @Get()
-  async getAllConfig(@TenantId() tenantId: string): Promise<KonfigurasiItem[]> {
-    return this.konfigurasiService.getAllConfig(tenantId);
+  async getAllConfig(@TenantId() tenantId: string) {
+    const items = await this.konfigurasiService.getAllConfig(tenantId);
+    // Convert array of {key, value} to structured object for frontend
+    const data: Record<string, any> = {};
+    for (const item of items) {
+      data[item.key] = item.value;
+    }
+    return { data };
   }
 
   /**
    * PATCH /konfigurasi
-   * Bulk upsert multiple config keys at once.
+   * Bulk upsert config keys. Accepts either:
+   * - { items: [{ key, value }, ...] } (standard DTO)
+   * - { key1: value1, key2: value2, ... } (flat object from frontend)
    */
   @Patch()
   @HttpCode(HttpStatus.OK)
-  async bulkUpsertConfig(
-    @TenantId() tenantId: string,
-    @Body() dto: BulkUpsertKonfigurasiDto,
-  ): Promise<KonfigurasiItem[]> {
-    return this.konfigurasiService.bulkUpsertConfig(tenantId, dto.items);
+  async bulkUpsertConfig(@TenantId() tenantId: string, @Body() body: any) {
+    // Support both formats: { items: [...] } and flat object
+    let items: { key: string; value: any }[];
+    if (body.items && Array.isArray(body.items)) {
+      items = body.items;
+    } else {
+      // Flat object: convert to items array
+      items = Object.entries(body).map(([key, value]) => ({ key, value }));
+    }
+    const result = await this.konfigurasiService.bulkUpsertConfig(tenantId, items);
+    // Return structured data
+    const data: Record<string, any> = {};
+    for (const item of result) {
+      data[item.key] = item.value;
+    }
+    return { data };
   }
 
   /**

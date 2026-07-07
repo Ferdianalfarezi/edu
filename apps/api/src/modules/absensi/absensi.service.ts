@@ -185,11 +185,11 @@ export class AbsensiService {
    *
    * Requirements: 1.1, 1.12
    */
-  async getKelasHariIni(tenantId: string, guruId: string) {
+  async getKelasHariIni(tenantId: string, guruId: string, inputTanggal?: string) {
     const db = this.drizzleService.db;
-    const today = new Date();
-    const tanggal = today.toISOString().split('T')[0];
-    const dayIndex = today.getDay();
+    const targetDate = inputTanggal ? new Date(inputTanggal) : new Date();
+    const tanggal = inputTanggal || targetDate.toISOString().split('T')[0];
+    const dayIndex = targetDate.getDay();
     const hari = DAY_MAP[dayIndex];
 
     if (!hari) {
