@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue';
 import { api } from '@/api/client';
+import { PageHeader, BaseModal } from '@/components/ui';
 
 interface MataPelajaran {
   id: string;
@@ -97,214 +98,181 @@ onMounted(fetchItems);
 </script>
 
 <template>
-  <div class="page">
-    <div class="page-header">
-      <h1>Manajemen Mata Pelajaran</h1>
-      <button class="btn btn-primary" @click="openCreateForm">Tambah Mata Pelajaran</button>
-    </div>
+  <div class="p-4 lg:p-6 max-w-7xl mx-auto">
+    <PageHeader title="Manajemen Mata Pelajaran">
+      <template #actions>
+        <button
+          class="px-3 py-2 text-sm font-medium text-white bg-primary-600 rounded-lg hover:bg-primary-700 transition-colors"
+          @click="openCreateForm"
+        >
+          Tambah Mata Pelajaran
+        </button>
+      </template>
+    </PageHeader>
 
-    <div class="table-container">
-      <table v-if="!loading && items.length > 0">
-        <thead>
+    <div class="bg-white border border-border rounded-xl overflow-hidden">
+      <table v-if="!loading && items.length > 0" class="w-full">
+        <thead class="border-b border-border bg-surface-50">
           <tr>
-            <th>Nama</th>
-            <th>Kode</th>
-            <th>Aksi</th>
+            <th class="px-4 py-3 text-left font-medium text-text-secondary text-xs">Nama</th>
+            <th class="px-4 py-3 text-left font-medium text-text-secondary text-xs">Kode</th>
+            <th class="px-4 py-3 text-left font-medium text-text-secondary text-xs">Aksi</th>
           </tr>
         </thead>
-        <tbody>
-          <tr v-for="item in items" :key="item.id">
-            <td>{{ item.nama }}</td>
-            <td>{{ item.kode || '-' }}</td>
-            <td class="actions-cell">
-              <button class="btn-sm btn-edit" @click="openEditForm(item)">Edit</button>
-              <button class="btn-sm btn-delete" @click="openDeleteConfirm(item)">Hapus</button>
+        <tbody class="divide-y divide-border">
+          <tr v-for="item in items" :key="item.id" class="hover:bg-surface-50 transition-colors">
+            <td class="px-4 py-3 text-sm text-text-primary">{{ item.nama }}</td>
+            <td class="px-4 py-3 text-sm text-text-secondary font-mono">{{ item.kode || '-' }}</td>
+            <td class="px-4 py-3">
+              <div class="flex items-center gap-1">
+                <button
+                  class="p-1.5 rounded-md text-text-tertiary hover:text-primary-600 hover:bg-primary-50 transition-colors"
+                  @click="openEditForm(item)"
+                  title="Edit"
+                >
+                  <svg
+                    class="w-4 h-4"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                    stroke-width="1.75"
+                  >
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"
+                    />
+                  </svg>
+                </button>
+                <button
+                  class="p-1.5 rounded-md text-text-tertiary hover:text-danger-700 hover:bg-danger-50 transition-colors"
+                  @click="openDeleteConfirm(item)"
+                  title="Hapus"
+                >
+                  <svg
+                    class="w-4 h-4"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                    stroke-width="1.75"
+                  >
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                    />
+                  </svg>
+                </button>
+              </div>
             </td>
           </tr>
         </tbody>
       </table>
-      <p v-else-if="loading" class="empty-state">Memuat data...</p>
-      <p v-else class="empty-state">Belum ada mata pelajaran.</p>
+
+      <div v-else-if="loading" class="py-12 text-center">
+        <svg class="w-6 h-6 animate-spin text-primary-500 mx-auto" fill="none" viewBox="0 0 24 24">
+          <circle
+            class="opacity-25"
+            cx="12"
+            cy="12"
+            r="10"
+            stroke="currentColor"
+            stroke-width="4"
+          ></circle>
+          <path
+            class="opacity-75"
+            fill="currentColor"
+            d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
+          ></path>
+        </svg>
+        <p class="mt-2 text-sm text-text-tertiary">Memuat data...</p>
+      </div>
+
+      <div v-else class="py-12 text-center">
+        <svg
+          class="w-10 h-10 text-text-tertiary mx-auto mb-2"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+          stroke-width="1.5"
+        >
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            d="M12 6.042A8.967 8.967 0 0 0 6 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 0 1 6 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 0 1 6-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0 0 18 18a8.967 8.967 0 0 0-6 2.292m0-14.25v14.25"
+          />
+        </svg>
+        <p class="text-sm text-text-tertiary">Belum ada mata pelajaran.</p>
+      </div>
     </div>
 
     <!-- Create/Edit Modal -->
-    <div v-if="showFormModal" class="modal-overlay" @click.self="showFormModal = false">
-      <div class="modal">
-        <h2>{{ editingItem ? 'Edit Mata Pelajaran' : 'Tambah Mata Pelajaran' }}</h2>
-        <form @submit.prevent="saveItem">
-          <div class="form-group">
-            <label>Nama</label>
-            <input
-              v-model="form.nama"
-              type="text"
-              required
-              class="input"
-              placeholder="Matematika"
-            />
-          </div>
-          <div class="form-group">
-            <label>Kode <span class="optional">(opsional)</span></label>
-            <input v-model="form.kode" type="text" class="input" placeholder="MTK" />
-          </div>
-          <div class="modal-actions">
-            <button type="button" class="btn btn-secondary" @click="showFormModal = false">
-              Batal
-            </button>
-            <button type="submit" class="btn btn-primary">Simpan</button>
-          </div>
-        </form>
-      </div>
-    </div>
+    <BaseModal
+      :show="showFormModal"
+      :title="editingItem ? 'Edit Mata Pelajaran' : 'Tambah Mata Pelajaran'"
+      @close="showFormModal = false"
+    >
+      <form @submit.prevent="saveItem" id="form-mapel" class="space-y-4">
+        <div>
+          <label class="block text-sm font-medium text-text-primary mb-1.5">Nama</label>
+          <input
+            v-model="form.nama"
+            type="text"
+            required
+            placeholder="Matematika"
+            class="w-full px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
+          />
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-text-primary mb-1.5"
+            >Kode <span class="text-text-tertiary font-normal">(opsional)</span></label
+          >
+          <input
+            v-model="form.kode"
+            type="text"
+            placeholder="MTK"
+            class="w-full px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
+          />
+        </div>
+      </form>
+      <template #footer>
+        <button
+          class="px-3 py-2 text-sm font-medium text-text-secondary bg-white border border-border rounded-lg hover:bg-surface-50 transition-colors"
+          @click="showFormModal = false"
+        >
+          Batal
+        </button>
+        <button
+          type="submit"
+          form="form-mapel"
+          class="px-3 py-2 text-sm font-medium text-white bg-primary-600 rounded-lg hover:bg-primary-700 transition-colors"
+        >
+          Simpan
+        </button>
+      </template>
+    </BaseModal>
 
     <!-- Delete Confirmation Modal -->
-    <div v-if="showDeleteModal" class="modal-overlay" @click.self="showDeleteModal = false">
-      <div class="modal">
-        <h2>Konfirmasi Hapus</h2>
-        <p>
-          Apakah Anda yakin ingin menghapus mata pelajaran
-          <strong>{{ deletingItem?.nama }}</strong
-          >?
-        </p>
-        <p v-if="deleteError" class="error-text">{{ deleteError }}</p>
-        <div class="modal-actions">
-          <button class="btn btn-secondary" @click="showDeleteModal = false">Batal</button>
-          <button class="btn btn-danger" @click="deleteItem">Hapus</button>
-        </div>
-      </div>
-    </div>
+    <BaseModal :show="showDeleteModal" title="Konfirmasi Hapus" @close="showDeleteModal = false">
+      <p class="text-sm text-text-primary">
+        Apakah Anda yakin ingin menghapus mata pelajaran <strong>{{ deletingItem?.nama }}</strong
+        >?
+      </p>
+      <p v-if="deleteError" class="text-xs text-danger-500 mt-2">{{ deleteError }}</p>
+      <template #footer>
+        <button
+          class="px-3 py-2 text-sm font-medium text-text-secondary bg-white border border-border rounded-lg hover:bg-surface-50 transition-colors"
+          @click="showDeleteModal = false"
+        >
+          Batal
+        </button>
+        <button
+          class="px-4 py-2 text-sm font-medium text-white bg-danger-500 rounded-lg hover:bg-danger-700 transition-colors"
+          @click="deleteItem"
+        >
+          Hapus
+        </button>
+      </template>
+    </BaseModal>
   </div>
 </template>
-
-<style scoped>
-.page {
-  padding: 2rem;
-}
-.page-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 1.5rem;
-}
-.page-header h1 {
-  margin: 0;
-  font-size: 1.5rem;
-}
-.table-container {
-  overflow-x: auto;
-}
-table {
-  width: 100%;
-  border-collapse: collapse;
-}
-th,
-td {
-  padding: 0.75rem;
-  text-align: left;
-  border-bottom: 1px solid #e5e7eb;
-}
-th {
-  font-weight: 600;
-  color: #374151;
-  background: #f9fafb;
-}
-.actions-cell {
-  display: flex;
-  gap: 0.5rem;
-}
-.btn {
-  padding: 0.5rem 1rem;
-  border: none;
-  border-radius: 6px;
-  font-size: 0.875rem;
-  cursor: pointer;
-  font-weight: 500;
-}
-.btn-primary {
-  background: #2563eb;
-  color: white;
-}
-.btn-primary:hover {
-  background: #1d4ed8;
-}
-.btn-secondary {
-  background: #f3f4f6;
-  color: #374151;
-  border: 1px solid #d1d5db;
-}
-.btn-danger {
-  background: #ef4444;
-  color: white;
-}
-.btn-sm {
-  padding: 0.25rem 0.5rem;
-  border: none;
-  border-radius: 4px;
-  font-size: 0.75rem;
-  cursor: pointer;
-}
-.btn-edit {
-  background: #fef3c7;
-  color: #92400e;
-}
-.btn-delete {
-  background: #fee2e2;
-  color: #991b1b;
-}
-.empty-state {
-  text-align: center;
-  color: #6b7280;
-  padding: 2rem;
-}
-.modal-overlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.4);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 50;
-}
-.modal {
-  background: white;
-  border-radius: 8px;
-  padding: 1.5rem;
-  width: 100%;
-  max-width: 480px;
-}
-.modal h2 {
-  margin: 0 0 1rem;
-  font-size: 1.25rem;
-}
-.form-group {
-  margin-bottom: 1rem;
-}
-.form-group label {
-  display: block;
-  margin-bottom: 0.25rem;
-  font-size: 0.875rem;
-  font-weight: 500;
-  color: #374151;
-}
-.form-group .input {
-  width: 100%;
-  padding: 0.5rem 0.75rem;
-  border: 1px solid #d1d5db;
-  border-radius: 6px;
-  font-size: 0.875rem;
-}
-.optional {
-  color: #9ca3af;
-  font-weight: 400;
-}
-.modal-actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 0.5rem;
-  margin-top: 1.5rem;
-}
-.error-text {
-  color: #dc2626;
-  font-size: 0.875rem;
-  margin-top: 0.5rem;
-}
-</style>

@@ -2,6 +2,7 @@
 import { ref, onMounted, watch } from 'vue';
 import { api } from '@/api/client';
 import { PeriodeRapor } from '@edu/shared';
+import { PageHeader, BaseModal } from '@/components/ui';
 
 interface KelasOption {
   id: string;
@@ -64,7 +65,6 @@ async function fetchTahunAjaran() {
   try {
     const { data } = await api.get<{ data: TahunAjaranOption[] }>('/tahun-ajaran');
     tahunAjaranOptions.value = data.data;
-    // Default to aktif
     const aktif = data.data.find((t: any) => t.status === 'aktif');
     if (aktif) selectedTahunAjaran.value = aktif.id;
   } catch (err) {
@@ -157,7 +157,7 @@ function viewDetail(siswa: SiswaRaporView) {
 }
 
 function getStatusBadgeClass(status: string): string {
-  return status === 'final' ? 'badge-final' : 'badge-draft';
+  return status === 'final' ? 'bg-success-50 text-success-700' : 'bg-warning-50 text-warning-700';
 }
 
 watch(selectedTahunAjaran, () => {
@@ -177,24 +177,28 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="page">
-    <div class="page-header">
-      <h1>Rapor Siswa</h1>
-      <button
-        v-if="raporOverview?.status === 'final'"
-        class="btn btn-primary"
-        :disabled="exporting"
-        @click="exportRapor"
-      >
-        {{ exporting ? 'Mengexport...' : 'Export Excel' }}
-      </button>
-    </div>
+  <div class="p-4 lg:p-6 max-w-7xl mx-auto">
+    <PageHeader title="Rapor Siswa">
+      <template #actions>
+        <button
+          v-if="raporOverview?.status === 'final'"
+          class="px-3 py-2 text-sm font-medium text-white bg-primary-600 rounded-lg hover:bg-primary-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          :disabled="exporting"
+          @click="exportRapor"
+        >
+          {{ exporting ? 'Mengexport...' : 'Export Excel' }}
+        </button>
+      </template>
+    </PageHeader>
 
     <!-- Filters -->
-    <div class="filter-bar">
-      <div class="filter-group">
-        <label>Tahun Ajaran</label>
-        <select v-model="selectedTahunAjaran" class="input">
+    <div class="flex flex-wrap items-center gap-3 mb-4">
+      <div class="flex flex-col gap-1 min-w-[200px]">
+        <label class="text-sm font-medium text-text-primary">Tahun Ajaran</label>
+        <select
+          v-model="selectedTahunAjaran"
+          class="px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
+        >
           <option value="" disabled>Pilih tahun ajaran</option>
           <option v-for="t in tahunAjaranOptions" :key="t.id" :value="t.id">
             {{ t.nama }}
@@ -202,17 +206,24 @@ onMounted(() => {
         </select>
       </div>
 
-      <div class="filter-group">
-        <label>Kelas</label>
-        <select v-model="selectedKelas" class="input" :disabled="!selectedTahunAjaran">
+      <div class="flex flex-col gap-1 min-w-[200px]">
+        <label class="text-sm font-medium text-text-primary">Kelas</label>
+        <select
+          v-model="selectedKelas"
+          class="px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
+          :disabled="!selectedTahunAjaran"
+        >
           <option value="" disabled>Pilih kelas</option>
           <option v-for="k in kelasOptions" :key="k.id" :value="k.id">{{ k.nama }}</option>
         </select>
       </div>
 
-      <div class="filter-group">
-        <label>Periode</label>
-        <select v-model="selectedPeriode" class="input">
+      <div class="flex flex-col gap-1 min-w-[200px]">
+        <label class="text-sm font-medium text-text-primary">Periode</label>
+        <select
+          v-model="selectedPeriode"
+          class="px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
+        >
           <option value="" disabled>Pilih periode</option>
           <option v-for="p in periodeOptions" :key="p.value" :value="p.value">
             {{ p.label }}
@@ -221,18 +232,38 @@ onMounted(() => {
       </div>
     </div>
 
-    <div v-if="error" class="alert alert-error">{{ error }}</div>
+    <div
+      v-if="error"
+      class="p-3 bg-danger-50 border border-danger-500/20 rounded-lg text-sm text-danger-700 mb-4"
+    >
+      {{ error }}
+    </div>
 
-    <div v-if="loading" class="empty-state">Memuat data...</div>
+    <div v-if="loading" class="text-center py-8">
+      <svg class="w-6 h-6 animate-spin text-primary-500 mx-auto" fill="none" viewBox="0 0 24 24">
+        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
+        <path
+          class="opacity-75"
+          fill="currentColor"
+          d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
+        />
+      </svg>
+      <p class="text-sm text-text-secondary mt-2">Memuat data...</p>
+    </div>
 
     <template v-else-if="raporOverview && siswaRapors.length > 0">
       <!-- Status Banner -->
-      <div class="rapor-status-banner">
-        <div class="status-info">
-          <span :class="['badge', getStatusBadgeClass(raporOverview.status)]">
+      <div
+        class="flex items-center justify-between p-3 bg-surface-50 border border-border rounded-lg mb-4"
+      >
+        <div class="flex items-center gap-3">
+          <span
+            class="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium"
+            :class="getStatusBadgeClass(raporOverview.status)"
+          >
             {{ raporOverview.status === 'final' ? 'Final' : 'Draft' }}
           </span>
-          <span class="status-text">
+          <span class="text-sm font-medium text-text-primary">
             {{ raporOverview.kelas_nama }} —
             {{
               periodeOptions.find((p) => p.value === (raporOverview ? raporOverview.periode : ''))
@@ -240,398 +271,187 @@ onMounted(() => {
             }}
           </span>
         </div>
-        <div v-if="raporOverview.finalized_at" class="finalized-info">
+        <div v-if="raporOverview.finalized_at" class="text-xs text-text-secondary">
           Difinalkan: {{ new Date(raporOverview.finalized_at).toLocaleString('id-ID') }}
         </div>
       </div>
 
       <!-- Students Table -->
-      <div class="table-container">
-        <table>
-          <thead>
-            <tr>
-              <th>No</th>
-              <th>Nama Siswa</th>
-              <th>NISN</th>
-              <th>Rata-rata</th>
-              <th>Peringkat</th>
-              <th>Status</th>
-              <th>Detail</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-for="(siswa, idx) in siswaRapors" :key="siswa.siswa_id">
-              <td>{{ idx + 1 }}</td>
-              <td>{{ siswa.siswa_nama }}</td>
-              <td>{{ siswa.nisn || '-' }}</td>
-              <td>{{ siswa.rata_rata !== null ? siswa.rata_rata.toFixed(1) : '-' }}</td>
-              <td>{{ siswa.peringkat ?? '-' }}</td>
-              <td>
-                <span
-                  :class="[
-                    'badge',
-                    raporOverview && raporOverview.status === 'final'
-                      ? 'badge-final'
-                      : 'badge-draft',
-                  ]"
-                >
-                  {{ raporOverview && raporOverview.status === 'final' ? 'Final' : 'Draft' }}
-                </span>
-              </td>
-              <td>
-                <button class="btn-sm btn-detail" @click="viewDetail(siswa)">Lihat</button>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-    </template>
-
-    <div v-else-if="selectedKelas && selectedPeriode && !loading" class="empty-state">
-      Tidak ada data rapor untuk kelas dan periode ini.
-    </div>
-    <div v-else-if="!selectedKelas || !selectedPeriode" class="empty-state">
-      Pilih tahun ajaran, kelas, dan periode untuk melihat rapor.
-    </div>
-
-    <!-- Detail Modal -->
-    <div
-      v-if="showDetailModal && detailSiswa"
-      class="modal-overlay"
-      @click.self="showDetailModal = false"
-    >
-      <div class="modal modal-wide">
-        <div class="modal-header">
-          <h2>Rapor: {{ detailSiswa.siswa_nama }}</h2>
-          <button class="btn-close" @click="showDetailModal = false">&times;</button>
-        </div>
-
-        <div class="detail-summary">
-          <div class="summary-item">
-            <span class="summary-label">Rata-rata</span>
-            <span class="summary-value">
-              {{ detailSiswa.rata_rata !== null ? detailSiswa.rata_rata.toFixed(1) : '-' }}
-            </span>
-          </div>
-          <div class="summary-item">
-            <span class="summary-label">Peringkat</span>
-            <span class="summary-value">{{ detailSiswa.peringkat ?? '-' }}</span>
-          </div>
-        </div>
-
-        <!-- Nilai per mapel -->
-        <div class="detail-section">
-          <h3>Nilai per Mata Pelajaran</h3>
-          <table class="detail-table">
-            <thead>
+      <div class="bg-white border border-border rounded-xl overflow-hidden">
+        <div class="overflow-x-auto">
+          <table class="w-full">
+            <thead class="border-b border-border bg-surface-50">
               <tr>
-                <th>Mata Pelajaran</th>
-                <th>Komponen</th>
-                <th>Capaian Pembelajaran</th>
+                <th class="px-4 py-3 text-left font-medium text-text-secondary text-xs">No</th>
+                <th class="px-4 py-3 text-left font-medium text-text-secondary text-xs">
+                  Nama Siswa
+                </th>
+                <th class="px-4 py-3 text-left font-medium text-text-secondary text-xs">NISN</th>
+                <th class="px-4 py-3 text-left font-medium text-text-secondary text-xs">
+                  Rata-rata
+                </th>
+                <th class="px-4 py-3 text-left font-medium text-text-secondary text-xs">
+                  Peringkat
+                </th>
+                <th class="px-4 py-3 text-left font-medium text-text-secondary text-xs">Status</th>
+                <th class="px-4 py-3 text-left font-medium text-text-secondary text-xs">Detail</th>
               </tr>
             </thead>
-            <tbody>
-              <tr v-for="mapel in detailSiswa.nilai_per_mapel" :key="mapel.mata_pelajaran_nama">
-                <td>{{ mapel.mata_pelajaran_nama }}</td>
-                <td>
-                  <div
-                    v-for="k in mapel.komponen_nilai"
-                    :key="k.komponen_nama"
-                    class="komponen-item"
-                  >
-                    <span class="komponen-label">{{ k.komponen_nama }}:</span>
-                    <span class="komponen-value">{{ k.nilai }}</span>
-                  </div>
+            <tbody class="divide-y divide-border">
+              <tr
+                v-for="(siswa, idx) in siswaRapors"
+                :key="siswa.siswa_id"
+                class="hover:bg-surface-50 transition-colors"
+              >
+                <td class="px-4 py-3 text-sm">{{ idx + 1 }}</td>
+                <td class="px-4 py-3 text-sm text-text-primary font-medium">
+                  {{ siswa.siswa_nama }}
                 </td>
-                <td>{{ mapel.capaian_pembelajaran || '-' }}</td>
+                <td class="px-4 py-3 text-sm text-text-secondary">{{ siswa.nisn || '-' }}</td>
+                <td class="px-4 py-3 text-sm">
+                  {{ siswa.rata_rata !== null ? siswa.rata_rata.toFixed(1) : '-' }}
+                </td>
+                <td class="px-4 py-3 text-sm">{{ siswa.peringkat ?? '-' }}</td>
+                <td class="px-4 py-3">
+                  <span
+                    class="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium"
+                    :class="
+                      raporOverview && raporOverview.status === 'final'
+                        ? 'bg-success-50 text-success-700'
+                        : 'bg-warning-50 text-warning-700'
+                    "
+                  >
+                    {{ raporOverview && raporOverview.status === 'final' ? 'Final' : 'Draft' }}
+                  </span>
+                </td>
+                <td class="px-4 py-3">
+                  <button
+                    class="px-2 py-1 text-xs font-medium rounded-md bg-primary-50 text-primary-700 hover:bg-primary-100 transition-colors"
+                    @click="viewDetail(siswa)"
+                  >
+                    Lihat
+                  </button>
+                </td>
               </tr>
             </tbody>
           </table>
         </div>
+      </div>
+    </template>
+
+    <div
+      v-else-if="selectedKelas && selectedPeriode && !loading"
+      class="text-center text-text-secondary py-8 text-sm"
+    >
+      Tidak ada data rapor untuk kelas dan periode ini.
+    </div>
+    <div
+      v-else-if="!selectedKelas || !selectedPeriode"
+      class="text-center text-text-secondary py-8 text-sm"
+    >
+      Pilih tahun ajaran, kelas, dan periode untuk melihat rapor.
+    </div>
+
+    <!-- Detail Modal -->
+    <BaseModal
+      :show="showDetailModal && !!detailSiswa"
+      :title="'Rapor: ' + (detailSiswa?.siswa_nama || '')"
+      @close="showDetailModal = false"
+      size="xl"
+    >
+      <template v-if="detailSiswa">
+        <!-- Summary cards -->
+        <div class="flex gap-6 mb-6 p-3 bg-surface-50 rounded-lg">
+          <div class="flex flex-col">
+            <span class="text-xs text-text-secondary uppercase tracking-wide">Rata-rata</span>
+            <span class="text-xl font-bold text-text-primary">
+              {{ detailSiswa.rata_rata !== null ? detailSiswa.rata_rata.toFixed(1) : '-' }}
+            </span>
+          </div>
+          <div class="flex flex-col">
+            <span class="text-xs text-text-secondary uppercase tracking-wide">Peringkat</span>
+            <span class="text-xl font-bold text-text-primary">{{
+              detailSiswa.peringkat ?? '-'
+            }}</span>
+          </div>
+        </div>
+
+        <!-- Nilai per mapel -->
+        <div class="mb-6">
+          <h3 class="text-sm font-semibold text-text-primary mb-3">Nilai per Mata Pelajaran</h3>
+          <div class="bg-white border border-border rounded-lg overflow-hidden">
+            <table class="w-full">
+              <thead class="border-b border-border bg-surface-50">
+                <tr>
+                  <th class="px-4 py-2 text-left font-medium text-text-secondary text-xs">
+                    Mata Pelajaran
+                  </th>
+                  <th class="px-4 py-2 text-left font-medium text-text-secondary text-xs">
+                    Komponen
+                  </th>
+                  <th class="px-4 py-2 text-left font-medium text-text-secondary text-xs">
+                    Capaian Pembelajaran
+                  </th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-border">
+                <tr v-for="mapel in detailSiswa.nilai_per_mapel" :key="mapel.mata_pelajaran_nama">
+                  <td class="px-4 py-2 text-xs text-text-primary">
+                    {{ mapel.mata_pelajaran_nama }}
+                  </td>
+                  <td class="px-4 py-2">
+                    <div
+                      v-for="k in mapel.komponen_nilai"
+                      :key="k.komponen_nama"
+                      class="flex gap-1 text-xs"
+                    >
+                      <span class="text-text-secondary">{{ k.komponen_nama }}:</span>
+                      <span class="font-medium text-text-primary">{{ k.nilai }}</span>
+                    </div>
+                  </td>
+                  <td class="px-4 py-2 text-xs text-text-secondary">
+                    {{ mapel.capaian_pembelajaran || '-' }}
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
 
         <!-- P5 -->
-        <div
-          v-if="detailSiswa.p5_deskripsi && detailSiswa.p5_deskripsi.length > 0"
-          class="detail-section"
-        >
-          <h3>P5 - Profil Pelajar Pancasila</h3>
-          <div class="p5-list">
-            <div v-for="item in detailSiswa.p5_deskripsi" :key="item.dimensi" class="p5-item-view">
-              <strong>{{ item.dimensi }}</strong>
-              <p>{{ item.deskripsi }}</p>
+        <div v-if="detailSiswa.p5_deskripsi && detailSiswa.p5_deskripsi.length > 0" class="mb-6">
+          <h3 class="text-sm font-semibold text-text-primary mb-3">
+            P5 - Profil Pelajar Pancasila
+          </h3>
+          <div class="flex flex-col gap-2">
+            <div
+              v-for="item in detailSiswa.p5_deskripsi"
+              :key="item.dimensi"
+              class="p-3 bg-purple-50 rounded-lg"
+            >
+              <strong class="text-xs text-purple-700">{{ item.dimensi }}</strong>
+              <p class="text-xs text-text-primary mt-1">{{ item.deskripsi }}</p>
             </div>
           </div>
         </div>
 
         <!-- Catatan Wali Kelas -->
-        <div v-if="detailSiswa.catatan_wali_kelas" class="detail-section">
-          <h3>Catatan Wali Kelas</h3>
-          <p class="catatan-text">{{ detailSiswa.catatan_wali_kelas }}</p>
+        <div v-if="detailSiswa.catatan_wali_kelas" class="mb-4">
+          <h3 class="text-sm font-semibold text-text-primary mb-3">Catatan Wali Kelas</h3>
+          <p class="p-3 bg-surface-50 rounded-lg text-sm text-text-primary leading-relaxed">
+            {{ detailSiswa.catatan_wali_kelas }}
+          </p>
         </div>
-      </div>
-    </div>
+      </template>
+
+      <template #footer>
+        <button
+          class="px-3 py-2 text-sm font-medium text-text-secondary bg-white border border-border rounded-lg hover:bg-surface-50 transition-colors"
+          @click="showDetailModal = false"
+        >
+          Tutup
+        </button>
+      </template>
+    </BaseModal>
   </div>
 </template>
-
-<style scoped>
-.page {
-  padding: 2rem;
-}
-.page-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 1.5rem;
-}
-.page-header h1 {
-  margin: 0;
-  font-size: 1.5rem;
-}
-.filter-bar {
-  display: flex;
-  gap: 1rem;
-  margin-bottom: 1.5rem;
-  flex-wrap: wrap;
-}
-.filter-group {
-  display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
-  min-width: 200px;
-}
-.filter-group label {
-  font-size: 0.875rem;
-  font-weight: 500;
-  color: #374151;
-}
-.input {
-  padding: 0.5rem 0.75rem;
-  border: 1px solid #d1d5db;
-  border-radius: 6px;
-  font-size: 0.875rem;
-}
-.alert {
-  padding: 0.75rem 1rem;
-  border-radius: 6px;
-  margin-bottom: 1rem;
-  font-size: 0.875rem;
-}
-.alert-error {
-  background: #fef2f2;
-  color: #991b1b;
-  border: 1px solid #fecaca;
-}
-.rapor-status-banner {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 0.75rem 1rem;
-  background: #f9fafb;
-  border: 1px solid #e5e7eb;
-  border-radius: 8px;
-  margin-bottom: 1.5rem;
-}
-.status-info {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-}
-.status-text {
-  font-weight: 500;
-  color: #1f2937;
-}
-.finalized-info {
-  font-size: 0.8125rem;
-  color: #6b7280;
-}
-.badge {
-  padding: 0.125rem 0.5rem;
-  border-radius: 9999px;
-  font-size: 0.6875rem;
-  font-weight: 500;
-}
-.badge-final {
-  background: #d1fae5;
-  color: #065f46;
-}
-.badge-draft {
-  background: #fef3c7;
-  color: #92400e;
-}
-.table-container {
-  overflow-x: auto;
-}
-table {
-  width: 100%;
-  border-collapse: collapse;
-}
-th,
-td {
-  padding: 0.5rem 0.75rem;
-  text-align: left;
-  border-bottom: 1px solid #e5e7eb;
-}
-th {
-  font-weight: 600;
-  color: #374151;
-  background: #f9fafb;
-  font-size: 0.8125rem;
-}
-.btn {
-  padding: 0.5rem 1rem;
-  border: none;
-  border-radius: 6px;
-  font-size: 0.875rem;
-  cursor: pointer;
-  font-weight: 500;
-}
-.btn:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-.btn-primary {
-  background: #2563eb;
-  color: white;
-}
-.btn-primary:hover:not(:disabled) {
-  background: #1d4ed8;
-}
-.btn-sm {
-  padding: 0.25rem 0.5rem;
-  border: none;
-  border-radius: 4px;
-  font-size: 0.75rem;
-  cursor: pointer;
-}
-.btn-detail {
-  background: #dbeafe;
-  color: #1e40af;
-}
-.empty-state {
-  text-align: center;
-  color: #6b7280;
-  padding: 2rem;
-}
-.modal-overlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.4);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 50;
-}
-.modal {
-  background: white;
-  border-radius: 8px;
-  padding: 1.5rem;
-  width: 100%;
-  max-width: 520px;
-  max-height: 85vh;
-  overflow-y: auto;
-}
-.modal-wide {
-  max-width: 720px;
-}
-.modal-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 1rem;
-}
-.modal-header h2 {
-  margin: 0;
-  font-size: 1.25rem;
-}
-.btn-close {
-  background: none;
-  border: none;
-  font-size: 1.5rem;
-  cursor: pointer;
-  color: #6b7280;
-  line-height: 1;
-}
-.detail-summary {
-  display: flex;
-  gap: 2rem;
-  margin-bottom: 1.5rem;
-  padding: 0.75rem 1rem;
-  background: #f9fafb;
-  border-radius: 6px;
-}
-.summary-item {
-  display: flex;
-  flex-direction: column;
-}
-.summary-label {
-  font-size: 0.75rem;
-  color: #6b7280;
-  text-transform: uppercase;
-  letter-spacing: 0.025em;
-}
-.summary-value {
-  font-size: 1.25rem;
-  font-weight: 700;
-  color: #1f2937;
-}
-.detail-section {
-  margin-bottom: 1.5rem;
-}
-.detail-section h3 {
-  font-size: 1rem;
-  margin: 0 0 0.75rem;
-  color: #374151;
-}
-.detail-table {
-  width: 100%;
-  border-collapse: collapse;
-}
-.detail-table th,
-.detail-table td {
-  padding: 0.5rem 0.75rem;
-  text-align: left;
-  border-bottom: 1px solid #e5e7eb;
-  font-size: 0.8125rem;
-}
-.detail-table th {
-  background: #f9fafb;
-  font-weight: 600;
-}
-.komponen-item {
-  display: flex;
-  gap: 0.25rem;
-  font-size: 0.8125rem;
-}
-.komponen-label {
-  color: #6b7280;
-}
-.komponen-value {
-  font-weight: 500;
-}
-.p5-list {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-}
-.p5-item-view {
-  padding: 0.5rem 0.75rem;
-  background: #f5f3ff;
-  border-radius: 6px;
-  font-size: 0.8125rem;
-}
-.p5-item-view strong {
-  color: #5b21b6;
-}
-.p5-item-view p {
-  margin: 0.25rem 0 0;
-  color: #374151;
-}
-.catatan-text {
-  padding: 0.75rem;
-  background: #f9fafb;
-  border-radius: 6px;
-  font-size: 0.875rem;
-  color: #374151;
-  line-height: 1.5;
-}
-</style>

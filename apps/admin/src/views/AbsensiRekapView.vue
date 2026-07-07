@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue';
 import { api } from '@/api/client';
+import { PageHeader } from '@/components/ui';
 
 interface Kelas {
   id: string;
@@ -154,7 +155,6 @@ async function exportRekap() {
       responseType: 'blob',
     });
 
-    // Trigger download
     const url = window.URL.createObjectURL(new Blob([response.data]));
     const link = document.createElement('a');
     link.href = url;
@@ -179,9 +179,9 @@ async function exportRekap() {
 
 function getPercentageClass(value: number | null): string {
   if (value === null) return '';
-  if (value >= 90) return 'pct-high';
-  if (value >= 75) return 'pct-medium';
-  return 'pct-low';
+  if (value >= 90) return 'text-success-700';
+  if (value >= 75) return 'text-warning-700';
+  return 'text-danger-700 font-bold';
 }
 
 // Watchers
@@ -198,24 +198,28 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="page">
-    <div class="page-header">
-      <h1>Rekap Absensi</h1>
-      <button
-        v-if="rekapData && rekapData.data.length > 0"
-        class="btn btn-primary"
-        :disabled="exporting"
-        @click="exportRekap"
-      >
-        {{ exporting ? 'Mengexport...' : '📥 Export' }}
-      </button>
-    </div>
+  <div class="p-4 lg:p-6 max-w-7xl mx-auto">
+    <PageHeader title="Rekap Absensi">
+      <template #actions>
+        <button
+          v-if="rekapData && rekapData.data.length > 0"
+          class="px-3 py-2 text-sm font-medium text-white bg-primary-600 rounded-lg hover:bg-primary-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          :disabled="exporting"
+          @click="exportRekap"
+        >
+          {{ exporting ? 'Mengexport...' : '📥 Export' }}
+        </button>
+      </template>
+    </PageHeader>
 
     <!-- Filter Bar -->
-    <div class="filter-bar">
-      <div class="form-group-inline">
-        <label>Kelas:</label>
-        <select v-model="selectedKelasId" class="input select-input">
+    <div class="flex flex-wrap items-center gap-3 mb-4">
+      <div class="flex items-center gap-2">
+        <label class="text-sm font-medium text-text-primary">Kelas:</label>
+        <select
+          v-model="selectedKelasId"
+          class="px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 max-w-xs min-w-[180px]"
+        >
           <option value="" disabled>Pilih Kelas</option>
           <option v-for="kelas in kelasList" :key="kelas.id" :value="kelas.id">
             {{ kelas.nama }}
@@ -223,34 +227,46 @@ onMounted(() => {
         </select>
       </div>
 
-      <div class="form-group-inline">
-        <label>Periode:</label>
-        <select v-model="selectedPeriode" class="input">
+      <div class="flex items-center gap-2">
+        <label class="text-sm font-medium text-text-primary">Periode:</label>
+        <select
+          v-model="selectedPeriode"
+          class="px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
+        >
           <option value="bulanan">Bulanan</option>
           <option value="semester">Semester</option>
         </select>
       </div>
 
-      <div v-if="selectedPeriode === 'bulanan'" class="form-group-inline">
-        <label>Bulan:</label>
-        <select v-model="selectedBulan" class="input">
+      <div v-if="selectedPeriode === 'bulanan'" class="flex items-center gap-2">
+        <label class="text-sm font-medium text-text-primary">Bulan:</label>
+        <select
+          v-model="selectedBulan"
+          class="px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
+        >
           <option v-for="(label, index) in BULAN_LABELS" :key="index" :value="index + 1">
             {{ label }}
           </option>
         </select>
       </div>
 
-      <div v-if="selectedPeriode === 'semester'" class="form-group-inline">
-        <label>Semester:</label>
-        <select v-model="selectedSemester" class="input">
+      <div v-if="selectedPeriode === 'semester'" class="flex items-center gap-2">
+        <label class="text-sm font-medium text-text-primary">Semester:</label>
+        <select
+          v-model="selectedSemester"
+          class="px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
+        >
           <option :value="1">Semester 1</option>
           <option :value="2">Semester 2</option>
         </select>
       </div>
 
-      <div class="form-group-inline">
-        <label>Tahun:</label>
-        <select v-model="selectedTahun" class="input">
+      <div class="flex items-center gap-2">
+        <label class="text-sm font-medium text-text-primary">Tahun:</label>
+        <select
+          v-model="selectedTahun"
+          class="px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
+        >
           <option v-for="tahun in tahunOptions" :key="tahun" :value="tahun">
             {{ tahun }}
           </option>
@@ -259,296 +275,146 @@ onMounted(() => {
     </div>
 
     <!-- Error -->
-    <div v-if="errorMessage" class="alert alert-danger">{{ errorMessage }}</div>
+    <div
+      v-if="errorMessage"
+      class="p-3 bg-danger-50 border border-danger-500/20 rounded-lg text-sm text-danger-700 mb-4"
+    >
+      {{ errorMessage }}
+    </div>
 
     <!-- Loading -->
-    <div v-if="loading" class="loading">Memuat data rekap...</div>
+    <div v-if="loading" class="text-center py-8">
+      <svg class="w-6 h-6 animate-spin text-primary-500 mx-auto" fill="none" viewBox="0 0 24 24">
+        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
+        <path
+          class="opacity-75"
+          fill="currentColor"
+          d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
+        />
+      </svg>
+      <p class="text-sm text-text-secondary mt-2">Memuat data rekap...</p>
+    </div>
 
     <!-- Rekap Content -->
-    <div v-else-if="rekapData" class="rekap-content">
+    <div v-else-if="rekapData">
       <!-- Info Bar -->
-      <div class="info-bar">
-        <div class="info-item">
-          <span class="info-label">Periode:</span>
-          <span class="info-value">{{ periodeLabel }}</span>
+      <div class="flex flex-wrap gap-6 p-3 bg-surface-50 rounded-lg mb-4 text-sm">
+        <div class="flex items-center gap-1.5">
+          <span class="text-text-secondary">Periode:</span>
+          <span class="font-semibold text-text-primary">{{ periodeLabel }}</span>
         </div>
-        <div class="info-item">
-          <span class="info-label">Total Hari Efektif:</span>
-          <span class="info-value">
+        <div class="flex items-center gap-1.5">
+          <span class="text-text-secondary">Total Hari Efektif:</span>
+          <span class="font-semibold text-text-primary">
             {{
               rekapData.total_hari_efektif !== null
                 ? rekapData.total_hari_efektif + ' hari'
                 : 'Belum tersedia'
             }}
           </span>
-          <span v-if="rekapData.hari_efektif_source" class="info-source">
+          <span v-if="rekapData.hari_efektif_source" class="text-xs text-text-tertiary">
             ({{
               rekapData.hari_efektif_source === 'manual' ? 'input manual' : 'kalkulasi otomatis'
             }})
           </span>
         </div>
-        <div v-if="averagePercentage !== null" class="info-item">
-          <span class="info-label">Rata-rata Kehadiran:</span>
-          <span class="info-value" :class="getPercentageClass(averagePercentage)">
+        <div v-if="averagePercentage !== null" class="flex items-center gap-1.5">
+          <span class="text-text-secondary">Rata-rata Kehadiran:</span>
+          <span class="font-semibold" :class="getPercentageClass(averagePercentage)">
             {{ averagePercentage }}%
           </span>
         </div>
       </div>
 
       <!-- Hari efektif warning -->
-      <div v-if="rekapData.total_hari_efektif === null" class="alert alert-warning">
+      <div
+        v-if="rekapData.total_hari_efektif === null"
+        class="p-3 bg-warning-50 border border-warning-500/20 rounded-lg text-sm text-warning-700 mb-4"
+      >
         ⚠️ Data hari efektif belum tersedia. Persentase kehadiran tidak dapat dihitung.
       </div>
 
       <!-- Rekap Table -->
-      <div v-if="rekapData.data.length > 0" class="table-container">
-        <table class="rekap-table">
-          <thead>
-            <tr>
-              <th class="col-no">No</th>
-              <th class="col-nama">Nama Siswa</th>
-              <th class="col-nisn">NISN</th>
-              <th class="col-count col-hadir">Hadir</th>
-              <th class="col-count col-izin">Izin</th>
-              <th class="col-count col-sakit">Sakit</th>
-              <th class="col-count col-alpa">Alpa</th>
-              <th class="col-pct">% Kehadiran</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-for="(siswa, index) in rekapData.data" :key="siswa.siswa_id">
-              <td class="col-no">{{ index + 1 }}</td>
-              <td class="col-nama">{{ siswa.siswa_nama }}</td>
-              <td class="col-nisn">{{ siswa.siswa_nisn || '-' }}</td>
-              <td class="col-count">{{ siswa.hadir }}</td>
-              <td class="col-count">{{ siswa.izin }}</td>
-              <td class="col-count">{{ siswa.sakit }}</td>
-              <td class="col-count">{{ siswa.alpa }}</td>
-              <td class="col-pct" :class="getPercentageClass(siswa.persentase_kehadiran)">
-                {{ siswa.persentase_kehadiran !== null ? siswa.persentase_kehadiran + '%' : '-' }}
-              </td>
-            </tr>
-          </tbody>
-          <tfoot>
-            <tr class="total-row">
-              <td colspan="3"><strong>Total</strong></td>
-              <td class="col-count">
-                <strong>{{ totals.hadir }}</strong>
-              </td>
-              <td class="col-count">
-                <strong>{{ totals.izin }}</strong>
-              </td>
-              <td class="col-count">
-                <strong>{{ totals.sakit }}</strong>
-              </td>
-              <td class="col-count">
-                <strong>{{ totals.alpa }}</strong>
-              </td>
-              <td class="col-pct">
-                <strong v-if="averagePercentage !== null">{{ averagePercentage }}%</strong>
-                <span v-else>-</span>
-              </td>
-            </tr>
-          </tfoot>
-        </table>
+      <div
+        v-if="rekapData.data.length > 0"
+        class="bg-white border border-border rounded-xl overflow-hidden"
+      >
+        <div class="overflow-x-auto">
+          <table class="w-full">
+            <thead class="border-b border-border bg-surface-50">
+              <tr>
+                <th class="px-4 py-3 font-medium text-text-secondary text-xs w-[50px] text-center">
+                  No
+                </th>
+                <th class="px-4 py-3 text-left font-medium text-text-secondary text-xs">
+                  Nama Siswa
+                </th>
+                <th class="px-4 py-3 text-left font-medium text-text-secondary text-xs w-[120px]">
+                  NISN
+                </th>
+                <th class="px-4 py-3 text-center font-medium text-xs w-[70px] text-success-700">
+                  Hadir
+                </th>
+                <th class="px-4 py-3 text-center font-medium text-xs w-[70px] text-warning-700">
+                  Izin
+                </th>
+                <th class="px-4 py-3 text-center font-medium text-xs w-[70px] text-primary-700">
+                  Sakit
+                </th>
+                <th class="px-4 py-3 text-center font-medium text-xs w-[70px] text-danger-700">
+                  Alpa
+                </th>
+                <th class="px-4 py-3 text-center font-medium text-text-secondary text-xs w-[110px]">
+                  % Kehadiran
+                </th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-border">
+              <tr
+                v-for="(siswa, index) in rekapData.data"
+                :key="siswa.siswa_id"
+                class="hover:bg-surface-50 transition-colors"
+              >
+                <td class="px-4 py-3 text-sm text-center">{{ index + 1 }}</td>
+                <td class="px-4 py-3 text-sm text-text-primary">{{ siswa.siswa_nama }}</td>
+                <td class="px-4 py-3 text-sm text-text-secondary">{{ siswa.siswa_nisn || '-' }}</td>
+                <td class="px-4 py-3 text-sm text-center">{{ siswa.hadir }}</td>
+                <td class="px-4 py-3 text-sm text-center">{{ siswa.izin }}</td>
+                <td class="px-4 py-3 text-sm text-center">{{ siswa.sakit }}</td>
+                <td class="px-4 py-3 text-sm text-center">{{ siswa.alpa }}</td>
+                <td
+                  class="px-4 py-3 text-sm text-center font-medium"
+                  :class="getPercentageClass(siswa.persentase_kehadiran)"
+                >
+                  {{ siswa.persentase_kehadiran !== null ? siswa.persentase_kehadiran + '%' : '-' }}
+                </td>
+              </tr>
+            </tbody>
+            <tfoot>
+              <tr class="bg-surface-50 border-t-2 border-border font-semibold">
+                <td colspan="3" class="px-4 py-3 text-sm">Total</td>
+                <td class="px-4 py-3 text-sm text-center">{{ totals.hadir }}</td>
+                <td class="px-4 py-3 text-sm text-center">{{ totals.izin }}</td>
+                <td class="px-4 py-3 text-sm text-center">{{ totals.sakit }}</td>
+                <td class="px-4 py-3 text-sm text-center">{{ totals.alpa }}</td>
+                <td class="px-4 py-3 text-sm text-center">
+                  <span v-if="averagePercentage !== null">{{ averagePercentage }}%</span>
+                  <span v-else>-</span>
+                </td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
       </div>
 
-      <div v-else class="empty-state">Tidak ada data absensi untuk periode yang dipilih.</div>
+      <div v-else class="text-center text-text-secondary py-8 text-sm">
+        Tidak ada data absensi untuk periode yang dipilih.
+      </div>
     </div>
 
     <!-- Initial empty state -->
-    <div v-else-if="!selectedKelasId" class="empty-state">
+    <div v-else-if="!selectedKelasId" class="text-center text-text-secondary py-8 text-sm">
       Pilih kelas untuk melihat rekap absensi.
     </div>
   </div>
 </template>
-
-<style scoped>
-.page {
-  padding: 2rem;
-}
-.page-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 1.5rem;
-}
-.page-header h1 {
-  margin: 0;
-  font-size: 1.5rem;
-}
-.filter-bar {
-  display: flex;
-  gap: 1.25rem;
-  margin-bottom: 1.5rem;
-  align-items: center;
-  flex-wrap: wrap;
-}
-.form-group-inline {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-}
-.form-group-inline label {
-  font-size: 0.875rem;
-  font-weight: 500;
-  color: #374151;
-  white-space: nowrap;
-}
-.input {
-  padding: 0.5rem 0.75rem;
-  border: 1px solid #d1d5db;
-  border-radius: 6px;
-  font-size: 0.875rem;
-}
-.select-input {
-  min-width: 180px;
-}
-
-/* Info bar */
-.info-bar {
-  display: flex;
-  gap: 2rem;
-  margin-bottom: 1rem;
-  padding: 0.75rem 1rem;
-  background: #f9fafb;
-  border-radius: 8px;
-  flex-wrap: wrap;
-}
-.info-item {
-  display: flex;
-  align-items: center;
-  gap: 0.4rem;
-  font-size: 0.875rem;
-}
-.info-label {
-  color: #6b7280;
-}
-.info-value {
-  font-weight: 600;
-  color: #1f2937;
-}
-.info-source {
-  font-size: 0.75rem;
-  color: #9ca3af;
-}
-
-/* Alerts */
-.alert {
-  padding: 0.75rem 1rem;
-  border-radius: 6px;
-  margin-bottom: 1rem;
-  font-size: 0.875rem;
-}
-.alert-warning {
-  background: #fef3c7;
-  border: 1px solid #fde68a;
-  color: #92400e;
-}
-.alert-danger {
-  background: #fee2e2;
-  border: 1px solid #fca5a5;
-  color: #991b1b;
-}
-
-/* Table */
-.table-container {
-  overflow-x: auto;
-}
-.rekap-table {
-  width: 100%;
-  border-collapse: collapse;
-}
-.rekap-table th,
-.rekap-table td {
-  padding: 0.625rem 0.75rem;
-  text-align: left;
-  border-bottom: 1px solid #e5e7eb;
-}
-.rekap-table th {
-  background: #f9fafb;
-  font-weight: 600;
-  font-size: 0.8125rem;
-  color: #374151;
-}
-.col-no {
-  width: 50px;
-  text-align: center;
-}
-.col-nisn {
-  width: 120px;
-}
-.col-count {
-  width: 70px;
-  text-align: center;
-}
-.col-pct {
-  width: 110px;
-  text-align: center;
-  font-weight: 500;
-}
-.col-hadir {
-  color: #166534;
-}
-.col-izin {
-  color: #92400e;
-}
-.col-sakit {
-  color: #3730a3;
-}
-.col-alpa {
-  color: #991b1b;
-}
-
-/* Percentage indicators */
-.pct-high {
-  color: #166534;
-}
-.pct-medium {
-  color: #d97706;
-}
-.pct-low {
-  color: #dc2626;
-  font-weight: 700;
-}
-
-/* Total row */
-.total-row {
-  background: #f3f4f6;
-}
-.total-row td {
-  border-top: 2px solid #d1d5db;
-}
-
-/* Buttons */
-.btn {
-  padding: 0.5rem 1rem;
-  border: none;
-  border-radius: 6px;
-  font-size: 0.875rem;
-  cursor: pointer;
-  font-weight: 500;
-}
-.btn-primary {
-  background: #2563eb;
-  color: white;
-}
-.btn-primary:hover:not(:disabled) {
-  background: #1d4ed8;
-}
-.btn-primary:disabled {
-  background: #93c5fd;
-  cursor: not-allowed;
-}
-
-.loading {
-  text-align: center;
-  padding: 2rem;
-  color: #6b7280;
-}
-.empty-state {
-  text-align: center;
-  color: #6b7280;
-  padding: 2rem;
-}
-</style>

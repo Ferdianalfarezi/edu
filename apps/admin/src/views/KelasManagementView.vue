@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue';
 import { api } from '@/api/client';
+import { PageHeader, BaseModal } from '@/components/ui';
 
 interface TahunAjaran {
   id: string;
@@ -187,15 +188,25 @@ onMounted(async () => {
 </script>
 
 <template>
-  <div class="page">
-    <div class="page-header">
-      <h1>Manajemen Kelas</h1>
-      <button class="btn btn-primary" @click="openCreateForm">Tambah Kelas</button>
-    </div>
+  <div class="p-4 lg:p-6 max-w-7xl mx-auto">
+    <PageHeader title="Manajemen Kelas">
+      <template #actions>
+        <button
+          class="px-3 py-2 text-sm font-medium text-white bg-primary-600 rounded-lg hover:bg-primary-700 transition-colors"
+          @click="openCreateForm"
+        >
+          Tambah Kelas
+        </button>
+      </template>
+    </PageHeader>
 
     <!-- Filter by Tahun Ajaran -->
-    <div class="filters">
-      <select v-model="selectedTahunAjaran" class="input" @change="onTahunAjaranChange">
+    <div class="flex flex-wrap gap-3 mb-4">
+      <select
+        v-model="selectedTahunAjaran"
+        class="w-full px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 max-w-xs"
+        @change="onTahunAjaranChange"
+      >
         <option value="">Semua Tahun Ajaran</option>
         <option v-for="ta in tahunAjaranList" :key="ta.id" :value="ta.id">
           {{ ta.nama }} <span v-if="ta.status === 'aktif'">(Aktif)</span>
@@ -204,246 +215,175 @@ onMounted(async () => {
     </div>
 
     <!-- Table -->
-    <div class="table-container">
-      <table v-if="!loading && filteredKelas.length > 0">
+    <div class="bg-white border border-border rounded-xl overflow-hidden">
+      <table v-if="!loading && filteredKelas.length > 0" class="w-full">
         <thead>
-          <tr>
-            <th>Nama Kelas</th>
-            <th>Tingkat</th>
-            <th>Wali Kelas</th>
-            <th>Jumlah Siswa</th>
-            <th>Kapasitas</th>
-            <th>Aksi</th>
+          <tr class="border-b border-border bg-surface-50">
+            <th class="px-4 py-3 text-left font-medium text-text-secondary text-xs">Nama Kelas</th>
+            <th class="px-4 py-3 text-left font-medium text-text-secondary text-xs">Tingkat</th>
+            <th class="px-4 py-3 text-left font-medium text-text-secondary text-xs">Wali Kelas</th>
+            <th class="px-4 py-3 text-left font-medium text-text-secondary text-xs">
+              Jumlah Siswa
+            </th>
+            <th class="px-4 py-3 text-left font-medium text-text-secondary text-xs">Kapasitas</th>
+            <th class="px-4 py-3 text-left font-medium text-text-secondary text-xs">Aksi</th>
           </tr>
         </thead>
-        <tbody>
-          <tr v-for="kelas in filteredKelas" :key="kelas.id">
-            <td>{{ kelas.nama }}</td>
-            <td>{{ kelas.tingkat }}</td>
-            <td>{{ kelas.wali_kelas_nama || '-' }}</td>
-            <td>{{ kelas.jumlah_siswa }}</td>
-            <td>{{ kelas.kapasitas || '-' }}</td>
-            <td class="actions-cell">
-              <button class="btn-sm btn-edit" @click="openEditForm(kelas)">Edit</button>
-              <button class="btn-sm btn-delete" @click="openDeleteConfirm(kelas)">Hapus</button>
+        <tbody class="divide-y divide-border">
+          <tr
+            v-for="kelas in filteredKelas"
+            :key="kelas.id"
+            class="hover:bg-surface-50 transition-colors"
+          >
+            <td class="px-4 py-3 text-sm text-text-primary">{{ kelas.nama }}</td>
+            <td class="px-4 py-3 text-sm text-text-primary">{{ kelas.tingkat }}</td>
+            <td class="px-4 py-3 text-sm text-text-primary">{{ kelas.wali_kelas_nama || '-' }}</td>
+            <td class="px-4 py-3 text-sm text-text-primary">{{ kelas.jumlah_siswa }}</td>
+            <td class="px-4 py-3 text-sm text-text-primary">{{ kelas.kapasitas || '-' }}</td>
+            <td class="px-4 py-3">
+              <div class="flex items-center gap-2">
+                <button
+                  class="px-2 py-1 text-xs font-medium text-warning-700 bg-warning-50 rounded-md hover:bg-warning-50/80 transition-colors"
+                  @click="openEditForm(kelas)"
+                >
+                  Edit
+                </button>
+                <button
+                  class="px-2 py-1 text-xs font-medium text-danger-700 bg-danger-50 rounded-md hover:bg-danger-50/80 transition-colors"
+                  @click="openDeleteConfirm(kelas)"
+                >
+                  Hapus
+                </button>
+              </div>
             </td>
           </tr>
         </tbody>
       </table>
-      <p v-else-if="loading" class="empty-state">Memuat data...</p>
-      <p v-else class="empty-state">Belum ada kelas untuk tahun ajaran ini.</p>
+      <div v-else-if="loading" class="py-12 text-center">
+        <svg
+          class="w-6 h-6 animate-spin text-primary-500 mx-auto"
+          xmlns="http://www.w3.org/2000/svg"
+          fill="none"
+          viewBox="0 0 24 24"
+        >
+          <circle
+            class="opacity-25"
+            cx="12"
+            cy="12"
+            r="10"
+            stroke="currentColor"
+            stroke-width="4"
+          ></circle>
+          <path
+            class="opacity-75"
+            fill="currentColor"
+            d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
+          ></path>
+        </svg>
+        <p class="text-sm text-text-tertiary mt-2">Memuat data...</p>
+      </div>
+      <div v-else class="py-12 text-center">
+        <p class="text-sm text-text-tertiary">Belum ada kelas untuk tahun ajaran ini.</p>
+      </div>
     </div>
 
     <!-- Create/Edit Modal -->
-    <div v-if="showFormModal" class="modal-overlay" @click.self="showFormModal = false">
-      <div class="modal">
-        <h2>{{ editingKelas ? 'Edit Kelas' : 'Tambah Kelas' }}</h2>
-        <form @submit.prevent="saveKelas">
-          <div class="form-group">
-            <label>Nama Kelas</label>
-            <input
-              v-model="form.nama"
-              type="text"
-              required
-              class="input"
-              placeholder="1A, 2B, 6C..."
-            />
-          </div>
-          <div class="form-group">
-            <label>Tingkat</label>
-            <input
-              v-model="form.tingkat"
-              type="number"
-              required
-              min="1"
-              max="12"
-              class="input"
-              placeholder="1-12"
-            />
-          </div>
-          <div class="form-group">
-            <label>Wali Kelas <span class="optional">(opsional)</span></label>
-            <select v-model="form.wali_kelas_id" class="input">
-              <option value="">-- Tidak Ada --</option>
-              <option v-for="guru in guruList" :key="guru.id" :value="guru.id">
-                {{ guru.nama }}
-              </option>
-            </select>
-          </div>
-          <div class="form-group">
-            <label>Kapasitas <span class="optional">(opsional)</span></label>
-            <input v-model="form.kapasitas" type="number" min="1" class="input" placeholder="30" />
-          </div>
-          <p v-if="formError" class="error-text">{{ formError }}</p>
-          <div class="modal-actions">
-            <button type="button" class="btn btn-secondary" @click="showFormModal = false">
-              Batal
-            </button>
-            <button type="submit" class="btn btn-primary">Simpan</button>
-          </div>
-        </form>
-      </div>
-    </div>
+    <BaseModal
+      :show="showFormModal"
+      :title="editingKelas ? 'Edit Kelas' : 'Tambah Kelas'"
+      @close="showFormModal = false"
+    >
+      <form @submit.prevent="saveKelas">
+        <div class="mb-4">
+          <label class="block text-sm font-medium text-text-primary mb-1.5">Nama Kelas</label>
+          <input
+            v-model="form.nama"
+            type="text"
+            required
+            class="w-full px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
+            placeholder="1A, 2B, 6C..."
+          />
+        </div>
+        <div class="mb-4">
+          <label class="block text-sm font-medium text-text-primary mb-1.5">Tingkat</label>
+          <input
+            v-model="form.tingkat"
+            type="number"
+            required
+            min="1"
+            max="12"
+            class="w-full px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
+            placeholder="1-12"
+          />
+        </div>
+        <div class="mb-4">
+          <label class="block text-sm font-medium text-text-primary mb-1.5"
+            >Wali Kelas <span class="text-text-tertiary font-normal">(opsional)</span></label
+          >
+          <select
+            v-model="form.wali_kelas_id"
+            class="w-full px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
+          >
+            <option value="">-- Tidak Ada --</option>
+            <option v-for="guru in guruList" :key="guru.id" :value="guru.id">
+              {{ guru.nama }}
+            </option>
+          </select>
+        </div>
+        <div class="mb-4">
+          <label class="block text-sm font-medium text-text-primary mb-1.5"
+            >Kapasitas <span class="text-text-tertiary font-normal">(opsional)</span></label
+          >
+          <input
+            v-model="form.kapasitas"
+            type="number"
+            min="1"
+            class="w-full px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
+            placeholder="30"
+          />
+        </div>
+        <p v-if="formError" class="text-xs text-danger-500 mt-1">{{ formError }}</p>
+      </form>
+      <template #footer>
+        <button
+          type="button"
+          class="px-3 py-2 text-sm font-medium text-text-secondary bg-white border border-border rounded-lg hover:bg-surface-50 transition-colors"
+          @click="showFormModal = false"
+        >
+          Batal
+        </button>
+        <button
+          type="button"
+          class="px-3 py-2 text-sm font-medium text-white bg-primary-600 rounded-lg hover:bg-primary-700 transition-colors"
+          @click="saveKelas"
+        >
+          Simpan
+        </button>
+      </template>
+    </BaseModal>
 
     <!-- Delete Confirmation Modal -->
-    <div v-if="showDeleteModal" class="modal-overlay" @click.self="showDeleteModal = false">
-      <div class="modal">
-        <h2>Konfirmasi Hapus</h2>
-        <p>
-          Apakah Anda yakin ingin menghapus kelas
-          <strong>{{ deletingKelas?.nama }}</strong
-          >?
-        </p>
-        <p v-if="deleteError" class="error-text">{{ deleteError }}</p>
-        <div class="modal-actions">
-          <button class="btn btn-secondary" @click="showDeleteModal = false">Batal</button>
-          <button class="btn btn-danger" @click="deleteKelas">Hapus</button>
-        </div>
-      </div>
-    </div>
+    <BaseModal :show="showDeleteModal" title="Konfirmasi Hapus" @close="showDeleteModal = false">
+      <p class="text-sm text-text-primary">
+        Apakah Anda yakin ingin menghapus kelas
+        <strong>{{ deletingKelas?.nama }}</strong
+        >?
+      </p>
+      <p v-if="deleteError" class="text-xs text-danger-500 mt-1">{{ deleteError }}</p>
+      <template #footer>
+        <button
+          class="px-3 py-2 text-sm font-medium text-text-secondary bg-white border border-border rounded-lg hover:bg-surface-50 transition-colors"
+          @click="showDeleteModal = false"
+        >
+          Batal
+        </button>
+        <button
+          class="px-4 py-2 text-sm font-medium text-white bg-danger-500 rounded-lg hover:bg-danger-700 transition-colors"
+          @click="deleteKelas"
+        >
+          Hapus
+        </button>
+      </template>
+    </BaseModal>
   </div>
 </template>
-
-<style scoped>
-.page {
-  padding: 2rem;
-}
-.page-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 1.5rem;
-}
-.page-header h1 {
-  margin: 0;
-  font-size: 1.5rem;
-}
-.filters {
-  display: flex;
-  gap: 0.75rem;
-  margin-bottom: 1rem;
-  flex-wrap: wrap;
-}
-.input {
-  padding: 0.5rem 0.75rem;
-  border: 1px solid #d1d5db;
-  border-radius: 6px;
-  font-size: 0.875rem;
-}
-.table-container {
-  overflow-x: auto;
-}
-table {
-  width: 100%;
-  border-collapse: collapse;
-}
-th,
-td {
-  padding: 0.75rem;
-  text-align: left;
-  border-bottom: 1px solid #e5e7eb;
-}
-th {
-  font-weight: 600;
-  color: #374151;
-  background: #f9fafb;
-}
-.actions-cell {
-  display: flex;
-  gap: 0.5rem;
-}
-.btn {
-  padding: 0.5rem 1rem;
-  border: none;
-  border-radius: 6px;
-  font-size: 0.875rem;
-  cursor: pointer;
-  font-weight: 500;
-}
-.btn-primary {
-  background: #2563eb;
-  color: white;
-}
-.btn-primary:hover {
-  background: #1d4ed8;
-}
-.btn-secondary {
-  background: #f3f4f6;
-  color: #374151;
-  border: 1px solid #d1d5db;
-}
-.btn-danger {
-  background: #ef4444;
-  color: white;
-}
-.btn-sm {
-  padding: 0.25rem 0.5rem;
-  border: none;
-  border-radius: 4px;
-  font-size: 0.75rem;
-  cursor: pointer;
-}
-.btn-edit {
-  background: #fef3c7;
-  color: #92400e;
-}
-.btn-delete {
-  background: #fee2e2;
-  color: #991b1b;
-}
-.empty-state {
-  text-align: center;
-  color: #6b7280;
-  padding: 2rem;
-}
-.modal-overlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.4);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 50;
-}
-.modal {
-  background: white;
-  border-radius: 8px;
-  padding: 1.5rem;
-  width: 100%;
-  max-width: 480px;
-  max-height: 90vh;
-  overflow-y: auto;
-}
-.modal h2 {
-  margin: 0 0 1rem;
-  font-size: 1.25rem;
-}
-.form-group {
-  margin-bottom: 1rem;
-}
-.form-group label {
-  display: block;
-  margin-bottom: 0.25rem;
-  font-size: 0.875rem;
-  font-weight: 500;
-  color: #374151;
-}
-.form-group .input {
-  width: 100%;
-}
-.optional {
-  color: #9ca3af;
-  font-weight: 400;
-}
-.modal-actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 0.5rem;
-  margin-top: 1.5rem;
-}
-.error-text {
-  color: #dc2626;
-  font-size: 0.875rem;
-  margin-top: 0.5rem;
-}
-</style>

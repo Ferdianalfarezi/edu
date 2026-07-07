@@ -2,6 +2,7 @@
 import { ref, onMounted, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import { api } from '@/api/client';
+import { PageHeader } from '@/components/ui';
 
 interface RppItem {
   id: string;
@@ -157,38 +158,52 @@ onMounted(async () => {
 </script>
 
 <template>
-  <div class="page">
-    <div class="page-header">
-      <h1>Portal RPP / Modul Ajar</h1>
-      <button class="btn btn-primary" @click="router.push({ name: 'rpp-create' })">
-        + Buat RPP Baru
-      </button>
-    </div>
+  <div class="p-4 lg:p-6 max-w-7xl mx-auto">
+    <PageHeader title="Portal RPP / Modul Ajar" description="">
+      <template #actions>
+        <button
+          class="px-3 py-2 text-sm font-medium text-white bg-primary-600 rounded-lg hover:bg-primary-700 transition-colors"
+          @click="router.push({ name: 'rpp-create' })"
+        >
+          + Buat RPP Baru
+        </button>
+      </template>
+    </PageHeader>
 
     <!-- Filters -->
-    <div class="filters">
-      <div class="search-box">
+    <div class="flex flex-wrap gap-3 mb-4">
+      <div class="flex-1 min-w-[200px] relative">
+        <span class="absolute left-3 top-1/2 -translate-y-1/2 text-text-tertiary text-sm">🔍</span>
         <input
           v-model="search"
           type="text"
-          class="input"
-          placeholder="🔍 Cari judul RPP..."
+          class="w-full pl-8 pr-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
+          placeholder="Cari judul RPP..."
           @input="onSearchInput"
         />
       </div>
-      <select v-model="filterMapel" class="input filter-select">
+      <select
+        v-model="filterMapel"
+        class="w-full px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 min-w-[160px] sm:w-auto"
+      >
         <option value="">Semua Mata Pelajaran</option>
         <option v-for="mapel in mataPelajaranList" :key="mapel.id" :value="mapel.id">
           {{ mapel.nama }}
         </option>
       </select>
-      <select v-model="filterKategori" class="input filter-select">
+      <select
+        v-model="filterKategori"
+        class="w-full px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 min-w-[160px] sm:w-auto"
+      >
         <option value="">Semua Kategori</option>
         <option v-for="kat in kategoriList" :key="kat.id" :value="kat.id">
           {{ kat.nama }}
         </option>
       </select>
-      <select v-model="filterTahun" class="input filter-select">
+      <select
+        v-model="filterTahun"
+        class="w-full px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 min-w-[120px] sm:w-auto"
+      >
         <option value="">Semua Tahun</option>
         <option v-for="y in [2025, 2024, 2023, 2022, 2021, 2020]" :key="y" :value="y.toString()">
           {{ y }}
@@ -197,219 +212,88 @@ onMounted(async () => {
     </div>
 
     <!-- RPP List -->
-    <div v-if="loading && items.length === 0" class="empty-state">Memuat data...</div>
-    <div v-else-if="items.length === 0" class="empty-state">Belum ada RPP yang dipublish.</div>
-    <div v-else class="rpp-grid">
-      <div v-for="item in items" :key="item.id" class="rpp-card">
-        <div class="card-header">
-          <span :class="['content-badge', item.konten_type]">
+    <div v-if="loading && items.length === 0" class="text-center text-text-secondary py-12">
+      <svg class="w-6 h-6 animate-spin text-primary-500 mx-auto" fill="none" viewBox="0 0 24 24">
+        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
+        <path
+          class="opacity-75"
+          fill="currentColor"
+          d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
+        />
+      </svg>
+      <p class="mt-2 text-sm">Memuat data...</p>
+    </div>
+    <div v-else-if="items.length === 0" class="text-center text-text-secondary py-12">
+      <p class="text-sm">Belum ada RPP yang dipublish.</p>
+    </div>
+    <div v-else class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div
+        v-for="item in items"
+        :key="item.id"
+        class="bg-white border border-border rounded-xl p-4 hover:shadow-md transition-shadow"
+      >
+        <div class="flex justify-between items-center mb-2">
+          <span
+            :class="[
+              'inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium',
+              item.konten_type === 'file'
+                ? 'bg-warning-50 text-warning-700'
+                : 'bg-primary-50 text-primary-600',
+            ]"
+          >
             {{ item.konten_type === 'file' ? '📄 File' : '📝 Teks' }}
           </span>
           <button
-            :class="['btn-favorite', item.is_favorited ? 'active' : '']"
+            :class="[
+              'text-xl leading-none transition-colors',
+              item.is_favorited ? 'text-amber-500' : 'text-text-tertiary hover:text-amber-500',
+            ]"
             :title="item.is_favorited ? 'Hapus dari favorit' : 'Tambah ke favorit'"
             @click.stop="toggleFavorite(item)"
           >
             {{ item.is_favorited ? '★' : '☆' }}
           </button>
         </div>
-        <h3 class="card-title" @click="viewRpp(item)">{{ item.judul }}</h3>
-        <div class="card-meta">
-          <span class="meta-item">👤 {{ item.guru_nama }}</span>
-          <span class="meta-item">📚 {{ item.mata_pelajaran_nama }}</span>
-          <span class="meta-item">🏷️ {{ item.kategori_nama }}</span>
+        <h3
+          class="text-sm font-semibold text-text-primary cursor-pointer hover:text-primary-600 transition-colors mb-2"
+          @click="viewRpp(item)"
+        >
+          {{ item.judul }}
+        </h3>
+        <div class="flex flex-wrap gap-2 mb-3">
+          <span class="text-xs text-text-tertiary">👤 {{ item.guru_nama }}</span>
+          <span class="text-xs text-text-tertiary">📚 {{ item.mata_pelajaran_nama }}</span>
+          <span class="text-xs text-text-tertiary">🏷️ {{ item.kategori_nama }}</span>
         </div>
-        <div class="card-footer">
-          <span class="card-date">{{ formatDate(item.tanggal_publish) }}</span>
-          <div class="card-actions">
-            <button class="btn-sm btn-view" @click="viewRpp(item)">Lihat</button>
-            <button class="btn-sm btn-download" @click="downloadRpp(item)">⬇ Download</button>
+        <div class="flex justify-between items-center pt-3 border-t border-border">
+          <span class="text-xs text-text-tertiary">{{ formatDate(item.tanggal_publish) }}</span>
+          <div class="flex gap-2">
+            <button
+              class="px-2 py-1 text-xs font-medium text-primary-600 bg-primary-50 rounded-md hover:bg-primary-100 transition-colors"
+              @click="viewRpp(item)"
+            >
+              Lihat
+            </button>
+            <button
+              class="px-2 py-1 text-xs font-medium text-success-700 bg-success-50 rounded-md hover:bg-success-50/80 transition-colors"
+              @click="downloadRpp(item)"
+            >
+              ⬇ Download
+            </button>
           </div>
         </div>
       </div>
     </div>
 
     <!-- Load more -->
-    <div v-if="hasMore" class="load-more">
-      <button class="btn btn-secondary" :disabled="loading" @click="loadMore">
+    <div v-if="hasMore" class="flex justify-center mt-6">
+      <button
+        class="px-3 py-2 text-sm font-medium text-text-secondary bg-white border border-border rounded-lg hover:bg-surface-50 transition-colors"
+        :disabled="loading"
+        @click="loadMore"
+      >
         {{ loading ? 'Memuat...' : 'Muat Lebih Banyak' }}
       </button>
     </div>
   </div>
 </template>
-
-<style scoped>
-.page {
-  padding: 2rem;
-}
-.page-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 1.5rem;
-}
-.page-header h1 {
-  margin: 0;
-  font-size: 1.5rem;
-}
-.filters {
-  display: flex;
-  gap: 0.75rem;
-  margin-bottom: 1.5rem;
-  flex-wrap: wrap;
-}
-.search-box {
-  flex: 1;
-  min-width: 200px;
-}
-.filter-select {
-  min-width: 160px;
-}
-.input {
-  padding: 0.5rem 0.75rem;
-  border: 1px solid #d1d5db;
-  border-radius: 6px;
-  font-size: 0.875rem;
-  width: 100%;
-}
-select.input {
-  appearance: auto;
-}
-/* RPP Grid */
-.rpp-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-  gap: 1rem;
-}
-.rpp-card {
-  border: 1px solid #e5e7eb;
-  border-radius: 8px;
-  padding: 1rem;
-  background: white;
-  transition: box-shadow 0.15s;
-}
-.rpp-card:hover {
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-}
-.card-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 0.5rem;
-}
-.content-badge {
-  font-size: 0.75rem;
-  padding: 0.125rem 0.5rem;
-  border-radius: 999px;
-  background: #f3f4f6;
-  color: #374151;
-}
-.content-badge.file {
-  background: #fef3c7;
-  color: #92400e;
-}
-.content-badge.richtext {
-  background: #dbeafe;
-  color: #1e40af;
-}
-.btn-favorite {
-  background: none;
-  border: none;
-  font-size: 1.25rem;
-  cursor: pointer;
-  color: #9ca3af;
-  transition: color 0.15s;
-}
-.btn-favorite.active {
-  color: #f59e0b;
-}
-.btn-favorite:hover {
-  color: #f59e0b;
-}
-.card-title {
-  margin: 0 0 0.5rem;
-  font-size: 1rem;
-  font-weight: 600;
-  color: #111827;
-  cursor: pointer;
-}
-.card-title:hover {
-  color: #2563eb;
-}
-.card-meta {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem;
-  margin-bottom: 0.75rem;
-}
-.meta-item {
-  font-size: 0.75rem;
-  color: #6b7280;
-}
-.card-footer {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding-top: 0.75rem;
-  border-top: 1px solid #f3f4f6;
-}
-.card-date {
-  font-size: 0.75rem;
-  color: #9ca3af;
-}
-.card-actions {
-  display: flex;
-  gap: 0.5rem;
-}
-.btn {
-  padding: 0.5rem 1rem;
-  border: none;
-  border-radius: 6px;
-  font-size: 0.875rem;
-  cursor: pointer;
-  font-weight: 500;
-}
-.btn-primary {
-  background: #2563eb;
-  color: white;
-}
-.btn-primary:hover {
-  background: #1d4ed8;
-}
-.btn-secondary {
-  background: #f3f4f6;
-  color: #374151;
-  border: 1px solid #d1d5db;
-}
-.btn-sm {
-  padding: 0.25rem 0.5rem;
-  border: none;
-  border-radius: 4px;
-  font-size: 0.75rem;
-  cursor: pointer;
-}
-.btn-view {
-  background: #dbeafe;
-  color: #1e40af;
-}
-.btn-view:hover {
-  background: #bfdbfe;
-}
-.btn-download {
-  background: #d1fae5;
-  color: #065f46;
-}
-.btn-download:hover {
-  background: #a7f3d0;
-}
-.empty-state {
-  text-align: center;
-  color: #6b7280;
-  padding: 3rem;
-}
-.load-more {
-  display: flex;
-  justify-content: center;
-  margin-top: 1.5rem;
-}
-</style>
