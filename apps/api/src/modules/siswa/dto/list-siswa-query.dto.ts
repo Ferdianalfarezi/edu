@@ -1,9 +1,17 @@
-import { IsEnum, IsOptional, IsString, IsUUID } from 'class-validator';
+import { IsEnum, IsInt, IsOptional, IsString, IsUUID, Max, Min } from 'class-validator';
+import { Type } from 'class-transformer';
 
 const SISWA_STATUS_VALUES = ['aktif', 'pindah_sekolah', 'keluar', 'lulus'] as const;
 type SiswaStatusValue = (typeof SISWA_STATUS_VALUES)[number];
 
 export class ListSiswaQueryDto {
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(100)
+  limit?: number;
+
   @IsOptional()
   @IsString()
   cursor?: string;
@@ -18,7 +26,7 @@ export class ListSiswaQueryDto {
 
   @IsOptional()
   @IsUUID()
-  kelasId?: string;
+  kelas_id?: string;
 
   @IsOptional()
   @IsEnum(SISWA_STATUS_VALUES, {
@@ -28,5 +36,5 @@ export class ListSiswaQueryDto {
 
   @IsOptional()
   @IsUUID()
-  tahunAjaranId?: string;
+  tahun_ajaran_id?: string;
 }
