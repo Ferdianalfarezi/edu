@@ -45,6 +45,19 @@ export class AbsensiController {
   }
 
   /**
+   * GET /absensi/audit-log
+   * Returns audit log entries for a specific absensi record.
+   * Query: ?absensi_id=UUID
+   *
+   * Requirements: 2.5, 2.6
+   */
+  @Get('audit-log')
+  @Roles(Role.GURU, Role.KEPALA_SEKOLAH, Role.ADMIN)
+  async getAuditLog(@TenantId() tenantId: string, @Query('absensi_id') absensiId: string) {
+    return this.absensiService.getAuditLog(tenantId, absensiId);
+  }
+
+  /**
    * GET /absensi/dashboard
    *
    * Returns today's attendance summary per class and alpa alert list.
@@ -56,6 +69,31 @@ export class AbsensiController {
   @Roles(Role.KEPALA_SEKOLAH)
   async getDashboard(@TenantId() tenantId: string) {
     return this.absensiService.getDashboard(tenantId);
+  }
+
+  /**
+   * GET /absensi
+   * Returns attendance data for a class on a specific date (query-param version).
+   * Query: ?kelas_id=UUID&tanggal=YYYY-MM-DD
+   */
+  @Get()
+  @Roles(Role.GURU, Role.KEPALA_SEKOLAH, Role.ADMIN)
+  async getAbsensiByQuery(
+    @TenantId() tenantId: string,
+    @CurrentUser() user: RequestUser,
+    @Query('kelas_id') kelasId: string,
+    @Query('tanggal') tanggal: string,
+  ) {
+    if (!kelasId || !tanggal) {
+      return { data: [] };
+    }
+    return this.absensiService.getAbsensiByKelasAndTanggal(
+      tenantId,
+      kelasId,
+      tanggal,
+      user.id,
+      user.role,
+    );
   }
 
   /**

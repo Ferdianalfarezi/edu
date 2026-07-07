@@ -127,7 +127,7 @@ async function saveUser() {
 async function deleteUser() {
   if (!deletingUser.value) return;
   try {
-    await api.delete(`/users/${deletingUser.value.id}`);
+    await api.patch(`/users/${deletingUser.value.id}/deactivate`);
     showDeleteModal.value = false;
     deletingUser.value = null;
     await fetchUsers();
@@ -188,7 +188,7 @@ async function importCsv() {
   try {
     const formData = new FormData();
     formData.append('file', importFile.value);
-    await api.post('/users/import-csv', formData, {
+    await api.post('/users/bulk-import', formData, {
       headers: { 'Content-Type': 'multipart/form-data' },
     });
     showImportModal.value = false;

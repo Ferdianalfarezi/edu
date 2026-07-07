@@ -507,4 +507,133 @@ export class SiswaService {
     // Returns true if parent still has access (has active children)
     return activeChildren.length > 0;
   }
+
+  // ─── CSV Import with Preview ──────────────────────────────────
+
+  /**
+   * Preview CSV import: parse, validate, detect NISN conflicts.
+   * Returns conflicts and preview counts without persisting.
+   */
+  async importCsvPreview(tenantId: string, csvContent: string) {
+    const rows = this.parseSiswaCsv(csvContent);
+
+    if (rows.length === 0) {
+      throw new BadRequestException('File CSV kosong atau format tidak valid');
+    }
+
+    const conflicts: { nisn: string; nama_csv: string; nama_existing: string }[] = [];
+
+    for (const row of rows) {
+      if (row.nisn) {
+        const exists = await this.checkNisnExists(row.nisn, tenantId);
+        if (exists) {
+          const [existing] = await this.db
+            .select({ nama: siswa.nama })
+            .from(siswa)
+            .where(
+              and(
+                eq(siswa.nisn, row.nisn),
+                eq(siswa.tenantId, tenantId),
+                eq(siswa.status, 'aktif'),
+              ),
+            )
+            .limit(1);
+
+          conflicts.push({
+            nisn: row.nisn,
+            nama_csv: row.nama,
+            nama_existing: existing?.nama || '',
+          });
+        }
+      }
+    }
+
+    return {
+      preview_count: rows.length,
+      valid_count: rows.length - conflicts.length,
+      conflicts,
+    };
+  }
+
+  /**
+   * Execute CSV import with conflict resolutions.
+   */
+  async importCsvExecute(
+    tenantId: string,
+    csvContent: string,
+    processedByUserId: string,
+    resolutions: { nisn: string; action: 'skip' | 'update' }[],
+  ) {
+    const rows = this.parseSiswaCsv(csvContent);
+    const resolutionMap = new Map(resolutions.map((r) => [r.nisn, r.action]));
+
+    let created = 0;
+    let updated = 0;
+    let skipped = 0;
+
+    for (const row of rows) {
+      if (!row.nama) {
+        skipped++;
+        continue;
+      }
+
+      // Check for conflict
+      if (row.nisn) {
+        const exists = await this.checkNisnExists(row.nisn, tenantId);
+        if (exists) {
+          const action = resolutionMap.get(row.nisn) || 'skip';
+          if (action === 'skip') {
+            skipped++;
+            continue;
+          }
+          // action === 'update': update existing record
+          await this.db
+            .update(siswa)
+            .set({
+              nama: row.nama,
+              jenisKelamin:
+                row.jenisKelamin === 'L' || row.jenisKelamin === 'P' ? row.jenisKelamin : undefined,
+              tanggalLahir: row.tanggalLahir || undefined,
+              kelasId: row.kelasId || undefined,
+              updatedAt: new Date(),
+            })
+            .where(
+              and(
+                eq(siswa.nisn, row.nisn),
+                eq(siswa.tenantId, tenantId),
+                eq(siswa.status, 'aktif'),
+              ),
+            );
+          updated++;
+          continue;
+        }
+      }
+
+      // Create new student
+      const insertData: any = {
+        tenantId,
+        nama: row.nama,
+        nisn: row.nisn || null,
+        jenisKelamin:
+          row.jenisKelamin === 'L' || row.jenisKelamin === 'P' ? row.jenisKelamin : null,
+        tanggalLahir: row.tanggalLahir || null,
+        kelasId: row.kelasId || null,
+        status: 'aktif',
+      };
+
+      // Handle parent linkage
+      if (row.orangTuaPhone) {
+        const parentId = await this.resolveOrCreateParent(
+          row.orangTuaPhone,
+          row.orangTuaNama || row.nama,
+        );
+        insertData.orangTuaId = parentId;
+      }
+
+      await this.db.insert(siswa).values(insertData);
+      created++;
+    }
+
+    return { created, updated, skipped };
+  }
 }

@@ -113,6 +113,22 @@ export class KonfigurasiService {
     return { key: result[0].key, value: result[0].value };
   }
 
+  /**
+   * Bulk upsert multiple config keys at once.
+   * Requirements: 22.3
+   */
+  async bulkUpsertConfig(
+    tenantId: string,
+    items: { key: string; value: any }[],
+  ): Promise<KonfigurasiItem[]> {
+    const results: KonfigurasiItem[] = [];
+    for (const item of items) {
+      const result = await this.upsertConfig(tenantId, item.key, item.value);
+      results.push(result);
+    }
+    return results;
+  }
+
   // ─── Hari Libur ──────────────────────────────────────────────
 
   /**

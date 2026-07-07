@@ -28,6 +28,7 @@ import {
   CancelTagihanDto,
   GetTunggakanQueryDto,
   ExportTagihanQueryDto,
+  ListTagihanQueryDto,
 } from './dto';
 import { randomUUID } from 'crypto';
 
@@ -1408,8 +1409,129 @@ export class TagihanService {
   }
 
   // ═══════════════════════════════════════════════════════════════════
+  // TAGIHAN LIST (GET /tagihan)
+  // ═══════════════════════════════════════════════════════════════════
+
+  /**
+   * List all tagihan with cursor-pagination and filters.
+   * Supports: status, kelas_id, bulan, tahun, search (by student name).
+   */
+  async listTagihan(tenantId: string, query: ListTagihanQueryDto) {
+    const db = this.drizzleService.db;
+    const limit = query.limit ?? 20;
+    const conditions: any[] = [eq(tagihan.tenantId, tenantId)];
+
+    if (query.status) {
+      conditions.push(eq(tagihan.status, query.status as any));
+    }
+    if (query.kelas_id) {
+      conditions.push(eq(siswa.kelasId, query.kelas_id));
+    }
+    if (query.bulan) {
+      conditions.push(eq(tagihan.bulan, query.bulan));
+    }
+    if (query.tahun) {
+      conditions.push(eq(tagihan.tahun, query.tahun));
+    }
+
+    // Cursor-based pagination
+    if (query.cursor) {
+      const [cursorRecord] = await db
+        .select({ createdAt: tagihan.createdAt, id: tagihan.id })
+        .from(tagihan)
+        .where(eq(tagihan.id, query.cursor))
+        .limit(1);
+
+      if (cursorRecord && cursorRecord.createdAt) {
+        conditions.push(
+          or(
+            sql`${tagihan.createdAt} < ${cursorRecord.createdAt}`,
+            and(eq(tagihan.createdAt, cursorRecord.createdAt), gt(tagihan.id, cursorRecord.id)),
+          )!,
+        );
+      }
+    }
+
+    const results = await db
+      .select({
+        id: tagihan.id,
+        siswaId: tagihan.siswaId,
+        bulan: tagihan.bulan,
+        tahun: tagihan.tahun,
+        nominal: tagihan.nominal,
+        totalDibayar: tagihan.totalDibayar,
+        status: tagihan.status,
+        tanggalJatuhTempo: tagihan.tanggalJatuhTempo,
+        createdAt: tagihan.createdAt,
+        siswa_nama: siswa.nama,
+        kelas_nama: kelas.nama,
+      })
+      .from(tagihan)
+      .innerJoin(siswa, eq(tagihan.siswaId, siswa.id))
+      .leftJoin(kelas, eq(siswa.kelasId, kelas.id))
+      .where(and(...conditions))
+      .orderBy(sql`${tagihan.createdAt} DESC`)
+      .limit(limit + 1);
+
+    const hasNext = results.length > limit;
+    const data = results.slice(0, limit);
+    const nextCursor = hasNext && data.length > 0 ? data[data.length - 1].id : null;
+
+    return {
+      data: data.map((row) => ({
+        id: row.id,
+        siswa_id: row.siswaId,
+        siswa_nama: row.siswa_nama,
+        kelas_nama: row.kelas_nama,
+        bulan: row.bulan,
+        tahun: row.tahun,
+        nominal: row.nominal,
+        total_dibayar: row.totalDibayar,
+        status: row.status,
+        tanggal_jatuh_tempo: row.tanggalJatuhTempo,
+        created_at: row.createdAt,
+      })),
+      meta: {
+        has_next: hasNext,
+        cursor: nextCursor,
+      },
+    };
+  }
+
+  // ═══════════════════════════════════════════════════════════════════
   // TUNGGAKAN DASHBOARD (Requirements: 15.1–15.5)
   // ═══════════════════════════════════════════════════════════════════
+
+  /**
+   * Get summary stats of tunggakan for the dashboard widget.
+   */
+  async getTunggakanSummary(tenantId: string, kelasId?: string) {
+    const db = this.drizzleService.db;
+    const conditions: any[] = [
+      eq(tagihan.tenantId, tenantId),
+      or(eq(tagihan.status, 'belum_bayar'), eq(tagihan.status, 'cicilan')),
+    ];
+
+    if (kelasId) {
+      conditions.push(eq(siswa.kelasId, kelasId));
+    }
+
+    const [result] = await db
+      .select({
+        total_tunggakan: sql<number>`COALESCE(SUM(${tagihan.nominal} - ${tagihan.totalDibayar}), 0)`,
+        total_siswa: sql<number>`COUNT(DISTINCT ${tagihan.siswaId})`,
+        total_tagihan: sql<number>`COUNT(*)`,
+      })
+      .from(tagihan)
+      .innerJoin(siswa, eq(tagihan.siswaId, siswa.id))
+      .where(and(...conditions));
+
+    return {
+      total_tunggakan: Number(result?.total_tunggakan ?? 0),
+      total_siswa: Number(result?.total_siswa ?? 0),
+      total_tagihan: Number(result?.total_tagihan ?? 0),
+    };
+  }
 
   /**
    * Get list of unpaid tagihan (belum_bayar or cicilan) sorted by jatuh_tempo ASC.

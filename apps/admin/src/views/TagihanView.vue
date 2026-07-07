@@ -339,7 +339,7 @@ async function verifyTransaksi(action: 'approve' | 'reject') {
 
   verifyingId.value = selectedTransaksi.value.id;
   try {
-    await api.patch(`/tagihan/transaksi/${selectedTransaksi.value.id}/verify`, {
+    await api.patch(`/tagihan/${selectedTransaksi.value.id}/verify`, {
       action,
       alasan_penolakan: action === 'reject' ? rejectReason.value.trim() : undefined,
     });
@@ -427,7 +427,7 @@ async function saveManualPayment() {
   manualPaymentError.value = '';
 
   try {
-    await api.post(`/tagihan/${manualPaymentTagihan.value.id}/bayar-manual`, {
+    await api.post(`/tagihan/${manualPaymentTagihan.value.id}/manual-payment`, {
       jumlah_bayar: manualPaymentForm.jumlah_bayar,
       metode: manualPaymentForm.metode,
       catatan: manualPaymentForm.catatan.trim() || undefined,
@@ -490,8 +490,8 @@ async function confirmCancelTagihan() {
 
   cancelling.value = true;
   try {
-    await api.delete(`/tagihan/${cancellingTagihan.value.id}`, {
-      data: { alasan: cancelReason.value.trim() },
+    await api.patch(`/tagihan/${cancellingTagihan.value.id}/cancel`, {
+      alasan: cancelReason.value.trim(),
     });
     showCancelModal.value = false;
     await fetchTagihanList();

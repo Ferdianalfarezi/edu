@@ -20,7 +20,7 @@ import { GetAuditTrailQueryDto } from './dto';
  *
  * Requirements: 29.3, 29.4
  */
-@Controller('audit-trail')
+@Controller('tagihan/audit-log')
 @UseGuards(JwtAuthGuard, RolesGuard)
 export class AuditTrailController {
   constructor(private readonly auditTrailService: AuditTrailService) {}

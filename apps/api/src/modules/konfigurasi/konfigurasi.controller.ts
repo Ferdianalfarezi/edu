@@ -1,11 +1,21 @@
-import { Body, Controller, Get, HttpCode, HttpStatus, Param, Put, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  HttpCode,
+  HttpStatus,
+  Param,
+  Patch,
+  Put,
+  UseGuards,
+} from '@nestjs/common';
 import { Role } from '@edu/shared';
 import { JwtAuthGuard } from '@/common/guards/jwt-auth.guard';
 import { RolesGuard } from '@/common/guards/roles.guard';
 import { Roles } from '@/common/decorators/roles.decorator';
 import { TenantId } from '@/common/decorators/tenant-id.decorator';
 import { KonfigurasiService, KonfigurasiItem } from './konfigurasi.service';
-import { UpsertKonfigurasiDto } from './dto';
+import { UpsertKonfigurasiDto, BulkUpsertKonfigurasiDto } from './dto';
 
 @Controller('konfigurasi')
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -20,6 +30,19 @@ export class KonfigurasiController {
   @Get()
   async getAllConfig(@TenantId() tenantId: string): Promise<KonfigurasiItem[]> {
     return this.konfigurasiService.getAllConfig(tenantId);
+  }
+
+  /**
+   * PATCH /konfigurasi
+   * Bulk upsert multiple config keys at once.
+   */
+  @Patch()
+  @HttpCode(HttpStatus.OK)
+  async bulkUpsertConfig(
+    @TenantId() tenantId: string,
+    @Body() dto: BulkUpsertKonfigurasiDto,
+  ): Promise<KonfigurasiItem[]> {
+    return this.konfigurasiService.bulkUpsertConfig(tenantId, dto.items);
   }
 
   /**

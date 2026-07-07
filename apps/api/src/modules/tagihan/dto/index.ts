@@ -7,3 +7,4 @@ export { UploadBuktiDto } from './upload-bukti.dto';
 export { VerifyPaymentDto } from './verify-payment.dto';
 export { EditTagihanDto } from './edit-tagihan.dto';
 export { CancelTagihanDto } from './cancel-tagihan.dto';
+export { ListTagihanQueryDto } from './list-tagihan-query.dto';

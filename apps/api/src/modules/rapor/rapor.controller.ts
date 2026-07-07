@@ -9,11 +9,13 @@ import { RaporNilaiService } from './rapor-nilai.service';
 import { RaporOverviewService } from './rapor-overview.service';
 import { RaporFinalizationService } from './rapor-finalization.service';
 import { RaporExportService } from './rapor-export.service';
+import { RaporWaliService } from './rapor-wali.service';
 import {
   InputNilaiDto,
   GetRaporOverviewQueryDto,
   FinalizeRaporDto,
   ExportRaporQueryDto,
+  SaveCatatanDto,
 } from './dto';
 
 /**
@@ -30,7 +32,84 @@ export class RaporController {
     private readonly raporOverviewService: RaporOverviewService,
     private readonly raporFinalizationService: RaporFinalizationService,
     private readonly raporExportService: RaporExportService,
+    private readonly raporWaliService: RaporWaliService,
   ) {}
+
+  /**
+   * GET /rapor/kelas-wali
+   * Returns the kelas assigned to the current guru as wali kelas.
+   */
+  @Get('kelas-wali')
+  @Roles(Role.GURU)
+  async getKelasWali(@TenantId() tenantId: string, @CurrentUser('id') guruId: string) {
+    const data = await this.raporWaliService.getKelasWali(tenantId, guruId);
+    return { data };
+  }
+
+  /**
+   * GET /rapor/kelas
+   * Returns classes for a specific mapel that the guru teaches.
+   * Query: ?mapel_id=UUID
+   */
+  @Get('kelas')
+  @Roles(Role.GURU)
+  async getKelasByMapel(
+    @TenantId() tenantId: string,
+    @CurrentUser('id') guruId: string,
+    @Query('mapel_id') mapelId: string,
+  ) {
+    const data = await this.raporWaliService.getKelasByMapel(tenantId, guruId, mapelId);
+    return { data };
+  }
+
+  /**
+   * GET /rapor/nilai
+   * Returns student grades for a specific kelas, mapel, and periode.
+   * Query: ?kelas_id=&mapel_id=&periode_rapor_id=
+   */
+  @Get('nilai')
+  @Roles(Role.GURU)
+  async getNilai(
+    @TenantId() tenantId: string,
+    @CurrentUser('id') guruId: string,
+    @Query('kelas_id') kelasId: string,
+    @Query('mapel_id') mapelId: string,
+    @Query('periode_rapor_id') periodeId: string,
+  ) {
+    const data = await this.raporNilaiService.getKelasGrades(
+      tenantId,
+      guruId,
+      kelasId,
+      mapelId,
+      periodeId,
+    );
+    return { data };
+  }
+
+  /**
+   * GET /rapor/finalize-overview
+   * Returns overview data for the finalization page:
+   * - mapel submission status per kelas
+   * - student grades summary
+   * - rapor finalization status
+   * Query: ?kelas_id=&periode_id=
+   */
+  @Get('finalize-overview')
+  @Roles(Role.GURU)
+  async getFinalizeOverview(
+    @TenantId() tenantId: string,
+    @CurrentUser('id') userId: string,
+    @Query('kelas_id') kelasId: string,
+    @Query('periode_id') periodeId: string,
+  ) {
+    const data = await this.raporWaliService.getFinalizeOverview(
+      tenantId,
+      userId,
+      kelasId,
+      periodeId,
+    );
+    return { data };
+  }
 
   /**
    * GET /rapor/mata-pelajaran
@@ -70,6 +149,24 @@ export class RaporController {
       periodeId,
     );
     return { data };
+  }
+
+  /**
+   * POST /rapor/nilai/catatan
+   * Save wali kelas notes (catatan) for students in a kelas/periode.
+   */
+  @Post('nilai/catatan')
+  @Roles(Role.GURU)
+  async saveCatatan(
+    @TenantId() tenantId: string,
+    @CurrentUser('id') userId: string,
+    @Body() dto: SaveCatatanDto,
+  ) {
+    const result = await this.raporWaliService.saveCatatan(tenantId, userId, dto);
+    return {
+      message: 'Catatan berhasil disimpan',
+      data: result,
+    };
   }
 
   /**

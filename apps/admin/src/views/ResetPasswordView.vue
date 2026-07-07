@@ -14,7 +14,7 @@ async function handleSubmit() {
 
   try {
     const payload: ResetPasswordRequest = { email: email.value };
-    await api.post('/auth/reset-password', payload);
+    await api.post('/auth/reset-password/request', payload);
     submitted.value = true;
   } catch (err: unknown) {
     // Always show success message to prevent email enumeration
