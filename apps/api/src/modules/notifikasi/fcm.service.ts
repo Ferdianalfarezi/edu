@@ -86,7 +86,10 @@ export class FcmService implements OnModuleInit {
     if (
       projectId === 'placeholder' ||
       privateKey === 'placeholder' ||
-      clientEmail?.includes('placeholder')
+      clientEmail?.includes('placeholder') ||
+      privateKey.startsWith('<') ||
+      projectId.startsWith('<') ||
+      !privateKey.includes('-----BEGIN')
     ) {
       this.logger.warn(
         'Firebase credentials are placeholders. Push notifications will be disabled.',
