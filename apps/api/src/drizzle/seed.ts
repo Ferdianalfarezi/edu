@@ -6,7 +6,7 @@
  * - Users: 1 admin, 1 kepala_sekolah, 2 guru, 1 bendahara, 2 orang_tua
  * - 1 active tahun_ajaran (2024/2025)
  * - 3 kelas (1A, 2A, 3A)
- * - 7 siswa with parent linkage
+ * - 10 siswa with parent linkage
  * - 5 mata_pelajaran
  *
  * Usage: npx ts-node -r tsconfig-paths/register src/drizzle/seed.ts
@@ -50,6 +50,9 @@ const IDS = {
   siswa5: '00000000-0000-4000-a000-000000000054',
   siswa6: '00000000-0000-4000-a000-000000000055',
   siswa7: '00000000-0000-4000-a000-000000000056',
+  siswa8: '00000000-0000-4000-a000-000000000057',
+  siswa9: '00000000-0000-4000-a000-000000000058',
+  siswa10: '00000000-0000-4000-a000-000000000059',
 } as const;
 
 async function seed() {
@@ -289,6 +292,43 @@ async function seed() {
         orangTuaId: IDS.orangTua1,
         status: 'aktif',
       },
+      // Additional siswa to reach 10
+      {
+        id: IDS.siswa8,
+        tenantId: IDS.tenant,
+        kelasId: IDS.kelas1A,
+        nama: 'Nadia Permata',
+        nisn: '0012345008',
+        jenisKelamin: 'P',
+        tanggalLahir: '2017-06-14',
+        alamat: 'Jl. Cempaka No. 9, Jakarta',
+        orangTuaId: IDS.orangTua2,
+        status: 'aktif',
+      },
+      {
+        id: IDS.siswa9,
+        tenantId: IDS.tenant,
+        kelasId: IDS.kelas2A,
+        nama: 'Fajar Nugroho',
+        nisn: '0012345009',
+        jenisKelamin: 'L',
+        tanggalLahir: '2016-09-03',
+        alamat: 'Jl. Bougenville No. 15, Jakarta',
+        orangTuaId: IDS.orangTua1,
+        status: 'aktif',
+      },
+      {
+        id: IDS.siswa10,
+        tenantId: IDS.tenant,
+        kelasId: IDS.kelas3A,
+        nama: 'Salsabila Azzahra',
+        nisn: '0012345010',
+        jenisKelamin: 'P',
+        tanggalLahir: '2015-04-20',
+        alamat: 'Jl. Teratai No. 11, Jakarta',
+        orangTuaId: IDS.orangTua2,
+        status: 'aktif',
+      },
     ]);
 
     // 7. Create default school configuration
@@ -334,7 +374,7 @@ async function seed() {
     console.log('   Password for all staff: password123');
     console.log('   Tahun Ajaran: 2024/2025 (aktif)');
     console.log('   Kelas: 1A, 2A, 3A');
-    console.log('   Siswa: 7 students across 3 classes');
+    console.log('   Siswa: 10 students across 3 classes');
     console.log('   Mata Pelajaran: MTK, BIND, IPA, IPS, BING');
     console.log('');
   } catch (error) {

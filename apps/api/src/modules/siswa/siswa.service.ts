@@ -230,8 +230,8 @@ export class SiswaService {
     }
 
     // Filter by kelas
-    if (query.kelasId) {
-      conditions.push(eq(siswa.kelasId, query.kelasId));
+    if (query.kelas_id) {
+      conditions.push(eq(siswa.kelasId, query.kelas_id));
     }
 
     // Filter by status
@@ -242,12 +242,12 @@ export class SiswaService {
     }
 
     // Filter by tahun_ajaran (via kelas.tahun_ajaran_id)
-    if (query.tahunAjaranId) {
+    if (query.tahun_ajaran_id) {
       // We need a subquery or join; use subquery for simplicity
       const kelasIds = this.db
         .select({ id: kelas.id })
         .from(kelas)
-        .where(and(eq(kelas.tenantId, tenantId), eq(kelas.tahunAjaranId, query.tahunAjaranId)));
+        .where(and(eq(kelas.tenantId, tenantId), eq(kelas.tahunAjaranId, query.tahun_ajaran_id)));
       conditions.push(sql`${siswa.kelasId} IN (${kelasIds})`);
     }
 
@@ -255,6 +255,8 @@ export class SiswaService {
     if (query.cursor) {
       conditions.push(gt(siswa.id, query.cursor));
     }
+
+    const pageSize = query.limit ?? DEFAULT_PAGE_SIZE;
 
     const results = await this.db
       .select({
@@ -271,10 +273,10 @@ export class SiswaService {
       .from(siswa)
       .where(and(...conditions))
       .orderBy(asc(siswa.id))
-      .limit(DEFAULT_PAGE_SIZE + 1);
+      .limit(pageSize + 1);
 
-    const hasNext = results.length > DEFAULT_PAGE_SIZE;
-    const data = hasNext ? results.slice(0, DEFAULT_PAGE_SIZE) : results;
+    const hasNext = results.length > pageSize;
+    const data = hasNext ? results.slice(0, pageSize) : results;
     const nextCursor = hasNext ? data[data.length - 1].id : null;
 
     return { data, nextCursor };
