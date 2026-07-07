@@ -21,6 +21,8 @@ COPY --from=deps /app/packages/shared/node_modules ./packages/shared/node_module
 COPY pnpm-lock.yaml pnpm-workspace.yaml package.json ./
 COPY apps/api/ ./apps/api/
 COPY packages/shared/ ./packages/shared/
+# Build shared package first (API imports from @edu/shared)
+RUN pnpm --filter @edu/shared build
 RUN pnpm --filter @edu/api build
 
 # ---- Production ----
