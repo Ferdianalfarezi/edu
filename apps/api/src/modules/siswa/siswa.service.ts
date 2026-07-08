@@ -6,11 +6,12 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { NodePgDatabase } from 'drizzle-orm/node-postgres';
-import { and, eq, ilike, or, gt, asc, sql } from 'drizzle-orm';
+import { and, eq, ilike, gt, asc, sql } from 'drizzle-orm';
 import { DRIZZLE } from '@/drizzle/drizzle.module';
 import { siswa } from '@/drizzle/schema/siswa';
 import { user } from '@/drizzle/schema/user';
 import { kelas } from '@/drizzle/schema/kelas';
+import { tahunAjaran } from '@/drizzle/schema/tahun-ajaran';
 import { CreateSiswaDto, UpdateSiswaDto, SoftDeleteSiswaDto, ListSiswaQueryDto } from './dto';
 
 const DEFAULT_PAGE_SIZE = 20;
@@ -243,7 +244,6 @@ export class SiswaService {
 
     // Filter by tahun_ajaran (via kelas.tahun_ajaran_id)
     if (query.tahun_ajaran_id) {
-      // We need a subquery or join; use subquery for simplicity
       const kelasIds = this.db
         .select({ id: kelas.id })
         .from(kelas)
@@ -258,19 +258,30 @@ export class SiswaService {
 
     const pageSize = query.limit ?? DEFAULT_PAGE_SIZE;
 
+    // Alias the user table for the parent join
+    const orangTuaUser = user;
+
     const results = await this.db
       .select({
         id: siswa.id,
-        kelasId: siswa.kelasId,
+        kelas_id: siswa.kelasId,
+        kelas_nama: kelas.nama,
+        tahun_ajaran_id: kelas.tahunAjaranId,
+        tahun_ajaran_nama: tahunAjaran.nama,
         nama: siswa.nama,
         nisn: siswa.nisn,
-        jenisKelamin: siswa.jenisKelamin,
-        tanggalLahir: siswa.tanggalLahir,
-        orangTuaId: siswa.orangTuaId,
+        jenis_kelamin: siswa.jenisKelamin,
+        tanggal_lahir: siswa.tanggalLahir,
+        alamat: siswa.alamat,
+        orang_tua_nama: orangTuaUser.nama,
+        orang_tua_phone: orangTuaUser.phone,
         status: siswa.status,
-        createdAt: siswa.createdAt,
+        created_at: siswa.createdAt,
       })
       .from(siswa)
+      .leftJoin(kelas, eq(siswa.kelasId, kelas.id))
+      .leftJoin(tahunAjaran, eq(kelas.tahunAjaranId, tahunAjaran.id))
+      .leftJoin(orangTuaUser, eq(siswa.orangTuaId, orangTuaUser.id))
       .where(and(...conditions))
       .orderBy(asc(siswa.id))
       .limit(pageSize + 1);
@@ -279,7 +290,13 @@ export class SiswaService {
     const data = hasNext ? results.slice(0, pageSize) : results;
     const nextCursor = hasNext ? data[data.length - 1].id : null;
 
-    return { data, nextCursor };
+    return {
+      data,
+      meta: {
+        has_next: hasNext,
+        cursor: nextCursor,
+      },
+    };
   }
 
   // ─── Bulk Import via CSV ──────────────────────────────────────

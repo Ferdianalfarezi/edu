@@ -65,21 +65,60 @@ export class KelasService {
         nama: kelas.nama,
         tingkat: kelas.tingkat,
         tahunAjaranId: kelas.tahunAjaranId,
+        tahunAjaranNama: tahunAjaran.nama,
         waliKelasId: kelas.waliKelasId,
+        waliKelasNama: user.nama,
         kapasitas: kelas.kapasitas,
         createdAt: kelas.createdAt,
         updatedAt: kelas.updatedAt,
       })
       .from(kelas)
+      .leftJoin(tahunAjaran, eq(kelas.tahunAjaranId, tahunAjaran.id))
+      .leftJoin(user, eq(kelas.waliKelasId, user.id))
       .where(and(...conditions))
       .orderBy(asc(kelas.id))
       .limit(DEFAULT_PAGE_SIZE + 1);
 
     const hasNext = results.length > DEFAULT_PAGE_SIZE;
-    const data = hasNext ? results.slice(0, DEFAULT_PAGE_SIZE) : results;
-    const nextCursor = hasNext ? data[data.length - 1].id : null;
+    const rawData = hasNext ? results.slice(0, DEFAULT_PAGE_SIZE) : results;
 
-    return { data, nextCursor };
+    // Get student counts for each kelas
+    const kelasIds = rawData.map((k) => k.id);
+    let studentCounts: Record<string, number> = {};
+    if (kelasIds.length > 0) {
+      const countResults = await this.db
+        .select({
+          kelasId: siswa.kelasId,
+          count: count(),
+        })
+        .from(siswa)
+        .where(
+          and(
+            sql`${siswa.kelasId} IN (${sql.join(
+              kelasIds.map((id) => sql`${id}`),
+              sql`, `,
+            )})`,
+            eq(siswa.status, 'aktif'),
+          ),
+        )
+        .groupBy(siswa.kelasId);
+
+      studentCounts = Object.fromEntries(countResults.map((r) => [r.kelasId, Number(r.count)]));
+    }
+
+    const data = rawData.map((k) => ({
+      id: k.id,
+      nama: k.nama,
+      tingkat: k.tingkat,
+      wali_kelas_id: k.waliKelasId,
+      wali_kelas_nama: k.waliKelasNama,
+      tahun_ajaran_id: k.tahunAjaranId,
+      tahun_ajaran_nama: k.tahunAjaranNama,
+      kapasitas: k.kapasitas,
+      jumlah_siswa: studentCounts[k.id] ?? 0,
+    }));
+
+    return { data };
   }
 
   // ─── Get Kelas Detail (with student count) ────────────────────

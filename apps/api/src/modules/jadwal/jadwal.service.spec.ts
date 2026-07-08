@@ -37,7 +37,22 @@ describe('JadwalService', () => {
     ...mockJadwal,
     kelasNama: '6A',
     mataPelajaranNama: 'Matematika',
+    mataPelajaranKode: 'MTK',
     guruNama: 'Pak Budi',
+  };
+
+  // Expected snake_case response from findOne
+  const expectedFindOneResponse = {
+    id: jadwalId,
+    kelas_id: kelasId,
+    mata_pelajaran_id: mapelId,
+    guru_id: guruId,
+    hari: 'senin',
+    jam_mulai: '08:00',
+    jam_selesai: '09:30',
+    is_vacant: false,
+    mata_pelajaran: { id: mapelId, nama: 'Matematika', kode: 'MTK' },
+    guru: { id: guruId, nama: 'Pak Budi' },
   };
 
   const validCreateDto: CreateJadwalDto = {
@@ -252,7 +267,7 @@ describe('JadwalService', () => {
 
       const result = await service.findOne(tenantId, jadwalId);
 
-      expect(result).toEqual(mockJadwalWithJoins);
+      expect(result).toEqual(expectedFindOneResponse);
     });
 
     it('should throw NotFoundException when jadwal not found', async () => {
@@ -267,18 +282,25 @@ describe('JadwalService', () => {
     it('should return all jadwal for a tenant with no filters', async () => {
       const jadwalList = [mockJadwalWithJoins];
       const selectChain = createChainMock(jadwalList);
-      mockDb.select.mockReturnValue(selectChain);
+      // First call: main query, subsequent calls: guru_pengganti queries (return empty)
+      const emptyChain = createChainMock([]);
+      mockDb.select.mockReturnValueOnce(selectChain).mockReturnValue(emptyChain);
 
       const result = await service.findAll(tenantId, {});
 
       expect(mockDb.select).toHaveBeenCalled();
-      expect(result).toEqual(jadwalList);
+      expect(result).toHaveLength(1);
+      expect(result[0].kelas_id).toBe(kelasId);
+      expect(result[0].guru).toEqual({ id: guruId, nama: 'Pak Budi' });
+      expect(result[0].mata_pelajaran).toEqual({ id: mapelId, nama: 'Matematika', kode: 'MTK' });
+      expect(result[0].guru_pengganti_aktif).toBeNull();
     });
 
     it('should apply filters when provided', async () => {
       const jadwalList = [mockJadwalWithJoins];
       const selectChain = createChainMock(jadwalList);
-      mockDb.select.mockReturnValue(selectChain);
+      const emptyChain = createChainMock([]);
+      mockDb.select.mockReturnValueOnce(selectChain).mockReturnValue(emptyChain);
 
       const result = await service.findAll(tenantId, {
         kelasId,
@@ -286,7 +308,7 @@ describe('JadwalService', () => {
         hari: 'senin',
       });
 
-      expect(result).toEqual(jadwalList);
+      expect(result).toHaveLength(1);
       expect(selectChain.where).toHaveBeenCalled();
     });
   });
@@ -302,7 +324,9 @@ describe('JadwalService', () => {
       // update chain
       const updateChain = createChainMock(mockJadwal);
       // findOne after update (with joins)
-      const findOneChain = createChainMock([{ ...mockJadwalWithJoins, guruId: newGuruId }]);
+      const findOneChain = createChainMock([
+        { ...mockJadwalWithJoins, guruId: newGuruId, guruNama: 'Pak Baru' },
+      ]);
 
       mockDb.select
         .mockReturnValueOnce(rawChain) // findOneRaw
@@ -321,7 +345,8 @@ describe('JadwalService', () => {
           updatedAt: expect.any(Date),
         }),
       );
-      expect(result).toEqual({ ...mockJadwalWithJoins, guruId: newGuruId });
+      expect(result.guru_id).toBe(newGuruId);
+      expect(result.guru).toEqual({ id: newGuruId, nama: 'Pak Baru' });
     });
 
     it('should throw NotFoundException when jadwal does not exist', async () => {
@@ -354,7 +379,7 @@ describe('JadwalService', () => {
       const result = await service.update(tenantId, jadwalId, adminId, {});
 
       expect(mockDb.update).not.toHaveBeenCalled();
-      expect(result).toEqual(mockJadwalWithJoins);
+      expect(result).toEqual(expectedFindOneResponse);
     });
   });
 
