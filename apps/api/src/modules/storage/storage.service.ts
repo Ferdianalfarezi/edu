@@ -29,7 +29,9 @@ export class StorageService {
         accessKeyId: this.configService.get<string>('S3_ACCESS_KEY_ID')!,
         secretAccessKey: this.configService.get<string>('S3_SECRET_ACCESS_KEY')!,
       },
-      forcePathStyle: true,
+      // Railway Buckets use virtual-hosted-style URLs by default.
+      // Set S3_FORCE_PATH_STYLE=true only if your bucket was created before the change.
+      forcePathStyle: this.configService.get<string>('S3_FORCE_PATH_STYLE', 'false') === 'true',
     });
   }
 
