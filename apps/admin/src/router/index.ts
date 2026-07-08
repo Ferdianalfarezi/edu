@@ -201,6 +201,11 @@ router.beforeEach((to: RouteLocationNormalized) => {
     return { name: 'login' };
   }
 
+  // Force password change: only allow dashboard (where the modal is shown)
+  if (authStore.mustChangePassword && to.name !== 'dashboard') {
+    return { name: 'dashboard' };
+  }
+
   // Check route-level role restrictions
   const allowedRoles = to.meta.roles;
   if (allowedRoles && allowedRoles.length > 0) {

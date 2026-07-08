@@ -1,4 +1,4 @@
-import { IsEnum, IsOptional, IsString, IsUUID } from 'class-validator';
+import { IsEnum, IsOptional, IsString, IsIn } from 'class-validator';
 import { Role } from '@edu/shared';
 
 export class ListUsersQueryDto {
@@ -13,4 +13,8 @@ export class ListUsersQueryDto {
   @IsOptional()
   @IsString()
   search?: string;
+
+  @IsOptional()
+  @IsIn(['true', 'false', 'all'])
+  is_active?: 'true' | 'false' | 'all';
 }

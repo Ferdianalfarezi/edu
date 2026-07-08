@@ -252,9 +252,18 @@ describe('UserService', () => {
     it('should create guru users from valid CSV and return result', async () => {
       const csv = 'nama,email\nBudi,budi@school.id\nAndi,andi@school.id';
 
-      // For each row: uniqueness check → no conflict
-      mockDb.limit.mockResolvedValueOnce([]); // budi@school.id - no conflict
-      mockDb.limit.mockResolvedValueOnce([]); // andi@school.id - no conflict
+      // First select query: batch email uniqueness check → no existing emails
+      // The chain is: select({email}).from(user).where(and(inArray, eq))
+      // Since where() returns mock, we make mock itself iterable/thenable for this case
+      let selectCallCount = 0;
+      mockDb.where.mockImplementation(() => {
+        selectCallCount++;
+        if (selectCallCount === 1) {
+          // Batch uniqueness check — return empty array (no duplicates)
+          return Promise.resolve([]);
+        }
+        return mockDb; // fallback for other chains
+      });
 
       // insert().values() returns a chainable, returning() is called inside
       mockDb.returning.mockResolvedValue([{ id: 'new-id' }]);
@@ -270,8 +279,10 @@ describe('UserService', () => {
     it('should skip rows with duplicate emails', async () => {
       const csv = 'nama,email\nBudi,budi@school.id';
 
-      // Email already exists
-      mockDb.limit.mockResolvedValueOnce([{ id: 'existing-id' }]);
+      // Batch uniqueness check returns the email as existing
+      mockDb.where.mockImplementationOnce(() => {
+        return Promise.resolve([{ email: 'budi@school.id' }]);
+      });
 
       const result = await service.bulkImportGuru(tenantId, csv);
 

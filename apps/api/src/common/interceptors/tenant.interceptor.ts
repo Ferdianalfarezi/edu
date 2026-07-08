@@ -6,7 +6,7 @@ import {
   Logger,
   NestInterceptor,
 } from '@nestjs/common';
-import { Observable, from, switchMap, tap } from 'rxjs';
+import { Observable, from, switchMap, tap, finalize } from 'rxjs';
 import { Request } from 'express';
 import { PoolClient } from 'pg';
 import { Role } from '@edu/shared';
@@ -76,6 +76,19 @@ export class TenantInterceptor implements NestInterceptor {
     next: CallHandler,
   ): Observable<unknown> {
     let client: PoolClient;
+    let released = false;
+
+    const safeCommitAndRelease = async () => {
+      if (released) return;
+      released = true;
+      await this.commitAndRelease(client);
+    };
+
+    const safeRollbackAndRelease = async () => {
+      if (released) return;
+      released = true;
+      await this.rollbackAndRelease(client);
+    };
 
     return from(this.acquireAndSetTenant(request, user)).pipe(
       switchMap((poolClient) => {
@@ -85,12 +98,20 @@ export class TenantInterceptor implements NestInterceptor {
       tap({
         next: () => {
           // On success: commit transaction and release client
-          this.commitAndRelease(client);
+          safeCommitAndRelease();
         },
         error: () => {
           // On error: rollback transaction and release client
-          this.rollbackAndRelease(client);
+          safeRollbackAndRelease();
         },
+      }),
+      // Safety net: if observable is unsubscribed (e.g. client disconnect)
+      // without emitting next or error, ensure we still release the connection.
+      finalize(() => {
+        if (!released && client) {
+          this.rollbackAndRelease(client);
+          released = true;
+        }
       }),
     );
   }

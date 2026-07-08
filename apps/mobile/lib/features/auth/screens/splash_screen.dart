@@ -27,24 +27,31 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
   }
 
   Future<void> _restoreSession() async {
-    final authNotifier = ref.read(authStateProvider.notifier);
-    await authNotifier.restoreSession();
+    try {
+      final authNotifier = ref.read(authStateProvider.notifier);
+      await authNotifier.restoreSession();
 
-    if (!mounted) return;
+      if (!mounted) return;
 
-    final authState = ref.read(authStateProvider);
+      final authState = ref.read(authStateProvider);
 
-    if (authState.isAuthenticated) {
-      switch (authState.role) {
-        case UserRole.guru:
-          context.go(AppRoutes.guruHome);
-        case UserRole.orangTua:
-          context.go(AppRoutes.orangTuaHome);
-        case null:
-          context.go(AppRoutes.login);
+      if (authState.isAuthenticated) {
+        switch (authState.role) {
+          case UserRole.guru:
+            context.go(AppRoutes.guruHome);
+          case UserRole.orangTua:
+            context.go(AppRoutes.orangTuaHome);
+          case null:
+            context.go(AppRoutes.login);
+        }
+      } else {
+        context.go(AppRoutes.login);
       }
-    } else {
-      context.go(AppRoutes.login);
+    } catch (e) {
+      // If session restore fails for any reason, redirect to login
+      if (mounted) {
+        context.go(AppRoutes.login);
+      }
     }
   }
 

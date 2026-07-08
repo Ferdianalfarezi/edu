@@ -182,28 +182,34 @@ class AttendanceSyncService extends StateNotifier<SyncStatus> {
         response.data as Map<String, dynamic>,
       );
 
-      // Mark synced records
-      for (final syncedId in result.synced) {
-        await (database.update(database.attendanceSyncQueue)
-              ..where((t) => t.siswaId.equals(syncedId)))
-            .write(
-          const AttendanceSyncQueueCompanion(
-            isSynced: Value(true),
-          ),
-        );
+      // Mark synced records — use primary key (id) for precise targeting
+      for (final record in pending) {
+        // Check if this record's siswaId is in the synced list
+        if (result.synced.contains(record.siswaId)) {
+          await (database.update(database.attendanceSyncQueue)
+                ..where((t) => t.id.equals(record.id)))
+              .write(
+            const AttendanceSyncQueueCompanion(
+              isSynced: Value(true),
+            ),
+          );
+        }
       }
 
       // Mark conflict-resolved records as synced too (they've been processed)
       for (final conflict in result.conflicts) {
-        await (database.update(database.attendanceSyncQueue)
-              ..where((t) =>
-                  t.siswaId.equals(conflict.siswaId) &
-                  t.tanggal.equals(conflict.tanggal)))
-            .write(
-          const AttendanceSyncQueueCompanion(
-            isSynced: Value(true),
-          ),
-        );
+        // Match by primary key using the pending records we already have
+        final matchingRecords = pending.where((r) =>
+            r.siswaId == conflict.siswaId && r.tanggal == conflict.tanggal);
+        for (final record in matchingRecords) {
+          await (database.update(database.attendanceSyncQueue)
+                ..where((t) => t.id.equals(record.id)))
+              .write(
+            const AttendanceSyncQueueCompanion(
+              isSynced: Value(true),
+            ),
+          );
+        }
       }
 
       await _refreshPendingCount();
@@ -311,20 +317,20 @@ class HttpDate {
       'Dec': '12',
     };
 
-    try {
-      // "Mon, 01 Jan 2024 07:00:00 GMT"
-      final parts = httpDate.split(' ');
-      if (parts.length >= 5) {
-        final day = parts[1];
-        final month = months[parts[2]] ?? '01';
-        final year = parts[3];
-        final time = parts[4];
+    // "Mon, 01 Jan 2024 07:00:00 GMT"
+    final parts = httpDate.split(' ');
+    if (parts.length >= 5) {
+      final day = parts[1];
+      final month = months[parts[2]];
+      final year = parts[3];
+      final time = parts[4];
+      if (month != null) {
         return '$year-$month-${day}T${time}Z';
       }
-    } catch (_) {}
+    }
 
-    // Fallback: return current time
-    return DateTime.now().toUtc().toIso8601String();
+    // Throw instead of silently returning local time — callers catch this
+    throw FormatException('Cannot parse HTTP date: $httpDate');
   }
 }
 

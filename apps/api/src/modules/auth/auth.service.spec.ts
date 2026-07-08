@@ -96,6 +96,9 @@ describe('AuthService', () => {
     mockRedisService = {
       isTokenBlacklisted: jest.fn().mockResolvedValue(false),
       blacklistToken: jest.fn().mockResolvedValue(undefined),
+      del: jest.fn().mockResolvedValue(undefined),
+      get: jest.fn().mockResolvedValue(null),
+      set: jest.fn().mockResolvedValue(undefined),
     };
 
     mockConfigService = {
