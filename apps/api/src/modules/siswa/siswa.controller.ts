@@ -56,6 +56,20 @@ export class SiswaController {
   }
 
   /**
+   * GET /siswa/anak-saya
+   * Returns the authenticated parent's children across all tenants.
+   * Used by mobile app for child selector in attendance, tagihan, etc.
+   * Must be defined before :id route to avoid route conflict.
+   *
+   * Requirements: 21.9, 21.10
+   */
+  @Get('anak-saya')
+  @Roles(Role.ORANG_TUA)
+  async getAnakSaya(@CurrentUser() currentUser: RequestUser) {
+    return this.siswaService.getAnakSaya(currentUser.id);
+  }
+
+  /**
    * GET /siswa/:id
    * Get single student detail.
    * Accessible by admin, guru, kepala_sekolah.

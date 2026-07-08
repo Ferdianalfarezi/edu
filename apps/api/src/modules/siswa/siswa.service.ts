@@ -12,6 +12,7 @@ import { siswa } from '@/drizzle/schema/siswa';
 import { user } from '@/drizzle/schema/user';
 import { kelas } from '@/drizzle/schema/kelas';
 import { tahunAjaran } from '@/drizzle/schema/tahun-ajaran';
+import { tenant } from '@/drizzle/schema/tenant';
 import { CreateSiswaDto, UpdateSiswaDto, SoftDeleteSiswaDto, ListSiswaQueryDto } from './dto';
 
 const DEFAULT_PAGE_SIZE = 20;
@@ -212,6 +213,40 @@ export class SiswaService {
       tanggalKeluar: updated.tanggalKeluar,
       alasanKeluar: updated.alasanKeluar,
       processedBy: updated.processedBy,
+    };
+  }
+
+  // ─── Get Anak Saya (Parent's Children) ────────────────────────
+
+  /**
+   * Returns all children belonging to the authenticated parent user.
+   * Joins kelas and tenant tables to include kelas_nama and tenant info.
+   * Used by mobile app for child selectors across features.
+   *
+   * Requirements: 21.9, 21.10
+   */
+  async getAnakSaya(parentUserId: string) {
+    const results = await this.db
+      .select({
+        id: siswa.id,
+        nama: siswa.nama,
+        kelasNama: kelas.nama,
+        tenantId: siswa.tenantId,
+        tenantNama: tenant.nama,
+      })
+      .from(siswa)
+      .leftJoin(kelas, eq(siswa.kelasId, kelas.id))
+      .innerJoin(tenant, eq(siswa.tenantId, tenant.id))
+      .where(and(eq(siswa.orangTuaId, parentUserId), eq(siswa.status, 'aktif')));
+
+    return {
+      data: results.map((r) => ({
+        siswa_id: r.id,
+        nama: r.nama,
+        kelas_nama: r.kelasNama,
+        tenant_id: r.tenantId,
+        tenant_nama: r.tenantNama,
+      })),
     };
   }
 
