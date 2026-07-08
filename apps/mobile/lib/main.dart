@@ -19,12 +19,21 @@ void main() async {
     systemNavigationBarIconBrightness: Brightness.dark,
   ));
 
-  await Firebase.initializeApp();
+  try {
+    await Firebase.initializeApp();
+  } catch (e) {
+    // Firebase not configured — skip initialization for local development
+    debugPrint('Firebase init skipped: $e');
+  }
 
   final container = ProviderContainer();
 
   // Initialize FCM notification handling
-  await container.read(notificationServiceProvider).initialize();
+  try {
+    await container.read(notificationServiceProvider).initialize();
+  } catch (e) {
+    debugPrint('Notification service init skipped: $e');
+  }
 
   runApp(
     UncontrolledProviderScope(

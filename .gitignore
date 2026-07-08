@@ -5,30 +5,76 @@ node_modules/
 dist/
 build/
 
-# Environment
+# Environment (secrets)
 .env
 .env.local
 .env.*.local
 
 # IDE
 .idea/
+.vscode/
 *.swp
 *.swo
+*.sublime-project
+*.sublime-workspace
 
 # OS
 .DS_Store
 Thumbs.db
+ehthumbs.db
+Desktop.ini
+._*
 
 # Flutter/Dart
 .dart_tool/
 .flutter-plugins
 .flutter-plugins-dependencies
+.packages
+.pub-cache/
+.pub/
 **/.gradle/
+**/android/local.properties
+**/android/key.properties
+*.jks
+
+# iOS (CocoaPods rebuilt from Podfile.lock, don't track Pods/)
+**/ios/Pods/
+**/ios/.symlinks/
+**/ios/Flutter/App.framework
+**/ios/Flutter/Flutter.framework
+**/ios/Flutter/Flutter.podspec
+**/ios/Flutter/ephemeral/
+**/ios/Flutter/flutter_assets/
+**/ios/**/xcuserdata/
+**/ios/**/DerivedData/
+
+# Firebase config (contains API keys)
+**/android/app/google-services.json
+**/ios/Runner/GoogleService-Info.plist
+**/ios/firebase_app_id_file.json
+
+# Generated Dart files
+*.g.dart
+*.freezed.dart
 
 # Coverage
 coverage/
+.nyc_output/
 
 # Logs
 *.log
+npm-debug.log*
+pnpm-debug.log*
+yarn-debug.log*
+yarn-error.log*
 
-# Lock files are tracked (pnpm-lock.yaml)
+# Docker
+docker-compose.override.yml
+
+# Temp files
+*.tmp
+*.bak
+*.pid
+*.seed
+
+# Lock files are tracked (pnpm-lock.yaml, pubspec.lock)

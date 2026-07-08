@@ -50,5 +50,9 @@
 	<!-- Required for flutter_secure_storage -->
 	<key>NSFaceIDUsageDescription</key>
 	<string>Menggunakan Face ID untuk keamanan akun Anda</string>
+	<key>CADisableMinimumFrameDurationOnPhone</key>
+	<true/>
+	<key>UIApplicationSupportsIndirectInputEvents</key>
+	<true/>
 </dict>
 </plist>

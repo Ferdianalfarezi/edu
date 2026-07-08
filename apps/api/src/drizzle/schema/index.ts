@@ -19,6 +19,9 @@ export * from './rapor';
 // RPP
 export * from './rpp';
 
+// Tagihan & Billing
+export * from './tagihan';
+
 // Notifikasi
 export * from './notifikasi';
 

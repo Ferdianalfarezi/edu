@@ -1,3 +1,4 @@
+import 'package:drift/drift.dart' show Value;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:logger/logger.dart';
 
@@ -371,7 +372,8 @@ class AttendanceInputNotifier extends StateNotifier<AttendanceInputState> {
 
 /// Provider for the attendance input notifier, scoped to a class.
 final attendanceInputProvider = StateNotifierProvider.autoDispose
-    .family<AttendanceInputNotifier, String>((ref, kelasId) {
+    .family<AttendanceInputNotifier, AttendanceInputState, String>(
+        (ref, kelasId) {
   final apiClient = ref.watch(apiClientProvider);
   final database = ref.watch(appDatabaseProvider);
   final connectivity = ref.watch(connectivityServiceProvider);

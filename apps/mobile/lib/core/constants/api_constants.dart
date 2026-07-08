@@ -4,7 +4,7 @@ class ApiConstants {
 
   /// Base URL for the API server.
   /// In production, this should be loaded from environment/config.
-  static const String baseUrl = 'https://api.edu.example.com';
+  static const String baseUrl = 'https://api-development-672d.up.railway.app';
 
   /// API version prefix.
   static const String apiPrefix = '/api/v1';
