@@ -22,8 +22,13 @@ export class StorageService {
 
   constructor(private readonly configService: ConfigService) {
     this.bucket = this.configService.get<string>('S3_BUCKET')!;
+
+    // Railway Bucket exposes REGION via ${{Bucket.REGION}}, mapped to S3_REGION in service vars.
+    // Default to 'auto' so the app doesn't crash if the variable is missing.
+    const region = this.configService.get<string>('S3_REGION') || 'auto';
+
     this.s3Client = new S3Client({
-      region: this.configService.get<string>('S3_REGION', 'auto'),
+      region,
       endpoint: this.configService.get<string>('S3_ENDPOINT')!,
       credentials: {
         accessKeyId: this.configService.get<string>('S3_ACCESS_KEY_ID')!,
