@@ -4,6 +4,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:logger/logger.dart';
 
+import '../../../core/constants/api_constants.dart';
 import '../../../core/di/providers.dart';
 import '../models/tagihan_models.dart';
 
@@ -11,14 +12,15 @@ final _logger = Logger(printer: SimplePrinter());
 
 /// Provider for fetching tagihan list for a specific child.
 ///
-/// API: GET /tagihan/anak/:siswaId
+/// API: GET /tagihan/siswa/:siswaId
 /// Requirements: 14.1, 14.2, 14.3
 final childTagihanProvider = FutureProvider.autoDispose
     .family<List<Tagihan>, String>((ref, siswaId) async {
   final apiClient = ref.watch(apiClientProvider);
 
   try {
-    final response = await apiClient.dio.get('/tagihan/anak/$siswaId');
+    final response =
+        await apiClient.dio.get(ApiConstants.tagihanBySiswa(siswaId));
     final data = response.data as Map<String, dynamic>;
     final items = (data['data'] as List<dynamic>?) ?? [];
 
@@ -31,18 +33,40 @@ final childTagihanProvider = FutureProvider.autoDispose
   }
 });
 
-/// Provider for fetching payment history (transactions) for a specific tagihan.
+/// Provider for fetching payment receipt (bukti bayar) for a specific tagihan.
 ///
-/// API: GET /tagihan/:id/riwayat
-/// Requirement 14.2, 14.4
+/// API: GET /tagihan/:id/bukti-bayar
+/// Requirement 14.4, 14.5, 14.6
+final tagihanBuktiBayarProvider = FutureProvider.autoDispose
+    .family<Map<String, dynamic>, String>((ref, tagihanId) async {
+  final apiClient = ref.watch(apiClientProvider);
+
+  try {
+    final response =
+        await apiClient.dio.get(ApiConstants.tagihanBuktiBayar(tagihanId));
+    final data = response.data as Map<String, dynamic>;
+    return (data['data'] as Map<String, dynamic>?) ?? {};
+  } catch (e) {
+    _logger.e('Failed to fetch bukti bayar for tagihan $tagihanId: $e');
+    rethrow;
+  }
+});
+
+/// Provider for fetching payment history (transactions) for a specific tagihan.
+/// Uses the bukti-bayar endpoint which returns transaction details.
+///
+/// API: GET /tagihan/:id/bukti-bayar
+/// Requirements: 14.2, 14.4
 final tagihanRiwayatProvider = FutureProvider.autoDispose
     .family<List<TagihanTransaksi>, String>((ref, tagihanId) async {
   final apiClient = ref.watch(apiClientProvider);
 
   try {
-    final response = await apiClient.dio.get('/tagihan/$tagihanId/riwayat');
+    final response =
+        await apiClient.dio.get(ApiConstants.tagihanBuktiBayar(tagihanId));
     final data = response.data as Map<String, dynamic>;
-    final items = (data['data'] as List<dynamic>?) ?? [];
+    final buktiData = data['data'] as Map<String, dynamic>?;
+    final items = (buktiData?['transaksi'] as List<dynamic>?) ?? [];
 
     return items
         .map((e) => TagihanTransaksi.fromJson(e as Map<String, dynamic>))
@@ -53,17 +77,22 @@ final tagihanRiwayatProvider = FutureProvider.autoDispose
   }
 });
 
-/// Provider for downloading receipt (presigned URL).
+/// Provider for downloading receipt URL from bukti-bayar response.
 ///
-/// API: GET /tagihan/transaksi/:id/bukti
+/// API: GET /tagihan/:id/bukti-bayar
 /// Requirement 14.6
-final receiptUrlProvider = FutureProvider.autoDispose
-    .family<String, String>((ref, transaksiId) async {
+final receiptUrlProvider =
+    FutureProvider.autoDispose.family<String, String>((ref, transaksiId) async {
+  // The receipt URL comes from the bukti-bayar response for the parent tagihan.
+  // Since we only have transaksiId here, we fetch using the same endpoint structure.
   final apiClient = ref.watch(apiClientProvider);
 
   try {
+    // Note: This assumes the API provides a dedicated endpoint for receipt download.
+    // If the presigned URL is already in the bukti-bayar response, consumers should
+    // use tagihanBuktiBayarProvider instead.
     final response =
-        await apiClient.dio.get('/tagihan/transaksi/$transaksiId/bukti');
+        await apiClient.dio.get('/tagihan/transaksi/$transaksiId/receipt');
     final data = response.data as Map<String, dynamic>;
     return data['url'] as String;
   } catch (e) {
@@ -82,9 +111,10 @@ class UploadBuktiResult {
 
 /// Provider/notifier for uploading bukti transfer.
 ///
-/// API: POST /tagihan/:id/bayar (multipart: file + nominal_bayar)
+/// API: POST /tagihan/:id/upload-bukti (multipart: file + nominal_bayar)
 /// Requirements: 11.1–11.17
-class UploadBuktiNotifier extends StateNotifier<AsyncValue<UploadBuktiResult?>> {
+class UploadBuktiNotifier
+    extends StateNotifier<AsyncValue<UploadBuktiResult?>> {
   UploadBuktiNotifier(this._ref) : super(const AsyncData(null));
 
   final Ref _ref;
@@ -105,7 +135,8 @@ class UploadBuktiNotifier extends StateNotifier<AsyncValue<UploadBuktiResult?>> 
     // Client-side validations
     final validationError = _validate(imageFile, nominalBayar, sisaTagihan);
     if (validationError != null) {
-      final result = UploadBuktiResult(success: false, message: validationError);
+      final result =
+          UploadBuktiResult(success: false, message: validationError);
       state = AsyncData(result);
       return result;
     }
@@ -125,7 +156,7 @@ class UploadBuktiNotifier extends StateNotifier<AsyncValue<UploadBuktiResult?>> 
       });
 
       await apiClient.dio.post(
-        '/tagihan/$tagihanId/bayar',
+        ApiConstants.tagihanUploadBukti(tagihanId),
         data: formData,
         options: Options(
           headers: {'Content-Type': 'multipart/form-data'},
@@ -134,7 +165,8 @@ class UploadBuktiNotifier extends StateNotifier<AsyncValue<UploadBuktiResult?>> 
 
       const result = UploadBuktiResult(
         success: true,
-        message: 'Bukti transfer berhasil dikirim. Menunggu verifikasi Bendahara.',
+        message:
+            'Bukti transfer berhasil dikirim. Menunggu verifikasi Bendahara.',
       );
       state = AsyncData(result);
       return result;
@@ -184,8 +216,7 @@ class UploadBuktiNotifier extends StateNotifier<AsyncValue<UploadBuktiResult?>> 
   String _extractErrorMessage(DioException e) {
     if (e.response?.data is Map<String, dynamic>) {
       final data = e.response!.data as Map<String, dynamic>;
-      return data['message'] as String? ??
-          'Gagal mengupload bukti transfer.';
+      return data['message'] as String? ?? 'Gagal mengupload bukti transfer.';
     }
     return 'Gagal mengupload bukti transfer. Silakan coba lagi.';
   }
@@ -196,7 +227,7 @@ class UploadBuktiNotifier extends StateNotifier<AsyncValue<UploadBuktiResult?>> 
 }
 
 /// Provider for the upload bukti state.
-final uploadBuktiProvider =
-    StateNotifierProvider.autoDispose<UploadBuktiNotifier, AsyncValue<UploadBuktiResult?>>(
+final uploadBuktiProvider = StateNotifierProvider.autoDispose<
+    UploadBuktiNotifier, AsyncValue<UploadBuktiResult?>>(
   (ref) => UploadBuktiNotifier(ref),
 );

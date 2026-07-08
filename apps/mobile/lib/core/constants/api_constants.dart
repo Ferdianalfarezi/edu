@@ -3,8 +3,11 @@ class ApiConstants {
   ApiConstants._();
 
   /// Base URL for the API server.
-  /// In production, this should be loaded from environment/config.
-  static const String baseUrl = 'https://api-development-672d.up.railway.app';
+  /// Uses compile-time environment variable with fallback to development URL.
+  static const String baseUrl = String.fromEnvironment(
+    'API_BASE_URL',
+    defaultValue: 'https://api-development-672d.up.railway.app',
+  );
 
   /// API version prefix.
   static const String apiPrefix = '/api/v1';
@@ -31,14 +34,13 @@ class ApiConstants {
   // Jadwal endpoints
   static const String jadwalSaya = '/jadwal/saya';
 
-  // Tagihan endpoints
+  // Tagihan endpoints — paths must match API controller routes
   static const String tagihanSiswa = '/tagihan/siswa';
-  static String tagihanAnak(String siswaId) => '/tagihan/anak/$siswaId';
-  static String tagihanBayar(String tagihanId) => '/tagihan/$tagihanId/bayar';
-  static String tagihanRiwayat(String tagihanId) =>
-      '/tagihan/$tagihanId/riwayat';
-  static String transaksiReceipt(String transaksiId) =>
-      '/tagihan/transaksi/$transaksiId/bukti';
+  static String tagihanBySiswa(String siswaId) => '/tagihan/siswa/$siswaId';
+  static String tagihanUploadBukti(String tagihanId) =>
+      '/tagihan/$tagihanId/upload-bukti';
+  static String tagihanBuktiBayar(String tagihanId) =>
+      '/tagihan/$tagihanId/bukti-bayar';
 
   // Notifikasi endpoints
   static const String notifikasiRiwayat = '/notifikasi/riwayat';

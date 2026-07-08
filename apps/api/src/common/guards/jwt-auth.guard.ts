@@ -57,14 +57,32 @@ export class JwtAuthGuard extends AuthGuard('jwt') {
         const payload = JSON.parse(Buffer.from(payloadBase64, 'base64').toString());
         const tokenIssuedAt = new Date(payload.iat * 1000);
 
-        const users = await this.db
-          .select({ tokensInvalidatedAt: user.tokensInvalidatedAt })
-          .from(user)
-          .where(eq(user.id, requestUser.id))
-          .limit(1);
+        // Cache the tokens_invalidated_at check in Redis (TTL 60s) to avoid DB hit on every request
+        const cacheKey = `user_invalidated:${requestUser.id}`;
+        let tokensInvalidatedAt: Date | null = null;
 
-        const foundUser = users[0];
-        if (foundUser?.tokensInvalidatedAt && tokenIssuedAt < foundUser.tokensInvalidatedAt) {
+        const cached = await this.redisService.get(cacheKey);
+        if (cached !== null) {
+          tokensInvalidatedAt = cached === '' ? null : new Date(cached);
+        } else {
+          const users = await this.db
+            .select({ tokensInvalidatedAt: user.tokensInvalidatedAt })
+            .from(user)
+            .where(eq(user.id, requestUser.id))
+            .limit(1);
+
+          const foundUser = users[0];
+          tokensInvalidatedAt = foundUser?.tokensInvalidatedAt ?? null;
+
+          // Cache for 60 seconds — short enough to honor invalidation quickly
+          await this.redisService.set(
+            cacheKey,
+            tokensInvalidatedAt ? tokensInvalidatedAt.toISOString() : '',
+            60,
+          );
+        }
+
+        if (tokensInvalidatedAt && tokenIssuedAt < tokensInvalidatedAt) {
           throw new UnauthorizedException('Semua sesi telah di-invalidasi, silakan login ulang');
         }
       }

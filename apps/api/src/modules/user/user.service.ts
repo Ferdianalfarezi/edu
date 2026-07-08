@@ -113,17 +113,28 @@ export class UserService {
   // ─── List Users (cursor paginated) ────────────────────────────
 
   async listUsers(tenantId: string, query: ListUsersQueryDto) {
-    const conditions = [eq(user.tenantId, tenantId), eq(user.isActive, true)];
+    const conditions = [eq(user.tenantId, tenantId)];
+
+    // Filter by active status (defaults to active-only for backwards compatibility)
+    if (query.is_active === 'false') {
+      conditions.push(eq(user.isActive, false));
+    } else if (query.is_active === 'all') {
+      // No isActive filter — show all
+    } else {
+      // Default: only active users
+      conditions.push(eq(user.isActive, true));
+    }
 
     // Filter by role
     if (query.role) {
       conditions.push(eq(user.role, query.role));
     }
 
-    // Search by name or email
+    // Search by name or email — escape LIKE wildcards in search term
     if (query.search) {
+      const escapedSearch = query.search.replace(/[%_\\]/g, '\\$&');
       conditions.push(
-        or(ilike(user.nama, `%${query.search}%`), ilike(user.email, `%${query.search}%`))!,
+        or(ilike(user.nama, `%${escapedSearch}%`), ilike(user.email, `%${escapedSearch}%`))!,
       );
     }
 
@@ -394,60 +405,83 @@ export class UserService {
       throw new BadRequestException('File CSV kosong atau format tidak valid');
     }
 
-    const created: number[] = [];
     const skipped: { email: string; reason: string }[] = [];
 
+    // Pre-validate all rows
+    const validRows: ParsedCsvRow[] = [];
     for (const row of rows) {
-      // Validate email format
       if (!row.email || !this.isValidEmail(row.email)) {
         skipped.push({ email: row.email || '(kosong)', reason: 'Format email tidak valid' });
         continue;
       }
-
       if (!row.nama || row.nama.trim().length === 0) {
         skipped.push({ email: row.email, reason: 'Nama tidak boleh kosong' });
         continue;
       }
+      validRows.push({ nama: row.nama.trim(), email: row.email.trim().toLowerCase() });
+    }
 
-      // Check email uniqueness
-      const existingUser = await this.db
-        .select({ id: user.id })
-        .from(user)
-        .where(and(eq(user.email, row.email), eq(user.tenantId, tenantId)))
-        .limit(1);
+    if (validRows.length === 0) {
+      return { created: 0, skipped, total: rows.length };
+    }
 
-      if (existingUser.length > 0) {
+    // Batch check email uniqueness — single query instead of N queries
+    const emailsToCheck = validRows.map((r) => r.email);
+    const existingUsers = await this.db
+      .select({ email: user.email })
+      .from(user)
+      .where(and(inArray(user.email, emailsToCheck), eq(user.tenantId, tenantId)));
+
+    const existingEmailSet = new Set(existingUsers.map((u) => u.email));
+
+    // Separate into creatable vs duplicate
+    const creatableRows: ParsedCsvRow[] = [];
+    for (const row of validRows) {
+      if (existingEmailSet.has(row.email)) {
         skipped.push({ email: row.email, reason: 'Email sudah terdaftar' });
-        continue;
+      } else {
+        creatableRows.push(row);
       }
+    }
 
-      // Generate random password and create user
-      const rawPassword = this.generateRandomPassword();
-      const passwordHash = await bcrypt.hash(rawPassword, BCRYPT_SALT_ROUNDS);
+    if (creatableRows.length === 0) {
+      return { created: 0, skipped, total: rows.length };
+    }
 
-      await this.db.insert(user).values({
+    // Generate passwords and hash them in parallel
+    const userEntries = await Promise.all(
+      creatableRows.map(async (row) => {
+        const rawPassword = this.generateRandomPassword();
+        const passwordHash = await bcrypt.hash(rawPassword, BCRYPT_SALT_ROUNDS);
+        return { ...row, rawPassword, passwordHash };
+      }),
+    );
+
+    // Batch INSERT all users at once
+    await this.db.insert(user).values(
+      userEntries.map((entry) => ({
         tenantId,
-        nama: row.nama.trim(),
-        email: row.email.trim().toLowerCase(),
+        nama: entry.nama,
+        email: entry.email,
         role: Role.GURU,
-        passwordHash,
+        passwordHash: entry.passwordHash,
         isActive: true,
         mustChangePassword: true,
-      });
+      })),
+    );
 
-      // Enqueue credential email
+    // Enqueue all credential emails
+    for (const entry of userEntries) {
       await this.emailQueue.add('send-user-credentials', {
-        to: row.email.trim().toLowerCase(),
-        name: row.nama.trim(),
-        password: rawPassword,
+        to: entry.email,
+        name: entry.nama,
+        password: entry.rawPassword,
         role: Role.GURU,
       });
-
-      created.push(1);
     }
 
     return {
-      created: created.length,
+      created: creatableRows.length,
       skipped,
       total: rows.length,
     };
@@ -466,10 +500,8 @@ export class UserService {
     }
 
     // Parse header to identify column indices
-    const header = lines[0]
-      .toLowerCase()
-      .split(',')
-      .map((h) => h.trim());
+    const headerCols = this.parseCsvLine(lines[0]);
+    const header = headerCols.map((h) => h.toLowerCase().trim());
     const namaIdx = header.findIndex((h) => h === 'nama');
     const emailIdx = header.findIndex((h) => h === 'email');
 
@@ -479,7 +511,7 @@ export class UserService {
 
     const rows: ParsedCsvRow[] = [];
     for (let i = 1; i < lines.length; i++) {
-      const cols = lines[i].split(',').map((c) => c.trim());
+      const cols = this.parseCsvLine(lines[i]);
       rows.push({
         nama: cols[namaIdx] || '',
         email: cols[emailIdx] || '',
@@ -487,6 +519,46 @@ export class UserService {
     }
 
     return rows;
+  }
+
+  /**
+   * Parse a single CSV line respecting quoted fields.
+   * Handles fields with commas inside double quotes (RFC 4180).
+   */
+  private parseCsvLine(line: string): string[] {
+    const result: string[] = [];
+    let current = '';
+    let inQuotes = false;
+
+    for (let i = 0; i < line.length; i++) {
+      const char = line[i];
+
+      if (inQuotes) {
+        if (char === '"') {
+          // Check for escaped quote ("")
+          if (i + 1 < line.length && line[i + 1] === '"') {
+            current += '"';
+            i++; // Skip the next quote
+          } else {
+            inQuotes = false;
+          }
+        } else {
+          current += char;
+        }
+      } else {
+        if (char === '"') {
+          inQuotes = true;
+        } else if (char === ',') {
+          result.push(current.trim());
+          current = '';
+        } else {
+          current += char;
+        }
+      }
+    }
+
+    result.push(current.trim());
+    return result;
   }
 
   // ─── Helpers ──────────────────────────────────────────────────

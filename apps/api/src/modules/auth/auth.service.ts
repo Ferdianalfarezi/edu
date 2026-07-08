@@ -346,6 +346,9 @@ export class AuthService {
         updatedAt: new Date(),
       })
       .where(eq(user.id, userId));
+
+    // Invalidate the Redis cache so the JWT guard picks up the change immediately
+    await this.redisService.del(`user_invalidated:${userId}`);
   }
 
   /**

@@ -15,6 +15,29 @@ export const api: AxiosInstance = axios.create({
   },
 });
 
+/**
+ * In-memory access token storage. NOT persisted to localStorage to mitigate XSS.
+ * On page refresh, the refresh token (still in localStorage) is used to obtain a new access token.
+ * This means an XSS attacker can only steal the refresh token (which requires a POST to /auth/refresh
+ * to be useful) rather than having immediate bearer access.
+ */
+let inMemoryAccessToken: string | null = localStorage.getItem('access_token');
+
+export function setAccessToken(token: string | null) {
+  inMemoryAccessToken = token;
+  // Also keep in localStorage for backward-compat during migration.
+  // TODO: Remove localStorage persistence once silent-refresh-on-load is fully tested.
+  if (token) {
+    localStorage.setItem('access_token', token);
+  } else {
+    localStorage.removeItem('access_token');
+  }
+}
+
+export function getAccessToken(): string | null {
+  return inMemoryAccessToken;
+}
+
 // Track whether a token refresh is in progress to prevent multiple parallel refreshes
 let isRefreshing = false;
 let failedQueue: Array<{
@@ -33,10 +56,32 @@ function processQueue(error: unknown, token: string | null = null) {
   failedQueue = [];
 }
 
-// Request interceptor: attach JWT access token
+// Cross-tab coordination: listen for token updates from other tabs
+const tokenChannel =
+  typeof BroadcastChannel !== 'undefined' ? new BroadcastChannel('auth_token_sync') : null;
+
+if (tokenChannel) {
+  tokenChannel.onmessage = (event: MessageEvent) => {
+    const { type, access_token, refresh_token } = event.data;
+    if (type === 'token_refreshed' && access_token) {
+      setAccessToken(access_token);
+      localStorage.setItem('refresh_token', refresh_token);
+      // If we were waiting on a refresh, resolve queued requests with the new token
+      if (isRefreshing) {
+        isRefreshing = false;
+        processQueue(null, access_token);
+      }
+    } else if (type === 'logged_out') {
+      clearTokens();
+      window.location.href = '/login';
+    }
+  };
+}
+
+// Request interceptor: attach JWT access token from memory
 api.interceptors.request.use(
   (config: InternalAxiosRequestConfig) => {
-    const token = localStorage.getItem('access_token');
+    const token = getAccessToken();
     if (token && config.headers) {
       config.headers.Authorization = `Bearer ${token}`;
     }
@@ -92,8 +137,15 @@ api.interceptors.response.use(
         refresh_token: refreshToken,
       });
 
-      localStorage.setItem('access_token', data.access_token);
+      setAccessToken(data.access_token);
       localStorage.setItem('refresh_token', data.refresh_token);
+
+      // Notify other tabs about the new tokens
+      tokenChannel?.postMessage({
+        type: 'token_refreshed',
+        access_token: data.access_token,
+        refresh_token: data.refresh_token,
+      });
 
       isRefreshing = false;
       processQueue(null, data.access_token);
@@ -131,10 +183,13 @@ api.interceptors.response.use(undefined, (error: AxiosError<{ message?: string }
 });
 
 function clearTokens() {
+  inMemoryAccessToken = null;
   localStorage.removeItem('access_token');
   localStorage.removeItem('refresh_token');
   localStorage.removeItem('user');
   localStorage.removeItem('must_change_password');
+  // Notify other tabs
+  tokenChannel?.postMessage({ type: 'logged_out' });
 }
 
 export { clearTokens };

@@ -34,6 +34,9 @@ describe('JwtAuthGuard', () => {
   beforeEach(() => {
     redisService = {
       isTokenBlacklisted: jest.fn(),
+      get: jest.fn().mockResolvedValue(null),
+      set: jest.fn().mockResolvedValue(undefined),
+      del: jest.fn().mockResolvedValue(undefined),
     } as any;
 
     mockDb = {

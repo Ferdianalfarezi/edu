@@ -2,7 +2,7 @@ import { defineStore } from 'pinia';
 import { ref, computed } from 'vue';
 import type { AuthUser, LoginRequest, LoginResponse, ChangePasswordRequest } from '@edu/shared';
 import { Role, Platform } from '@edu/shared';
-import { api, clearTokens } from '@/api/client';
+import { api, clearTokens, setAccessToken } from '@/api/client';
 
 export const useAuthStore = defineStore('auth', () => {
   const user = ref<AuthUser | null>(loadUserFromStorage());
@@ -35,6 +35,7 @@ export const useAuthStore = defineStore('auth', () => {
     localStorage.setItem('access_token', data.access_token);
     localStorage.setItem('refresh_token', data.refresh_token);
     localStorage.setItem('user', JSON.stringify(data.user));
+    setAccessToken(data.access_token);
 
     if (data.must_change_password) {
       localStorage.setItem('must_change_password', 'true');
@@ -60,6 +61,21 @@ export const useAuthStore = defineStore('auth', () => {
   }
 
   function logout() {
+    // Notify server to blacklist tokens before clearing local state
+    const refreshToken = localStorage.getItem('refresh_token');
+    api
+      .post('/auth/logout', { refresh_token: refreshToken })
+      .catch(() => {
+        // Best-effort: even if the API call fails, clear local state
+      })
+      .finally(() => {
+        clearTokens();
+        localStorage.removeItem('must_change_password');
+        mustChangePassword.value = false;
+        user.value = null;
+      });
+
+    // Clear local state immediately for responsive UX
     clearTokens();
     localStorage.removeItem('must_change_password');
     mustChangePassword.value = false;
