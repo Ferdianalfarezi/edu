@@ -248,8 +248,8 @@ export class AbsensiService {
         kelasMap.set(slot.kelasId, {
           kelasId: slot.kelasId,
           kelasNama: slot.kelasNama,
-          jamMulai: slot.jamMulai,
-          jamSelesai: slot.jamSelesai,
+          jamMulai: slot.jamMulai?.substring(0, 5) ?? slot.jamMulai,
+          jamSelesai: slot.jamSelesai?.substring(0, 5) ?? slot.jamSelesai,
         });
       }
     }

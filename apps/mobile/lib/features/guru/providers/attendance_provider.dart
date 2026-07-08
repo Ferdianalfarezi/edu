@@ -31,7 +31,7 @@ final todayJadwalProvider =
       );
 
       final data = response.data as Map<String, dynamic>;
-      final items = (data['data'] as List<dynamic>?)
+      final items = (data['kelas'] as List<dynamic>?)
               ?.map((e) => JadwalItem.fromJson(e as Map<String, dynamic>))
               .toList() ??
           [];

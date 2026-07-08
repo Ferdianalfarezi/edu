@@ -20,13 +20,19 @@ class JadwalItem {
 
   factory JadwalItem.fromJson(Map<String, dynamic> json) {
     return JadwalItem(
-      id: json['id'] as String,
-      kelasId: json['kelas_id'] as String,
-      kelasNama: json['kelas_nama'] as String,
-      mataPelajaranId: json['mata_pelajaran_id'] as String,
-      mataPelajaranNama: json['mata_pelajaran_nama'] as String,
-      jamMulai: json['jam_mulai'] as String,
-      jamSelesai: json['jam_selesai'] as String,
+      id: json['id'] as String? ?? json['kelasId'] as String,
+      kelasId: json['kelasId'] as String? ?? json['kelas_id'] as String,
+      kelasNama: json['kelasNama'] as String? ?? json['kelas_nama'] as String,
+      mataPelajaranId: json['mataPelajaranId'] as String? ??
+          json['mata_pelajaran_id'] as String? ??
+          '',
+      mataPelajaranNama: json['mataPelajaranNama'] as String? ??
+          json['mata_pelajaran_nama'] as String? ??
+          '',
+      jamMulai:
+          json['jamMulai'] as String? ?? json['jam_mulai'] as String? ?? '',
+      jamSelesai:
+          json['jamSelesai'] as String? ?? json['jam_selesai'] as String? ?? '',
     );
   }
 
