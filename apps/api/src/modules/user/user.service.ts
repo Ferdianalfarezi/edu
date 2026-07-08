@@ -7,7 +7,7 @@ import {
 } from '@nestjs/common';
 import { InjectQueue } from '@nestjs/bull';
 import { NodePgDatabase } from 'drizzle-orm/node-postgres';
-import { and, eq, ilike, or, gt, asc, desc, sql, inArray } from 'drizzle-orm';
+import { and, eq, ilike, or, gt, asc, sql, inArray } from 'drizzle-orm';
 import * as bcrypt from 'bcrypt';
 import * as crypto from 'crypto';
 import { Queue } from 'bull';
@@ -152,7 +152,22 @@ export class UserService {
     const data = hasNext ? results.slice(0, DEFAULT_PAGE_SIZE) : results;
     const nextCursor = hasNext ? data[data.length - 1].id : null;
 
-    return { data, nextCursor };
+    return {
+      data: data.map((u) => ({
+        id: u.id,
+        nama: u.nama,
+        email: u.email,
+        phone: u.phone,
+        role: u.role,
+        is_active: u.isActive,
+        must_change_password: u.mustChangePassword,
+        created_at: u.createdAt,
+      })),
+      meta: {
+        has_next: hasNext,
+        cursor: nextCursor,
+      },
+    };
   }
 
   // ─── Get Single User ──────────────────────────────────────────
