@@ -7,6 +7,7 @@ import { DRIZZLE } from '@/drizzle/drizzle.module';
 const createMockDb = () => ({
   select: jest.fn().mockReturnThis(),
   from: jest.fn().mockReturnThis(),
+  leftJoin: jest.fn().mockReturnThis(),
   where: jest.fn().mockReturnThis(),
   limit: jest.fn().mockReturnThis(),
   orderBy: jest.fn().mockReturnThis(),
@@ -406,17 +407,22 @@ describe('SiswaService', () => {
   // ─── LIST / SEARCH / FILTER ───────────────────────────────────
 
   describe('listSiswa', () => {
-    it('should return paginated list with nextCursor', async () => {
+    it('should return paginated list with meta.cursor', async () => {
       const students = Array.from({ length: 21 }, (_, i) => ({
         id: `siswa-${String(i).padStart(2, '0')}`,
-        kelasId: 'kelas-1',
+        kelas_id: 'kelas-1',
+        kelas_nama: '1A',
+        tahun_ajaran_id: 'ta-1',
+        tahun_ajaran_nama: '2024/2025',
         nama: `Student ${i}`,
         nisn: `000000000${i}`,
-        jenisKelamin: 'L',
-        tanggalLahir: '2015-01-01',
-        orangTuaId: null,
+        jenis_kelamin: 'L',
+        tanggal_lahir: '2015-01-01',
+        alamat: null,
+        orang_tua_nama: null,
+        orang_tua_phone: null,
         status: 'aktif',
-        createdAt: new Date(),
+        created_at: new Date(),
       }));
 
       mockDb.limit.mockResolvedValueOnce(students);
@@ -424,42 +430,54 @@ describe('SiswaService', () => {
       const result = await service.listSiswa(tenantId, {});
 
       expect(result.data).toHaveLength(20);
-      expect(result.nextCursor).toBe('siswa-19');
+      expect(result.meta.cursor).toBe('siswa-19');
+      expect(result.meta.has_next).toBe(true);
     });
 
-    it('should return null nextCursor when no more data', async () => {
+    it('should return null cursor when no more data', async () => {
       mockDb.limit.mockResolvedValueOnce([
         {
           id: 'siswa-1',
-          kelasId: 'kelas-1',
+          kelas_id: 'kelas-1',
+          kelas_nama: '1A',
+          tahun_ajaran_id: 'ta-1',
+          tahun_ajaran_nama: '2024/2025',
           nama: 'Student 1',
           nisn: '0000000001',
-          jenisKelamin: 'L',
-          tanggalLahir: '2015-01-01',
-          orangTuaId: null,
+          jenis_kelamin: 'L',
+          tanggal_lahir: '2015-01-01',
+          alamat: null,
+          orang_tua_nama: null,
+          orang_tua_phone: null,
           status: 'aktif',
-          createdAt: new Date(),
+          created_at: new Date(),
         },
       ]);
 
       const result = await service.listSiswa(tenantId, {});
 
       expect(result.data).toHaveLength(1);
-      expect(result.nextCursor).toBeNull();
+      expect(result.meta.cursor).toBeNull();
+      expect(result.meta.has_next).toBe(false);
     });
 
     it('should support search by name (ILIKE)', async () => {
       mockDb.limit.mockResolvedValueOnce([
         {
           id: 'siswa-1',
-          kelasId: 'kelas-1',
+          kelas_id: 'kelas-1',
+          kelas_nama: '1A',
+          tahun_ajaran_id: 'ta-1',
+          tahun_ajaran_nama: '2024/2025',
           nama: 'Ahmad Fauzi',
           nisn: '1234567890',
-          jenisKelamin: 'L',
-          tanggalLahir: '2015-01-01',
-          orangTuaId: null,
+          jenis_kelamin: 'L',
+          tanggal_lahir: '2015-01-01',
+          alamat: null,
+          orang_tua_nama: null,
+          orang_tua_phone: null,
           status: 'aktif',
-          createdAt: new Date(),
+          created_at: new Date(),
         },
       ]);
 
@@ -473,14 +491,19 @@ describe('SiswaService', () => {
       mockDb.limit.mockResolvedValueOnce([
         {
           id: 'siswa-1',
-          kelasId: 'kelas-1',
+          kelas_id: 'kelas-1',
+          kelas_nama: '1A',
+          tahun_ajaran_id: 'ta-1',
+          tahun_ajaran_nama: '2024/2025',
           nama: 'Found Student',
           nisn: '9999999999',
-          jenisKelamin: 'P',
-          tanggalLahir: '2015-06-01',
-          orangTuaId: null,
+          jenis_kelamin: 'P',
+          tanggal_lahir: '2015-06-01',
+          alamat: null,
+          orang_tua_nama: 'Hendra',
+          orang_tua_phone: '081234567890',
           status: 'aktif',
-          createdAt: new Date(),
+          created_at: new Date(),
         },
       ]);
 

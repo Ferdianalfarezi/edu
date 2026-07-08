@@ -91,25 +91,21 @@ export class JadwalService {
       conditions.push(eq(jadwalPelajaran.hari, filters.hari));
     }
 
-    return db
+    const results = await db
       .select({
         id: jadwalPelajaran.id,
-        tenantId: jadwalPelajaran.tenantId,
         kelasId: jadwalPelajaran.kelasId,
         mataPelajaranId: jadwalPelajaran.mataPelajaranId,
         guruId: jadwalPelajaran.guruId,
-        tahunAjaranId: jadwalPelajaran.tahunAjaranId,
-        semester: jadwalPelajaran.semester,
         hari: jadwalPelajaran.hari,
         jamMulai: jadwalPelajaran.jamMulai,
         jamSelesai: jadwalPelajaran.jamSelesai,
+        isVacant: jadwalPelajaran.isVacant,
         tanggalMulaiBerlaku: jadwalPelajaran.tanggalMulaiBerlaku,
         tanggalSelesaiBerlaku: jadwalPelajaran.tanggalSelesaiBerlaku,
-        isVacant: jadwalPelajaran.isVacant,
-        createdAt: jadwalPelajaran.createdAt,
-        updatedAt: jadwalPelajaran.updatedAt,
         kelasNama: kelas.nama,
         mataPelajaranNama: mataPelajaran.nama,
+        mataPelajaranKode: mataPelajaran.kode,
         guruNama: user.nama,
       })
       .from(jadwalPelajaran)
@@ -117,6 +113,66 @@ export class JadwalService {
       .innerJoin(mataPelajaran, eq(jadwalPelajaran.mataPelajaranId, mataPelajaran.id))
       .innerJoin(user, eq(jadwalPelajaran.guruId, user.id))
       .where(and(...conditions));
+
+    // Check for active guru_pengganti for today on each entry
+    const today = new Date().toISOString().split('T')[0];
+    const enriched = await Promise.all(
+      results.map(async (row) => {
+        let guru_pengganti_aktif: {
+          id: string;
+          guru_pengganti_id: string;
+          guru_pengganti_nama: string;
+          tanggal: string;
+        } | null = null;
+
+        const [penggantiRecord] = await db
+          .select({
+            id: guruPengganti.id,
+            guruPenggantiId: guruPengganti.guruPenggantiId,
+            guruPenggantiNama: user.nama,
+            tanggal: guruPengganti.tanggal,
+          })
+          .from(guruPengganti)
+          .innerJoin(user, eq(guruPengganti.guruPenggantiId, user.id))
+          .where(
+            and(
+              eq(guruPengganti.tenantId, tenantId),
+              eq(guruPengganti.kelasId, row.kelasId),
+              eq(guruPengganti.mataPelajaranId, row.mataPelajaranId),
+              gte(guruPengganti.tanggal, today),
+            ),
+          );
+
+        if (penggantiRecord) {
+          guru_pengganti_aktif = {
+            id: penggantiRecord.id,
+            guru_pengganti_id: penggantiRecord.guruPenggantiId,
+            guru_pengganti_nama: penggantiRecord.guruPenggantiNama,
+            tanggal: penggantiRecord.tanggal,
+          };
+        }
+
+        return {
+          id: row.id,
+          kelas_id: row.kelasId,
+          mata_pelajaran_id: row.mataPelajaranId,
+          guru_id: row.guruId,
+          hari: row.hari,
+          jam_mulai: row.jamMulai,
+          jam_selesai: row.jamSelesai,
+          is_vacant: row.isVacant,
+          mata_pelajaran: {
+            id: row.mataPelajaranId,
+            nama: row.mataPelajaranNama,
+            kode: row.mataPelajaranKode,
+          },
+          guru: { id: row.guruId, nama: row.guruNama },
+          guru_pengganti_aktif,
+        };
+      }),
+    );
+
+    return enriched;
   }
 
   /**
@@ -128,7 +184,6 @@ export class JadwalService {
     const [result] = await db
       .select({
         id: jadwalPelajaran.id,
-        tenantId: jadwalPelajaran.tenantId,
         kelasId: jadwalPelajaran.kelasId,
         mataPelajaranId: jadwalPelajaran.mataPelajaranId,
         guruId: jadwalPelajaran.guruId,
@@ -140,10 +195,9 @@ export class JadwalService {
         tanggalMulaiBerlaku: jadwalPelajaran.tanggalMulaiBerlaku,
         tanggalSelesaiBerlaku: jadwalPelajaran.tanggalSelesaiBerlaku,
         isVacant: jadwalPelajaran.isVacant,
-        createdAt: jadwalPelajaran.createdAt,
-        updatedAt: jadwalPelajaran.updatedAt,
         kelasNama: kelas.nama,
         mataPelajaranNama: mataPelajaran.nama,
+        mataPelajaranKode: mataPelajaran.kode,
         guruNama: user.nama,
       })
       .from(jadwalPelajaran)
@@ -156,7 +210,22 @@ export class JadwalService {
       throw new NotFoundException('Jadwal pelajaran tidak ditemukan');
     }
 
-    return result;
+    return {
+      id: result.id,
+      kelas_id: result.kelasId,
+      mata_pelajaran_id: result.mataPelajaranId,
+      guru_id: result.guruId,
+      hari: result.hari,
+      jam_mulai: result.jamMulai,
+      jam_selesai: result.jamSelesai,
+      is_vacant: result.isVacant,
+      mata_pelajaran: {
+        id: result.mataPelajaranId,
+        nama: result.mataPelajaranNama,
+        kode: result.mataPelajaranKode,
+      },
+      guru: { id: result.guruId, nama: result.guruNama },
+    };
   }
 
   /**

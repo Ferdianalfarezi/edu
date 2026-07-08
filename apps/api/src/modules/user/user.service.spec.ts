@@ -382,10 +382,11 @@ describe('UserService', () => {
       const result = await service.listUsers(tenantId, {});
 
       expect(result.data).toHaveLength(20);
-      expect(result.nextCursor).toBe('user-19');
+      expect(result.meta.cursor).toBe('user-19');
+      expect(result.meta.has_next).toBe(true);
     });
 
-    it('should return null nextCursor when no more data', async () => {
+    it('should return null cursor when no more data', async () => {
       const users = [
         {
           id: 'user-1',
@@ -404,7 +405,8 @@ describe('UserService', () => {
       const result = await service.listUsers(tenantId, {});
 
       expect(result.data).toHaveLength(1);
-      expect(result.nextCursor).toBeNull();
+      expect(result.meta.cursor).toBeNull();
+      expect(result.meta.has_next).toBe(false);
     });
   });
 

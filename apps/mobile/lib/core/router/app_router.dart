@@ -44,7 +44,8 @@ class AppRoutes {
   static const String orangTuaNotificationPreferences =
       '/orang-tua/notifications/preferences';
   static const String orangTuaRapor = '/orang-tua/rapor';
-  static const String orangTuaRaporDetail = '/orang-tua/rapor/:siswaId/:periodeId';
+  static const String orangTuaRaporDetail =
+      '/orang-tua/rapor/:siswaId/:periodeId';
   static const String orangTuaTagihan = '/orang-tua/tagihan';
   static const String orangTuaUploadBukti = '/orang-tua/tagihan/upload-bukti';
   static const String orangTuaPaymentHistory = '/orang-tua/tagihan/history';
@@ -59,12 +60,15 @@ class AppRoutes {
 /// Unauthenticated users are redirected to login.
 /// Requirement 19.11: detect role from auth response and show appropriate UI.
 final appRouterProvider = Provider<GoRouter>((ref) {
-  final authState = ref.watch(authStateProvider);
+  final notifier = _AuthChangeNotifier(ref);
 
   return GoRouter(
     initialLocation: AppRoutes.splash,
-    refreshListenable: _AuthChangeNotifier(ref),
+    refreshListenable: notifier,
     redirect: (BuildContext context, GoRouterState state) {
+      // Read auth state at redirect time (not at provider creation time)
+      // so the redirect always uses the latest auth state.
+      final authState = ref.read(authStateProvider);
       final isAuthenticated = authState.isAuthenticated;
       final currentPath = state.matchedLocation;
 
@@ -166,8 +170,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           ),
           GoRoute(
             path: AppRoutes.orangTuaNotificationPreferences,
-            builder: (context, state) =>
-                const NotificationPreferencesScreen(),
+            builder: (context, state) => const NotificationPreferencesScreen(),
           ),
           GoRoute(
             path: AppRoutes.orangTuaRapor,

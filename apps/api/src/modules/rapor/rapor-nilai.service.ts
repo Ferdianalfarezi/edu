@@ -200,7 +200,7 @@ export class RaporNilaiService {
 
     // Check if rapor record exists for this kelas + periode
     const activeTa = await this.getActiveTahunAjaran(tenantId);
-    let existingNilai: Map<
+    const existingNilai: Map<
       string,
       { komponen_nilai: any; capaian: string | null; status: string }
     > = new Map();

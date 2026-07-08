@@ -16,9 +16,12 @@ function createMockDb(queryResults: any[]) {
     const chain: any = {
       select: jest.fn(() => createChain()),
       from: jest.fn().mockReturnThis(),
+      leftJoin: jest.fn().mockReturnThis(),
+      innerJoin: jest.fn().mockReturnThis(),
       where: jest.fn().mockReturnThis(),
       limit: jest.fn().mockResolvedValue(result),
       orderBy: jest.fn().mockReturnThis(),
+      groupBy: jest.fn().mockResolvedValue(result),
       // For queries that end at where() without limit (e.g. count queries)
       then: (resolve: any) => resolve(result),
     };
@@ -406,27 +409,29 @@ describe('KelasService', () => {
   // ─── listKelas ────────────────────────────────────────────────
 
   describe('listKelas', () => {
-    it('should return paginated list with nextCursor when more data exists', async () => {
+    it('should return list with resolved names and student counts', async () => {
       const items = Array.from({ length: 21 }, (_, i) => ({
         id: `kelas-${String(i).padStart(3, '0')}`,
         nama: `${Math.floor(i / 3) + 1}${String.fromCharCode(65 + (i % 3))}`,
         tingkat: Math.floor(i / 3) + 1,
         tahunAjaranId,
+        tahunAjaranNama: '2024/2025',
         waliKelasId: null,
+        waliKelasNama: null,
         kapasitas: 30,
         createdAt: new Date(),
         updatedAt: new Date(),
       }));
 
-      const service = buildService([items]);
+      // First call: main query; Second call: student counts
+      const service = buildService([items, []]);
 
       const result = await service.listKelas(tenantId, {});
 
       expect(result.data).toHaveLength(20);
-      expect(result.nextCursor).toBe('kelas-019');
     });
 
-    it('should return null nextCursor when no more data', async () => {
+    it('should return all items when less than page size', async () => {
       const service = buildService([
         [
           {
@@ -434,18 +439,22 @@ describe('KelasService', () => {
             nama: '1A',
             tingkat: 1,
             tahunAjaranId,
+            tahunAjaranNama: '2024/2025',
             waliKelasId: null,
+            waliKelasNama: null,
             kapasitas: 30,
             createdAt: new Date(),
             updatedAt: new Date(),
           },
         ],
+        [], // student counts
       ]);
 
       const result = await service.listKelas(tenantId, {});
 
       expect(result.data).toHaveLength(1);
-      expect(result.nextCursor).toBeNull();
+      expect(result.data[0].wali_kelas_nama).toBeNull();
+      expect(result.data[0].tahun_ajaran_nama).toBe('2024/2025');
     });
   });
 });
