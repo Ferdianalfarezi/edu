@@ -3,11 +3,12 @@
  *
  * Creates sample data for local development:
  * - 1 tenant (Sekolah Contoh)
- * - Users: 1 admin, 1 kepala_sekolah, 2 guru, 1 bendahara, 2 orang_tua
+ * - Users: 1 admin, 1 kepala_sekolah, 5 guru, 1 bendahara, 2 orang_tua
  * - 1 active tahun_ajaran (2024/2025)
  * - 3 kelas (1A, 2A, 3A)
  * - 10 siswa with parent linkage
  * - 5 mata_pelajaran
+ * - 36 jadwal_pelajaran entries (Kelas 1A, Senin-Sabtu, 6 slot/hari)
  *
  * Usage: npx ts-node -r tsconfig-paths/register src/drizzle/seed.ts
  */
@@ -22,6 +23,7 @@ import { tahunAjaran } from './schema/tahun-ajaran';
 import { kelas } from './schema/kelas';
 import { siswa } from './schema/siswa';
 import { mataPelajaran } from './schema/mata-pelajaran';
+import { jadwalPelajaran } from './schema/jadwal';
 import { konfigurasiSekolah } from './schema/konfigurasi';
 
 // Fixed UUIDs for deterministic seeding (allows re-running without conflicts)
@@ -31,6 +33,9 @@ const IDS = {
   kepalaSekolah: '00000000-0000-4000-a000-000000000011',
   guru1: '00000000-0000-4000-a000-000000000012',
   guru2: '00000000-0000-4000-a000-000000000013',
+  guru3: '00000000-0000-4000-a000-000000000017',
+  guru4: '00000000-0000-4000-a000-000000000018',
+  guru5: '00000000-0000-4000-a000-000000000019',
   bendahara: '00000000-0000-4000-a000-000000000014',
   orangTua1: '00000000-0000-4000-a000-000000000015',
   orangTua2: '00000000-0000-4000-a000-000000000016',
@@ -122,6 +127,33 @@ async function seed() {
         isActive: true,
       },
       {
+        id: IDS.guru3,
+        tenantId: IDS.tenant,
+        nama: 'Ratna Dewi, S.Pd.',
+        email: 'ratna.dewi@sekolahcontoh.sch.id',
+        passwordHash,
+        role: 'guru',
+        isActive: true,
+      },
+      {
+        id: IDS.guru4,
+        tenantId: IDS.tenant,
+        nama: 'Hasan Basri, S.Pd.',
+        email: 'hasan.basri@sekolahcontoh.sch.id',
+        passwordHash,
+        role: 'guru',
+        isActive: true,
+      },
+      {
+        id: IDS.guru5,
+        tenantId: IDS.tenant,
+        nama: 'Yuliana Sari, S.Pd.',
+        email: 'yuliana.sari@sekolahcontoh.sch.id',
+        passwordHash,
+        role: 'guru',
+        isActive: true,
+      },
+      {
         id: IDS.bendahara,
         tenantId: IDS.tenant,
         nama: 'Dewi Lestari',
@@ -187,7 +219,7 @@ async function seed() {
         tahunAjaranId: IDS.tahunAjaran,
         nama: '3A',
         tingkat: 3,
-        waliKelasId: null,
+        waliKelasId: IDS.guru3,
         kapasitas: 30,
       },
     ]);
@@ -358,6 +390,324 @@ async function seed() {
       },
     ]);
 
+    // 8. Create jadwal pelajaran for Kelas 1A (Senin-Sabtu)
+    // ─── Schedule Design ─────────────────────────────────────────────────
+    // Slot times:
+    //   Jam-1: 07:30-08:05  |  Jam-2: 08:05-08:40  |  Jam-3: 08:40-09:15
+    //   [Istirahat 09:15-09:30]
+    //   Jam-4: 09:30-10:05  |  Jam-5: 10:05-10:40  |  Jam-6: 10:40-11:15
+    //
+    // Guru assignments (each guru teaches exactly 1 mapel):
+    //   guru1 (Siti Rahayu)    → MTK  (Matematika)
+    //   guru2 (Ahmad Wijaya)   → BIND (Bahasa Indonesia)
+    //   guru3 (Ratna Dewi)     → IPA  (Ilmu Pengetahuan Alam)
+    //   guru4 (Hasan Basri)    → IPS  (Ilmu Pengetahuan Sosial)
+    //   guru5 (Yuliana Sari)   → BING (Bahasa Inggris)
+    //
+    // Constraint: max 2-3 slots per guru per day, no time conflicts.
+    // ─────────────────────────────────────────────────────────────────────
+    console.log('  → Creating jadwal pelajaran (Kelas 1A, Senin-Sabtu)...');
+
+    const jadwalData = [
+      // ═══ SENIN ═══
+      // Guru1 (MTK): slot 1-2 = 2 slots
+      {
+        hari: 'senin',
+        jamMulai: '07:30',
+        jamSelesai: '08:05',
+        guruId: IDS.guru1,
+        mapelId: IDS.mapelMtk,
+      },
+      {
+        hari: 'senin',
+        jamMulai: '08:05',
+        jamSelesai: '08:40',
+        guruId: IDS.guru1,
+        mapelId: IDS.mapelMtk,
+      },
+      // Guru2 (BIND): slot 3-4 = 2 slots
+      {
+        hari: 'senin',
+        jamMulai: '08:40',
+        jamSelesai: '09:15',
+        guruId: IDS.guru2,
+        mapelId: IDS.mapelBindo,
+      },
+      {
+        hari: 'senin',
+        jamMulai: '09:30',
+        jamSelesai: '10:05',
+        guruId: IDS.guru2,
+        mapelId: IDS.mapelBindo,
+      },
+      // Guru3 (IPA): slot 5-6 = 2 slots
+      {
+        hari: 'senin',
+        jamMulai: '10:05',
+        jamSelesai: '10:40',
+        guruId: IDS.guru3,
+        mapelId: IDS.mapelIpa,
+      },
+      {
+        hari: 'senin',
+        jamMulai: '10:40',
+        jamSelesai: '11:15',
+        guruId: IDS.guru3,
+        mapelId: IDS.mapelIpa,
+      },
+
+      // ═══ SELASA ═══
+      // Guru4 (IPS): slot 1-2 = 2 slots
+      {
+        hari: 'selasa',
+        jamMulai: '07:30',
+        jamSelesai: '08:05',
+        guruId: IDS.guru4,
+        mapelId: IDS.mapelIps,
+      },
+      {
+        hari: 'selasa',
+        jamMulai: '08:05',
+        jamSelesai: '08:40',
+        guruId: IDS.guru4,
+        mapelId: IDS.mapelIps,
+      },
+      // Guru5 (BING): slot 3-4 = 2 slots
+      {
+        hari: 'selasa',
+        jamMulai: '08:40',
+        jamSelesai: '09:15',
+        guruId: IDS.guru5,
+        mapelId: IDS.mapelBing,
+      },
+      {
+        hari: 'selasa',
+        jamMulai: '09:30',
+        jamSelesai: '10:05',
+        guruId: IDS.guru5,
+        mapelId: IDS.mapelBing,
+      },
+      // Guru1 (MTK): slot 5-6 = 2 slots
+      {
+        hari: 'selasa',
+        jamMulai: '10:05',
+        jamSelesai: '10:40',
+        guruId: IDS.guru1,
+        mapelId: IDS.mapelMtk,
+      },
+      {
+        hari: 'selasa',
+        jamMulai: '10:40',
+        jamSelesai: '11:15',
+        guruId: IDS.guru1,
+        mapelId: IDS.mapelMtk,
+      },
+
+      // ═══ RABU ═══
+      // Guru2 (BIND): slot 1-2 = 2 slots
+      {
+        hari: 'rabu',
+        jamMulai: '07:30',
+        jamSelesai: '08:05',
+        guruId: IDS.guru2,
+        mapelId: IDS.mapelBindo,
+      },
+      {
+        hari: 'rabu',
+        jamMulai: '08:05',
+        jamSelesai: '08:40',
+        guruId: IDS.guru2,
+        mapelId: IDS.mapelBindo,
+      },
+      // Guru3 (IPA): slot 3-4 = 2 slots
+      {
+        hari: 'rabu',
+        jamMulai: '08:40',
+        jamSelesai: '09:15',
+        guruId: IDS.guru3,
+        mapelId: IDS.mapelIpa,
+      },
+      {
+        hari: 'rabu',
+        jamMulai: '09:30',
+        jamSelesai: '10:05',
+        guruId: IDS.guru3,
+        mapelId: IDS.mapelIpa,
+      },
+      // Guru4 (IPS): slot 5-6 = 2 slots
+      {
+        hari: 'rabu',
+        jamMulai: '10:05',
+        jamSelesai: '10:40',
+        guruId: IDS.guru4,
+        mapelId: IDS.mapelIps,
+      },
+      {
+        hari: 'rabu',
+        jamMulai: '10:40',
+        jamSelesai: '11:15',
+        guruId: IDS.guru4,
+        mapelId: IDS.mapelIps,
+      },
+
+      // ═══ KAMIS ═══
+      // Guru5 (BING): slot 1-2 = 2 slots
+      {
+        hari: 'kamis',
+        jamMulai: '07:30',
+        jamSelesai: '08:05',
+        guruId: IDS.guru5,
+        mapelId: IDS.mapelBing,
+      },
+      {
+        hari: 'kamis',
+        jamMulai: '08:05',
+        jamSelesai: '08:40',
+        guruId: IDS.guru5,
+        mapelId: IDS.mapelBing,
+      },
+      // Guru1 (MTK): slot 3-4 = 2 slots
+      {
+        hari: 'kamis',
+        jamMulai: '08:40',
+        jamSelesai: '09:15',
+        guruId: IDS.guru1,
+        mapelId: IDS.mapelMtk,
+      },
+      {
+        hari: 'kamis',
+        jamMulai: '09:30',
+        jamSelesai: '10:05',
+        guruId: IDS.guru1,
+        mapelId: IDS.mapelMtk,
+      },
+      // Guru2 (BIND): slot 5-6 = 2 slots
+      {
+        hari: 'kamis',
+        jamMulai: '10:05',
+        jamSelesai: '10:40',
+        guruId: IDS.guru2,
+        mapelId: IDS.mapelBindo,
+      },
+      {
+        hari: 'kamis',
+        jamMulai: '10:40',
+        jamSelesai: '11:15',
+        guruId: IDS.guru2,
+        mapelId: IDS.mapelBindo,
+      },
+
+      // ═══ JUMAT ═══
+      // Guru3 (IPA): slot 1-2 = 2 slots
+      {
+        hari: 'jumat',
+        jamMulai: '07:30',
+        jamSelesai: '08:05',
+        guruId: IDS.guru3,
+        mapelId: IDS.mapelIpa,
+      },
+      {
+        hari: 'jumat',
+        jamMulai: '08:05',
+        jamSelesai: '08:40',
+        guruId: IDS.guru3,
+        mapelId: IDS.mapelIpa,
+      },
+      // Guru4 (IPS): slot 3-4 = 2 slots
+      {
+        hari: 'jumat',
+        jamMulai: '08:40',
+        jamSelesai: '09:15',
+        guruId: IDS.guru4,
+        mapelId: IDS.mapelIps,
+      },
+      {
+        hari: 'jumat',
+        jamMulai: '09:30',
+        jamSelesai: '10:05',
+        guruId: IDS.guru4,
+        mapelId: IDS.mapelIps,
+      },
+      // Guru5 (BING): slot 5-6 = 2 slots
+      {
+        hari: 'jumat',
+        jamMulai: '10:05',
+        jamSelesai: '10:40',
+        guruId: IDS.guru5,
+        mapelId: IDS.mapelBing,
+      },
+      {
+        hari: 'jumat',
+        jamMulai: '10:40',
+        jamSelesai: '11:15',
+        guruId: IDS.guru5,
+        mapelId: IDS.mapelBing,
+      },
+
+      // ═══ SABTU ═══
+      // Guru2 (BIND): slot 1-2 = 2 slots
+      {
+        hari: 'sabtu',
+        jamMulai: '07:30',
+        jamSelesai: '08:05',
+        guruId: IDS.guru2,
+        mapelId: IDS.mapelBindo,
+      },
+      {
+        hari: 'sabtu',
+        jamMulai: '08:05',
+        jamSelesai: '08:40',
+        guruId: IDS.guru2,
+        mapelId: IDS.mapelBindo,
+      },
+      // Guru5 (BING): slot 3-4 = 2 slots
+      {
+        hari: 'sabtu',
+        jamMulai: '08:40',
+        jamSelesai: '09:15',
+        guruId: IDS.guru5,
+        mapelId: IDS.mapelBing,
+      },
+      {
+        hari: 'sabtu',
+        jamMulai: '09:30',
+        jamSelesai: '10:05',
+        guruId: IDS.guru5,
+        mapelId: IDS.mapelBing,
+      },
+      // Guru1 (MTK): slot 5-6 = 2 slots
+      {
+        hari: 'sabtu',
+        jamMulai: '10:05',
+        jamSelesai: '10:40',
+        guruId: IDS.guru1,
+        mapelId: IDS.mapelMtk,
+      },
+      {
+        hari: 'sabtu',
+        jamMulai: '10:40',
+        jamSelesai: '11:15',
+        guruId: IDS.guru1,
+        mapelId: IDS.mapelMtk,
+      },
+    ];
+
+    await db.insert(jadwalPelajaran).values(
+      jadwalData.map((j) => ({
+        tenantId: IDS.tenant,
+        kelasId: IDS.kelas1A,
+        mataPelajaranId: j.mapelId,
+        guruId: j.guruId,
+        tahunAjaranId: IDS.tahunAjaran,
+        semester: 1,
+        hari: j.hari,
+        jamMulai: j.jamMulai,
+        jamSelesai: j.jamSelesai,
+        tanggalMulaiBerlaku: '2024-07-15',
+        tanggalSelesaiBerlaku: '2025-06-30',
+      })),
+    );
+
     console.log('');
     console.log('✅ Seed completed successfully!');
     console.log('');
@@ -366,8 +716,11 @@ async function seed() {
     console.log('   Users:');
     console.log('     - admin@sekolahcontoh.sch.id (admin)');
     console.log('     - kepsek@sekolahcontoh.sch.id (kepala_sekolah)');
-    console.log('     - siti.rahayu@sekolahcontoh.sch.id (guru)');
-    console.log('     - ahmad.wijaya@sekolahcontoh.sch.id (guru)');
+    console.log('     - siti.rahayu@sekolahcontoh.sch.id (guru - MTK)');
+    console.log('     - ahmad.wijaya@sekolahcontoh.sch.id (guru - BIND)');
+    console.log('     - ratna.dewi@sekolahcontoh.sch.id (guru - IPA)');
+    console.log('     - hasan.basri@sekolahcontoh.sch.id (guru - IPS)');
+    console.log('     - yuliana.sari@sekolahcontoh.sch.id (guru - BING)');
     console.log('     - bendahara@sekolahcontoh.sch.id (bendahara)');
     console.log('     - 081234567890 (orang_tua - Hendra Gunawan)');
     console.log('     - 081298765432 (orang_tua - Rina Wati)');
@@ -376,6 +729,15 @@ async function seed() {
     console.log('   Kelas: 1A, 2A, 3A');
     console.log('   Siswa: 10 students across 3 classes');
     console.log('   Mata Pelajaran: MTK, BIND, IPA, IPS, BING');
+    console.log('   Jadwal Pelajaran: 36 entries (Kelas 1A, Senin-Sabtu, 6 slot/hari)');
+    console.log('');
+    console.log('📅 Jadwal Kelas 1A:');
+    console.log('   Senin : MTK(2) → BIND(2) → IPA(2)');
+    console.log('   Selasa: IPS(2) → BING(2) → MTK(2)');
+    console.log('   Rabu  : BIND(2) → IPA(2) → IPS(2)');
+    console.log('   Kamis : BING(2) → MTK(2) → BIND(2)');
+    console.log('   Jumat : IPA(2) → IPS(2) → BING(2)');
+    console.log('   Sabtu : BIND(2) → BING(2) → MTK(2)');
     console.log('');
   } catch (error) {
     console.error('❌ Seed failed:', error);

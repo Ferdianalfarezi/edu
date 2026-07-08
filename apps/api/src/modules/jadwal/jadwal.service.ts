@@ -158,8 +158,8 @@ export class JadwalService {
           mata_pelajaran_id: row.mataPelajaranId,
           guru_id: row.guruId,
           hari: row.hari,
-          jam_mulai: row.jamMulai,
-          jam_selesai: row.jamSelesai,
+          jam_mulai: row.jamMulai?.substring(0, 5) ?? row.jamMulai,
+          jam_selesai: row.jamSelesai?.substring(0, 5) ?? row.jamSelesai,
           is_vacant: row.isVacant,
           mata_pelajaran: {
             id: row.mataPelajaranId,
@@ -216,8 +216,8 @@ export class JadwalService {
       mata_pelajaran_id: result.mataPelajaranId,
       guru_id: result.guruId,
       hari: result.hari,
-      jam_mulai: result.jamMulai,
-      jam_selesai: result.jamSelesai,
+      jam_mulai: result.jamMulai?.substring(0, 5) ?? result.jamMulai,
+      jam_selesai: result.jamSelesai?.substring(0, 5) ?? result.jamSelesai,
       is_vacant: result.isVacant,
       mata_pelajaran: {
         id: result.mataPelajaranId,
@@ -564,8 +564,8 @@ export class JadwalService {
           id: slot.id,
           kelasNama: slot.kelasNama,
           mataPelajaranNama: slot.mataPelajaranNama,
-          jamMulai: slot.jamMulai,
-          jamSelesai: slot.jamSelesai,
+          jamMulai: slot.jamMulai?.substring(0, 5) ?? slot.jamMulai,
+          jamSelesai: slot.jamSelesai?.substring(0, 5) ?? slot.jamSelesai,
           hasGuruPengganti: !!penggantiRecord,
           guruPenggantiNama: penggantiRecord?.guruPenggantiNama ?? undefined,
         };

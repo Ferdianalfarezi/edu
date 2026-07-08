@@ -139,7 +139,9 @@ function deriveJamKe(jamMulai: string): number {
     '12:20': 9,
     '13:00': 10,
   };
-  return timeMap[jamMulai] || 0;
+  // Handle both HH:mm and HH:mm:ss formats from the database
+  const normalized = jamMulai?.substring(0, 5) || '';
+  return timeMap[normalized] || 0;
 }
 
 // Data fetching
