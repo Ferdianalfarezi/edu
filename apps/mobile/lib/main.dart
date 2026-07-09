@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:intl/date_symbol_data_local.dart';
 
 import 'core/di/providers.dart';
 import 'core/router/app_router.dart';
@@ -10,6 +11,9 @@ import 'core/theme/app_theme.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Initialize locale data for intl (date/currency formatting)
+  await initializeDateFormatting('id_ID', null);
 
   // Set system UI overlay style for a clean look
   SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(

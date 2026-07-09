@@ -8,7 +8,8 @@ final _logger = Logger(printer: SimplePrinter());
 
 /// Fetches the list of finalized rapor periods for a given child.
 ///
-/// API: GET /rapor/anak/:siswaId
+/// API: GET /rapor/siswa/:siswaId (not /rapor/anak/:siswaId)
+/// Returns: { data: [{ rapor_id, periode, tahun_ajaran, nilai, peringkat, rata_rata, ... }] }
 /// Only returns periods with status = 'final'.
 /// Requirements: 39.1, 39.2
 final childRaporPeriodsProvider = FutureProvider.autoDispose
@@ -16,7 +17,7 @@ final childRaporPeriodsProvider = FutureProvider.autoDispose
   final apiClient = ref.watch(apiClientProvider);
 
   try {
-    final response = await apiClient.dio.get('/rapor/anak/$siswaId');
+    final response = await apiClient.dio.get('/rapor/siswa/$siswaId');
     final data = response.data as Map<String, dynamic>;
     final items = (data['data'] as List<dynamic>?) ?? [];
 
@@ -52,7 +53,8 @@ class RaporDetailParams {
 
 /// Fetches full rapor detail for a specific child + period.
 ///
-/// API: GET /rapor/anak/:siswaId/:periodeId
+/// API: GET /rapor/siswa/:siswaId (same endpoint — returns all periods with full data)
+/// The API returns all periods in one response, so we filter for the target period.
 /// Includes: nilai per mapel, komponen, capaian_pembelajaran, P5, catatan_wali_kelas, peringkat, rata_rata
 /// Requirements: 39.3, 39.5
 final childRaporDetailProvider = FutureProvider.autoDispose
@@ -61,11 +63,27 @@ final childRaporDetailProvider = FutureProvider.autoDispose
 
   try {
     final response = await apiClient.dio.get(
-      '/rapor/anak/${params.siswaId}/${params.periodeId}',
+      '/rapor/siswa/${params.siswaId}',
     );
     final data = response.data as Map<String, dynamic>;
+    final items = (data['data'] as List<dynamic>?) ?? [];
 
-    return RaporDetail.fromJson(data['data'] as Map<String, dynamic>);
+    // Find the period matching the requested periodeId (rapor_id)
+    final periodData = items.firstWhere(
+      (e) {
+        final map = e as Map<String, dynamic>;
+        return (map['rapor_id'] as String?) == params.periodeId ||
+            (map['periode_id'] as String?) == params.periodeId ||
+            (map['id'] as String?) == params.periodeId;
+      },
+      orElse: () => items.isNotEmpty ? items.first : <String, dynamic>{},
+    ) as Map<String, dynamic>;
+
+    if (periodData.isEmpty) {
+      throw Exception('Rapor periode tidak ditemukan');
+    }
+
+    return RaporDetail.fromJson(periodData);
   } catch (e) {
     _logger.e(
       'Failed to fetch rapor detail for siswa ${params.siswaId}, '

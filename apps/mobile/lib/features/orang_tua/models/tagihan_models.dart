@@ -153,16 +153,24 @@ class TagihanTransaksi {
   final String? nomorReferensi;
   final DateTime createdAt;
 
+  /// API pembayaran items: { id, nominal_bayar, tanggal_bayar, metode, nomor_referensi, verified_at }
   factory TagihanTransaksi.fromJson(Map<String, dynamic> json) {
     return TagihanTransaksi(
       id: json['id'] as String,
-      tagihanId: json['tagihan_id'] as String,
-      jumlahBayar: (json['jumlah_bayar'] as num).toInt(),
+      tagihanId: json['tagihan_id'] as String? ?? '',
+      jumlahBayar: (json['jumlah_bayar'] as num?)?.toInt() ??
+          (json['nominal_bayar'] as num?)?.toInt() ??
+          0,
       metode: json['metode'] as String? ?? 'upload_bukti',
-      status: TransaksiStatus.fromString(json['status'] as String),
+      status:
+          TransaksiStatus.fromString(json['status'] as String? ?? 'approved'),
       alasanPenolakan: json['alasan_penolakan'] as String?,
       nomorReferensi: json['nomor_referensi'] as String?,
-      createdAt: DateTime.parse(json['created_at'] as String),
+      createdAt: json['created_at'] != null
+          ? DateTime.parse(json['created_at'] as String)
+          : json['tanggal_bayar'] != null
+              ? DateTime.parse(json['tanggal_bayar'] as String)
+              : DateTime.now(),
     );
   }
 }

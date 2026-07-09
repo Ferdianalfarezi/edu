@@ -54,9 +54,10 @@ final tagihanBuktiBayarProvider = FutureProvider.autoDispose
 });
 
 /// Provider for fetching payment history (transactions) for a specific tagihan.
-/// Uses the bukti-bayar endpoint which returns transaction details.
+/// Uses the bukti-bayar endpoint which returns payment details.
 ///
 /// API: GET /tagihan/:id/bukti-bayar
+/// Returns: { data: { ..., pembayaran: [...] } }
 /// Requirements: 14.2, 14.4
 final tagihanRiwayatProvider = FutureProvider.autoDispose
     .family<List<TagihanTransaksi>, String>((ref, tagihanId) async {
@@ -67,7 +68,10 @@ final tagihanRiwayatProvider = FutureProvider.autoDispose
         await apiClient.dio.get(ApiConstants.tagihanBuktiBayar(tagihanId));
     final data = response.data as Map<String, dynamic>;
     final buktiData = data['data'] as Map<String, dynamic>?;
-    final items = (buktiData?['transaksi'] as List<dynamic>?) ?? [];
+    // API returns 'pembayaran' array, not 'transaksi'
+    final items = (buktiData?['pembayaran'] as List<dynamic>?) ??
+        (buktiData?['transaksi'] as List<dynamic>?) ??
+        [];
 
     return items
         .map((e) => TagihanTransaksi.fromJson(e as Map<String, dynamic>))
@@ -80,25 +84,23 @@ final tagihanRiwayatProvider = FutureProvider.autoDispose
 
 /// Provider for downloading receipt URL from bukti-bayar response.
 ///
-/// API: GET /tagihan/:id/bukti-bayar
-/// Requirement 14.6
+/// Since the API doesn't have a dedicated /tagihan/transaksi/:id/receipt endpoint,
+/// this provider should not be used directly. Consumers should use
+/// tagihanBuktiBayarProvider to get payment details including presigned URLs.
+/// Kept for backward compatibility — returns empty string on failure.
 final receiptUrlProvider =
     FutureProvider.autoDispose.family<String, String>((ref, transaksiId) async {
-  // The receipt URL comes from the bukti-bayar response for the parent tagihan.
-  // Since we only have transaksiId here, we fetch using the same endpoint structure.
   final apiClient = ref.watch(apiClientProvider);
 
   try {
-    // Note: This assumes the API provides a dedicated endpoint for receipt download.
-    // If the presigned URL is already in the bukti-bayar response, consumers should
-    // use tagihanBuktiBayarProvider instead.
     final response =
         await apiClient.dio.get('/tagihan/transaksi/$transaksiId/receipt');
     final data = response.data as Map<String, dynamic>;
-    return data['url'] as String;
+    return data['url'] as String? ?? '';
   } catch (e) {
     _logger.e('Failed to get receipt URL for transaksi $transaksiId: $e');
-    rethrow;
+    // This endpoint may not exist — return empty string instead of crashing
+    return '';
   }
 });
 

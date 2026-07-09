@@ -28,18 +28,33 @@ class RppItem {
   final String? tanggalPublish;
   final bool isFavorited;
 
+  /// API returns snake_case keys: konten_type, tahun_terbit, guru_nama, mata_pelajaran, kategori
   factory RppItem.fromJson(Map<String, dynamic> json) {
     return RppItem(
       id: json['id'] as String,
       judul: json['judul'] as String,
-      guruNama: json['guruNama'] as String? ?? '',
-      mataPelajaranNama: json['mataPelajaranNama'] as String? ?? '',
-      kategoriNama: json['kategoriNama'] as String? ?? '',
-      kontenType: json['kontenType'] as String? ?? 'richtext',
-      tahunTerbit: json['tahunTerbit'] as int? ?? DateTime.now().year,
+      guruNama:
+          json['guruNama'] as String? ?? json['guru_nama'] as String? ?? '',
+      mataPelajaranNama: json['mataPelajaranNama'] as String? ??
+          json['mata_pelajaran'] as String? ??
+          json['mata_pelajaran_nama'] as String? ??
+          '',
+      kategoriNama: json['kategoriNama'] as String? ??
+          json['kategori'] as String? ??
+          json['kategori_nama'] as String? ??
+          '',
+      kontenType: json['kontenType'] as String? ??
+          json['konten_type'] as String? ??
+          'richtext',
+      tahunTerbit: json['tahunTerbit'] as int? ??
+          json['tahun_terbit'] as int? ??
+          DateTime.now().year,
       status: json['status'] as String? ?? 'draft',
-      tanggalPublish: json['tanggalPublish'] as String?,
-      isFavorited: json['isFavorited'] as bool? ?? false,
+      tanggalPublish: json['tanggalPublish'] as String? ??
+          json['tanggal_publish']?.toString(),
+      isFavorited: json['isFavorited'] as bool? ??
+          json['is_favorited'] as bool? ??
+          false,
     );
   }
 }
@@ -84,25 +99,51 @@ class RppDetail {
   final String? tanggalUpdated;
   final bool isFavorited;
 
+  /// API returns snake_case keys with nested guru object
   factory RppDetail.fromJson(Map<String, dynamic> json) {
+    // guru can be a nested object { id, nama } or flat fields
+    final guruObj = json['guru'] as Map<String, dynamic>?;
     return RppDetail(
       id: json['id'] as String,
       judul: json['judul'] as String,
-      guruId: json['guruId'] as String? ?? '',
-      guruNama: json['guruNama'] as String? ?? '',
-      mataPelajaranId: json['mataPelajaranId'] as String? ?? '',
-      mataPelajaranNama: json['mataPelajaranNama'] as String? ?? '',
-      kategoriId: json['kategoriId'] as String? ?? '',
-      kategoriNama: json['kategoriNama'] as String? ?? '',
-      kontenType: json['kontenType'] as String? ?? 'richtext',
-      tahunTerbit: json['tahunTerbit'] as int? ?? DateTime.now().year,
+      guruId: json['guruId'] as String? ??
+          json['guru_id'] as String? ??
+          guruObj?['id'] as String? ??
+          '',
+      guruNama: json['guruNama'] as String? ??
+          json['guru_nama'] as String? ??
+          guruObj?['nama'] as String? ??
+          '',
+      mataPelajaranId: json['mataPelajaranId'] as String? ??
+          json['mata_pelajaran_id'] as String? ??
+          '',
+      mataPelajaranNama: json['mataPelajaranNama'] as String? ??
+          json['mata_pelajaran'] as String? ??
+          json['mata_pelajaran_nama'] as String? ??
+          '',
+      kategoriId:
+          json['kategoriId'] as String? ?? json['kategori_id'] as String? ?? '',
+      kategoriNama: json['kategoriNama'] as String? ??
+          json['kategori'] as String? ??
+          json['kategori_nama'] as String? ??
+          '',
+      kontenType: json['kontenType'] as String? ??
+          json['konten_type'] as String? ??
+          'richtext',
+      tahunTerbit: json['tahunTerbit'] as int? ??
+          json['tahun_terbit'] as int? ??
+          DateTime.now().year,
       status: json['status'] as String? ?? 'draft',
       konten: json['konten'] as String?,
-      fileNama: json['fileNama'] as String?,
-      fileSize: json['fileSize'] as int?,
-      tanggalPublish: json['tanggalPublish'] as String?,
-      tanggalUpdated: json['tanggalUpdated'] as String?,
-      isFavorited: json['isFavorited'] as bool? ?? false,
+      fileNama: json['fileNama'] as String? ?? json['file_nama'] as String?,
+      fileSize: json['fileSize'] as int? ?? json['file_size'] as int?,
+      tanggalPublish: json['tanggalPublish'] as String? ??
+          json['tanggal_publish']?.toString(),
+      tanggalUpdated:
+          json['tanggalUpdated'] as String? ?? json['updated_at']?.toString(),
+      isFavorited: json['isFavorited'] as bool? ??
+          json['is_favorited'] as bool? ??
+          false,
     );
   }
 }
@@ -119,14 +160,16 @@ class RppListResponse {
   final String? nextCursor;
   final int? total;
 
+  /// API returns: { data: [...], meta: { has_next, cursor } }
   factory RppListResponse.fromJson(Map<String, dynamic> json) {
+    final meta = json['meta'] as Map<String, dynamic>?;
     return RppListResponse(
       data: (json['data'] as List<dynamic>?)
               ?.map((e) => RppItem.fromJson(e as Map<String, dynamic>))
               .toList() ??
           [],
-      nextCursor: json['nextCursor'] as String?,
-      total: json['total'] as int?,
+      nextCursor: meta?['cursor'] as String? ?? json['nextCursor'] as String?,
+      total: meta?['total'] as int? ?? json['total'] as int?,
     );
   }
 }

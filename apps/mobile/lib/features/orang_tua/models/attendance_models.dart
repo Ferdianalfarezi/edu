@@ -97,11 +97,13 @@ class AttendanceSummary {
           break;
       }
     }
-    return AttendanceSummary(hadir: hadir, izin: izin, sakit: sakit, alpa: alpa);
+    return AttendanceSummary(
+        hadir: hadir, izin: izin, sakit: sakit, alpa: alpa);
   }
 }
 
 /// Response model for GET /absensi/anak/:siswaId.
+/// API returns: { siswa_id, siswa_nama, bulan, tahun, ringkasan: {...}, hari: [...] }
 class ChildAttendanceResponse {
   const ChildAttendanceResponse({
     required this.records,
@@ -112,13 +114,16 @@ class ChildAttendanceResponse {
   final AttendanceSummary summary;
 
   factory ChildAttendanceResponse.fromJson(Map<String, dynamic> json) {
-    final data = json['data'] as List<dynamic>? ?? [];
+    // API returns attendance records in 'hari' array, not 'data'
+    final data =
+        json['hari'] as List<dynamic>? ?? json['data'] as List<dynamic>? ?? [];
     final records = data
         .map((e) => AttendanceRecord.fromJson(e as Map<String, dynamic>))
         .toList();
 
-    // Use summary from API if provided, otherwise compute from records.
-    final summaryJson = json['summary'] as Map<String, dynamic>?;
+    // API returns summary in 'ringkasan', not 'summary'
+    final summaryJson = json['ringkasan'] as Map<String, dynamic>? ??
+        json['summary'] as Map<String, dynamic>?;
     final summary = summaryJson != null
         ? AttendanceSummary.fromJson(summaryJson)
         : AttendanceSummary.fromRecords(records);
@@ -149,7 +154,9 @@ class ChildInfo {
       nama: json['nama'] as String,
       kelasNama: json['kelas_nama'] as String? ?? '',
       tenantId: json['tenant_id'] as String,
-      tenantNama: json['tenant_nama'] as String? ?? json['sekolah_nama'] as String? ?? '',
+      tenantNama: json['tenant_nama'] as String? ??
+          json['sekolah_nama'] as String? ??
+          '',
     );
   }
 }

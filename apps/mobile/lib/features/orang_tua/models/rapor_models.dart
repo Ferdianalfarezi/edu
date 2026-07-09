@@ -18,9 +18,13 @@ class RaporPeriode {
   final String tahunAjaran;
   final DateTime? finalizedAt;
 
+  /// API returns: { rapor_id, periode, tahun_ajaran, ... }
   factory RaporPeriode.fromJson(Map<String, dynamic> json) {
     return RaporPeriode(
-      periodeId: json['periode_id'] as String? ?? json['id'] as String,
+      periodeId: json['rapor_id'] as String? ??
+          json['periode_id'] as String? ??
+          json['id'] as String? ??
+          '',
       periode: json['periode'] as String,
       tahunAjaran: json['tahun_ajaran'] as String? ?? '',
       finalizedAt: json['finalized_at'] != null
@@ -72,9 +76,15 @@ class RaporDetail {
   final String? catatanWaliKelas;
   final List<P5Item>? p5;
 
+  /// API returns: { rapor_id, periode, tahun_ajaran, nilai: [...], peringkat, rata_rata, catatan_wali_kelas, p5_deskripsi }
   factory RaporDetail.fromJson(Map<String, dynamic> json) {
-    final nilaiList = (json['nilai_mapel'] as List<dynamic>?) ?? [];
-    final p5List = (json['p5'] as List<dynamic>?) ?? [];
+    // API returns 'nilai' array with { mapel, komponen_nilai, capaian_pembelajaran }
+    final nilaiList = (json['nilai'] as List<dynamic>?) ??
+        (json['nilai_mapel'] as List<dynamic>?) ??
+        [];
+    final p5List = (json['p5_deskripsi'] as List<dynamic>?) ??
+        (json['p5'] as List<dynamic>?) ??
+        [];
 
     return RaporDetail(
       siswaId: json['siswa_id'] as String? ?? '',
@@ -85,7 +95,9 @@ class RaporDetail {
       nilaiMapel: nilaiList
           .map((e) => NilaiMapel.fromJson(e as Map<String, dynamic>))
           .toList(),
-      rataRata: (json['rata_rata'] as num?)?.toDouble(),
+      rataRata: json['rata_rata'] != null
+          ? double.tryParse(json['rata_rata'].toString())
+          : null,
       peringkat: (json['peringkat'] as num?)?.toInt(),
       catatanWaliKelas: json['catatan_wali_kelas'] as String?,
       p5: p5List.isNotEmpty
@@ -126,9 +138,14 @@ class NilaiMapel {
   final String? capaianPembelajaran;
 
   factory NilaiMapel.fromJson(Map<String, dynamic> json) {
-    final komponenList = (json['komponen'] as List<dynamic>?) ?? [];
+    final komponenList = (json['komponen'] as List<dynamic>?) ??
+        (json['komponen_nilai'] as List<dynamic>?) ??
+        [];
     return NilaiMapel(
-      mapelNama: json['mapel_nama'] as String? ?? json['mata_pelajaran'] as String? ?? '',
+      mapelNama: json['mapel_nama'] as String? ??
+          json['mapel'] as String? ??
+          json['mata_pelajaran'] as String? ??
+          '',
       komponen: komponenList
           .map((e) => KomponenNilai.fromJson(e as Map<String, dynamic>))
           .toList(),
@@ -149,9 +166,13 @@ class KomponenNilai {
   /// Can be a number string or letter/description string.
   final String nilai;
 
+  /// API returns: { komponen_id, nilai } or { nama, nilai }
   factory KomponenNilai.fromJson(Map<String, dynamic> json) {
     return KomponenNilai(
-      nama: json['nama'] as String? ?? json['komponen_nama'] as String? ?? '',
+      nama: json['nama'] as String? ??
+          json['komponen_nama'] as String? ??
+          json['komponen_id'] as String? ??
+          '',
       nilai: '${json['nilai'] ?? ''}',
     );
   }

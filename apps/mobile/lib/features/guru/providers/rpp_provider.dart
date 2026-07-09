@@ -52,7 +52,8 @@ final rppFilterProvider = StateProvider<RppFilter>((ref) {
 });
 
 /// Fetches the list of published RPPs for the portal (Req 43.1, 43.2, 43.3, 43.7).
-final rppListProvider = FutureProvider.autoDispose<RppListResponse>((ref) async {
+final rppListProvider =
+    FutureProvider.autoDispose<RppListResponse>((ref) async {
   final apiClient = ref.watch(apiClientProvider);
   final filter = ref.watch(rppFilterProvider);
 
@@ -65,22 +66,39 @@ final rppListProvider = FutureProvider.autoDispose<RppListResponse>((ref) async 
 });
 
 /// Fetches a single RPP detail by ID (Req 43.4).
+/// API returns the detail directly (not wrapped in { data: ... }).
 final rppDetailProvider =
     FutureProvider.autoDispose.family<RppDetail, String>((ref, rppId) async {
   final apiClient = ref.watch(apiClientProvider);
 
   final response = await apiClient.dio.get('/rpp/$rppId');
 
-  return RppDetail.fromJson(response.data as Map<String, dynamic>);
+  // API may return { data: {...} } or the detail directly
+  final responseData = response.data as Map<String, dynamic>;
+  final detailJson =
+      responseData.containsKey('data') && responseData['data'] is Map
+          ? responseData['data'] as Map<String, dynamic>
+          : responseData;
+
+  return RppDetail.fromJson(detailJson);
 });
 
 /// Fetches the user's favorited RPPs list (Req 44.3).
+/// API returns an array directly or wrapped in { data: [...] }.
 final rppFavoritesProvider =
     FutureProvider.autoDispose<RppListResponse>((ref) async {
   final apiClient = ref.watch(apiClientProvider);
 
   final response = await apiClient.dio.get('/rpp/favorit');
 
+  // API may return raw array or { data: [...] } wrapper
+  if (response.data is List) {
+    return RppListResponse(
+      data: (response.data as List<dynamic>)
+          .map((e) => RppItem.fromJson(e as Map<String, dynamic>))
+          .toList(),
+    );
+  }
   return RppListResponse.fromJson(response.data as Map<String, dynamic>);
 });
 
@@ -91,7 +109,16 @@ final mapelOptionsProvider =
 
   final response = await apiClient.dio.get('/mata-pelajaran');
 
-  final list = response.data['data'] as List<dynamic>? ?? response.data as List<dynamic>;
+  // API may return { data: [...] } or raw array
+  List<dynamic> list;
+  if (response.data is List) {
+    list = response.data as List<dynamic>;
+  } else if (response.data is Map<String, dynamic>) {
+    list =
+        (response.data as Map<String, dynamic>)['data'] as List<dynamic>? ?? [];
+  } else {
+    list = [];
+  }
   return list
       .map((e) => MapelOption.fromJson(e as Map<String, dynamic>))
       .toList();
@@ -104,7 +131,16 @@ final kategoriOptionsProvider =
 
   final response = await apiClient.dio.get('/rpp/kategori');
 
-  final list = response.data['data'] as List<dynamic>? ?? response.data as List<dynamic>;
+  // API may return { data: [...] } or raw array
+  List<dynamic> list;
+  if (response.data is List) {
+    list = response.data as List<dynamic>;
+  } else if (response.data is Map<String, dynamic>) {
+    list =
+        (response.data as Map<String, dynamic>)['data'] as List<dynamic>? ?? [];
+  } else {
+    list = [];
+  }
   return list
       .map((e) => KategoriOption.fromJson(e as Map<String, dynamic>))
       .toList();
@@ -117,7 +153,8 @@ class RppFavoriteNotifier extends StateNotifier<Map<String, bool>> {
   final Ref _ref;
 
   /// Toggle favorite for a given RPP ID.
-  Future<void> toggleFavorite(String rppId, {required bool currentState}) async {
+  Future<void> toggleFavorite(String rppId,
+      {required bool currentState}) async {
     final apiClient = _ref.read(apiClientProvider);
 
     // Optimistic update

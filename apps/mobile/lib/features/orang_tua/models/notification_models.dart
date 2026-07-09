@@ -131,7 +131,8 @@ enum NotificationType {
 }
 
 /// Paginated response for notification history.
-/// API: GET /notifikasi/riwayat?page=&limit=
+/// API: GET /notifikasi/riwayat?limit=&cursor=
+/// Response shape: { data: [...], meta: { has_next, cursor } }
 class NotificationHistoryResponse {
   const NotificationHistoryResponse({
     required this.items,
@@ -149,10 +150,13 @@ class NotificationHistoryResponse {
         .map((e) => NotificationItem.fromJson(e as Map<String, dynamic>))
         .toList();
 
+    // API returns pagination in meta object: { has_next, cursor }
+    final meta = json['meta'] as Map<String, dynamic>?;
+
     return NotificationHistoryResponse(
       items: items,
-      nextCursor: json['next_cursor'] as String?,
-      hasMore: json['has_more'] as bool? ?? false,
+      nextCursor: meta?['cursor'] as String? ?? json['next_cursor'] as String?,
+      hasMore: meta?['has_next'] as bool? ?? json['has_more'] as bool? ?? false,
     );
   }
 }
@@ -173,10 +177,12 @@ class ChildNotificationPreference {
   final bool kehadiranEnabled;
   final bool ketidakhadiranEnabled;
 
+  /// API returns: { anak_id, anak_nama, kehadiran_enabled, ketidakhadiran_enabled }
   factory ChildNotificationPreference.fromJson(Map<String, dynamic> json) {
     return ChildNotificationPreference(
-      siswaId: json['siswa_id'] as String,
-      siswaName: json['siswa_nama'] as String? ?? '',
+      siswaId: json['anak_id'] as String? ?? json['siswa_id'] as String? ?? '',
+      siswaName:
+          json['anak_nama'] as String? ?? json['siswa_nama'] as String? ?? '',
       kelasNama: json['kelas_nama'] as String? ?? '',
       kehadiranEnabled: json['kehadiran_enabled'] as bool? ?? false,
       ketidakhadiranEnabled: json['ketidakhadiran_enabled'] as bool? ?? true,
@@ -199,13 +205,17 @@ class ChildNotificationPreference {
 }
 
 /// Response model for GET /notifikasi/preferensi.
+/// API returns: { preferensi: [...] }
 class NotificationPreferencesResponse {
   const NotificationPreferencesResponse({required this.preferences});
 
   final List<ChildNotificationPreference> preferences;
 
   factory NotificationPreferencesResponse.fromJson(Map<String, dynamic> json) {
-    final data = json['data'] as List<dynamic>? ?? [];
+    // API returns { preferensi: [...] }, not { data: [...] }
+    final data = json['preferensi'] as List<dynamic>? ??
+        json['data'] as List<dynamic>? ??
+        [];
     return NotificationPreferencesResponse(
       preferences: data
           .map((e) =>
