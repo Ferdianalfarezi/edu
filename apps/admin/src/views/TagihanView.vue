@@ -292,13 +292,12 @@ async function generateTagihan() {
     }
 
     const { data } = await api.post<{
-      created: number;
-      skipped: number;
-      total_nominal: number;
+      message: string;
+      data: { created: number; skipped: number; total_nominal: number };
     }>('/tagihan/generate', payload);
 
-    generateResult.value = data;
-    toast.success(`Berhasil! ${data.created} tagihan dibuat, ${data.skipped} dilewati.`);
+    generateResult.value = data.data;
+    toast.success(`Berhasil! ${data.data.created} tagihan dibuat, ${data.data.skipped} dilewati.`);
   } catch (error: any) {
     generateError.value = error.response?.data?.message || 'Gagal men-generate tagihan';
     toast.error(generateError.value);
