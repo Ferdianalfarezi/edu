@@ -162,7 +162,9 @@ class UploadBuktiNotifier
         ApiConstants.tagihanUploadBukti(tagihanId),
         data: formData,
         options: Options(
-          headers: {'Content-Type': 'multipart/form-data'},
+          contentType: 'multipart/form-data',
+          sendTimeout: const Duration(seconds: 120),
+          receiveTimeout: const Duration(seconds: 60),
         ),
       );
 
@@ -171,18 +173,19 @@ class UploadBuktiNotifier
         message:
             'Bukti transfer berhasil dikirim. Menunggu verifikasi Bendahara.',
       );
-      state = AsyncData(result);
+      state = const AsyncData(result);
       return result;
     } on DioException catch (e) {
+      _logger.e('Upload bukti DioException: ${e.type} - ${e.message}');
       final message = _extractErrorMessage(e);
       final result = UploadBuktiResult(success: false, message: message);
       state = AsyncData(result);
       return result;
-    } catch (e) {
-      _logger.e('Upload bukti failed: $e');
+    } catch (e, stackTrace) {
+      _logger.e('Upload bukti unexpected error: $e\n$stackTrace');
       final result = UploadBuktiResult(
         success: false,
-        message: 'Gagal mengupload bukti transfer. Silakan coba lagi.',
+        message: 'Terjadi kesalahan: ${e.toString()}',
       );
       state = AsyncData(result);
       return result;
@@ -217,6 +220,20 @@ class UploadBuktiNotifier
   }
 
   String _extractErrorMessage(DioException e) {
+    // Handle timeout errors
+    if (e.type == DioExceptionType.sendTimeout) {
+      return 'Upload timeout. Periksa koneksi internet Anda dan coba lagi.';
+    }
+    if (e.type == DioExceptionType.receiveTimeout) {
+      return 'Server tidak merespon. Cek status tagihan Anda sebelum mencoba ulang.';
+    }
+    if (e.type == DioExceptionType.connectionTimeout) {
+      return 'Koneksi timeout. Periksa koneksi internet Anda.';
+    }
+    if (e.type == DioExceptionType.connectionError) {
+      return 'Tidak dapat terhubung ke server. Periksa koneksi internet Anda.';
+    }
+
     if (e.response?.data is Map<String, dynamic>) {
       final data = e.response!.data as Map<String, dynamic>;
       return data['message'] as String? ?? 'Gagal mengupload bukti transfer.';
