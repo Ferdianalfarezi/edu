@@ -18,15 +18,16 @@ interface Kelas {
 
 interface Siswa {
   id: string;
+  siswa_id?: string;
   nama: string;
   nisn: string | null;
 }
 
 interface PreviewResult {
-  students: Siswa[];
-  source_kelas: Kelas;
-  target_kelas: Kelas | null;
-  suggested_target_kelas_id: string | null;
+  students: { siswa_id: string; nama: string; nisn: string | null }[];
+  source_kelas: { id: string; nama: string; tingkat: number };
+  target_kelas: { id: string; nama: string; tingkat: number } | null;
+  is_highest_grade: boolean;
 }
 
 // Wizard steps
@@ -125,14 +126,19 @@ async function goToPreview() {
       payload.target_kelas_id = targetKelasId.value;
     }
 
-    const { data } = await api.post<{ data: PreviewResult }>('/kenaikan-kelas/preview', payload);
-    previewStudents.value = data.data.students;
-    isHighestGrade.value = !data.data.target_kelas;
+    const { data } = await api.post<PreviewResult>('/kenaikan-kelas/preview', payload);
+    // Map siswa_id to id for frontend compatibility
+    previewStudents.value = data.students.map((s) => ({
+      id: s.siswa_id,
+      nama: s.nama,
+      nisn: s.nisn,
+    }));
+    isHighestGrade.value = data.is_highest_grade;
     excludedStudentIds.value = new Set();
 
-    // Auto-select suggested target if not manually chosen
-    if (!targetKelasId.value && data.data.suggested_target_kelas_id) {
-      targetKelasId.value = data.data.suggested_target_kelas_id;
+    // Auto-select suggested target from response
+    if (!targetKelasId.value && data.target_kelas) {
+      targetKelasId.value = data.target_kelas.id;
     }
 
     currentStep.value = 2;
@@ -188,10 +194,12 @@ async function executePromotion() {
     };
 
     const { data } = await api.post<{
-      data: { promoted: number; excluded: number; graduated: number };
+      promoted: number;
+      excluded: number;
+      graduated: number;
     }>('/kenaikan-kelas/execute', payload);
 
-    executionResult.value = data.data;
+    executionResult.value = data;
     successMessage.value = 'Kenaikan kelas berhasil diproses!';
   } catch (err: any) {
     const msg = err.response?.data?.message;
@@ -234,6 +242,10 @@ function getTargetTahunAjaranName(): string {
 onMounted(async () => {
   await fetchTahunAjaran();
   await fetchSourceKelas();
+  // Fetch target kelas if a prepared tahun ajaran was auto-selected
+  if (targetTahunAjaranId.value) {
+    await fetchTargetKelas();
+  }
 });
 </script>
 
