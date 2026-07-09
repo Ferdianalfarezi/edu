@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue';
 import { api } from '@/api/client';
-import { PageHeader, BaseModal, SearchSelect } from '@/components/ui';
+import { PageHeader, BaseModal, SearchSelect, ActionButton } from '@/components/ui';
 import type { SelectOption } from '@/components/ui';
 
 // Types
@@ -632,22 +632,20 @@ onMounted(async () => {
       </form>
       <template #footer>
         <div class="flex items-center gap-2 w-full">
-          <button
+          <ActionButton
             v-if="editingEntry"
-            type="button"
-            class="px-4 py-2 text-sm font-medium text-white bg-danger-500 rounded-lg hover:bg-danger-700 transition-colors"
+            variant="danger"
+            icon="delete"
             @click="handleConfirmDelete"
+            >Hapus</ActionButton
           >
-            Hapus
-          </button>
-          <button
+          <ActionButton
             v-if="editingEntry && !form.is_istirahat"
-            type="button"
-            class="px-3 py-2 text-sm font-medium text-white bg-primary-600 rounded-lg hover:bg-primary-700 transition-colors"
+            variant="primary"
+            icon="assign"
             @click="handleOpenPengganti"
+            >Assign Pengganti</ActionButton
           >
-            Assign Pengganti
-          </button>
           <div class="flex-1"></div>
           <button
             type="button"
@@ -725,12 +723,9 @@ onMounted(async () => {
           <strong>Guru Pengganti Aktif:</strong>
           {{ penggantiTarget.guru_pengganti_aktif.guru_pengganti_nama }}
         </p>
-        <button
-          class="px-2 py-1 text-xs font-medium text-danger-700 bg-danger-50 rounded-md hover:bg-danger-50/80 transition-colors"
-          @click="handleRemovePengganti"
+        <ActionButton variant="danger" icon="cancel" @click="handleRemovePengganti"
+          >Hapus Pengganti</ActionButton
         >
-          Hapus Pengganti
-        </button>
       </div>
       <form @submit.prevent="savePengganti">
         <div class="mb-4">

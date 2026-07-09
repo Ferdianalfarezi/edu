@@ -3,7 +3,7 @@ import { ref, reactive, onMounted, watch, computed } from 'vue';
 import { StatusSiswa } from '@edu/shared';
 import type { PaginatedResponse } from '@edu/shared';
 import { api } from '@/api/client';
-import { PageHeader, BaseModal, SearchSelect } from '@/components/ui';
+import { PageHeader, BaseModal, SearchSelect, ActionButton } from '@/components/ui';
 import type { SelectOption } from '@/components/ui';
 
 interface Siswa {
@@ -510,45 +510,16 @@ onMounted(() => {
               </td>
               <td class="px-4 py-3 text-right">
                 <div class="flex items-center justify-end gap-1">
-                  <button
-                    @click="openEditForm(siswa)"
-                    class="p-1.5 rounded-md text-text-tertiary hover:text-primary-600 hover:bg-primary-50 transition-colors"
-                    title="Edit"
+                  <ActionButton variant="warning" icon="edit" @click="openEditForm(siswa)"
+                    >Edit</ActionButton
                   >
-                    <svg
-                      class="w-4 h-4"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      stroke="currentColor"
-                      stroke-width="1.75"
-                    >
-                      <path
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                        d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"
-                      />
-                    </svg>
-                  </button>
-                  <button
+                  <ActionButton
                     v-if="siswa.status === 'aktif'"
+                    variant="danger"
+                    icon="cancel"
                     @click="openDeleteConfirm(siswa)"
-                    class="p-1.5 rounded-md text-text-tertiary hover:text-danger-700 hover:bg-danger-50 transition-colors"
-                    title="Nonaktifkan"
+                    >Nonaktifkan</ActionButton
                   >
-                    <svg
-                      class="w-4 h-4"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      stroke="currentColor"
-                      stroke-width="1.75"
-                    >
-                      <path
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                        d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"
-                      />
-                    </svg>
-                  </button>
                 </div>
               </td>
             </tr>

@@ -2,7 +2,7 @@
 import { ref, computed, onMounted, watch } from 'vue';
 import { api } from '@/api/client';
 import { PeriodeRapor } from '@edu/shared';
-import { PageHeader, BaseModal, SearchSelect } from '@/components/ui';
+import { PageHeader, BaseModal, SearchSelect, ActionButton } from '@/components/ui';
 import type { SelectOption } from '@/components/ui';
 
 interface KelasOption {
@@ -328,12 +328,9 @@ onMounted(() => {
                   </span>
                 </td>
                 <td class="px-4 py-3">
-                  <button
-                    class="px-2 py-1 text-xs font-medium rounded-md bg-primary-50 text-primary-700 hover:bg-primary-100 transition-colors"
-                    @click="viewDetail(siswa)"
+                  <ActionButton variant="primary" icon="view" @click="viewDetail(siswa)"
+                    >Lihat</ActionButton
                   >
-                    Lihat
-                  </button>
                 </td>
               </tr>
             </tbody>

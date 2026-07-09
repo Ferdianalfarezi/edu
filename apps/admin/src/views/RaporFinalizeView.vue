@@ -2,7 +2,7 @@
 import { ref, onMounted, watch, computed } from 'vue';
 import { api } from '@/api/client';
 import { PeriodeRapor } from '@edu/shared';
-import { PageHeader, BaseModal, SearchSelect } from '@/components/ui';
+import { PageHeader, BaseModal, SearchSelect, ActionButton } from '@/components/ui';
 import type { SelectOption } from '@/components/ui';
 
 interface KelasOption {
@@ -367,13 +367,13 @@ onMounted(fetchKelas);
                     />
                   </td>
                   <td class="px-4 py-3">
-                    <button
-                      class="px-2 py-1 text-xs font-medium rounded-md bg-purple-50 text-purple-700 hover:bg-purple-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    <ActionButton
+                      variant="purple"
+                      icon="edit"
                       :disabled="isFinalized"
                       @click="openP5Modal(idx)"
+                      >{{ siswa.p5_deskripsi ? 'Edit P5' : 'Isi P5' }}</ActionButton
                     >
-                      {{ siswa.p5_deskripsi ? 'Edit P5' : 'Isi P5' }}
-                    </button>
                   </td>
                 </tr>
               </tbody>

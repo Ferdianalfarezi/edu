@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, reactive, onMounted, watch, computed } from 'vue';
 import { api } from '@/api/client';
-import { PageHeader, BaseModal, SearchSelect } from '@/components/ui';
+import { PageHeader, BaseModal, SearchSelect, ActionButton } from '@/components/ui';
 import type { SelectOption } from '@/components/ui';
 
 // ===== Types =====
@@ -845,27 +845,27 @@ onMounted(() => {
                 </td>
                 <td class="px-4 py-3">
                   <div class="flex flex-wrap gap-1">
-                    <button
+                    <ActionButton
                       v-if="tagihan.status === 'belum_bayar' || tagihan.status === 'cicilan'"
-                      class="px-2 py-1 text-xs font-medium text-success-700 bg-success-50 rounded-md hover:bg-success-50/80 transition-colors"
+                      variant="success"
+                      icon="pay"
                       @click="openManualPayment(tagihan)"
+                      >Bayar Manual</ActionButton
                     >
-                      Bayar Manual
-                    </button>
-                    <button
+                    <ActionButton
                       v-if="tagihan.status !== 'lunas' && tagihan.status !== 'dibatalkan'"
-                      class="px-2 py-1 text-xs font-medium text-warning-700 bg-warning-50 rounded-md hover:bg-warning-50/80 transition-colors"
+                      variant="warning"
+                      icon="edit"
                       @click="openEditTagihan(tagihan)"
+                      >Edit</ActionButton
                     >
-                      Edit
-                    </button>
-                    <button
+                    <ActionButton
                       v-if="tagihan.status !== 'lunas' && tagihan.status !== 'dibatalkan'"
-                      class="px-2 py-1 text-xs font-medium text-danger-700 bg-danger-50 rounded-md hover:bg-danger-50/80 transition-colors"
+                      variant="danger"
+                      icon="cancel"
                       @click="openCancelTagihan(tagihan)"
+                      >Batalkan</ActionButton
                     >
-                      Batalkan
-                    </button>
                   </div>
                 </td>
               </tr>
@@ -937,12 +937,9 @@ onMounted(() => {
                   {{ formatDate(tx.created_at) }}
                 </td>
                 <td class="px-4 py-3">
-                  <button
-                    class="px-2 py-1 text-xs font-medium text-primary-600 bg-primary-50 rounded-md hover:bg-primary-100 transition-colors"
-                    @click="openBuktiPreview(tx)"
+                  <ActionButton variant="primary" icon="view" @click="openBuktiPreview(tx)"
+                    >Lihat Bukti</ActionButton
                   >
-                    Lihat Bukti
-                  </button>
                 </td>
               </tr>
             </tbody>

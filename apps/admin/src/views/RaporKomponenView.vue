@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue';
 import { api } from '@/api/client';
-import { PageHeader, BaseModal, SearchSelect } from '@/components/ui';
+import { PageHeader, BaseModal, SearchSelect, ActionButton } from '@/components/ui';
 import type { SelectOption } from '@/components/ui';
 
 interface KomponenPenilaian {
@@ -241,18 +241,12 @@ onMounted(fetchItems);
               </td>
               <td class="px-4 py-3">
                 <div class="flex gap-1.5">
-                  <button
-                    class="px-2 py-1 text-xs font-medium rounded-md bg-warning-50 text-warning-700 hover:bg-yellow-200 transition-colors"
-                    @click="openEditForm(item)"
+                  <ActionButton variant="warning" icon="edit" @click="openEditForm(item)"
+                    >Edit</ActionButton
                   >
-                    Edit
-                  </button>
-                  <button
-                    class="px-2 py-1 text-xs font-medium rounded-md bg-danger-50 text-danger-700 hover:bg-red-200 transition-colors"
-                    @click="openDeleteConfirm(item)"
+                  <ActionButton variant="danger" icon="delete" @click="openDeleteConfirm(item)"
+                    >Hapus</ActionButton
                   >
-                    Hapus
-                  </button>
                 </div>
               </td>
             </tr>

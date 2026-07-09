@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue';
 import { api } from '@/api/client';
-import { PageHeader } from '@/components/ui';
+import { PageHeader, ActionButton } from '@/components/ui';
 
 interface KonfigurasiData {
   batas_ketidakhadiran_notifikasi: number;
@@ -329,12 +329,9 @@ onMounted(fetchKonfigurasi);
               <strong>{{ formatDate(hl.tanggal) }}</strong>
               <span v-if="hl.keterangan" class="text-text-secondary"> — {{ hl.keterangan }}</span>
             </div>
-            <button
-              class="px-2 py-1 text-xs font-medium text-danger-700 bg-danger-50 rounded-md hover:bg-danger-50/80 transition-colors"
-              @click="removeHoliday(hl.id)"
+            <ActionButton variant="danger" icon="delete" @click="removeHoliday(hl.id)"
+              >Hapus</ActionButton
             >
-              Hapus
-            </button>
           </div>
         </div>
         <div v-else class="py-12 text-center">

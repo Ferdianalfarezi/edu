@@ -2,7 +2,7 @@
 import { ref, reactive, computed, onMounted } from 'vue';
 import { Role } from '@edu/shared';
 import { api } from '@/api/client';
-import { PageHeader, BaseModal, SearchSelect } from '@/components/ui';
+import { PageHeader, BaseModal, SearchSelect, ActionButton } from '@/components/ui';
 import type { SelectOption } from '@/components/ui';
 
 interface User {
@@ -300,18 +300,12 @@ onMounted(fetchUsers);
               </td>
               <td class="px-4 py-3">
                 <div class="flex gap-2">
-                  <button
-                    class="px-2 py-1 text-xs font-medium text-warning-700 bg-warning-50 rounded-md hover:bg-warning-50/80 transition-colors"
-                    @click="openEditForm(user)"
+                  <ActionButton variant="warning" icon="edit" @click="openEditForm(user)"
+                    >Edit</ActionButton
                   >
-                    Edit
-                  </button>
-                  <button
-                    class="px-2 py-1 text-xs font-medium text-danger-700 bg-danger-50 rounded-md hover:bg-danger-50/80 transition-colors"
-                    @click="openDeleteConfirm(user)"
+                  <ActionButton variant="danger" icon="delete" @click="openDeleteConfirm(user)"
+                    >Hapus</ActionButton
                   >
-                    Hapus
-                  </button>
                 </div>
               </td>
             </tr>

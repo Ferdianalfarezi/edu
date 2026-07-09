@@ -3,7 +3,7 @@ import { ref, computed, onMounted, watch } from 'vue';
 import { api } from '@/api/client';
 import { useAuthStore } from '@/stores/auth';
 import { Role } from '@edu/shared';
-import { PageHeader, BaseModal, SearchSelect } from '@/components/ui';
+import { PageHeader, BaseModal, SearchSelect, ActionButton } from '@/components/ui';
 import type { SelectOption } from '@/components/ui';
 
 interface Kelas {
@@ -283,19 +283,16 @@ onMounted(() => {
               <td class="px-4 py-3 text-sm text-text-secondary">{{ item.guru_nama }}</td>
               <td class="px-4 py-3">
                 <div class="flex gap-1.5">
-                  <button
+                  <ActionButton
                     v-if="canEdit"
-                    class="px-2 py-1 text-xs font-medium rounded-md bg-warning-50 text-warning-700 hover:bg-yellow-200 transition-colors"
+                    variant="warning"
+                    icon="edit"
                     @click="openEditModal(item)"
+                    >Edit</ActionButton
                   >
-                    Edit
-                  </button>
-                  <button
-                    class="px-2 py-1 text-xs font-medium rounded-md bg-primary-50 text-primary-700 hover:bg-primary-100 transition-colors"
-                    @click="openAuditModal(item)"
+                  <ActionButton variant="primary" icon="log" @click="openAuditModal(item)"
+                    >Log</ActionButton
                   >
-                    Log
-                  </button>
                 </div>
               </td>
             </tr>

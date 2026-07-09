@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue';
 import { api } from '@/api/client';
-import { PageHeader, BaseModal } from '@/components/ui';
+import { PageHeader, BaseModal, ActionButton } from '@/components/ui';
 
 interface Tenant {
   id: string;
@@ -160,23 +160,15 @@ onMounted(fetchTenants);
             </td>
             <td class="px-4 py-3">
               <div class="flex gap-2">
-                <button
-                  class="px-2 py-1 text-xs font-medium text-warning-700 bg-warning-50 rounded-md hover:bg-warning-50/80 transition-colors"
-                  @click="openEditForm(tenant)"
+                <ActionButton variant="warning" icon="edit" @click="openEditForm(tenant)"
+                  >Edit</ActionButton
                 >
-                  Edit
-                </button>
-                <button
-                  :class="[
-                    'px-2 py-1 text-xs font-medium rounded-md transition-colors',
-                    tenant.is_active
-                      ? 'text-danger-700 bg-danger-50 hover:bg-danger-50/80'
-                      : 'text-success-700 bg-success-50 hover:bg-success-50/80',
-                  ]"
+                <ActionButton
+                  :variant="tenant.is_active ? 'danger' : 'success'"
+                  :icon="tenant.is_active ? 'cancel' : 'activate'"
                   @click="toggleTenantStatus(tenant)"
+                  >{{ tenant.is_active ? 'Nonaktifkan' : 'Aktifkan' }}</ActionButton
                 >
-                  {{ tenant.is_active ? 'Nonaktifkan' : 'Aktifkan' }}
-                </button>
               </div>
             </td>
           </tr>

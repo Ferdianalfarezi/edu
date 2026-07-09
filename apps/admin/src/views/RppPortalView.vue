@@ -2,7 +2,7 @@
 import { ref, computed, onMounted, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import { api } from '@/api/client';
-import { PageHeader, SearchSelect } from '@/components/ui';
+import { PageHeader, SearchSelect, ActionButton } from '@/components/ui';
 import type { SelectOption } from '@/components/ui';
 
 interface RppItem {
@@ -275,18 +275,10 @@ onMounted(async () => {
         <div class="flex justify-between items-center pt-3 border-t border-border">
           <span class="text-xs text-text-tertiary">{{ formatDate(item.tanggal_publish) }}</span>
           <div class="flex gap-2">
-            <button
-              class="px-2 py-1 text-xs font-medium text-primary-600 bg-primary-50 rounded-md hover:bg-primary-100 transition-colors"
-              @click="viewRpp(item)"
+            <ActionButton variant="primary" icon="view" @click="viewRpp(item)">Lihat</ActionButton>
+            <ActionButton variant="success" icon="download" @click="downloadRpp(item)"
+              >Download</ActionButton
             >
-              Lihat
-            </button>
-            <button
-              class="px-2 py-1 text-xs font-medium text-success-700 bg-success-50 rounded-md hover:bg-success-50/80 transition-colors"
-              @click="downloadRpp(item)"
-            >
-              ⬇ Download
-            </button>
           </div>
         </div>
       </div>

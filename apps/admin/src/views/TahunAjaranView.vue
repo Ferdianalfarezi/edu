@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue';
 import { api } from '@/api/client';
-import { PageHeader, BaseModal } from '@/components/ui';
+import { PageHeader, BaseModal, ActionButton } from '@/components/ui';
 
 interface TahunAjaran {
   id: string;
@@ -184,13 +184,13 @@ onMounted(fetchItems);
               </span>
             </td>
             <td class="px-4 py-3">
-              <button
+              <ActionButton
                 v-if="item.status === 'disiapkan'"
-                class="px-2 py-1 text-xs font-medium text-primary-700 bg-primary-50 rounded-md hover:bg-primary-100 transition-colors"
+                variant="primary"
+                icon="activate"
                 @click="openActivateConfirm(item)"
+                >Aktifkan</ActionButton
               >
-                Aktifkan
-              </button>
               <span v-else-if="item.status === 'aktif'" class="text-xs text-text-tertiary"
                 >Sedang Aktif</span
               >
