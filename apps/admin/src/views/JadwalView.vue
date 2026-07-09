@@ -167,13 +167,14 @@ async function fetchDropdowns() {
     const [mapelRes, guruRes, taRes] = await Promise.all([
       api.get<{ data: MataPelajaran[] }>('/mata-pelajaran'),
       api.get<{ data: Guru[] }>('/users', { params: { role: 'guru' } }),
-      api.get<{ data: { id: string; nama: string; status: string }[] }>('/tahun-ajaran'),
+      api.get<{ id: string; nama: string; status: string }[]>('/tahun-ajaran'),
     ]);
     mataPelajaranList.value = mapelRes.data.data;
     guruList.value = guruRes.data.data;
-    // Find active tahun ajaran
-    const aktif = taRes.data.data.find((ta) => ta.status === 'aktif');
-    activeTahunAjaran.value = aktif || taRes.data.data[0] || null;
+    // Find active tahun ajaran (API returns flat array)
+    const taList = taRes.data;
+    const aktif = taList.find((ta) => ta.status === 'aktif');
+    activeTahunAjaran.value = aktif || taList[0] || null;
   } catch (error) {
     console.error('Failed to fetch dropdowns:', error);
   }
