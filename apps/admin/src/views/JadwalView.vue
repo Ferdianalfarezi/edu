@@ -8,6 +8,7 @@ interface Kelas {
   id: string;
   nama: string;
   tingkat: number;
+  tahun_ajaran_id?: string;
 }
 
 interface MataPelajaran {
@@ -76,6 +77,7 @@ const kelasList = ref<Kelas[]>([]);
 const mataPelajaranList = ref<MataPelajaran[]>([]);
 const guruList = ref<Guru[]>([]);
 const jadwalEntries = ref<JadwalEntry[]>([]);
+const activeTahunAjaran = ref<{ id: string; nama: string } | null>(null);
 
 const selectedKelasId = ref('');
 const loading = ref(false);
@@ -162,12 +164,16 @@ async function fetchKelasList() {
 
 async function fetchDropdowns() {
   try {
-    const [mapelRes, guruRes] = await Promise.all([
+    const [mapelRes, guruRes, taRes] = await Promise.all([
       api.get<{ data: MataPelajaran[] }>('/mata-pelajaran'),
       api.get<{ data: Guru[] }>('/users', { params: { role: 'guru' } }),
+      api.get<{ data: { id: string; nama: string; status: string }[] }>('/tahun-ajaran'),
     ]);
     mataPelajaranList.value = mapelRes.data.data;
     guruList.value = guruRes.data.data;
+    // Find active tahun ajaran
+    const aktif = taRes.data.data.find((ta) => ta.status === 'aktif');
+    activeTahunAjaran.value = aktif || taRes.data.data[0] || null;
   } catch (error) {
     console.error('Failed to fetch dropdowns:', error);
   }
@@ -299,11 +305,28 @@ async function saveJadwal() {
     return;
   }
 
+  if (!activeTahunAjaran.value) {
+    formError.value = 'Tidak ada tahun ajaran aktif. Harap buat tahun ajaran terlebih dahulu.';
+    return;
+  }
+
+  // Determine semester based on current month (Jul-Dec = 1, Jan-Jun = 2)
+  const currentMonth = new Date().getMonth() + 1;
+  const semester = currentMonth >= 7 ? 1 : 2;
+
+  // Use kelas's tahun_ajaran_id if available, fallback to active tahun ajaran
+  const selectedKelas = kelasList.value.find((k) => k.id === selectedKelasId.value);
+  const tahunAjaranId = selectedKelas?.tahun_ajaran_id || activeTahunAjaran.value.id;
+
   const payload: Record<string, unknown> = {
     kelasId: selectedKelasId.value,
+    tahunAjaranId,
+    semester,
     hari: selectedHari.value,
     jamMulai: form.value.jam_mulai,
     jamSelesai: form.value.jam_selesai,
+    tanggalMulaiBerlaku: '2024-07-15',
+    tanggalSelesaiBerlaku: '2025-06-30',
     isIstirahat: form.value.is_istirahat,
   };
 
