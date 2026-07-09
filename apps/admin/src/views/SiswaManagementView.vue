@@ -433,28 +433,31 @@ onMounted(() => {
           class="w-full pl-9 pr-3 py-2 text-sm border border-border rounded-lg bg-white placeholder:text-text-tertiary focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-colors"
         />
       </div>
-      <SearchSelect
-        v-model="filterKelas"
-        :options="kelasSelectOptions"
-        placeholder="Semua Kelas"
-        clearable
-        class="w-40"
-      />
-      <SearchSelect
-        v-model="filterStatus"
-        :options="statusOptions"
-        placeholder="Semua Status"
-        clearable
-        :searchable="false"
-        class="w-40"
-      />
-      <SearchSelect
-        v-model="filterTahunAjaran"
-        :options="tahunAjaranSelectOptions"
-        placeholder="Semua Tahun Ajaran"
-        clearable
-        class="w-48"
-      />
+      <div class="w-40">
+        <SearchSelect
+          v-model="filterKelas"
+          :options="kelasSelectOptions"
+          placeholder="Semua Kelas"
+          clearable
+        />
+      </div>
+      <div class="w-40">
+        <SearchSelect
+          v-model="filterStatus"
+          :options="statusOptions"
+          placeholder="Semua Status"
+          clearable
+          :searchable="false"
+        />
+      </div>
+      <div class="w-48">
+        <SearchSelect
+          v-model="filterTahunAjaran"
+          :options="tahunAjaranSelectOptions"
+          placeholder="Semua Tahun Ajaran"
+          clearable
+        />
+      </div>
     </div>
 
     <!-- Table -->

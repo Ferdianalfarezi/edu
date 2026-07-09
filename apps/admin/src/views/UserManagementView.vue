@@ -247,20 +247,22 @@ onMounted(fetchUsers);
           class="w-full px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
         />
       </div>
-      <SearchSelect
-        v-model="filterRole"
-        :options="roleFilterOptions"
-        placeholder="Semua Role"
-        clearable
-        class="w-40"
-      />
-      <SearchSelect
-        v-model="filterStatus"
-        :options="statusFilterOptions"
-        placeholder="Semua Status"
-        clearable
-        class="w-40"
-      />
+      <div class="w-40">
+        <SearchSelect
+          v-model="filterRole"
+          :options="roleFilterOptions"
+          placeholder="Semua Role"
+          clearable
+        />
+      </div>
+      <div class="w-40">
+        <SearchSelect
+          v-model="filterStatus"
+          :options="statusFilterOptions"
+          placeholder="Semua Status"
+          clearable
+        />
+      </div>
     </div>
 
     <!-- Table -->
