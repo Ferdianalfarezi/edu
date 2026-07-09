@@ -373,11 +373,14 @@ async function verifyTransaksi(action: 'approve' | 'reject') {
 
   verifyingId.value = selectedTransaksi.value.id;
   try {
-    await api.patch(`/tagihan/${selectedTransaksi.value.tagihan_id}/verify`, {
+    const { data } = await api.patch(`/tagihan/${selectedTransaksi.value.tagihan_id}/verify`, {
       action,
       alasan_penolakan: action === 'reject' ? rejectReason.value.trim() : undefined,
     });
     showBuktiModal.value = false;
+    toast.success(
+      data.message || (action === 'approve' ? 'Pembayaran disetujui' : 'Pembayaran ditolak'),
+    );
     await fetchVerifikasi();
   } catch (error) {
     toast.error(error.response?.data?.message || 'Gagal memverifikasi');

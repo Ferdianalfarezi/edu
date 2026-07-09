@@ -637,37 +637,47 @@ export class TagihanService {
 
       // Send notification to parent (Req 12.7, 12.8)
       if (studentInfo?.orangTuaId) {
-        await this.notificationQueue.add('send-verification-notification', {
-          tenant_id: tenantId,
-          orang_tua_id: studentInfo.orangTuaId,
-          siswa_id: tagihanRecord.siswaId,
-          siswa_nama: studentInfo.nama,
-          action: 'approved',
-          bulan: tagihanRecord.bulan,
-          tahun: tagihanRecord.tahun,
-          nominal_disetujui: pendingTransaksi.jumlahBayar,
-          status_baru: newStatus,
-          sisa_tagihan: sisaTagihan > 0 ? sisaTagihan : 0,
-        });
+        try {
+          await this.notificationQueue.add('send-verification-notification', {
+            tenant_id: tenantId,
+            orang_tua_id: studentInfo.orangTuaId,
+            siswa_id: tagihanRecord.siswaId,
+            siswa_nama: studentInfo.nama,
+            action: 'approved',
+            bulan: tagihanRecord.bulan,
+            tahun: tagihanRecord.tahun,
+            nominal_disetujui: pendingTransaksi.jumlahBayar,
+            status_baru: newStatus,
+            sisa_tagihan: sisaTagihan > 0 ? sisaTagihan : 0,
+          });
+        } catch (err) {
+          this.logger.warn(
+            `Failed to enqueue approval notification for tagihan ${tagihanId}: ${err}`,
+          );
+        }
       }
 
       // Record audit trail (Requirements: 29.1, 29.5)
-      await this.auditTrailService.record({
-        tenantId,
-        userId: bendaharaId,
-        jenisAksi: 'setujui_pembayaran',
-        entityType: 'tagihan',
-        entityId: tagihanId,
-        nilaiSebelum: {
-          status: tagihanRecord.status,
-          total_dibayar: tagihanRecord.totalDibayar,
-        },
-        nilaiSesudah: {
-          status: newStatus,
-          total_dibayar: newTotalDibayar,
-          nominal_disetujui: pendingTransaksi.jumlahBayar,
-        },
-      });
+      try {
+        await this.auditTrailService.record({
+          tenantId,
+          userId: bendaharaId,
+          jenisAksi: 'setujui_pembayaran',
+          entityType: 'tagihan',
+          entityId: tagihanId,
+          nilaiSebelum: {
+            status: tagihanRecord.status,
+            total_dibayar: tagihanRecord.totalDibayar,
+          },
+          nilaiSesudah: {
+            status: newStatus,
+            total_dibayar: newTotalDibayar,
+            nominal_disetujui: pendingTransaksi.jumlahBayar,
+          },
+        });
+      } catch (err) {
+        this.logger.warn(`Failed to record audit trail for approve tagihan ${tagihanId}: ${err}`);
+      }
 
       return {
         message:
@@ -704,29 +714,39 @@ export class TagihanService {
 
       // Send rejection notification to parent (Req 12.5)
       if (studentInfo?.orangTuaId) {
-        await this.notificationQueue.add('send-verification-notification', {
-          tenant_id: tenantId,
-          orang_tua_id: studentInfo.orangTuaId,
-          siswa_id: tagihanRecord.siswaId,
-          siswa_nama: studentInfo.nama,
-          action: 'rejected',
-          bulan: tagihanRecord.bulan,
-          tahun: tagihanRecord.tahun,
-          alasan_penolakan: dto.alasan_penolakan,
-        });
+        try {
+          await this.notificationQueue.add('send-verification-notification', {
+            tenant_id: tenantId,
+            orang_tua_id: studentInfo.orangTuaId,
+            siswa_id: tagihanRecord.siswaId,
+            siswa_nama: studentInfo.nama,
+            action: 'rejected',
+            bulan: tagihanRecord.bulan,
+            tahun: tagihanRecord.tahun,
+            alasan_penolakan: dto.alasan_penolakan,
+          });
+        } catch (err) {
+          this.logger.warn(
+            `Failed to enqueue rejection notification for tagihan ${tagihanId}: ${err}`,
+          );
+        }
       }
 
       // Record audit trail (Requirements: 29.1, 29.5)
-      await this.auditTrailService.record({
-        tenantId,
-        userId: bendaharaId,
-        jenisAksi: 'tolak_pembayaran',
-        entityType: 'tagihan',
-        entityId: tagihanId,
-        nilaiSebelum: { status: tagihanRecord.status },
-        nilaiSesudah: { status: 'ditolak' },
-        alasan: dto.alasan_penolakan,
-      });
+      try {
+        await this.auditTrailService.record({
+          tenantId,
+          userId: bendaharaId,
+          jenisAksi: 'tolak_pembayaran',
+          entityType: 'tagihan',
+          entityId: tagihanId,
+          nilaiSebelum: { status: tagihanRecord.status },
+          nilaiSesudah: { status: 'ditolak' },
+          alasan: dto.alasan_penolakan,
+        });
+      } catch (err) {
+        this.logger.warn(`Failed to record audit trail for reject tagihan ${tagihanId}: ${err}`);
+      }
 
       return {
         message: 'Pembayaran ditolak.',
