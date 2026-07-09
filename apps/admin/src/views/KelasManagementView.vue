@@ -39,6 +39,7 @@ const tahunAjaranList = ref<TahunAjaran[]>([]);
 const guruList = ref<Guru[]>([]);
 const loading = ref(false);
 const selectedTahunAjaran = ref('');
+const selectedTingkat = ref('');
 
 // Modal state
 const showFormModal = ref(false);
@@ -56,8 +57,21 @@ const form = ref<KelasForm>({
 });
 
 const filteredKelas = computed(() => {
-  if (!selectedTahunAjaran.value) return kelasList.value;
-  return kelasList.value.filter((k) => k.tahun_ajaran_id === selectedTahunAjaran.value);
+  let result = kelasList.value;
+  if (selectedTahunAjaran.value) {
+    result = result.filter((k) => k.tahun_ajaran_id === selectedTahunAjaran.value);
+  }
+  if (selectedTingkat.value) {
+    result = result.filter((k) => k.tingkat === Number(selectedTingkat.value));
+  }
+  return result;
+});
+
+const tingkatOptions = computed<SelectOption[]>(() => {
+  const tingkatSet = new Set(kelasList.value.map((k) => k.tingkat));
+  return Array.from(tingkatSet)
+    .sort((a, b) => a - b)
+    .map((t) => ({ value: String(t), label: `Tingkat ${t}` }));
 });
 
 const tahunAjaranSelectOptions = computed<SelectOption[]>(() =>
@@ -212,7 +226,7 @@ onMounted(async () => {
       </template>
     </PageHeader>
 
-    <!-- Filter by Tahun Ajaran -->
+    <!-- Filter by Tahun Ajaran & Tingkat -->
     <div class="flex flex-wrap gap-3 mb-4">
       <SearchSelect
         v-model="selectedTahunAjaran"
@@ -221,6 +235,13 @@ onMounted(async () => {
         clearable
         class="max-w-xs"
         @change="onTahunAjaranChange"
+      />
+      <SearchSelect
+        v-model="selectedTingkat"
+        :options="tingkatOptions"
+        placeholder="Semua Tingkat"
+        clearable
+        class="max-w-xs"
       />
     </div>
 

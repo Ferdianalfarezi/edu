@@ -238,24 +238,28 @@ onMounted(fetchUsers);
     </PageHeader>
 
     <!-- Filters -->
-    <div class="flex flex-wrap gap-3 mb-4">
-      <input
-        v-model="search"
-        type="text"
-        placeholder="Cari nama atau email..."
-        class="w-full px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 sm:w-auto sm:min-w-[200px]"
-      />
+    <div class="flex flex-wrap items-end gap-2 mb-4">
+      <div class="relative w-48 min-w-[150px]">
+        <input
+          v-model="search"
+          type="text"
+          placeholder="Cari nama atau email..."
+          class="w-full px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
+        />
+      </div>
       <SearchSelect
         v-model="filterRole"
         :options="roleFilterOptions"
         placeholder="Semua Role"
         clearable
+        class="w-40"
       />
       <SearchSelect
         v-model="filterStatus"
         :options="statusFilterOptions"
         placeholder="Semua Status"
         clearable
+        class="w-40"
       />
     </div>
 

@@ -411,8 +411,8 @@ onMounted(() => {
     </PageHeader>
 
     <!-- Filters -->
-    <div class="flex flex-wrap gap-2 mb-4">
-      <div class="relative flex-1 min-w-[200px] max-w-xs">
+    <div class="flex flex-wrap items-end gap-2 mb-4">
+      <div class="relative w-48 min-w-[150px]">
         <svg
           class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text-tertiary"
           fill="none"
@@ -438,6 +438,7 @@ onMounted(() => {
         :options="kelasSelectOptions"
         placeholder="Semua Kelas"
         clearable
+        class="w-40"
       />
       <SearchSelect
         v-model="filterStatus"
@@ -445,12 +446,14 @@ onMounted(() => {
         placeholder="Semua Status"
         clearable
         :searchable="false"
+        class="w-40"
       />
       <SearchSelect
         v-model="filterTahunAjaran"
         :options="tahunAjaranSelectOptions"
         placeholder="Semua Tahun Ajaran"
         clearable
+        class="w-48"
       />
     </div>
 

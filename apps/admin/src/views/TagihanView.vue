@@ -761,35 +761,40 @@ onMounted(() => {
 
     <!-- ===== List Tab ===== -->
     <div v-if="activeTab === 'list'" class="min-h-[400px]">
-      <div class="flex flex-wrap gap-3 mb-4 items-center">
-        <input
-          v-model="listFilter.search"
-          type="text"
-          placeholder="Cari nama siswa..."
-          class="w-full px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 sm:w-auto sm:min-w-[200px]"
-        />
+      <div class="flex flex-wrap items-end gap-2 mb-4">
+        <div class="relative w-48 min-w-[150px]">
+          <input
+            v-model="listFilter.search"
+            type="text"
+            placeholder="Cari nama siswa..."
+            class="w-full px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
+          />
+        </div>
         <SearchSelect
           v-model="listFilter.status"
           :options="statusFilterOptions"
           placeholder="Semua Status"
           clearable
+          class="w-40"
         />
         <SearchSelect
           v-model="listFilter.kelas_id"
           :options="kelasSelectOptions"
           placeholder="Semua Kelas"
           clearable
+          class="w-40"
         />
         <SearchSelect
           v-model="listFilter.bulan"
           :options="bulanSelectOptions"
           placeholder="Semua Bulan"
           clearable
+          class="w-40"
         />
         <input
           v-model.number="listFilter.tahun"
           type="number"
-          class="w-[100px] px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
+          class="w-20 px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
           placeholder="Tahun"
         />
       </div>
@@ -974,23 +979,25 @@ onMounted(() => {
         </button>
       </div>
 
-      <div class="flex flex-wrap gap-3 mb-4">
+      <div class="flex flex-wrap items-end gap-2 mb-4">
         <SearchSelect
           v-model="tunggakanFilter.kelas_id"
           :options="kelasSelectOptions"
           placeholder="Semua Kelas"
           clearable
+          class="w-40"
         />
         <SearchSelect
           v-model="tunggakanFilter.bulan"
           :options="bulanSelectOptions"
           placeholder="Semua Bulan"
           clearable
+          class="w-40"
         />
         <input
           v-model.number="tunggakanFilter.tahun"
           type="number"
-          class="w-[100px] px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
+          class="w-20 px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
           placeholder="Tahun"
         />
       </div>
