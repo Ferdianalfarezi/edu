@@ -25,7 +25,8 @@ final childTagihanProvider = FutureProvider.autoDispose
     final items = (data['data'] as List<dynamic>?) ?? [];
 
     return items
-        .map((e) => Tagihan.fromJson(e as Map<String, dynamic>))
+        .map((e) =>
+            Tagihan.fromJson(e as Map<String, dynamic>, siswaId: siswaId))
         .toList();
   } catch (e) {
     _logger.e('Failed to fetch tagihan for siswa $siswaId: $e');

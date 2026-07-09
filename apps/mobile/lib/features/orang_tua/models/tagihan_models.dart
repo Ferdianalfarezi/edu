@@ -83,10 +83,10 @@ class Tagihan {
   /// Requirement 11.3: show sisa tagihan.
   int get sisa => nominal - totalDibayar;
 
-  factory Tagihan.fromJson(Map<String, dynamic> json) {
+  factory Tagihan.fromJson(Map<String, dynamic> json, {String? siswaId}) {
     return Tagihan(
       id: json['id'] as String,
-      siswaId: json['siswa_id'] as String,
+      siswaId: json['siswa_id'] as String? ?? siswaId ?? '',
       bulan: (json['bulan'] as num).toInt(),
       tahun: (json['tahun'] as num).toInt(),
       nominal: (json['nominal'] as num).toInt(),
