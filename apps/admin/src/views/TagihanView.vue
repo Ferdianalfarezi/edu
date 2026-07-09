@@ -372,7 +372,7 @@ async function verifyTransaksi(action: 'approve' | 'reject') {
 
   verifyingId.value = selectedTransaksi.value.id;
   try {
-    await api.patch(`/tagihan/${selectedTransaksi.value.id}/verify`, {
+    await api.patch(`/tagihan/${selectedTransaksi.value.tagihan_id}/verify`, {
       action,
       alasan_penolakan: action === 'reject' ? rejectReason.value.trim() : undefined,
     });
