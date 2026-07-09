@@ -109,3 +109,24 @@ body {
 ::-webkit-scrollbar-thumb:hover {
   background: var(--color-text-tertiary);
 }
+
+/* ===== Table Styles ===== */
+
+/* Zebra striping: alternating row backgrounds for readability */
+table tbody tr:nth-child(even) {
+  background-color: var(--color-surface-50);
+}
+
+table tbody tr:nth-child(odd) {
+  background-color: var(--color-surface-0);
+}
+
+/* Hover overrides zebra on interaction */
+table tbody tr:hover {
+  background-color: var(--color-primary-50) !important;
+}
+
+/* Ensure table containers allow horizontal scroll */
+.overflow-x-auto {
+  -webkit-overflow-scrolling: touch;
+}

@@ -119,61 +119,65 @@ onMounted(fetchTenants);
     </PageHeader>
 
     <div class="bg-white border border-border rounded-xl overflow-hidden">
-      <table v-if="!loading && tenants.length > 0" class="w-full">
-        <thead class="border-b border-border bg-surface-50">
-          <tr>
-            <th class="px-4 py-3 text-left font-medium text-text-secondary text-xs">
-              Nama Sekolah
-            </th>
-            <th class="px-4 py-3 text-left font-medium text-text-secondary text-xs">Email</th>
-            <th class="px-4 py-3 text-left font-medium text-text-secondary text-xs">Telepon</th>
-            <th class="px-4 py-3 text-left font-medium text-text-secondary text-xs">Jumlah User</th>
-            <th class="px-4 py-3 text-left font-medium text-text-secondary text-xs">Status</th>
-            <th class="px-4 py-3 text-left font-medium text-text-secondary text-xs">Terdaftar</th>
-            <th class="px-4 py-3 text-left font-medium text-text-secondary text-xs">Aksi</th>
-          </tr>
-        </thead>
-        <tbody class="divide-y divide-border">
-          <tr
-            v-for="tenant in tenants"
-            :key="tenant.id"
-            class="hover:bg-surface-50 transition-colors"
-          >
-            <td class="px-4 py-3 text-sm text-text-primary">{{ tenant.nama }}</td>
-            <td class="px-4 py-3 text-sm text-text-secondary">{{ tenant.email || '-' }}</td>
-            <td class="px-4 py-3 text-sm text-text-secondary">{{ tenant.telepon || '-' }}</td>
-            <td class="px-4 py-3 text-sm text-text-secondary">{{ tenant.user_count ?? '-' }}</td>
-            <td class="px-4 py-3">
-              <span
-                :class="[
-                  'inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium',
-                  tenant.is_active
-                    ? 'bg-success-50 text-success-700'
-                    : 'bg-danger-50 text-danger-700',
-                ]"
-              >
-                {{ tenant.is_active ? 'Aktif' : 'Nonaktif' }}
-              </span>
-            </td>
-            <td class="px-4 py-3 text-sm text-text-secondary">
-              {{ formatDate(tenant.created_at) }}
-            </td>
-            <td class="px-4 py-3">
-              <div class="flex gap-2">
-                <ActionButton variant="warning" icon="edit" @click="openEditForm(tenant)"
-                  >Edit</ActionButton
+      <div v-if="!loading && tenants.length > 0" class="overflow-x-auto">
+        <table class="w-full">
+          <thead class="border-b border-border bg-surface-50">
+            <tr>
+              <th class="px-4 py-3 text-left font-medium text-text-secondary text-xs">
+                Nama Sekolah
+              </th>
+              <th class="px-4 py-3 text-left font-medium text-text-secondary text-xs">Email</th>
+              <th class="px-4 py-3 text-left font-medium text-text-secondary text-xs">Telepon</th>
+              <th class="px-4 py-3 text-left font-medium text-text-secondary text-xs">
+                Jumlah User
+              </th>
+              <th class="px-4 py-3 text-left font-medium text-text-secondary text-xs">Status</th>
+              <th class="px-4 py-3 text-left font-medium text-text-secondary text-xs">Terdaftar</th>
+              <th class="px-4 py-3 text-left font-medium text-text-secondary text-xs">Aksi</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-border">
+            <tr
+              v-for="tenant in tenants"
+              :key="tenant.id"
+              class="hover:bg-surface-50 transition-colors"
+            >
+              <td class="px-4 py-3 text-sm text-text-primary">{{ tenant.nama }}</td>
+              <td class="px-4 py-3 text-sm text-text-secondary">{{ tenant.email || '-' }}</td>
+              <td class="px-4 py-3 text-sm text-text-secondary">{{ tenant.telepon || '-' }}</td>
+              <td class="px-4 py-3 text-sm text-text-secondary">{{ tenant.user_count ?? '-' }}</td>
+              <td class="px-4 py-3">
+                <span
+                  :class="[
+                    'inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium',
+                    tenant.is_active
+                      ? 'bg-success-50 text-success-700'
+                      : 'bg-danger-50 text-danger-700',
+                  ]"
                 >
-                <ActionButton
-                  :variant="tenant.is_active ? 'danger' : 'success'"
-                  :icon="tenant.is_active ? 'cancel' : 'activate'"
-                  @click="toggleTenantStatus(tenant)"
-                  >{{ tenant.is_active ? 'Nonaktifkan' : 'Aktifkan' }}</ActionButton
-                >
-              </div>
-            </td>
-          </tr>
-        </tbody>
-      </table>
+                  {{ tenant.is_active ? 'Aktif' : 'Nonaktif' }}
+                </span>
+              </td>
+              <td class="px-4 py-3 text-sm text-text-secondary">
+                {{ formatDate(tenant.created_at) }}
+              </td>
+              <td class="px-4 py-3">
+                <div class="flex gap-2">
+                  <ActionButton variant="warning" icon="edit" @click="openEditForm(tenant)"
+                    >Edit</ActionButton
+                  >
+                  <ActionButton
+                    :variant="tenant.is_active ? 'danger' : 'success'"
+                    :icon="tenant.is_active ? 'cancel' : 'activate'"
+                    @click="toggleTenantStatus(tenant)"
+                    >{{ tenant.is_active ? 'Nonaktifkan' : 'Aktifkan' }}</ActionButton
+                  >
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
       <p v-else-if="loading" class="text-center text-text-secondary py-8">Memuat data...</p>
       <p v-else class="text-center text-text-secondary py-8">Belum ada tenant terdaftar.</p>
     </div>

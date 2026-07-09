@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue';
 import { api } from '@/api/client';
-import { PageHeader, BaseModal } from '@/components/ui';
+import { PageHeader, BaseModal, ActionButton } from '@/components/ui';
 
 interface MataPelajaran {
   id: string;
@@ -111,63 +111,35 @@ onMounted(fetchItems);
     </PageHeader>
 
     <div class="bg-white border border-border rounded-xl overflow-hidden">
-      <table v-if="!loading && items.length > 0" class="w-full">
-        <thead class="border-b border-border bg-surface-50">
-          <tr>
-            <th class="px-4 py-3 text-left font-medium text-text-secondary text-xs">Nama</th>
-            <th class="px-4 py-3 text-left font-medium text-text-secondary text-xs">Kode</th>
-            <th class="px-4 py-3 text-left font-medium text-text-secondary text-xs">Aksi</th>
-          </tr>
-        </thead>
-        <tbody class="divide-y divide-border">
-          <tr v-for="item in items" :key="item.id" class="hover:bg-surface-50 transition-colors">
-            <td class="px-4 py-3 text-sm text-text-primary">{{ item.nama }}</td>
-            <td class="px-4 py-3 text-sm text-text-secondary font-mono">{{ item.kode || '-' }}</td>
-            <td class="px-4 py-3">
-              <div class="flex items-center gap-1">
-                <button
-                  class="p-1.5 rounded-md text-text-tertiary hover:text-primary-600 hover:bg-primary-50 transition-colors"
-                  @click="openEditForm(item)"
-                  title="Edit"
-                >
-                  <svg
-                    class="w-4 h-4"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                    stroke-width="1.75"
+      <div v-if="!loading && items.length > 0" class="overflow-x-auto">
+        <table class="w-full">
+          <thead class="border-b border-border bg-surface-50">
+            <tr>
+              <th class="px-4 py-3 text-left font-medium text-text-secondary text-xs">Nama</th>
+              <th class="px-4 py-3 text-left font-medium text-text-secondary text-xs">Kode</th>
+              <th class="px-4 py-3 text-left font-medium text-text-secondary text-xs">Aksi</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-border">
+            <tr v-for="item in items" :key="item.id" class="hover:bg-surface-50 transition-colors">
+              <td class="px-4 py-3 text-sm text-text-primary">{{ item.nama }}</td>
+              <td class="px-4 py-3 text-sm text-text-secondary font-mono">
+                {{ item.kode || '-' }}
+              </td>
+              <td class="px-4 py-3">
+                <div class="flex items-center gap-1">
+                  <ActionButton variant="warning" icon="edit" @click="openEditForm(item)"
+                    >Edit</ActionButton
                   >
-                    <path
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                      d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"
-                    />
-                  </svg>
-                </button>
-                <button
-                  class="p-1.5 rounded-md text-text-tertiary hover:text-danger-700 hover:bg-danger-50 transition-colors"
-                  @click="openDeleteConfirm(item)"
-                  title="Hapus"
-                >
-                  <svg
-                    class="w-4 h-4"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                    stroke-width="1.75"
+                  <ActionButton variant="danger" icon="delete" @click="openDeleteConfirm(item)"
+                    >Hapus</ActionButton
                   >
-                    <path
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                      d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                    />
-                  </svg>
-                </button>
-              </div>
-            </td>
-          </tr>
-        </tbody>
-      </table>
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
 
       <div v-else-if="loading" class="py-12 text-center">
         <svg class="w-6 h-6 animate-spin text-primary-500 mx-auto" fill="none" viewBox="0 0 24 24">

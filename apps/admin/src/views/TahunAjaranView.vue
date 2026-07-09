@@ -150,55 +150,57 @@ onMounted(fetchItems);
     </PageHeader>
 
     <div class="bg-white border border-border rounded-xl overflow-hidden">
-      <table v-if="!loading && items.length > 0" class="w-full">
-        <thead class="border-b border-border bg-surface-50">
-          <tr>
-            <th class="px-4 py-3 text-left font-medium text-text-secondary text-xs">Nama</th>
-            <th class="px-4 py-3 text-left font-medium text-text-secondary text-xs">
-              Tanggal Mulai
-            </th>
-            <th class="px-4 py-3 text-left font-medium text-text-secondary text-xs">
-              Tanggal Selesai
-            </th>
-            <th class="px-4 py-3 text-left font-medium text-text-secondary text-xs">Status</th>
-            <th class="px-4 py-3 text-left font-medium text-text-secondary text-xs">Aksi</th>
-          </tr>
-        </thead>
-        <tbody class="divide-y divide-border">
-          <tr v-for="item in items" :key="item.id" class="hover:bg-surface-50 transition-colors">
-            <td class="px-4 py-3 text-sm text-text-primary">{{ item.nama }}</td>
-            <td class="px-4 py-3 text-sm text-text-secondary">
-              {{ formatDate(item.tanggal_mulai) }}
-            </td>
-            <td class="px-4 py-3 text-sm text-text-secondary">
-              {{ formatDate(item.tanggal_selesai) }}
-            </td>
-            <td class="px-4 py-3">
-              <span
-                :class="[
-                  'inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium',
-                  statusClass(item.status),
-                ]"
-              >
-                {{ statusLabel(item.status) }}
-              </span>
-            </td>
-            <td class="px-4 py-3">
-              <ActionButton
-                v-if="item.status === 'disiapkan'"
-                variant="primary"
-                icon="activate"
-                @click="openActivateConfirm(item)"
-                >Aktifkan</ActionButton
-              >
-              <span v-else-if="item.status === 'aktif'" class="text-xs text-text-tertiary"
-                >Sedang Aktif</span
-              >
-              <span v-else class="text-xs text-text-tertiary">Historis</span>
-            </td>
-          </tr>
-        </tbody>
-      </table>
+      <div v-if="!loading && items.length > 0" class="overflow-x-auto">
+        <table class="w-full">
+          <thead class="border-b border-border bg-surface-50">
+            <tr>
+              <th class="px-4 py-3 text-left font-medium text-text-secondary text-xs">Nama</th>
+              <th class="px-4 py-3 text-left font-medium text-text-secondary text-xs">
+                Tanggal Mulai
+              </th>
+              <th class="px-4 py-3 text-left font-medium text-text-secondary text-xs">
+                Tanggal Selesai
+              </th>
+              <th class="px-4 py-3 text-left font-medium text-text-secondary text-xs">Status</th>
+              <th class="px-4 py-3 text-left font-medium text-text-secondary text-xs">Aksi</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-border">
+            <tr v-for="item in items" :key="item.id" class="hover:bg-surface-50 transition-colors">
+              <td class="px-4 py-3 text-sm text-text-primary">{{ item.nama }}</td>
+              <td class="px-4 py-3 text-sm text-text-secondary">
+                {{ formatDate(item.tanggal_mulai) }}
+              </td>
+              <td class="px-4 py-3 text-sm text-text-secondary">
+                {{ formatDate(item.tanggal_selesai) }}
+              </td>
+              <td class="px-4 py-3">
+                <span
+                  :class="[
+                    'inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium',
+                    statusClass(item.status),
+                  ]"
+                >
+                  {{ statusLabel(item.status) }}
+                </span>
+              </td>
+              <td class="px-4 py-3">
+                <ActionButton
+                  v-if="item.status === 'disiapkan'"
+                  variant="primary"
+                  icon="activate"
+                  @click="openActivateConfirm(item)"
+                  >Aktifkan</ActionButton
+                >
+                <span v-else-if="item.status === 'aktif'" class="text-xs text-text-tertiary"
+                  >Sedang Aktif</span
+                >
+                <span v-else class="text-xs text-text-tertiary">Historis</span>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
 
       <div v-else-if="loading" class="py-12 text-center">
         <svg class="w-6 h-6 animate-spin text-primary-500 mx-auto" fill="none" viewBox="0 0 24 24">

@@ -226,43 +226,51 @@ onMounted(async () => {
 
     <!-- Table -->
     <div class="bg-white border border-border rounded-xl overflow-hidden">
-      <table v-if="!loading && filteredKelas.length > 0" class="w-full">
-        <thead>
-          <tr class="border-b border-border bg-surface-50">
-            <th class="px-4 py-3 text-left font-medium text-text-secondary text-xs">Nama Kelas</th>
-            <th class="px-4 py-3 text-left font-medium text-text-secondary text-xs">Tingkat</th>
-            <th class="px-4 py-3 text-left font-medium text-text-secondary text-xs">Wali Kelas</th>
-            <th class="px-4 py-3 text-left font-medium text-text-secondary text-xs">
-              Jumlah Siswa
-            </th>
-            <th class="px-4 py-3 text-left font-medium text-text-secondary text-xs">Kapasitas</th>
-            <th class="px-4 py-3 text-left font-medium text-text-secondary text-xs">Aksi</th>
-          </tr>
-        </thead>
-        <tbody class="divide-y divide-border">
-          <tr
-            v-for="kelas in filteredKelas"
-            :key="kelas.id"
-            class="hover:bg-surface-50 transition-colors"
-          >
-            <td class="px-4 py-3 text-sm text-text-primary">{{ kelas.nama }}</td>
-            <td class="px-4 py-3 text-sm text-text-primary">{{ kelas.tingkat }}</td>
-            <td class="px-4 py-3 text-sm text-text-primary">{{ kelas.wali_kelas_nama || '-' }}</td>
-            <td class="px-4 py-3 text-sm text-text-primary">{{ kelas.jumlah_siswa }}</td>
-            <td class="px-4 py-3 text-sm text-text-primary">{{ kelas.kapasitas || '-' }}</td>
-            <td class="px-4 py-3">
-              <div class="flex items-center gap-2">
-                <ActionButton variant="warning" icon="edit" @click="openEditForm(kelas)"
-                  >Edit</ActionButton
-                >
-                <ActionButton variant="danger" icon="delete" @click="openDeleteConfirm(kelas)"
-                  >Hapus</ActionButton
-                >
-              </div>
-            </td>
-          </tr>
-        </tbody>
-      </table>
+      <div v-if="!loading && filteredKelas.length > 0" class="overflow-x-auto">
+        <table class="w-full">
+          <thead>
+            <tr class="border-b border-border bg-surface-50">
+              <th class="px-4 py-3 text-left font-medium text-text-secondary text-xs">
+                Nama Kelas
+              </th>
+              <th class="px-4 py-3 text-left font-medium text-text-secondary text-xs">Tingkat</th>
+              <th class="px-4 py-3 text-left font-medium text-text-secondary text-xs">
+                Wali Kelas
+              </th>
+              <th class="px-4 py-3 text-left font-medium text-text-secondary text-xs">
+                Jumlah Siswa
+              </th>
+              <th class="px-4 py-3 text-left font-medium text-text-secondary text-xs">Kapasitas</th>
+              <th class="px-4 py-3 text-left font-medium text-text-secondary text-xs">Aksi</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-border">
+            <tr
+              v-for="kelas in filteredKelas"
+              :key="kelas.id"
+              class="hover:bg-surface-50 transition-colors"
+            >
+              <td class="px-4 py-3 text-sm text-text-primary">{{ kelas.nama }}</td>
+              <td class="px-4 py-3 text-sm text-text-primary">{{ kelas.tingkat }}</td>
+              <td class="px-4 py-3 text-sm text-text-primary">
+                {{ kelas.wali_kelas_nama || '-' }}
+              </td>
+              <td class="px-4 py-3 text-sm text-text-primary">{{ kelas.jumlah_siswa }}</td>
+              <td class="px-4 py-3 text-sm text-text-primary">{{ kelas.kapasitas || '-' }}</td>
+              <td class="px-4 py-3">
+                <div class="flex items-center gap-2">
+                  <ActionButton variant="warning" icon="edit" @click="openEditForm(kelas)"
+                    >Edit</ActionButton
+                  >
+                  <ActionButton variant="danger" icon="delete" @click="openDeleteConfirm(kelas)"
+                    >Hapus</ActionButton
+                  >
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
       <div v-else-if="loading" class="py-12 text-center">
         <svg
           class="w-6 h-6 animate-spin text-primary-500 mx-auto"
