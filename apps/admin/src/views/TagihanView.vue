@@ -3,6 +3,9 @@ import { ref, reactive, onMounted, watch, computed } from 'vue';
 import { api } from '@/api/client';
 import { PageHeader, BaseModal, SearchSelect, ActionButton } from '@/components/ui';
 import type { SelectOption } from '@/components/ui';
+import { useToast } from '@/composables/useToast';
+
+const toast = useToast();
 
 // ===== Types =====
 type StatusTagihan = 'belum_bayar' | 'cicilan' | 'lunas' | 'dibatalkan';
@@ -274,6 +277,7 @@ async function generateTagihan() {
   generating.value = true;
   generateError.value = '';
   generateResult.value = null;
+  toast.info('Sedang men-generate tagihan, mohon tunggu...', 0);
 
   try {
     const payload: Record<string, unknown> = {};
@@ -294,10 +298,17 @@ async function generateTagihan() {
     }>('/tagihan/generate', payload);
 
     generateResult.value = data;
+    toast.success(`Berhasil! ${data.created} tagihan dibuat, ${data.skipped} dilewati.`);
   } catch (error: any) {
     generateError.value = error.response?.data?.message || 'Gagal men-generate tagihan';
+    toast.error(generateError.value);
   } finally {
     generating.value = false;
+    // Remove the persistent info toast
+    const infoToast = toast.toasts.value.find(
+      (t) => t.type === 'info' && t.message.includes('men-generate tagihan'),
+    );
+    if (infoToast) toast.removeToast(infoToast.id);
   }
 }
 
@@ -722,11 +733,32 @@ onMounted(() => {
         </div>
 
         <button
-          class="px-3 py-2 text-sm font-medium text-white bg-primary-600 rounded-lg hover:bg-primary-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          class="px-3 py-2 text-sm font-medium text-white bg-primary-600 rounded-lg hover:bg-primary-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed inline-flex items-center gap-2"
           :disabled="generating"
           @click="generateTagihan"
         >
-          {{ generating ? 'Generating...' : 'Generate Tagihan' }}
+          <svg
+            v-if="generating"
+            class="animate-spin h-4 w-4 text-white"
+            xmlns="http://www.w3.org/2000/svg"
+            fill="none"
+            viewBox="0 0 24 24"
+          >
+            <circle
+              class="opacity-25"
+              cx="12"
+              cy="12"
+              r="10"
+              stroke="currentColor"
+              stroke-width="4"
+            />
+            <path
+              class="opacity-75"
+              fill="currentColor"
+              d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
+            />
+          </svg>
+          {{ generating ? 'Sedang men-generate...' : 'Generate Tagihan' }}
         </button>
 
         <div v-if="generateResult" class="mt-6 p-4 bg-surface-50 border border-border rounded-xl">

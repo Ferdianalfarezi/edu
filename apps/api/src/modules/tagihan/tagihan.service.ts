@@ -944,8 +944,15 @@ export class TagihanService {
     }
 
     // Send notifications for newly created tagihan (Requirements: 10.5)
+    // Fire-and-forget: notifications should not block the response or cause it to fail.
     if (newTagihanByParent.size > 0) {
-      await this.enqueueBatchTagihanNotifications(tenantId, newTagihanByParent, tanggalJatuhTempo);
+      this.enqueueBatchTagihanNotifications(tenantId, newTagihanByParent, tanggalJatuhTempo).catch(
+        (err) => {
+          this.logger.warn(
+            `Failed to enqueue tagihan notifications for tenant ${tenantId}: ${err.message}`,
+          );
+        },
+      );
     }
 
     return {
@@ -1233,19 +1240,28 @@ export class TagihanService {
     >,
     tanggalJatuhTempo: number,
   ): Promise<void> {
-    // Enqueue one notification job per parent to avoid overwhelming queue
-    for (const [orangTuaId, children] of byParent) {
-      await this.notificationQueue.add('send-new-tagihan-notification', {
-        tenant_id: tenantId,
-        orang_tua_id: orangTuaId,
-        children: children.map((c) => ({
-          siswa_id: c.siswaId,
-          siswa_nama: c.siswaNama,
-          tagihan_count: c.months.length,
-          nominal: c.nominal,
-          tanggal_jatuh_tempo: tanggalJatuhTempo,
-        })),
-      });
+    // Enqueue notifications in parallel batches to avoid blocking the response.
+    // Process in batches of 50 to avoid overwhelming Redis.
+    const entries = Array.from(byParent.entries());
+    const BATCH_SIZE = 50;
+
+    for (let i = 0; i < entries.length; i += BATCH_SIZE) {
+      const batch = entries.slice(i, i + BATCH_SIZE);
+      await Promise.all(
+        batch.map(([orangTuaId, children]) =>
+          this.notificationQueue.add('send-new-tagihan-notification', {
+            tenant_id: tenantId,
+            orang_tua_id: orangTuaId,
+            children: children.map((c) => ({
+              siswa_id: c.siswaId,
+              siswa_nama: c.siswaNama,
+              tagihan_count: c.months.length,
+              nominal: c.nominal,
+              tanggal_jatuh_tempo: tanggalJatuhTempo,
+            })),
+          }),
+        ),
+      );
     }
   }
 
