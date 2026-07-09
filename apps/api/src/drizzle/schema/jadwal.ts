@@ -34,12 +34,8 @@ export const jadwalPelajaran = pgTable(
     kelasId: uuid('kelas_id')
       .notNull()
       .references(() => kelas.id),
-    mataPelajaranId: uuid('mata_pelajaran_id')
-      .notNull()
-      .references(() => mataPelajaran.id),
-    guruId: uuid('guru_id')
-      .notNull()
-      .references(() => user.id),
+    mataPelajaranId: uuid('mata_pelajaran_id').references(() => mataPelajaran.id),
+    guruId: uuid('guru_id').references(() => user.id),
     tahunAjaranId: uuid('tahun_ajaran_id')
       .notNull()
       .references(() => tahunAjaran.id),
@@ -49,6 +45,7 @@ export const jadwalPelajaran = pgTable(
     jamSelesai: time('jam_selesai').notNull(),
     tanggalMulaiBerlaku: date('tanggal_mulai_berlaku').notNull(),
     tanggalSelesaiBerlaku: date('tanggal_selesai_berlaku').notNull(),
+    isIstirahat: boolean('is_istirahat').default(false),
     isVacant: boolean('is_vacant').default(false),
     createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow(),

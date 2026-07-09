@@ -1,17 +1,29 @@
-import { IsNotEmpty, IsUUID, IsInt, IsIn, IsDateString, Matches } from 'class-validator';
+import {
+  IsNotEmpty,
+  IsUUID,
+  IsInt,
+  IsIn,
+  IsDateString,
+  IsOptional,
+  IsBoolean,
+  Matches,
+  ValidateIf,
+} from 'class-validator';
 
 export class CreateJadwalDto {
   @IsNotEmpty()
   @IsUUID()
   kelasId: string;
 
-  @IsNotEmpty()
+  @ValidateIf((o) => !o.isIstirahat)
+  @IsNotEmpty({ message: 'mataPelajaranId wajib diisi untuk jam pelajaran' })
   @IsUUID()
-  mataPelajaranId: string;
+  mataPelajaranId?: string;
 
-  @IsNotEmpty()
+  @ValidateIf((o) => !o.isIstirahat)
+  @IsNotEmpty({ message: 'guruId wajib diisi untuk jam pelajaran' })
   @IsUUID()
-  guruId: string;
+  guruId?: string;
 
   @IsNotEmpty()
   @IsUUID()
@@ -45,4 +57,8 @@ export class CreateJadwalDto {
   @IsNotEmpty()
   @IsDateString()
   tanggalSelesaiBerlaku: string;
+
+  @IsOptional()
+  @IsBoolean()
+  isIstirahat?: boolean;
 }

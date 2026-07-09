@@ -111,6 +111,7 @@ export class RaporNilaiService {
     // Group by mapel
     const mapelMap = new Map<string, GuruMapelResult>();
     for (const row of rows) {
+      if (!row.mapelId) continue;
       if (!mapelMap.has(row.mapelId)) {
         mapelMap.set(row.mapelId, {
           mapel_id: row.mapelId,

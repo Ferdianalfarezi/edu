@@ -29,8 +29,14 @@ export class JadwalService {
   async create(tenantId: string, adminId: string, dto: CreateJadwalDto) {
     const db = this.drizzleService.db;
 
-    // Validate all referenced entities exist in the same tenant
-    await this.validateReferences(tenantId, dto);
+    // Validate referenced entities only for non-istirahat entries
+    if (!dto.isIstirahat) {
+      await this.validateReferences(tenantId, dto);
+    } else {
+      // For istirahat, only validate kelas and tahun ajaran
+      await this.validateKelas(tenantId, dto.kelasId);
+      await this.validateTahunAjaran(tenantId, dto.tahunAjaranId);
+    }
 
     // Validate jamSelesai > jamMulai
     if (dto.jamSelesai <= dto.jamMulai) {
@@ -49,8 +55,8 @@ export class JadwalService {
       .values({
         tenantId,
         kelasId: dto.kelasId,
-        mataPelajaranId: dto.mataPelajaranId,
-        guruId: dto.guruId,
+        mataPelajaranId: dto.isIstirahat ? null : dto.mataPelajaranId,
+        guruId: dto.isIstirahat ? null : dto.guruId,
         tahunAjaranId: dto.tahunAjaranId,
         semester: dto.semester,
         hari: dto.hari,
@@ -58,6 +64,7 @@ export class JadwalService {
         jamSelesai: dto.jamSelesai,
         tanggalMulaiBerlaku: dto.tanggalMulaiBerlaku,
         tanggalSelesaiBerlaku: dto.tanggalSelesaiBerlaku,
+        isIstirahat: dto.isIstirahat || false,
       })
       .returning();
 
@@ -101,6 +108,7 @@ export class JadwalService {
         jamMulai: jadwalPelajaran.jamMulai,
         jamSelesai: jadwalPelajaran.jamSelesai,
         isVacant: jadwalPelajaran.isVacant,
+        isIstirahat: jadwalPelajaran.isIstirahat,
         tanggalMulaiBerlaku: jadwalPelajaran.tanggalMulaiBerlaku,
         tanggalSelesaiBerlaku: jadwalPelajaran.tanggalSelesaiBerlaku,
         kelasNama: kelas.nama,
@@ -110,8 +118,8 @@ export class JadwalService {
       })
       .from(jadwalPelajaran)
       .innerJoin(kelas, eq(jadwalPelajaran.kelasId, kelas.id))
-      .innerJoin(mataPelajaran, eq(jadwalPelajaran.mataPelajaranId, mataPelajaran.id))
-      .innerJoin(user, eq(jadwalPelajaran.guruId, user.id))
+      .leftJoin(mataPelajaran, eq(jadwalPelajaran.mataPelajaranId, mataPelajaran.id))
+      .leftJoin(user, eq(jadwalPelajaran.guruId, user.id))
       .where(and(...conditions));
 
     // Check for active guru_pengganti for today on each entry
@@ -125,31 +133,34 @@ export class JadwalService {
           tanggal: string;
         } | null = null;
 
-        const [penggantiRecord] = await db
-          .select({
-            id: guruPengganti.id,
-            guruPenggantiId: guruPengganti.guruPenggantiId,
-            guruPenggantiNama: user.nama,
-            tanggal: guruPengganti.tanggal,
-          })
-          .from(guruPengganti)
-          .innerJoin(user, eq(guruPengganti.guruPenggantiId, user.id))
-          .where(
-            and(
-              eq(guruPengganti.tenantId, tenantId),
-              eq(guruPengganti.kelasId, row.kelasId),
-              eq(guruPengganti.mataPelajaranId, row.mataPelajaranId),
-              gte(guruPengganti.tanggal, today),
-            ),
-          );
+        // Skip pengganti check for istirahat entries
+        if (row.mataPelajaranId && row.guruId) {
+          const [penggantiRecord] = await db
+            .select({
+              id: guruPengganti.id,
+              guruPenggantiId: guruPengganti.guruPenggantiId,
+              guruPenggantiNama: user.nama,
+              tanggal: guruPengganti.tanggal,
+            })
+            .from(guruPengganti)
+            .innerJoin(user, eq(guruPengganti.guruPenggantiId, user.id))
+            .where(
+              and(
+                eq(guruPengganti.tenantId, tenantId),
+                eq(guruPengganti.kelasId, row.kelasId),
+                eq(guruPengganti.mataPelajaranId, row.mataPelajaranId),
+                gte(guruPengganti.tanggal, today),
+              ),
+            );
 
-        if (penggantiRecord) {
-          guru_pengganti_aktif = {
-            id: penggantiRecord.id,
-            guru_pengganti_id: penggantiRecord.guruPenggantiId,
-            guru_pengganti_nama: penggantiRecord.guruPenggantiNama,
-            tanggal: penggantiRecord.tanggal,
-          };
+          if (penggantiRecord) {
+            guru_pengganti_aktif = {
+              id: penggantiRecord.id,
+              guru_pengganti_id: penggantiRecord.guruPenggantiId,
+              guru_pengganti_nama: penggantiRecord.guruPenggantiNama,
+              tanggal: penggantiRecord.tanggal,
+            };
+          }
         }
 
         return {
@@ -161,12 +172,15 @@ export class JadwalService {
           jam_mulai: row.jamMulai?.substring(0, 5) ?? row.jamMulai,
           jam_selesai: row.jamSelesai?.substring(0, 5) ?? row.jamSelesai,
           is_vacant: row.isVacant,
-          mata_pelajaran: {
-            id: row.mataPelajaranId,
-            nama: row.mataPelajaranNama,
-            kode: row.mataPelajaranKode,
-          },
-          guru: { id: row.guruId, nama: row.guruNama },
+          is_istirahat: row.isIstirahat ?? false,
+          mata_pelajaran: row.mataPelajaranId
+            ? {
+                id: row.mataPelajaranId,
+                nama: row.mataPelajaranNama,
+                kode: row.mataPelajaranKode,
+              }
+            : null,
+          guru: row.guruId ? { id: row.guruId, nama: row.guruNama } : null,
           guru_pengganti_aktif,
         };
       }),
@@ -195,6 +209,7 @@ export class JadwalService {
         tanggalMulaiBerlaku: jadwalPelajaran.tanggalMulaiBerlaku,
         tanggalSelesaiBerlaku: jadwalPelajaran.tanggalSelesaiBerlaku,
         isVacant: jadwalPelajaran.isVacant,
+        isIstirahat: jadwalPelajaran.isIstirahat,
         kelasNama: kelas.nama,
         mataPelajaranNama: mataPelajaran.nama,
         mataPelajaranKode: mataPelajaran.kode,
@@ -202,8 +217,8 @@ export class JadwalService {
       })
       .from(jadwalPelajaran)
       .innerJoin(kelas, eq(jadwalPelajaran.kelasId, kelas.id))
-      .innerJoin(mataPelajaran, eq(jadwalPelajaran.mataPelajaranId, mataPelajaran.id))
-      .innerJoin(user, eq(jadwalPelajaran.guruId, user.id))
+      .leftJoin(mataPelajaran, eq(jadwalPelajaran.mataPelajaranId, mataPelajaran.id))
+      .leftJoin(user, eq(jadwalPelajaran.guruId, user.id))
       .where(and(eq(jadwalPelajaran.id, id), eq(jadwalPelajaran.tenantId, tenantId)));
 
     if (!result) {
@@ -219,12 +234,15 @@ export class JadwalService {
       jam_mulai: result.jamMulai?.substring(0, 5) ?? result.jamMulai,
       jam_selesai: result.jamSelesai?.substring(0, 5) ?? result.jamSelesai,
       is_vacant: result.isVacant,
-      mata_pelajaran: {
-        id: result.mataPelajaranId,
-        nama: result.mataPelajaranNama,
-        kode: result.mataPelajaranKode,
-      },
-      guru: { id: result.guruId, nama: result.guruNama },
+      is_istirahat: result.isIstirahat ?? false,
+      mata_pelajaran: result.mataPelajaranId
+        ? {
+            id: result.mataPelajaranId,
+            nama: result.mataPelajaranNama,
+            kode: result.mataPelajaranKode,
+          }
+        : null,
+      guru: result.guruId ? { id: result.guruId, nama: result.guruNama } : null,
     };
   }
 
@@ -544,21 +562,29 @@ export class JadwalService {
     // For each slot, check if there's a guru_pengganti assigned for that date
     const results = await Promise.all(
       jadwalResults.map(async (slot) => {
-        const [penggantiRecord] = await db
-          .select({
-            id: guruPengganti.id,
-            guruPenggantiNama: user.nama,
-          })
-          .from(guruPengganti)
-          .innerJoin(user, eq(guruPengganti.guruPenggantiId, user.id))
-          .where(
-            and(
-              eq(guruPengganti.tenantId, tenantId),
-              eq(guruPengganti.kelasId, slot.kelasId),
-              eq(guruPengganti.mataPelajaranId, slot.mataPelajaranId),
-              eq(guruPengganti.tanggal, tanggal),
-            ),
-          );
+        let hasGuruPengganti = false;
+        let guruPenggantiNama: string | undefined;
+
+        if (slot.mataPelajaranId) {
+          const [penggantiRecord] = await db
+            .select({
+              id: guruPengganti.id,
+              guruPenggantiNama: user.nama,
+            })
+            .from(guruPengganti)
+            .innerJoin(user, eq(guruPengganti.guruPenggantiId, user.id))
+            .where(
+              and(
+                eq(guruPengganti.tenantId, tenantId),
+                eq(guruPengganti.kelasId, slot.kelasId),
+                eq(guruPengganti.mataPelajaranId, slot.mataPelajaranId),
+                eq(guruPengganti.tanggal, tanggal),
+              ),
+            );
+
+          hasGuruPengganti = !!penggantiRecord;
+          guruPenggantiNama = penggantiRecord?.guruPenggantiNama ?? undefined;
+        }
 
         return {
           id: slot.id,
@@ -566,8 +592,8 @@ export class JadwalService {
           mataPelajaranNama: slot.mataPelajaranNama,
           jamMulai: slot.jamMulai?.substring(0, 5) ?? slot.jamMulai,
           jamSelesai: slot.jamSelesai?.substring(0, 5) ?? slot.jamSelesai,
-          hasGuruPengganti: !!penggantiRecord,
-          guruPenggantiNama: penggantiRecord?.guruPenggantiNama ?? undefined,
+          hasGuruPengganti,
+          guruPenggantiNama,
         };
       }),
     );
@@ -623,8 +649,8 @@ export class JadwalService {
   private async validateReferences(tenantId: string, dto: CreateJadwalDto) {
     await Promise.all([
       this.validateKelas(tenantId, dto.kelasId),
-      this.validateMataPelajaran(tenantId, dto.mataPelajaranId),
-      this.validateGuru(tenantId, dto.guruId),
+      this.validateMataPelajaran(tenantId, dto.mataPelajaranId!),
+      this.validateGuru(tenantId, dto.guruId!),
       this.validateTahunAjaran(tenantId, dto.tahunAjaranId),
     ]);
   }

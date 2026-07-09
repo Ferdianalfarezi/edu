@@ -24,15 +24,16 @@ interface Guru {
 interface JadwalEntry {
   id: string;
   kelas_id: string;
-  mata_pelajaran_id: string;
-  guru_id: string;
+  mata_pelajaran_id: string | null;
+  guru_id: string | null;
   hari: string;
   jam_ke?: number;
   jam_mulai: string;
   jam_selesai: string;
   is_vacant: boolean;
-  mata_pelajaran?: MataPelajaran;
-  guru?: Guru;
+  is_istirahat: boolean;
+  mata_pelajaran?: MataPelajaran | null;
+  guru?: Guru | null;
   guru_pengganti_aktif?: GuruPenggantiInfo | null;
 }
 
@@ -48,6 +49,7 @@ interface JadwalForm {
   guru_id: string;
   jam_mulai: string;
   jam_selesai: string;
+  is_istirahat: boolean;
 }
 
 interface GuruPenggantiForm {
@@ -88,6 +90,7 @@ const form = ref<JadwalForm>({
   guru_id: '',
   jam_mulai: '',
   jam_selesai: '',
+  is_istirahat: false,
 });
 const formError = ref('');
 
@@ -189,7 +192,7 @@ watch(selectedKelasId, () => {
   fetchJadwal();
 });
 
-// Cell click handler (avoids non-null assertion in template)
+// Cell click handler
 function handleCellClick(jam: number, hari: string) {
   const entry = gridData.value[jam][hari];
   if (entry) {
@@ -199,15 +202,16 @@ function handleCellClick(jam: number, hari: string) {
   }
 }
 
-// Cell display helpers (avoids non-null assertion in template)
+// Cell display helpers
 function getCellMapel(entry: JadwalEntry | null): string {
   if (!entry) return '';
-  return entry.mata_pelajaran?.nama || getMapelNama(entry.mata_pelajaran_id);
+  if (entry.is_istirahat) return 'Istirahat';
+  return entry.mata_pelajaran?.nama || getMapelNama(entry.mata_pelajaran_id || '');
 }
 
 function getCellGuru(entry: JadwalEntry | null): string {
-  if (!entry) return '';
-  return entry.guru?.nama || getGuruNama(entry.guru_id);
+  if (!entry || entry.is_istirahat) return '';
+  return entry.guru?.nama || getGuruNama(entry.guru_id || '');
 }
 
 function getCellPenggantiNama(entry: JadwalEntry | null): string {
@@ -224,7 +228,13 @@ function getGuruNama(id: string): string {
 }
 
 function isVacant(entry: JadwalEntry | null): boolean {
-  return !entry || entry.is_vacant || !entry.guru_id;
+  return (
+    !entry || (entry.is_vacant && !entry.is_istirahat) || (!entry.guru_id && !entry.is_istirahat)
+  );
+}
+
+function isIstirahat(entry: JadwalEntry | null): boolean {
+  return !!entry?.is_istirahat;
 }
 
 function hasPengganti(entry: JadwalEntry | null): boolean {
@@ -241,6 +251,7 @@ function openCreateForm(hari: string, jamKe: number) {
     guru_id: '',
     jam_mulai: getDefaultJamMulai(jamKe),
     jam_selesai: getDefaultJamSelesai(jamKe),
+    is_istirahat: false,
   };
   formError.value = '';
   showFormModal.value = true;
@@ -251,10 +262,11 @@ function openEditForm(entry: JadwalEntry, hari: string, jamKe: number) {
   selectedHari.value = hari;
   selectedJamKe.value = jamKe;
   form.value = {
-    mata_pelajaran_id: entry.mata_pelajaran_id,
-    guru_id: entry.guru_id,
+    mata_pelajaran_id: entry.mata_pelajaran_id || '',
+    guru_id: entry.guru_id || '',
     jam_mulai: entry.jam_mulai,
     jam_selesai: entry.jam_selesai,
+    is_istirahat: entry.is_istirahat || false,
   };
   formError.value = '';
   showFormModal.value = true;
@@ -280,19 +292,25 @@ function getDefaultJamSelesai(jamKe: number): string {
 
 async function saveJadwal() {
   formError.value = '';
-  if (!form.value.mata_pelajaran_id || !form.value.guru_id) {
-    formError.value = 'Mata pelajaran dan guru wajib dipilih.';
+
+  // Validate: if not istirahat, guru and mapel are required
+  if (!form.value.is_istirahat && (!form.value.mata_pelajaran_id || !form.value.guru_id)) {
+    formError.value = 'Mata pelajaran dan guru wajib dipilih untuk jam pelajaran.';
     return;
   }
 
-  const payload = {
+  const payload: Record<string, unknown> = {
     kelasId: selectedKelasId.value,
-    mataPelajaranId: form.value.mata_pelajaran_id,
-    guruId: form.value.guru_id,
     hari: selectedHari.value,
     jamMulai: form.value.jam_mulai,
     jamSelesai: form.value.jam_selesai,
+    isIstirahat: form.value.is_istirahat,
   };
+
+  if (!form.value.is_istirahat) {
+    payload.mataPelajaranId = form.value.mata_pelajaran_id;
+    payload.guruId = form.value.guru_id;
+  }
 
   try {
     if (editingEntry.value) {
@@ -465,8 +483,11 @@ onMounted(async () => {
                 :key="`${jam}-${hari}`"
                 :class="[
                   'p-2 border border-border text-center text-xs cursor-pointer hover:bg-primary-50 transition-colors align-top min-h-[60px]',
+                  isIstirahat(gridData[jam][hari]) ? 'bg-amber-50' : '',
                   isVacant(gridData[jam][hari]) && gridData[jam][hari] === null ? '' : '',
-                  isVacant(gridData[jam][hari]) && gridData[jam][hari] !== null
+                  isVacant(gridData[jam][hari]) &&
+                  gridData[jam][hari] !== null &&
+                  !isIstirahat(gridData[jam][hari])
                     ? 'bg-warning-50'
                     : '',
                   hasPengganti(gridData[jam][hari]) ? 'bg-primary-50' : '',
@@ -474,18 +495,23 @@ onMounted(async () => {
                 @click="handleCellClick(jam, hari)"
               >
                 <template v-if="gridData[jam][hari]">
-                  <div class="font-semibold text-text-primary mb-0.5">
-                    {{ getCellMapel(gridData[jam][hari]) }}
-                  </div>
-                  <div class="text-text-tertiary text-[10px]">
-                    {{ getCellGuru(gridData[jam][hari]) }}
-                  </div>
-                  <div
-                    v-if="hasPengganti(gridData[jam][hari])"
-                    class="mt-1 text-[10px] text-primary-700 font-medium"
-                  >
-                    🔄 {{ getCellPenggantiNama(gridData[jam][hari]) }}
-                  </div>
+                  <template v-if="isIstirahat(gridData[jam][hari])">
+                    <div class="font-semibold text-amber-700">☕ Istirahat</div>
+                  </template>
+                  <template v-else>
+                    <div class="font-semibold text-text-primary mb-0.5">
+                      {{ getCellMapel(gridData[jam][hari]) }}
+                    </div>
+                    <div class="text-text-tertiary text-[10px]">
+                      {{ getCellGuru(gridData[jam][hari]) }}
+                    </div>
+                    <div
+                      v-if="hasPengganti(gridData[jam][hari])"
+                      class="mt-1 text-[10px] text-primary-700 font-medium"
+                    >
+                      🔄 {{ getCellPenggantiNama(gridData[jam][hari]) }}
+                    </div>
+                  </template>
                 </template>
                 <template v-else>
                   <div class="text-warning-700 font-medium italic">Kosong</div>
@@ -511,32 +537,51 @@ onMounted(async () => {
         {{ HARI_LABELS[selectedHari] }} — Jam ke-{{ selectedJamKe }}
       </p>
       <form @submit.prevent="saveJadwal">
+        <!-- Istirahat Toggle -->
         <div class="mb-4">
-          <label class="block text-sm font-medium text-text-primary mb-1.5">Mata Pelajaran</label>
-          <select
-            v-model="form.mata_pelajaran_id"
-            class="w-full px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
-            required
-          >
-            <option value="" disabled>Pilih Mata Pelajaran</option>
-            <option v-for="mapel in mataPelajaranList" :key="mapel.id" :value="mapel.id">
-              {{ mapel.nama }}
-            </option>
-          </select>
+          <label class="flex items-center gap-2 cursor-pointer">
+            <input
+              v-model="form.is_istirahat"
+              type="checkbox"
+              class="w-4 h-4 rounded border-border text-primary-600 focus:ring-primary-500/20"
+            />
+            <span class="text-sm font-medium text-text-primary">Jam Istirahat</span>
+          </label>
+          <p class="text-xs text-text-tertiary mt-1">
+            Centang jika slot ini adalah jam istirahat (tidak perlu guru & mata pelajaran)
+          </p>
         </div>
-        <div class="mb-4">
-          <label class="block text-sm font-medium text-text-primary mb-1.5">Guru</label>
-          <select
-            v-model="form.guru_id"
-            class="w-full px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
-            required
-          >
-            <option value="" disabled>Pilih Guru</option>
-            <option v-for="guru in guruList" :key="guru.id" :value="guru.id">
-              {{ guru.nama }}
-            </option>
-          </select>
-        </div>
+
+        <!-- Mapel & Guru fields (hidden when istirahat) -->
+        <template v-if="!form.is_istirahat">
+          <div class="mb-4">
+            <label class="block text-sm font-medium text-text-primary mb-1.5">Mata Pelajaran</label>
+            <select
+              v-model="form.mata_pelajaran_id"
+              class="w-full px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
+              required
+            >
+              <option value="" disabled>Pilih Mata Pelajaran</option>
+              <option v-for="mapel in mataPelajaranList" :key="mapel.id" :value="mapel.id">
+                {{ mapel.nama }}
+              </option>
+            </select>
+          </div>
+          <div class="mb-4">
+            <label class="block text-sm font-medium text-text-primary mb-1.5">Guru</label>
+            <select
+              v-model="form.guru_id"
+              class="w-full px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
+              required
+            >
+              <option value="" disabled>Pilih Guru</option>
+              <option v-for="guru in guruList" :key="guru.id" :value="guru.id">
+                {{ guru.nama }}
+              </option>
+            </select>
+          </div>
+        </template>
+
         <div class="flex gap-4">
           <div class="flex-1 mb-4">
             <label class="block text-sm font-medium text-text-primary mb-1.5">Jam Mulai</label>
@@ -570,7 +615,7 @@ onMounted(async () => {
             Hapus
           </button>
           <button
-            v-if="editingEntry"
+            v-if="editingEntry && !form.is_istirahat"
             type="button"
             class="px-3 py-2 text-sm font-medium text-white bg-primary-600 rounded-lg hover:bg-primary-700 transition-colors"
             @click="handleOpenPengganti"
@@ -601,14 +646,20 @@ onMounted(async () => {
       <p class="text-sm text-text-primary mb-3">Apakah Anda yakin ingin menghapus jadwal ini?</p>
       <div v-if="deletingEntry" class="bg-surface-50 rounded-lg p-3 text-sm space-y-1">
         <p><strong>Hari:</strong> {{ HARI_LABELS[deletingEntry.hari] }}</p>
-        <p>
-          <strong>Mata Pelajaran:</strong>
-          {{ deletingEntry.mata_pelajaran?.nama || getMapelNama(deletingEntry.mata_pelajaran_id) }}
-        </p>
-        <p>
-          <strong>Guru:</strong>
-          {{ deletingEntry.guru?.nama || getGuruNama(deletingEntry.guru_id) }}
-        </p>
+        <p v-if="deletingEntry.is_istirahat"><strong>Tipe:</strong> Jam Istirahat</p>
+        <template v-else>
+          <p>
+            <strong>Mata Pelajaran:</strong>
+            {{
+              deletingEntry.mata_pelajaran?.nama ||
+              getMapelNama(deletingEntry.mata_pelajaran_id || '')
+            }}
+          </p>
+          <p>
+            <strong>Guru:</strong>
+            {{ deletingEntry.guru?.nama || getGuruNama(deletingEntry.guru_id || '') }}
+          </p>
+        </template>
       </div>
       <template #footer>
         <button
@@ -635,12 +686,11 @@ onMounted(async () => {
     >
       <p class="text-sm text-text-secondary mb-4" v-if="penggantiTarget">
         {{
-          penggantiTarget.mata_pelajaran?.nama || getMapelNama(penggantiTarget.mata_pelajaran_id)
+          penggantiTarget.mata_pelajaran?.nama ||
+          getMapelNama(penggantiTarget.mata_pelajaran_id || '')
         }}
         — {{ HARI_LABELS[penggantiTarget.hari] }}
       </p>
-
-      <!-- Show current pengganti if exists -->
       <div
         v-if="penggantiTarget?.guru_pengganti_aktif"
         class="flex items-center justify-between p-3 bg-primary-50 border border-primary-500/20 rounded-lg mb-4 text-sm"
@@ -656,7 +706,6 @@ onMounted(async () => {
           Hapus Pengganti
         </button>
       </div>
-
       <form @submit.prevent="savePengganti">
         <div class="mb-4">
           <label class="block text-sm font-medium text-text-primary mb-1.5">Guru Pengganti</label>

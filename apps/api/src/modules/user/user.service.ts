@@ -37,7 +37,7 @@ export interface ParsedCsvRow {
 export interface VacantJadwalSlot {
   id: string;
   kelasId: string;
-  mataPelajaranId: string;
+  mataPelajaranId: string | null;
   hari: string;
   jamMulai: string;
   jamSelesai: string;

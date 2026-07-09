@@ -345,7 +345,9 @@ export class RaporFinalizationService {
     // Deduplicate mapel
     const uniqueMapel = new Map<string, string>();
     for (const row of mapelRows) {
-      uniqueMapel.set(row.mapelId, row.mapelNama);
+      if (row.mapelId) {
+        uniqueMapel.set(row.mapelId, row.mapelNama);
+      }
     }
 
     if (uniqueMapel.size === 0) {

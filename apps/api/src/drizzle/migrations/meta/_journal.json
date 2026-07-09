@@ -15,6 +15,13 @@
       "when": 1783442569902,
       "tag": "0001_giant_hiroim",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1783563447253,
+      "tag": "0002_perpetual_maggott",
+      "breakpoints": true
     }
   ]
 }
