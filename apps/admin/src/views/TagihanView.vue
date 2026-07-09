@@ -120,6 +120,7 @@ const showBuktiModal = ref(false);
 const selectedTransaksi = ref<TransaksiVerifikasi | null>(null);
 const rejectReason = ref('');
 const verifyingId = ref<string | null>(null);
+const showLightbox = ref(false);
 
 // ===== Tunggakan Tab =====
 const tunggakanList = ref<Tunggakan[]>([]);
@@ -1204,8 +1205,10 @@ onMounted(() => {
           <img
             :src="selectedTransaksi.bukti_transfer_url"
             alt="Bukti Transfer"
-            class="max-w-full max-h-[400px] rounded-lg border border-border mx-auto"
+            class="max-w-full max-h-[400px] rounded-lg border border-border mx-auto cursor-zoom-in hover:opacity-90 transition-opacity"
+            @click="showLightbox = true"
           />
+          <p class="text-xs text-text-secondary mt-1.5">Klik gambar untuk memperbesar</p>
         </div>
         <p v-else class="text-center text-text-secondary py-4">
           Tidak ada bukti transfer tersedia.
@@ -1424,5 +1427,36 @@ onMounted(() => {
         </button>
       </template>
     </BaseModal>
+
+    <!-- ===== Lightbox for Bukti Transfer ===== -->
+    <Teleport to="body">
+      <Transition
+        enter-active-class="transition duration-200 ease-out"
+        enter-from-class="opacity-0"
+        enter-to-class="opacity-100"
+        leave-active-class="transition duration-150 ease-in"
+        leave-from-class="opacity-100"
+        leave-to-class="opacity-0"
+      >
+        <div
+          v-if="showLightbox && selectedTransaksi?.bukti_transfer_url"
+          class="fixed inset-0 z-[10000] flex items-center justify-center bg-black/80 backdrop-blur-sm cursor-zoom-out"
+          @click="showLightbox = false"
+        >
+          <button
+            class="absolute top-4 right-4 text-white/80 hover:text-white text-3xl font-light leading-none w-10 h-10 flex items-center justify-center rounded-full bg-white/10 hover:bg-white/20 transition-colors"
+            @click.stop="showLightbox = false"
+          >
+            ×
+          </button>
+          <img
+            :src="selectedTransaksi.bukti_transfer_url"
+            alt="Bukti Transfer"
+            class="max-w-[90vw] max-h-[90vh] object-contain rounded-lg shadow-2xl"
+            @click.stop
+          />
+        </div>
+      </Transition>
+    </Teleport>
   </div>
 </template>
