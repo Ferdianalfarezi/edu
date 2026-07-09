@@ -366,7 +366,7 @@ function openBuktiPreview(transaksi: TransaksiVerifikasi) {
 async function verifyTransaksi(action: 'approve' | 'reject') {
   if (!selectedTransaksi.value) return;
   if (action === 'reject' && !rejectReason.value.trim()) {
-    alert('Alasan penolakan wajib diisi');
+    toast.warning('Alasan penolakan wajib diisi');
     return;
   }
 
@@ -379,7 +379,7 @@ async function verifyTransaksi(action: 'approve' | 'reject') {
     showBuktiModal.value = false;
     await fetchVerifikasi();
   } catch (error) {
-    alert(error.response?.data?.message || 'Gagal memverifikasi');
+    toast.error(error.response?.data?.message || 'Gagal memverifikasi');
   } finally {
     verifyingId.value = null;
   }
@@ -429,7 +429,7 @@ async function exportTunggakan() {
     window.URL.revokeObjectURL(url);
   } catch (error) {
     console.error('Failed to export:', error);
-    alert('Gagal mengekspor laporan');
+    toast.error('Gagal mengekspor laporan');
   } finally {
     exporting.value = false;
   }
@@ -517,7 +517,7 @@ function openCancelTagihan(tagihan: Tagihan) {
 async function confirmCancelTagihan() {
   if (!cancellingTagihan.value) return;
   if (!cancelReason.value.trim()) {
-    alert('Alasan pembatalan wajib diisi');
+    toast.warning('Alasan pembatalan wajib diisi');
     return;
   }
 
@@ -529,7 +529,7 @@ async function confirmCancelTagihan() {
     showCancelModal.value = false;
     await fetchTagihanList();
   } catch (error) {
-    alert(error.response?.data?.message || 'Gagal membatalkan tagihan');
+    toast.error(error.response?.data?.message || 'Gagal membatalkan tagihan');
   } finally {
     cancelling.value = false;
   }
