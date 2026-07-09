@@ -18,6 +18,7 @@ import { tagihan, tagihanTransaksi } from '@/drizzle/schema/tagihan';
 import { siswa } from '@/drizzle/schema/siswa';
 import { kelas } from '@/drizzle/schema/kelas';
 import { tahunAjaran } from '@/drizzle/schema/tahun-ajaran';
+import { user } from '@/drizzle/schema/user';
 import { AuditTrailService } from './audit-trail.service';
 import {
   GenerateTagihanDto,
@@ -364,26 +365,38 @@ export class TagihanService {
       .where(eq(tagihan.id, tagihanId));
 
     // 12. Enqueue WebP compression job (Req 11.15)
-    await this.imageQueue.add('compress-bukti-transfer', {
-      transaksi_id: transaksi.id,
-      storage_path: storagePath,
-      tenant_id: tagihanRecord.tenantId,
-      tagihan_id: tagihanId,
-    });
+    // Fire-and-forget: queue/audit errors should not fail the response
+    // since the critical data (transaction + tagihan status) is already persisted.
+    try {
+      await this.imageQueue.add('compress-bukti-transfer', {
+        transaksi_id: transaksi.id,
+        storage_path: storagePath,
+        tenant_id: tagihanRecord.tenantId,
+        tagihan_id: tagihanId,
+      });
+    } catch (err) {
+      this.logger.warn(`Failed to enqueue compression job for transaksi ${transaksi.id}: ${err}`);
+    }
 
     // 13. Record audit trail (Requirements: 29.1, 29.5)
-    await this.auditTrailService.record({
-      tenantId: tagihanRecord.tenantId,
-      userId,
-      jenisAksi: 'upload_bukti_transfer',
-      entityType: 'tagihan',
-      entityId: tagihanId,
-      nilaiSebelum: { status: tagihanRecord.status },
-      nilaiSesudah: {
-        status: 'menunggu_verifikasi',
-        nominal_bayar: nominalBayar,
-      },
-    });
+    try {
+      await this.auditTrailService.record({
+        tenantId: tagihanRecord.tenantId,
+        userId,
+        jenisAksi: 'upload_bukti_transfer',
+        entityType: 'tagihan',
+        entityId: tagihanId,
+        nilaiSebelum: { status: tagihanRecord.status },
+        nilaiSesudah: {
+          status: 'menunggu_verifikasi',
+          nominal_bayar: nominalBayar,
+        },
+      });
+    } catch (err) {
+      this.logger.warn(
+        `Failed to record audit trail for upload bukti transaksi ${transaksi.id}: ${err}`,
+      );
+    }
 
     return {
       message: 'Bukti transfer berhasil dikirim dan menunggu verifikasi bendahara',
@@ -754,6 +767,7 @@ export class TagihanService {
     }
 
     // For each pending tagihan, get the pending transaction with bukti transfer
+    // Return FLAT structure matching admin panel's TransaksiVerifikasi interface
     const results = await Promise.all(
       pendingTagihan.map(async (t) => {
         // Get pending transaction
@@ -763,18 +777,44 @@ export class TagihanService {
           .where(and(eq(tagihanTransaksi.tagihanId, t.id), eq(tagihanTransaksi.status, 'pending')))
           .limit(1);
 
-        // Get student info
+        // Get student info with kelas name
         const [studentRecord] = await db
           .select({ nama: siswa.nama, kelasId: siswa.kelasId })
           .from(siswa)
           .where(eq(siswa.id, t.siswaId))
           .limit(1);
 
+        // Get kelas name
+        let kelasNama = '-';
+        if (studentRecord?.kelasId) {
+          const [kelasRecord] = await db
+            .select({ nama: kelas.nama })
+            .from(kelas)
+            .where(eq(kelas.id, studentRecord.kelasId))
+            .limit(1);
+          if (kelasRecord) {
+            kelasNama = kelasRecord.nama;
+          }
+        }
+
+        // Get uploader name
+        let uploadedByNama = '-';
+        if (transaksi?.uploadedBy) {
+          const [uploaderRecord] = await db
+            .select({ nama: user.nama })
+            .from(user)
+            .where(eq(user.id, transaksi.uploadedBy))
+            .limit(1);
+          if (uploaderRecord) {
+            uploadedByNama = uploaderRecord.nama;
+          }
+        }
+
         // Generate presigned URL for bukti transfer preview
-        let buktiPreviewUrl: string | null = null;
+        let buktiTransferUrl: string | null = null;
         if (transaksi?.buktiTransferUrl) {
           try {
-            buktiPreviewUrl = await this.storageService.getPresignedUrl(
+            buktiTransferUrl = await this.storageService.getPresignedUrl(
               transaksi.buktiTransferUrl,
               300, // 5 minutes
             );
@@ -786,23 +826,21 @@ export class TagihanService {
         }
 
         return {
+          id: transaksi?.id ?? null,
           tagihan_id: t.id,
           siswa_id: t.siswaId,
           siswa_nama: studentRecord?.nama ?? null,
+          kelas_nama: kelasNama,
           bulan: t.bulan,
           tahun: t.tahun,
-          nominal: t.nominal,
-          total_dibayar: t.totalDibayar,
-          sisa_tagihan: t.nominal - t.totalDibayar,
-          transaksi: transaksi
-            ? {
-                id: transaksi.id,
-                jumlah_bayar: transaksi.jumlahBayar,
-                nomor_referensi: transaksi.nomorReferensi,
-                bukti_preview_url: buktiPreviewUrl,
-                created_at: transaksi.createdAt,
-              }
-            : null,
+          nominal_tagihan: t.nominal,
+          jumlah_bayar: transaksi?.jumlahBayar ?? 0,
+          bukti_transfer_url: buktiTransferUrl,
+          metode: transaksi?.metode ?? 'upload_bukti',
+          status: 'menunggu_verifikasi',
+          uploaded_by_nama: uploadedByNama,
+          nomor_referensi: transaksi?.nomorReferensi ?? null,
+          created_at: transaksi?.createdAt ?? t.createdAt,
         };
       }),
     );

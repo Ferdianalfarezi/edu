@@ -152,21 +152,21 @@ describe('Tagihan Contract Tests', () => {
     it('should return { data: [] } array response shape', async () => {
       mockTagihanService.getPendingVerifications.mockResolvedValue([
         {
+          id: '770e8400-e29b-41d4-a716-446655440002',
           tagihan_id: '550e8400-e29b-41d4-a716-446655440000',
           siswa_id: '660e8400-e29b-41d4-a716-446655440001',
           siswa_nama: 'Budi Santoso',
+          kelas_nama: '1A',
           bulan: 1,
           tahun: 2025,
-          nominal: 250000,
-          total_dibayar: 0,
-          sisa_tagihan: 250000,
-          transaksi: {
-            id: '770e8400-e29b-41d4-a716-446655440002',
-            jumlah_bayar: 250000,
-            nomor_referensi: 'BT-1234567890-ABCD1234',
-            bukti_preview_url: 'https://storage.example.com/bukti/test.jpg',
-            created_at: '2025-01-05T10:00:00.000Z',
-          },
+          nominal_tagihan: 250000,
+          jumlah_bayar: 250000,
+          bukti_transfer_url: 'https://storage.example.com/bukti/test.jpg',
+          metode: 'upload_bukti',
+          status: 'menunggu_verifikasi',
+          uploaded_by_nama: 'Orang Tua Budi',
+          nomor_referensi: 'BT-1234567890-ABCD1234',
+          created_at: '2025-01-05T10:00:00.000Z',
         },
       ]);
 
@@ -178,12 +178,16 @@ describe('Tagihan Contract Tests', () => {
       expectDataArray(res.body);
       if (res.body.data.length > 0) {
         const item = res.body.data[0];
+        expect(item).toHaveProperty('id');
         expect(item).toHaveProperty('tagihan_id');
         expect(item).toHaveProperty('siswa_nama');
+        expect(item).toHaveProperty('kelas_nama');
         expect(item).toHaveProperty('bulan');
         expect(item).toHaveProperty('tahun');
-        expect(item).toHaveProperty('nominal');
-        expect(item).toHaveProperty('transaksi');
+        expect(item).toHaveProperty('nominal_tagihan');
+        expect(item).toHaveProperty('jumlah_bayar');
+        expect(item).toHaveProperty('bukti_transfer_url');
+        expect(item).toHaveProperty('uploaded_by_nama');
       }
     });
   });

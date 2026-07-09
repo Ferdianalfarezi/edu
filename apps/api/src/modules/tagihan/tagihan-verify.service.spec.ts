@@ -459,26 +459,34 @@ describe('TagihanService - getPendingVerifications', () => {
       status: 'pending',
       buktiTransferUrl: 'bukti-transfer/tenant/tagihan/file.jpg',
       nomorReferensi: 'BT-123-ABC',
+      uploadedBy: 'user-123',
+      metode: 'upload_bukti',
       createdAt: new Date(),
     };
 
     const studentRecord = { nama: 'Budi', kelasId: 'kelas-1' };
+    const kelasRecord = { nama: '1A' };
+    const uploaderRecord = { nama: 'Orang Tua Budi' };
 
     selectResults = [
       pendingTagihan, // tagihan query
       [pendingTransaksi], // transaksi for first tagihan
       [studentRecord], // student info for first tagihan
+      [kelasRecord], // kelas info
+      [uploaderRecord], // uploader info
     ];
 
     const result = await service.getPendingVerifications(tenantId);
 
     expect(result).toHaveLength(1);
+    expect(result[0].id).toBe(transaksiId);
     expect(result[0].tagihan_id).toBe(tagihanId);
     expect(result[0].siswa_nama).toBe('Budi');
-    expect(result[0].transaksi).toBeDefined();
-    expect(result[0].transaksi!.bukti_preview_url).toBe(
-      'https://presigned-url.example.com/bukti.jpg',
-    );
+    expect(result[0].kelas_nama).toBe('1A');
+    expect(result[0].nominal_tagihan).toBe(250000);
+    expect(result[0].jumlah_bayar).toBe(250000);
+    expect(result[0].bukti_transfer_url).toBe('https://presigned-url.example.com/bukti.jpg');
+    expect(result[0].uploaded_by_nama).toBe('Orang Tua Budi');
     expect(mockStorageService.getPresignedUrl).toHaveBeenCalledWith(
       'bukti-transfer/tenant/tagihan/file.jpg',
       300,
@@ -488,7 +496,7 @@ describe('TagihanService - getPendingVerifications', () => {
   /**
    * Requirement 12.1: Should handle presigned URL generation failure gracefully.
    */
-  it('should return null bukti_preview_url when presigned URL generation fails', async () => {
+  it('should return null bukti_transfer_url when presigned URL generation fails', async () => {
     const pendingTagihan = [
       {
         id: tagihanId,
@@ -509,16 +517,24 @@ describe('TagihanService - getPendingVerifications', () => {
       status: 'pending',
       buktiTransferUrl: 'bukti-transfer/tenant/tagihan/file.jpg',
       nomorReferensi: 'BT-123-ABC',
+      uploadedBy: 'user-123',
+      metode: 'upload_bukti',
       createdAt: new Date(),
     };
 
-    selectResults = [pendingTagihan, [pendingTransaksi], [{ nama: 'Sari', kelasId: 'kelas-1' }]];
+    selectResults = [
+      pendingTagihan,
+      [pendingTransaksi],
+      [{ nama: 'Sari', kelasId: 'kelas-1' }],
+      [{ nama: '1A' }],
+      [{ nama: 'Orang Tua Sari' }],
+    ];
 
     mockStorageService.getPresignedUrl.mockRejectedValue(new Error('R2 unavailable'));
 
     const result = await service.getPendingVerifications(tenantId);
 
     expect(result).toHaveLength(1);
-    expect(result[0].transaksi!.bukti_preview_url).toBeNull();
+    expect(result[0].bukti_transfer_url).toBeNull();
   });
 });
