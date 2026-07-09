@@ -2,7 +2,8 @@
 import { ref, computed, onMounted } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import { api } from '@/api/client';
-import { PageHeader } from '@/components/ui';
+import { PageHeader, SearchSelect } from '@/components/ui';
+import type { SelectOption } from '@/components/ui';
 
 interface MataPelajaran {
   id: string;
@@ -58,6 +59,10 @@ const existingFileName = ref('');
 const mataPelajaranList = ref<MataPelajaran[]>([]);
 const kategoriList = ref<KategoriRpp[]>([]);
 const showKategoriDropdown = ref(false);
+
+const mataPelajaranSelectOptions = computed<SelectOption[]>(() =>
+  mataPelajaranList.value.map((m) => ({ value: m.id, label: m.nama })),
+);
 
 const ALLOWED_FORMATS = [
   'application/pdf',
@@ -320,19 +325,13 @@ onMounted(async () => {
 
       <!-- Mata Pelajaran -->
       <div>
-        <label class="block text-sm font-medium text-text-primary mb-1.5"
-          >Mata Pelajaran <span class="text-danger-500">*</span></label
-        >
-        <select
+        <SearchSelect
           v-model="mataPelajaranId"
-          class="w-full px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
+          label="Mata Pelajaran"
+          :options="mataPelajaranSelectOptions"
+          placeholder="Pilih mata pelajaran"
           required
-        >
-          <option value="" disabled>Pilih mata pelajaran</option>
-          <option v-for="mapel in mataPelajaranList" :key="mapel.id" :value="mapel.id">
-            {{ mapel.nama }}
-          </option>
-        </select>
+        />
       </div>
 
       <!-- Kategori (searchable with auto-create) -->

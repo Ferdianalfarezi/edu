@@ -1,9 +1,10 @@
 <script setup lang="ts">
-import { ref, reactive, onMounted, watch } from 'vue';
+import { ref, reactive, onMounted, watch, computed } from 'vue';
 import { StatusSiswa } from '@edu/shared';
 import type { PaginatedResponse } from '@edu/shared';
 import { api } from '@/api/client';
-import { PageHeader, BaseModal } from '@/components/ui';
+import { PageHeader, BaseModal, SearchSelect } from '@/components/ui';
+import type { SelectOption } from '@/components/ui';
 
 interface Siswa {
   id: string;
@@ -102,17 +103,30 @@ const importing = ref(false);
 const importStep = ref<'upload' | 'preview' | 'conflicts' | 'done'>('upload');
 const importResult = ref<{ created: number; updated: number; skipped: number } | null>(null);
 
-const statusOptions = [
+const statusOptions: SelectOption[] = [
   { value: StatusSiswa.AKTIF, label: 'Aktif' },
   { value: StatusSiswa.PINDAH_SEKOLAH, label: 'Pindah Sekolah' },
   { value: StatusSiswa.KELUAR, label: 'Keluar' },
   { value: StatusSiswa.ALUMNI, label: 'Alumni/Lulus' },
 ];
 
-const deleteStatusOptions = [
+const deleteStatusOptions: SelectOption[] = [
   { value: StatusSiswa.PINDAH_SEKOLAH, label: 'Pindah Sekolah' },
   { value: StatusSiswa.KELUAR, label: 'Keluar' },
 ];
+
+const jenisKelaminOptions: SelectOption[] = [
+  { value: 'L', label: 'Laki-laki' },
+  { value: 'P', label: 'Perempuan' },
+];
+
+const kelasSelectOptions = computed<SelectOption[]>(() =>
+  kelasList.value.map((k) => ({ value: k.id, label: k.nama })),
+);
+
+const tahunAjaranSelectOptions = computed<SelectOption[]>(() =>
+  tahunAjaranList.value.map((ta) => ({ value: ta.id, label: ta.nama })),
+);
 
 async function fetchSiswa(resetCursor = true) {
   loading.value = true;
@@ -419,31 +433,25 @@ onMounted(() => {
           class="w-full pl-9 pr-3 py-2 text-sm border border-border rounded-lg bg-white placeholder:text-text-tertiary focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-colors"
         />
       </div>
-      <select
+      <SearchSelect
         v-model="filterKelas"
-        class="px-3 py-2 text-sm border border-border rounded-lg bg-white text-text-primary focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
-      >
-        <option value="">Semua Kelas</option>
-        <option v-for="kelas in kelasList" :key="kelas.id" :value="kelas.id">
-          {{ kelas.nama }}
-        </option>
-      </select>
-      <select
+        :options="kelasSelectOptions"
+        placeholder="Semua Kelas"
+        clearable
+      />
+      <SearchSelect
         v-model="filterStatus"
-        class="px-3 py-2 text-sm border border-border rounded-lg bg-white text-text-primary focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
-      >
-        <option value="">Semua Status</option>
-        <option v-for="opt in statusOptions" :key="opt.value" :value="opt.value">
-          {{ opt.label }}
-        </option>
-      </select>
-      <select
+        :options="statusOptions"
+        placeholder="Semua Status"
+        clearable
+        :searchable="false"
+      />
+      <SearchSelect
         v-model="filterTahunAjaran"
-        class="px-3 py-2 text-sm border border-border rounded-lg bg-white text-text-primary focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
-      >
-        <option value="">Semua Tahun Ajaran</option>
-        <option v-for="ta in tahunAjaranList" :key="ta.id" :value="ta.id">{{ ta.nama }}</option>
-      </select>
+        :options="tahunAjaranSelectOptions"
+        placeholder="Semua Tahun Ajaran"
+        clearable
+      />
     </div>
 
     <!-- Table -->
@@ -635,32 +643,25 @@ onMounted(() => {
         </div>
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
-            <label class="block text-sm font-medium text-text-primary mb-1.5"
-              >Kelas <span class="text-danger-500">*</span></label
-            >
-            <select
+            <SearchSelect
               v-model="form.kelas_id"
-              class="w-full px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
-            >
-              <option value="" disabled>Pilih Kelas</option>
-              <option v-for="kelas in kelasList" :key="kelas.id" :value="kelas.id">
-                {{ kelas.nama }}
-              </option>
-            </select>
-            <p v-if="formErrors.kelas_id" class="text-xs text-danger-500 mt-1">
-              {{ formErrors.kelas_id }}
-            </p>
+              :options="kelasSelectOptions"
+              label="Kelas"
+              placeholder="Pilih Kelas"
+              :required="true"
+              :error="!!formErrors.kelas_id"
+              :error-message="formErrors.kelas_id"
+            />
           </div>
           <div>
-            <label class="block text-sm font-medium text-text-primary mb-1.5">Jenis Kelamin</label>
-            <select
+            <SearchSelect
               v-model="form.jenis_kelamin"
-              class="w-full px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
-            >
-              <option value="">Pilih</option>
-              <option value="L">Laki-laki</option>
-              <option value="P">Perempuan</option>
-            </select>
+              :options="jenisKelaminOptions"
+              label="Jenis Kelamin"
+              placeholder="Pilih"
+              clearable
+              :searchable="false"
+            />
           </div>
         </div>
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -741,17 +742,13 @@ onMounted(() => {
           >. Data siswa tetap tersimpan untuk keperluan riwayat.
         </p>
         <div>
-          <label class="block text-sm font-medium text-text-primary mb-1.5"
-            >Status Baru <span class="text-danger-500">*</span></label
-          >
-          <select
+          <SearchSelect
             v-model="deleteStatus"
-            class="w-full px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
-          >
-            <option v-for="opt in deleteStatusOptions" :key="opt.value" :value="opt.value">
-              {{ opt.label }}
-            </option>
-          </select>
+            :options="deleteStatusOptions"
+            label="Status Baru"
+            :required="true"
+            :searchable="false"
+          />
         </div>
         <div>
           <label class="block text-sm font-medium text-text-primary mb-1.5"

@@ -2,7 +2,8 @@
 import { ref, reactive, computed, onMounted } from 'vue';
 import { Role } from '@edu/shared';
 import { api } from '@/api/client';
-import { PageHeader, BaseModal } from '@/components/ui';
+import { PageHeader, BaseModal, SearchSelect } from '@/components/ui';
+import type { SelectOption } from '@/components/ui';
 
 interface User {
   id: string;
@@ -50,6 +51,19 @@ const importErrors = ref<string[]>([]);
 const importing = ref(false);
 
 const staffRoles = [Role.ADMIN, Role.KEPALA_SEKOLAH, Role.GURU, Role.BENDAHARA] as const;
+
+const statusFilterOptions: SelectOption[] = [
+  { value: 'active', label: 'Aktif' },
+  { value: 'inactive', label: 'Nonaktif' },
+];
+
+const roleFilterOptions = computed<SelectOption[]>(() =>
+  staffRoles.map((role) => ({ value: role, label: role })),
+);
+
+const roleSelectOptions = computed<SelectOption[]>(() =>
+  staffRoles.map((role) => ({ value: role, label: role })),
+);
 
 const filteredUsers = computed(() => {
   return users.value.filter((u) => {
@@ -231,21 +245,18 @@ onMounted(fetchUsers);
         placeholder="Cari nama atau email..."
         class="w-full px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 sm:w-auto sm:min-w-[200px]"
       />
-      <select
+      <SearchSelect
         v-model="filterRole"
-        class="w-full px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 sm:w-auto"
-      >
-        <option value="">Semua Role</option>
-        <option v-for="role in staffRoles" :key="role" :value="role">{{ role }}</option>
-      </select>
-      <select
+        :options="roleFilterOptions"
+        placeholder="Semua Role"
+        clearable
+      />
+      <SearchSelect
         v-model="filterStatus"
-        class="w-full px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 sm:w-auto"
-      >
-        <option value="">Semua Status</option>
-        <option value="active">Aktif</option>
-        <option value="inactive">Nonaktif</option>
-      </select>
+        :options="statusFilterOptions"
+        placeholder="Semua Status"
+        clearable
+      />
     </div>
 
     <!-- Table -->
@@ -351,15 +362,13 @@ onMounted(fetchUsers);
           />
         </div>
         <div class="mb-4">
-          <label class="block text-sm font-medium text-text-primary mb-1.5">Role</label>
-          <select
+          <SearchSelect
             v-model="form.role"
+            label="Role"
+            :options="roleSelectOptions"
+            placeholder="Pilih Role"
             required
-            class="w-full px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
-          >
-            <option value="" disabled>Pilih Role</option>
-            <option v-for="role in staffRoles" :key="role" :value="role">{{ role }}</option>
-          </select>
+          />
         </div>
         <div class="mb-4">
           <label

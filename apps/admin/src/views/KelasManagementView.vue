@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue';
 import { api } from '@/api/client';
-import { PageHeader, BaseModal } from '@/components/ui';
+import { PageHeader, BaseModal, SearchSelect } from '@/components/ui';
+import type { SelectOption } from '@/components/ui';
 
 interface TahunAjaran {
   id: string;
@@ -58,6 +59,17 @@ const filteredKelas = computed(() => {
   if (!selectedTahunAjaran.value) return kelasList.value;
   return kelasList.value.filter((k) => k.tahun_ajaran_id === selectedTahunAjaran.value);
 });
+
+const tahunAjaranSelectOptions = computed<SelectOption[]>(() =>
+  tahunAjaranList.value.map((ta) => ({
+    value: ta.id,
+    label: ta.status === 'aktif' ? `${ta.nama} (Aktif)` : ta.nama,
+  })),
+);
+
+const guruSelectOptions = computed<SelectOption[]>(() =>
+  guruList.value.map((guru) => ({ value: guru.id, label: guru.nama })),
+);
 
 async function fetchTahunAjaran() {
   try {
@@ -202,16 +214,14 @@ onMounted(async () => {
 
     <!-- Filter by Tahun Ajaran -->
     <div class="flex flex-wrap gap-3 mb-4">
-      <select
+      <SearchSelect
         v-model="selectedTahunAjaran"
-        class="w-full px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 max-w-xs"
+        :options="tahunAjaranSelectOptions"
+        placeholder="Semua Tahun Ajaran"
+        clearable
+        class="max-w-xs"
         @change="onTahunAjaranChange"
-      >
-        <option value="">Semua Tahun Ajaran</option>
-        <option v-for="ta in tahunAjaranList" :key="ta.id" :value="ta.id">
-          {{ ta.nama }} <span v-if="ta.status === 'aktif'">(Aktif)</span>
-        </option>
-      </select>
+      />
     </div>
 
     <!-- Table -->
@@ -317,18 +327,13 @@ onMounted(async () => {
           />
         </div>
         <div class="mb-4">
-          <label class="block text-sm font-medium text-text-primary mb-1.5"
-            >Wali Kelas <span class="text-text-tertiary font-normal">(opsional)</span></label
-          >
-          <select
+          <SearchSelect
             v-model="form.wali_kelas_id"
-            class="w-full px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
-          >
-            <option value="">-- Tidak Ada --</option>
-            <option v-for="guru in guruList" :key="guru.id" :value="guru.id">
-              {{ guru.nama }}
-            </option>
-          </select>
+            :options="guruSelectOptions"
+            label="Wali Kelas (opsional)"
+            placeholder="-- Tidak Ada --"
+            clearable
+          />
         </div>
         <div class="mb-4">
           <label class="block text-sm font-medium text-text-primary mb-1.5"

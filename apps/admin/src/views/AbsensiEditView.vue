@@ -3,7 +3,8 @@ import { ref, computed, onMounted, watch } from 'vue';
 import { api } from '@/api/client';
 import { useAuthStore } from '@/stores/auth';
 import { Role } from '@edu/shared';
-import { PageHeader, BaseModal } from '@/components/ui';
+import { PageHeader, BaseModal, SearchSelect } from '@/components/ui';
+import type { SelectOption } from '@/components/ui';
 
 interface Kelas {
   id: string;
@@ -76,6 +77,10 @@ const auditSiswaName = ref('');
 const canEdit = computed(() => {
   return authStore.hasRole(Role.GURU, Role.KEPALA_SEKOLAH);
 });
+
+const kelasSelectOptions = computed<SelectOption[]>(() =>
+  kelasList.value.map((k) => ({ value: k.id, label: k.nama })),
+);
 
 // Data fetching
 async function fetchKelasList() {
@@ -207,16 +212,12 @@ onMounted(() => {
         />
       </div>
       <div class="flex items-center gap-2">
-        <label class="text-sm font-medium text-text-primary">Kelas:</label>
-        <select
+        <SearchSelect
           v-model="selectedKelasId"
-          class="px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 max-w-xs min-w-[200px]"
-        >
-          <option value="" disabled>Pilih Kelas</option>
-          <option v-for="kelas in kelasList" :key="kelas.id" :value="kelas.id">
-            {{ kelas.nama }}
-          </option>
-        </select>
+          label="Kelas"
+          :options="kelasSelectOptions"
+          placeholder="Pilih Kelas"
+        />
       </div>
     </div>
 

@@ -2,7 +2,8 @@
 import { ref, onMounted, watch, computed } from 'vue';
 import { api } from '@/api/client';
 import { PeriodeRapor } from '@edu/shared';
-import { PageHeader, BaseModal } from '@/components/ui';
+import { PageHeader, BaseModal, SearchSelect } from '@/components/ui';
+import type { SelectOption } from '@/components/ui';
 
 interface KelasOption {
   id: string;
@@ -53,12 +54,16 @@ const showP5Modal = ref(false);
 const editingP5SiswaIdx = ref(-1);
 const p5Form = ref<{ dimensi: string; deskripsi: string }[]>([]);
 
-const periodeOptions = [
+const periodeOptions: SelectOption[] = [
   { value: PeriodeRapor.UTS_SEMESTER_1, label: 'UTS Semester 1' },
   { value: PeriodeRapor.SEMESTER_1, label: 'Semester 1' },
   { value: PeriodeRapor.UTS_SEMESTER_2, label: 'UTS Semester 2' },
   { value: PeriodeRapor.SEMESTER_2, label: 'Semester 2' },
 ];
+
+const kelasSelectOptions = computed<SelectOption[]>(() =>
+  kelasOptions.value.map((k) => ({ value: k.id, label: k.nama })),
+);
 
 const allSubmitted = computed(() => {
   if (!mapelStatuses.value.length) return false;
@@ -221,27 +226,23 @@ onMounted(fetchKelas);
 
     <!-- Filters -->
     <div class="flex flex-wrap items-center gap-3 mb-4">
-      <div class="flex flex-col gap-1 min-w-[200px]">
-        <label class="text-sm font-medium text-text-primary">Kelas (Wali Kelas)</label>
-        <select
+      <div class="min-w-[200px]">
+        <SearchSelect
           v-model="selectedKelas"
-          class="px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
-        >
-          <option value="" disabled>Pilih kelas</option>
-          <option v-for="k in kelasOptions" :key="k.id" :value="k.id">{{ k.nama }}</option>
-        </select>
+          :options="kelasSelectOptions"
+          label="Kelas (Wali Kelas)"
+          placeholder="Pilih kelas"
+          :required="true"
+        />
       </div>
-      <div class="flex flex-col gap-1 min-w-[200px]">
-        <label class="text-sm font-medium text-text-primary">Periode</label>
-        <select
+      <div class="min-w-[200px]">
+        <SearchSelect
           v-model="selectedPeriode"
-          class="px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
-        >
-          <option value="" disabled>Pilih periode</option>
-          <option v-for="p in periodeOptions" :key="p.value" :value="p.value">
-            {{ p.label }}
-          </option>
-        </select>
+          :options="periodeOptions"
+          label="Periode"
+          placeholder="Pilih periode"
+          :required="true"
+        />
       </div>
     </div>
 

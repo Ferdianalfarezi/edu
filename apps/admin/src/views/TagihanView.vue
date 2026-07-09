@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { ref, reactive, onMounted, watch, computed } from 'vue';
 import { api } from '@/api/client';
-import { PageHeader, BaseModal } from '@/components/ui';
+import { PageHeader, BaseModal, SearchSelect } from '@/components/ui';
+import type { SelectOption } from '@/components/ui';
 
 // ===== Types =====
 type StatusTagihan = 'belum_bayar' | 'cicilan' | 'lunas' | 'dibatalkan';
@@ -102,7 +103,7 @@ const tagihanList = ref<Tagihan[]>([]);
 const listFilter = reactive({
   status: '' as StatusTagihan | '',
   kelas_id: '',
-  bulan: 0,
+  bulan: '' as number | '',
   tahun: new Date().getFullYear(),
   search: '',
 });
@@ -121,7 +122,7 @@ const verifyingId = ref<string | null>(null);
 const tunggakanList = ref<Tunggakan[]>([]);
 const tunggakanFilter = reactive({
   kelas_id: '',
-  bulan: 0,
+  bulan: '' as number | '',
   tahun: 0,
 });
 const tunggakanTotal = ref(0);
@@ -181,6 +182,27 @@ const statusOptions: { value: StatusTagihan; label: string }[] = [
   { value: 'lunas', label: 'Lunas' },
   { value: 'dibatalkan', label: 'Dibatalkan' },
 ];
+
+const metodeOptions: SelectOption[] = [
+  { value: 'tunai', label: 'Tunai' },
+  { value: 'transfer_manual', label: 'Transfer Manual' },
+];
+
+const kelasSelectOptions = computed<SelectOption[]>(() =>
+  kelasList.value.map((k) => ({ value: k.id, label: k.nama })),
+);
+
+const tahunAjaranSelectOptions = computed<SelectOption[]>(() =>
+  tahunAjaranList.value.map((ta) => ({ value: ta.id, label: `${ta.nama} (${ta.status})` })),
+);
+
+const bulanSelectOptions = computed<SelectOption[]>(() =>
+  bulanOptions.map((b) => ({ value: b.value, label: b.label })),
+);
+
+const statusFilterOptions = computed<SelectOption[]>(() =>
+  statusOptions.map((s) => ({ value: s.value, label: s.label })),
+);
 
 const sisaTagihanManual = computed(() => {
   if (!manualPaymentTagihan.value) return 0;
@@ -656,15 +678,12 @@ onMounted(() => {
           class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4"
         >
           <div>
-            <label class="block text-sm font-medium text-text-primary mb-1.5">Bulan</label>
-            <select
+            <SearchSelect
               v-model="generateForm.bulan"
-              class="w-full px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
-            >
-              <option v-for="b in bulanOptions" :key="b.value" :value="b.value">
-                {{ b.label }}
-              </option>
-            </select>
+              label="Bulan"
+              :options="bulanSelectOptions"
+              placeholder="Pilih Bulan"
+            />
           </div>
           <div>
             <label class="block text-sm font-medium text-text-primary mb-1.5">Tahun</label>
@@ -677,31 +696,22 @@ onMounted(() => {
         </div>
 
         <div v-if="generateForm.mode === 'tahun_ajaran'" class="mb-4">
-          <label class="block text-sm font-medium text-text-primary mb-1.5">Tahun Ajaran</label>
-          <select
+          <SearchSelect
             v-model="generateForm.tahun_ajaran_id"
-            class="w-full px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
-          >
-            <option value="" disabled>Pilih Tahun Ajaran</option>
-            <option v-for="ta in tahunAjaranList" :key="ta.id" :value="ta.id">
-              {{ ta.nama }} ({{ ta.status }})
-            </option>
-          </select>
+            label="Tahun Ajaran"
+            :options="tahunAjaranSelectOptions"
+            placeholder="Pilih Tahun Ajaran"
+          />
         </div>
 
         <div class="mb-4">
-          <label class="block text-sm font-medium text-text-primary mb-1.5"
-            >Kelas (opsional — kosong = semua kelas)</label
-          >
-          <select
+          <SearchSelect
             v-model="generateForm.kelas_id"
-            class="w-full px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
-          >
-            <option value="">Semua Kelas</option>
-            <option v-for="kelas in kelasList" :key="kelas.id" :value="kelas.id">
-              {{ kelas.nama }}
-            </option>
-          </select>
+            label="Kelas (opsional — kosong = semua kelas)"
+            :options="kelasSelectOptions"
+            placeholder="Semua Kelas"
+            clearable
+          />
         </div>
 
         <div
@@ -758,33 +768,24 @@ onMounted(() => {
           placeholder="Cari nama siswa..."
           class="w-full px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 sm:w-auto sm:min-w-[200px]"
         />
-        <select
+        <SearchSelect
           v-model="listFilter.status"
-          class="w-full px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 sm:w-auto"
-        >
-          <option value="">Semua Status</option>
-          <option v-for="opt in statusOptions" :key="opt.value" :value="opt.value">
-            {{ opt.label }}
-          </option>
-        </select>
-        <select
+          :options="statusFilterOptions"
+          placeholder="Semua Status"
+          clearable
+        />
+        <SearchSelect
           v-model="listFilter.kelas_id"
-          class="w-full px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 sm:w-auto"
-        >
-          <option value="">Semua Kelas</option>
-          <option v-for="kelas in kelasList" :key="kelas.id" :value="kelas.id">
-            {{ kelas.nama }}
-          </option>
-        </select>
-        <select
-          v-model.number="listFilter.bulan"
-          class="w-full px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 sm:w-auto"
-        >
-          <option :value="0">Semua Bulan</option>
-          <option v-for="b in bulanOptions" :key="b.value" :value="b.value">
-            {{ b.label }}
-          </option>
-        </select>
+          :options="kelasSelectOptions"
+          placeholder="Semua Kelas"
+          clearable
+        />
+        <SearchSelect
+          v-model="listFilter.bulan"
+          :options="bulanSelectOptions"
+          placeholder="Semua Bulan"
+          clearable
+        />
         <input
           v-model.number="listFilter.tahun"
           type="number"
@@ -977,24 +978,18 @@ onMounted(() => {
       </div>
 
       <div class="flex flex-wrap gap-3 mb-4">
-        <select
+        <SearchSelect
           v-model="tunggakanFilter.kelas_id"
-          class="w-full px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 sm:w-auto"
-        >
-          <option value="">Semua Kelas</option>
-          <option v-for="kelas in kelasList" :key="kelas.id" :value="kelas.id">
-            {{ kelas.nama }}
-          </option>
-        </select>
-        <select
-          v-model.number="tunggakanFilter.bulan"
-          class="w-full px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 sm:w-auto"
-        >
-          <option :value="0">Semua Bulan</option>
-          <option v-for="b in bulanOptions" :key="b.value" :value="b.value">
-            {{ b.label }}
-          </option>
-        </select>
+          :options="kelasSelectOptions"
+          placeholder="Semua Kelas"
+          clearable
+        />
+        <SearchSelect
+          v-model="tunggakanFilter.bulan"
+          :options="bulanSelectOptions"
+          placeholder="Semua Bulan"
+          clearable
+        />
         <input
           v-model.number="tunggakanFilter.tahun"
           type="number"
@@ -1249,16 +1244,12 @@ onMounted(() => {
         </div>
 
         <div class="mb-4">
-          <label class="block text-sm font-medium text-text-primary mb-1.5"
-            >Metode Pembayaran</label
-          >
-          <select
+          <SearchSelect
             v-model="manualPaymentForm.metode"
-            class="w-full px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
-          >
-            <option value="tunai">Tunai</option>
-            <option value="transfer_manual">Transfer Manual</option>
-          </select>
+            label="Metode Pembayaran"
+            :options="metodeOptions"
+            placeholder="Pilih metode"
+          />
         </div>
 
         <div class="mb-4">

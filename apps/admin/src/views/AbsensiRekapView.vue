@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue';
 import { api } from '@/api/client';
-import { PageHeader } from '@/components/ui';
+import { PageHeader, SearchSelect } from '@/components/ui';
+import type { SelectOption } from '@/components/ui';
 
 interface Kelas {
   id: string;
@@ -92,6 +93,29 @@ const periodeLabel = computed(() => {
   }
   return `Semester ${selectedSemester.value} — ${selectedTahun.value}`;
 });
+
+// Select options
+const kelasOptions = computed<SelectOption[]>(() =>
+  kelasList.value.map((k) => ({ value: k.id, label: k.nama })),
+);
+
+const PERIODE_OPTIONS: SelectOption[] = [
+  { value: 'bulanan', label: 'Bulanan' },
+  { value: 'semester', label: 'Semester' },
+];
+
+const bulanOptions = computed<SelectOption[]>(() =>
+  BULAN_LABELS.map((label, index) => ({ value: index + 1, label })),
+);
+
+const SEMESTER_OPTIONS: SelectOption[] = [
+  { value: 1, label: 'Semester 1' },
+  { value: 2, label: 'Semester 2' },
+];
+
+const tahunSelectOptions = computed<SelectOption[]>(() =>
+  tahunOptions.value.map((t) => ({ value: t, label: String(t) })),
+);
 
 // Data fetching
 async function fetchKelasList() {
@@ -214,63 +238,44 @@ onMounted(() => {
 
     <!-- Filter Bar -->
     <div class="flex flex-wrap items-center gap-3 mb-4">
-      <div class="flex items-center gap-2">
-        <label class="text-sm font-medium text-text-primary">Kelas:</label>
-        <select
+      <div class="min-w-[200px]">
+        <SearchSelect
           v-model="selectedKelasId"
-          class="px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 max-w-xs min-w-[180px]"
-        >
-          <option value="" disabled>Pilih Kelas</option>
-          <option v-for="kelas in kelasList" :key="kelas.id" :value="kelas.id">
-            {{ kelas.nama }}
-          </option>
-        </select>
+          :options="kelasOptions"
+          label="Kelas"
+          placeholder="Pilih Kelas"
+        />
       </div>
 
-      <div class="flex items-center gap-2">
-        <label class="text-sm font-medium text-text-primary">Periode:</label>
-        <select
+      <div class="min-w-[150px]">
+        <SearchSelect
           v-model="selectedPeriode"
-          class="px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
-        >
-          <option value="bulanan">Bulanan</option>
-          <option value="semester">Semester</option>
-        </select>
+          :options="PERIODE_OPTIONS"
+          label="Periode"
+          :searchable="false"
+        />
       </div>
 
-      <div v-if="selectedPeriode === 'bulanan'" class="flex items-center gap-2">
-        <label class="text-sm font-medium text-text-primary">Bulan:</label>
-        <select
-          v-model="selectedBulan"
-          class="px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
-        >
-          <option v-for="(label, index) in BULAN_LABELS" :key="index" :value="index + 1">
-            {{ label }}
-          </option>
-        </select>
+      <div v-if="selectedPeriode === 'bulanan'" class="min-w-[160px]">
+        <SearchSelect v-model="selectedBulan" :options="bulanOptions" label="Bulan" />
       </div>
 
-      <div v-if="selectedPeriode === 'semester'" class="flex items-center gap-2">
-        <label class="text-sm font-medium text-text-primary">Semester:</label>
-        <select
+      <div v-if="selectedPeriode === 'semester'" class="min-w-[160px]">
+        <SearchSelect
           v-model="selectedSemester"
-          class="px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
-        >
-          <option :value="1">Semester 1</option>
-          <option :value="2">Semester 2</option>
-        </select>
+          :options="SEMESTER_OPTIONS"
+          label="Semester"
+          :searchable="false"
+        />
       </div>
 
-      <div class="flex items-center gap-2">
-        <label class="text-sm font-medium text-text-primary">Tahun:</label>
-        <select
+      <div class="min-w-[120px]">
+        <SearchSelect
           v-model="selectedTahun"
-          class="px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
-        >
-          <option v-for="tahun in tahunOptions" :key="tahun" :value="tahun">
-            {{ tahun }}
-          </option>
-        </select>
+          :options="tahunSelectOptions"
+          label="Tahun"
+          :searchable="false"
+        />
       </div>
     </div>
 

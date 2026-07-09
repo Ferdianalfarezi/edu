@@ -1,8 +1,9 @@
 <script setup lang="ts">
-import { ref, onMounted, watch } from 'vue';
+import { ref, computed, onMounted, watch } from 'vue';
 import { api } from '@/api/client';
 import { PeriodeRapor } from '@edu/shared';
-import { PageHeader, BaseModal } from '@/components/ui';
+import { PageHeader, BaseModal, SearchSelect } from '@/components/ui';
+import type { SelectOption } from '@/components/ui';
 
 interface KelasOption {
   id: string;
@@ -60,6 +61,18 @@ const periodeOptions = [
   { value: PeriodeRapor.UTS_SEMESTER_2, label: 'UTS Semester 2' },
   { value: PeriodeRapor.SEMESTER_2, label: 'Semester 2' },
 ];
+
+const tahunAjaranSelectOptions = computed<SelectOption[]>(() =>
+  tahunAjaranOptions.value.map((t) => ({ value: t.id, label: t.nama })),
+);
+
+const kelasSelectOptions = computed<SelectOption[]>(() =>
+  kelasOptions.value.map((k) => ({ value: k.id, label: k.nama })),
+);
+
+const periodeSelectOptions = computed<SelectOption[]>(() =>
+  periodeOptions.map((p) => ({ value: p.value, label: p.label })),
+);
 
 async function fetchTahunAjaran() {
   try {
@@ -194,41 +207,31 @@ onMounted(() => {
     <!-- Filters -->
     <div class="flex flex-wrap items-center gap-3 mb-4">
       <div class="flex flex-col gap-1 min-w-[200px]">
-        <label class="text-sm font-medium text-text-primary">Tahun Ajaran</label>
-        <select
+        <SearchSelect
           v-model="selectedTahunAjaran"
-          class="px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
-        >
-          <option value="" disabled>Pilih tahun ajaran</option>
-          <option v-for="t in tahunAjaranOptions" :key="t.id" :value="t.id">
-            {{ t.nama }}
-          </option>
-        </select>
+          label="Tahun Ajaran"
+          :options="tahunAjaranSelectOptions"
+          placeholder="Pilih tahun ajaran"
+        />
       </div>
 
       <div class="flex flex-col gap-1 min-w-[200px]">
-        <label class="text-sm font-medium text-text-primary">Kelas</label>
-        <select
+        <SearchSelect
           v-model="selectedKelas"
-          class="px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
+          label="Kelas"
+          :options="kelasSelectOptions"
+          placeholder="Pilih kelas"
           :disabled="!selectedTahunAjaran"
-        >
-          <option value="" disabled>Pilih kelas</option>
-          <option v-for="k in kelasOptions" :key="k.id" :value="k.id">{{ k.nama }}</option>
-        </select>
+        />
       </div>
 
       <div class="flex flex-col gap-1 min-w-[200px]">
-        <label class="text-sm font-medium text-text-primary">Periode</label>
-        <select
+        <SearchSelect
           v-model="selectedPeriode"
-          class="px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
-        >
-          <option value="" disabled>Pilih periode</option>
-          <option v-for="p in periodeOptions" :key="p.value" :value="p.value">
-            {{ p.label }}
-          </option>
-        </select>
+          label="Periode"
+          :options="periodeSelectOptions"
+          placeholder="Pilih periode"
+        />
       </div>
     </div>
 

@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue';
 import { api } from '@/api/client';
-import { PageHeader } from '@/components/ui';
+import { PageHeader, SearchSelect } from '@/components/ui';
+import type { SelectOption } from '@/components/ui';
 
 interface TahunAjaran {
   id: string;
@@ -60,6 +61,35 @@ const executionResult = ref<{
 
 const targetTahunAjaranOptions = computed(() =>
   tahunAjaranList.value.filter((t) => t.id !== sourceTahunAjaranId.value),
+);
+
+// SelectOption computed for SearchSelect component
+const sourceTahunAjaranSelectOptions = computed<SelectOption[]>(() =>
+  sourceTahunAjaranOptions.value.map((ta) => ({
+    value: ta.id,
+    label: `${ta.nama} (${ta.status})`,
+  })),
+);
+
+const sourceKelasSelectOptions = computed<SelectOption[]>(() =>
+  sourceKelasList.value.map((k) => ({
+    value: k.id,
+    label: `${k.nama} (Tingkat ${k.tingkat})`,
+  })),
+);
+
+const targetTahunAjaranSelectOptions = computed<SelectOption[]>(() =>
+  targetTahunAjaranOptions.value.map((ta) => ({
+    value: ta.id,
+    label: `${ta.nama} (${ta.status})`,
+  })),
+);
+
+const targetKelasSelectOptions = computed<SelectOption[]>(() =>
+  targetKelasList.value.map((k) => ({
+    value: k.id,
+    label: `${k.nama} (Tingkat ${k.tingkat})`,
+  })),
 );
 
 const selectedStudentCount = computed(
@@ -338,67 +368,48 @@ onMounted(async () => {
 
       <template v-else>
         <div class="mb-4">
-          <label class="block text-sm font-medium text-text-primary mb-1.5"
-            >Tahun Ajaran Asal</label
-          >
-          <select
+          <SearchSelect
             v-model="sourceTahunAjaranId"
-            class="w-full px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
+            label="Tahun Ajaran Asal"
+            :options="sourceTahunAjaranSelectOptions"
+            placeholder="-- Pilih Tahun Ajaran Asal --"
             @change="fetchSourceKelas"
-          >
-            <option value="">-- Pilih Tahun Ajaran Asal --</option>
-            <option v-for="ta in sourceTahunAjaranOptions" :key="ta.id" :value="ta.id">
-              {{ ta.nama }} ({{ ta.status }})
-            </option>
-          </select>
+          />
         </div>
 
         <div class="mb-4">
-          <label class="block text-sm font-medium text-text-primary mb-1.5">Kelas Asal</label>
-          <select
+          <SearchSelect
             v-model="sourceKelasId"
-            class="w-full px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
+            label="Kelas Asal"
+            :options="sourceKelasSelectOptions"
+            placeholder="-- Pilih Kelas Asal --"
+            :disabled="!sourceTahunAjaranId"
             @change="error = ''"
-          >
-            <option value="">-- Pilih Kelas Asal --</option>
-            <option v-for="kelas in sourceKelasList" :key="kelas.id" :value="kelas.id">
-              {{ kelas.nama }} (Tingkat {{ kelas.tingkat }})
-            </option>
-          </select>
+          />
         </div>
 
         <div class="mb-4">
-          <label class="block text-sm font-medium text-text-primary mb-1.5"
-            >Tahun Ajaran Tujuan</label
-          >
-          <select
+          <SearchSelect
             v-model="targetTahunAjaranId"
-            class="w-full px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
+            label="Tahun Ajaran Tujuan"
+            :options="targetTahunAjaranSelectOptions"
+            placeholder="-- Pilih Tahun Ajaran Tujuan --"
             @change="fetchTargetKelas"
-          >
-            <option value="">-- Pilih Tahun Ajaran Tujuan --</option>
-            <option v-for="ta in targetTahunAjaranOptions" :key="ta.id" :value="ta.id">
-              {{ ta.nama }} ({{ ta.status }})
-            </option>
-          </select>
+          />
         </div>
 
         <div class="mb-4">
-          <label class="block text-sm font-medium text-text-primary mb-1.5"
-            >Kelas Tujuan
-            <span class="text-text-tertiary font-normal"
-              >(opsional - otomatis tingkat +1)</span
-            ></label
-          >
-          <select
+          <SearchSelect
             v-model="targetKelasId"
-            class="w-full px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
-          >
-            <option value="">-- Otomatis (Tingkat +1) --</option>
-            <option v-for="kelas in targetKelasList" :key="kelas.id" :value="kelas.id">
-              {{ kelas.nama }} (Tingkat {{ kelas.tingkat }})
-            </option>
-          </select>
+            label="Kelas Tujuan"
+            :options="targetKelasSelectOptions"
+            placeholder="-- Otomatis (Tingkat +1) --"
+            :disabled="!targetTahunAjaranId"
+            clearable
+          />
+          <p class="mt-1 text-xs text-text-tertiary">
+            Opsional — kosong berarti otomatis tingkat +1
+          </p>
         </div>
 
         <p v-if="error" class="text-xs text-danger-500 mt-1">{{ error }}</p>

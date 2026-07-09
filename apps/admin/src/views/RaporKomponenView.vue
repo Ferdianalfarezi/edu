@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue';
 import { api } from '@/api/client';
-import { PageHeader, BaseModal } from '@/components/ui';
+import { PageHeader, BaseModal, SearchSelect } from '@/components/ui';
+import type { SelectOption } from '@/components/ui';
 
 interface KomponenPenilaian {
   id: string;
@@ -44,6 +45,12 @@ const defaultForm: KomponenForm = {
 };
 
 const form = ref<KomponenForm>({ ...defaultForm });
+
+const tipePenilaianOptions: SelectOption[] = [
+  { value: 'angka', label: 'Angka (misal: 0-100)' },
+  { value: 'huruf', label: 'Huruf (A/B/C/D/E)' },
+  { value: 'deskripsi', label: 'Deskripsi Naratif' },
+];
 
 async function fetchItems() {
   loading.value = true;
@@ -289,16 +296,14 @@ onMounted(fetchItems);
         </div>
 
         <div class="mb-4">
-          <label class="block text-sm font-medium text-text-primary mb-1.5">Tipe Penilaian</label>
-          <select
+          <SearchSelect
             v-model="form.tipe"
-            class="w-full px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
+            :options="tipePenilaianOptions"
+            label="Tipe Penilaian"
+            :required="true"
+            :searchable="false"
             @change="onTipeChange"
-          >
-            <option value="angka">Angka (misal: 0-100)</option>
-            <option value="huruf">Huruf (A/B/C/D/E)</option>
-            <option value="deskripsi">Deskripsi Naratif</option>
-          </select>
+          />
         </div>
 
         <div v-if="form.tipe === 'angka'" class="grid grid-cols-2 gap-4 mb-4">

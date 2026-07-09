@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue';
 import { api } from '@/api/client';
-import { PageHeader, BaseModal } from '@/components/ui';
+import { PageHeader, BaseModal, SearchSelect } from '@/components/ui';
+import type { SelectOption } from '@/components/ui';
 
 // Types
 interface Kelas {
@@ -110,6 +111,19 @@ const penggantiError = ref('');
 // Delete confirmation
 const showDeleteModal = ref(false);
 const deletingEntry = ref<JadwalEntry | null>(null);
+
+// Computed options
+const kelasSelectOptions = computed<SelectOption[]>(() =>
+  kelasList.value.map((k) => ({ value: k.id, label: k.nama })),
+);
+
+const mataPelajaranSelectOptions = computed<SelectOption[]>(() =>
+  mataPelajaranList.value.map((m) => ({ value: m.id, label: m.nama })),
+);
+
+const guruSelectOptions = computed<SelectOption[]>(() =>
+  guruList.value.map((g) => ({ value: g.id, label: g.nama })),
+);
 
 // Computed: grid data structure mapping jam_ke + hari to jadwal entry
 const gridData = computed(() => {
@@ -442,16 +456,12 @@ onMounted(async () => {
 
     <!-- Kelas Selector -->
     <div class="flex items-center gap-3 mb-4">
-      <label class="text-sm font-medium text-text-primary">Kelas:</label>
-      <select
+      <SearchSelect
         v-model="selectedKelasId"
-        class="w-full px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 max-w-xs"
-      >
-        <option value="" disabled>Pilih Kelas</option>
-        <option v-for="kelas in kelasList" :key="kelas.id" :value="kelas.id">
-          {{ kelas.nama }}
-        </option>
-      </select>
+        label="Kelas"
+        :options="kelasSelectOptions"
+        placeholder="Pilih Kelas"
+      />
     </div>
 
     <!-- Schedule Grid -->
@@ -579,30 +589,22 @@ onMounted(async () => {
         <!-- Mapel & Guru fields (hidden when istirahat) -->
         <template v-if="!form.is_istirahat">
           <div class="mb-4">
-            <label class="block text-sm font-medium text-text-primary mb-1.5">Mata Pelajaran</label>
-            <select
+            <SearchSelect
               v-model="form.mata_pelajaran_id"
-              class="w-full px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
+              label="Mata Pelajaran"
+              :options="mataPelajaranSelectOptions"
+              placeholder="Pilih Mata Pelajaran"
               required
-            >
-              <option value="" disabled>Pilih Mata Pelajaran</option>
-              <option v-for="mapel in mataPelajaranList" :key="mapel.id" :value="mapel.id">
-                {{ mapel.nama }}
-              </option>
-            </select>
+            />
           </div>
           <div class="mb-4">
-            <label class="block text-sm font-medium text-text-primary mb-1.5">Guru</label>
-            <select
+            <SearchSelect
               v-model="form.guru_id"
-              class="w-full px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
+              label="Guru"
+              :options="guruSelectOptions"
+              placeholder="Pilih Guru"
               required
-            >
-              <option value="" disabled>Pilih Guru</option>
-              <option v-for="guru in guruList" :key="guru.id" :value="guru.id">
-                {{ guru.nama }}
-              </option>
-            </select>
+            />
           </div>
         </template>
 
@@ -732,17 +734,13 @@ onMounted(async () => {
       </div>
       <form @submit.prevent="savePengganti">
         <div class="mb-4">
-          <label class="block text-sm font-medium text-text-primary mb-1.5">Guru Pengganti</label>
-          <select
+          <SearchSelect
             v-model="penggantiForm.guru_pengganti_id"
-            class="w-full px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
+            label="Guru Pengganti"
+            :options="guruSelectOptions"
+            placeholder="Pilih Guru Pengganti"
             required
-          >
-            <option value="" disabled>Pilih Guru Pengganti</option>
-            <option v-for="guru in guruList" :key="guru.id" :value="guru.id">
-              {{ guru.nama }}
-            </option>
-          </select>
+          />
         </div>
         <div class="mb-4">
           <label class="block text-sm font-medium text-text-primary mb-1.5">Alasan</label>

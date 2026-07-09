@@ -2,7 +2,8 @@
 import { ref, computed, onMounted, watch } from 'vue';
 import { api } from '@/api/client';
 import { PeriodeRapor } from '@edu/shared';
-import { PageHeader } from '@/components/ui';
+import { PageHeader, SearchSelect } from '@/components/ui';
+import type { SelectOption } from '@/components/ui';
 
 interface MapelOption {
   id: string;
@@ -46,12 +47,20 @@ const saving = ref(false);
 const error = ref('');
 const successMessage = ref('');
 
-const periodeOptions = [
+const periodeOptions: SelectOption[] = [
   { value: PeriodeRapor.UTS_SEMESTER_1, label: 'UTS Semester 1' },
   { value: PeriodeRapor.SEMESTER_1, label: 'Semester 1' },
   { value: PeriodeRapor.UTS_SEMESTER_2, label: 'UTS Semester 2' },
   { value: PeriodeRapor.SEMESTER_2, label: 'Semester 2' },
 ];
+
+const mapelSelectOptions = computed<SelectOption[]>(() =>
+  mapelOptions.value.map((m) => ({ value: m.id, label: m.nama })),
+);
+
+const kelasSelectOptions = computed<SelectOption[]>(() =>
+  kelasOptions.value.map((k) => ({ value: k.id, label: k.nama })),
+);
 
 const isUTS = computed(() =>
   [PeriodeRapor.UTS_SEMESTER_1, PeriodeRapor.UTS_SEMESTER_2].includes(
@@ -211,40 +220,35 @@ onMounted(() => {
 
     <!-- Filters -->
     <div class="flex flex-wrap items-center gap-3 mb-4">
-      <div class="flex flex-col gap-1 min-w-[200px]">
-        <label class="text-sm font-medium text-text-primary">Mata Pelajaran</label>
-        <select
+      <div class="min-w-[200px]">
+        <SearchSelect
           v-model="selectedMapel"
-          class="px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
-        >
-          <option value="" disabled>Pilih mata pelajaran</option>
-          <option v-for="m in mapelOptions" :key="m.id" :value="m.id">{{ m.nama }}</option>
-        </select>
+          :options="mapelSelectOptions"
+          label="Mata Pelajaran"
+          placeholder="Pilih mata pelajaran"
+          :required="true"
+        />
       </div>
 
-      <div class="flex flex-col gap-1 min-w-[200px]">
-        <label class="text-sm font-medium text-text-primary">Kelas</label>
-        <select
+      <div class="min-w-[200px]">
+        <SearchSelect
           v-model="selectedKelas"
-          class="px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
+          :options="kelasSelectOptions"
+          label="Kelas"
+          placeholder="Pilih kelas"
+          :required="true"
           :disabled="!selectedMapel"
-        >
-          <option value="" disabled>Pilih kelas</option>
-          <option v-for="k in kelasOptions" :key="k.id" :value="k.id">{{ k.nama }}</option>
-        </select>
+        />
       </div>
 
-      <div class="flex flex-col gap-1 min-w-[200px]">
-        <label class="text-sm font-medium text-text-primary">Periode</label>
-        <select
+      <div class="min-w-[200px]">
+        <SearchSelect
           v-model="selectedPeriode"
-          class="px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
-        >
-          <option value="" disabled>Pilih periode</option>
-          <option v-for="p in periodeOptions" :key="p.value" :value="p.value">
-            {{ p.label }}
-          </option>
-        </select>
+          :options="periodeOptions"
+          label="Periode"
+          placeholder="Pilih periode"
+          :required="true"
+        />
       </div>
     </div>
 

@@ -3,7 +3,8 @@ import { ref, computed, onMounted, watch } from 'vue';
 import { api } from '@/api/client';
 import { useAuthStore } from '@/stores/auth';
 import { Role } from '@edu/shared';
-import { PageHeader } from '@/components/ui';
+import { PageHeader, SearchSelect } from '@/components/ui';
+import type { SelectOption } from '@/components/ui';
 
 interface Kelas {
   id: string;
@@ -62,6 +63,10 @@ const holidayWarning = ref('');
 
 // Computed
 const isGuru = computed(() => authStore.user?.role === Role.GURU);
+
+const kelasSelectOptions = computed<SelectOption[]>(() =>
+  kelasList.value.map((k) => ({ value: k.id, label: k.nama })),
+);
 
 const unfilledStudents = computed(() => {
   return records.value
@@ -219,15 +224,12 @@ onMounted(() => {
       </div>
       <div class="flex items-center gap-2">
         <label class="text-sm font-medium text-text-primary">Kelas:</label>
-        <select
+        <SearchSelect
           v-model="selectedKelasId"
-          class="px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 max-w-xs min-w-[200px]"
-        >
-          <option value="" disabled>Pilih Kelas</option>
-          <option v-for="kelas in kelasList" :key="kelas.id" :value="kelas.id">
-            {{ kelas.nama }}
-          </option>
-        </select>
+          :options="kelasSelectOptions"
+          placeholder="Pilih Kelas"
+          class="min-w-[200px] max-w-xs"
+        />
       </div>
     </div>
 

@@ -1,8 +1,9 @@
 <script setup lang="ts">
-import { ref, onMounted, watch } from 'vue';
+import { ref, computed, onMounted, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import { api } from '@/api/client';
-import { PageHeader } from '@/components/ui';
+import { PageHeader, SearchSelect } from '@/components/ui';
+import type { SelectOption } from '@/components/ui';
 
 interface RppItem {
   id: string;
@@ -51,6 +52,19 @@ const filterTahun = ref('');
 // Selectors
 const mataPelajaranList = ref<MataPelajaran[]>([]);
 const kategoriList = ref<KategoriRpp[]>([]);
+
+const tahunFilterOptions: SelectOption[] = [2025, 2024, 2023, 2022, 2021, 2020].map((y) => ({
+  value: y.toString(),
+  label: y.toString(),
+}));
+
+const mapelFilterOptions = computed<SelectOption[]>(() =>
+  mataPelajaranList.value.map((m) => ({ value: m.id, label: m.nama })),
+);
+
+const kategoriFilterOptions = computed<SelectOption[]>(() =>
+  kategoriList.value.map((k) => ({ value: k.id, label: k.nama })),
+);
 
 let searchTimeout: ReturnType<typeof setTimeout> | null = null;
 
@@ -184,33 +198,24 @@ onMounted(async () => {
           @input="onSearchInput"
         />
       </div>
-      <select
+      <SearchSelect
         v-model="filterMapel"
-        class="w-full px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 min-w-[160px] sm:w-auto"
-      >
-        <option value="">Semua Mata Pelajaran</option>
-        <option v-for="mapel in mataPelajaranList" :key="mapel.id" :value="mapel.id">
-          {{ mapel.nama }}
-        </option>
-      </select>
-      <select
+        :options="mapelFilterOptions"
+        placeholder="Semua Mata Pelajaran"
+        clearable
+      />
+      <SearchSelect
         v-model="filterKategori"
-        class="w-full px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 min-w-[160px] sm:w-auto"
-      >
-        <option value="">Semua Kategori</option>
-        <option v-for="kat in kategoriList" :key="kat.id" :value="kat.id">
-          {{ kat.nama }}
-        </option>
-      </select>
-      <select
+        :options="kategoriFilterOptions"
+        placeholder="Semua Kategori"
+        clearable
+      />
+      <SearchSelect
         v-model="filterTahun"
-        class="w-full px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 min-w-[120px] sm:w-auto"
-      >
-        <option value="">Semua Tahun</option>
-        <option v-for="y in [2025, 2024, 2023, 2022, 2021, 2020]" :key="y" :value="y.toString()">
-          {{ y }}
-        </option>
-      </select>
+        :options="tahunFilterOptions"
+        placeholder="Semua Tahun"
+        clearable
+      />
     </div>
 
     <!-- RPP List -->
