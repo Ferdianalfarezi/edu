@@ -5,7 +5,7 @@ import {
   ForbiddenException,
   NotFoundException,
 } from '@nestjs/common';
-import { eq, and, sql, desc, lt, ilike } from 'drizzle-orm';
+import { eq, and, desc, lt, ilike } from 'drizzle-orm';
 import { DRIZZLE } from '@/drizzle/drizzle.module';
 import { rpp, kategoriRpp, rppFavorit, mataPelajaran, user } from '@/drizzle/schema';
 import { StorageService, BUCKET_PATHS } from '@/modules/storage/storage.service';

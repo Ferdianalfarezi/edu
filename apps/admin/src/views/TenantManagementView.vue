@@ -186,8 +186,8 @@ onMounted(fetchTenants);
     <BaseModal
       :show="showFormModal"
       :title="editingTenant ? 'Edit Sekolah' : 'Tambah Sekolah Baru'"
-      @close="showFormModal = false"
       size="lg"
+      @close="showFormModal = false"
     >
       <p v-if="!editingTenant" class="text-sm text-text-secondary mb-4">
         Setelah dibuat, satu user Admin default akan dibuatkan dan kredensial dikirim ke email

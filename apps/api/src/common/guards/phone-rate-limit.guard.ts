@@ -14,7 +14,7 @@ export class PhoneRateLimitGuard extends RateLimitGuard {
     super(redisService);
   }
 
-  protected getConfig(context: ExecutionContext): RateLimitConfig {
+  protected getConfig(_context: ExecutionContext): RateLimitConfig {
     return {
       limit: 5,
       windowSeconds: 3600, // 1 hour

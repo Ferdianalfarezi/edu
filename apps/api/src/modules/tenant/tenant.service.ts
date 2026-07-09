@@ -1,7 +1,7 @@
 import { BadRequestException, Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectQueue } from '@nestjs/bull';
 import { NodePgDatabase } from 'drizzle-orm/node-postgres';
-import { eq, and, sql, count } from 'drizzle-orm';
+import { eq, and, count } from 'drizzle-orm';
 import * as bcrypt from 'bcrypt';
 import * as crypto from 'crypto';
 import { Queue } from 'bull';
@@ -242,7 +242,7 @@ export class TenantService {
       throw new NotFoundException(`Tenant dengan id ${tenantId} tidak ditemukan`);
     }
 
-    const updateData: Record<string, any> = { updatedAt: new Date() };
+    const updateData: Record<string, unknown> = { updatedAt: new Date() };
     if (dto.nama !== undefined) updateData.nama = dto.nama;
     if (dto.alamat !== undefined) updateData.alamat = dto.alamat;
     if (dto.telepon !== undefined) updateData.telepon = dto.telepon;

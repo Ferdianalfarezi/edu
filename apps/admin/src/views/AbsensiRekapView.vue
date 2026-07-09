@@ -148,7 +148,7 @@ async function fetchRekap() {
 
     const { data } = await api.get<RekapResponse>('/absensi/rekap', { params });
     rekapData.value = data;
-  } catch (err: unknown) {
+  } catch (err) {
     const error = err as { response?: { data?: { message?: string } } };
     errorMessage.value = error.response?.data?.message || 'Gagal memuat data rekap.';
     rekapData.value = null;
@@ -193,7 +193,7 @@ async function exportRekap() {
     link.click();
     link.remove();
     window.URL.revokeObjectURL(url);
-  } catch (err: unknown) {
+  } catch (err) {
     const error = err as { response?: { data?: { message?: string } } };
     errorMessage.value = error.response?.data?.message || 'Gagal mengexport laporan.';
   } finally {

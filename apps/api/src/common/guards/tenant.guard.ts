@@ -65,12 +65,16 @@ export class TenantGuard implements CanActivate {
    * 2. Query params (e.g., ?tenant_id=...)
    * 3. Request body (e.g., { tenant_id: ... })
    */
-  private extractTenantId(request: any): string | undefined {
+  private extractTenantId(request: {
+    params?: Record<string, string>;
+    query?: Record<string, string>;
+    body?: Record<string, unknown>;
+  }): string | undefined {
     return (
       request.params?.tenantId ||
       request.params?.tenant_id ||
-      request.query?.tenant_id ||
-      request.body?.tenant_id
+      (request.query?.tenant_id as string | undefined) ||
+      (request.body?.tenant_id as string | undefined)
     );
   }
 }

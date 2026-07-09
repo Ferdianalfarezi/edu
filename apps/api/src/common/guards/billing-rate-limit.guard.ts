@@ -13,7 +13,7 @@ export class BillingRateLimitGuard extends RateLimitGuard {
     super(redisService);
   }
 
-  protected getConfig(context: ExecutionContext): RateLimitConfig {
+  protected getConfig(_context: ExecutionContext): RateLimitConfig {
     return {
       limit: 2,
       windowSeconds: 60, // 1 minute

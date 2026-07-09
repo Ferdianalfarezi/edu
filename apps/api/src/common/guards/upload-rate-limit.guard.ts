@@ -12,7 +12,7 @@ export class UploadRateLimitGuard extends RateLimitGuard {
     super(redisService);
   }
 
-  protected getConfig(context: ExecutionContext): RateLimitConfig {
+  protected getConfig(_context: ExecutionContext): RateLimitConfig {
     return {
       limit: 10,
       windowSeconds: 300, // 5 minutes

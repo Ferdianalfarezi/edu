@@ -105,7 +105,7 @@ async function saveTahunAjaran() {
     await api.post('/tahun-ajaran', payload);
     showFormModal.value = false;
     await fetchItems();
-  } catch (error: any) {
+  } catch (error) {
     const msg = error.response?.data?.message;
     if (msg) {
       formError.value = Array.isArray(msg) ? msg.join(', ') : msg;
@@ -123,7 +123,7 @@ async function activateTahunAjaran() {
     showActivateModal.value = false;
     activatingItem.value = null;
     await fetchItems();
-  } catch (error: any) {
+  } catch (error) {
     const msg = error.response?.data?.message;
     if (msg) {
       activateError.value = Array.isArray(msg) ? msg.join(', ') : msg;
@@ -245,7 +245,7 @@ onMounted(fetchItems);
         Tahun ajaran baru akan dibuat dengan status "Disiapkan". Struktur kelas dari tahun ajaran
         aktif akan otomatis diduplikasi.
       </p>
-      <form @submit.prevent="saveTahunAjaran" id="form-tahun-ajaran" class="space-y-4">
+      <form id="form-tahun-ajaran" class="space-y-4" @submit.prevent="saveTahunAjaran">
         <div>
           <label class="block text-sm font-medium text-text-primary mb-1.5">Nama Periode</label>
           <input

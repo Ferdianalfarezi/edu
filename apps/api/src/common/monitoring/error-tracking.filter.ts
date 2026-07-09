@@ -6,7 +6,8 @@ import {
   HttpStatus,
   Logger,
 } from '@nestjs/common';
-import { Request, Response } from 'express';
+import { Response } from 'express';
+import { AuthenticatedRequest } from '../interfaces/request.interface';
 
 interface ErrorResponse {
   statusCode: number;
@@ -30,12 +31,13 @@ export class ErrorTrackingFilter implements ExceptionFilter {
 
   catch(exception: unknown, host: ArgumentsHost) {
     const ctx = host.switchToHttp();
-    const request = ctx.getRequest<Request>();
+    const request = ctx.getRequest<AuthenticatedRequest>();
     const response = ctx.getResponse<Response>();
 
-    const requestId = (request as any).requestId || request.headers['x-request-id'] || 'unknown';
-    const userId = (request as any).user?.sub || 'anonymous';
-    const tenantId = (request as any).user?.tenant_id || null;
+    const rawRequestId = request.requestId || request.headers['x-request-id'] || 'unknown';
+    const requestId = Array.isArray(rawRequestId) ? rawRequestId[0] : rawRequestId;
+    const userId = request.user?.sub || 'anonymous';
+    const tenantId = request.user?.tenant_id || null;
 
     let statusCode: number;
     let message: string | string[];
@@ -48,9 +50,9 @@ export class ErrorTrackingFilter implements ExceptionFilter {
         message = responseBody;
         error = exception.name;
       } else {
-        const body = responseBody as Record<string, any>;
-        message = body.message || exception.message;
-        error = body.error || exception.name;
+        const body = responseBody as Record<string, unknown>;
+        message = (body.message as string | string[]) || exception.message;
+        error = (body.error as string) || exception.name;
       }
     } else if (exception instanceof Error) {
       statusCode = HttpStatus.INTERNAL_SERVER_ERROR;

@@ -16,7 +16,7 @@ async function handleSubmit() {
     const payload: ResetPasswordRequest = { email: email.value };
     await api.post('/auth/reset-password/request', payload);
     submitted.value = true;
-  } catch (err: unknown) {
+  } catch (err) {
     // Always show success message to prevent email enumeration
     submitted.value = true;
   } finally {
@@ -34,7 +34,7 @@ async function handleSubmit() {
         <p class="text-sm text-text-secondary text-center mb-6">
           Masukkan alamat email Anda. Kami akan mengirim tautan untuk mengatur ulang password.
         </p>
-        <form @submit.prevent="handleSubmit" class="flex flex-col gap-4">
+        <form class="flex flex-col gap-4" @submit.prevent="handleSubmit">
           <div>
             <label for="email" class="block text-sm font-medium text-text-primary mb-1.5"
               >Email</label

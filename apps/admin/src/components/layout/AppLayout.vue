@@ -409,9 +409,9 @@ function toggleSidebar() {
           </div>
           <button
             v-if="!sidebarCollapsed"
-            @click="handleLogout"
             class="p-1.5 rounded-md text-text-tertiary hover:text-danger-700 hover:bg-danger-50 transition-colors"
             title="Logout"
+            @click="handleLogout"
           >
             <svg
               class="w-4 h-4"

@@ -33,8 +33,8 @@ const quickLinks = [
       <button
         v-for="link in quickLinks"
         :key="link.path"
-        @click="router.push(link.path)"
         class="bg-white border border-border rounded-xl p-5 text-left hover:shadow-sm hover:border-primary-200 transition-all group"
+        @click="router.push(link.path)"
       >
         <div
           class="w-9 h-9 rounded-lg bg-primary-50 flex items-center justify-center mb-3 group-hover:bg-primary-100 transition-colors"

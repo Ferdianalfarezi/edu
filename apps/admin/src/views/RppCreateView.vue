@@ -269,7 +269,7 @@ async function handleSubmit(publishStatus: 'draft' | 'published') {
     }
 
     router.push({ name: 'rpp-portal' });
-  } catch (e: any) {
+  } catch (e) {
     error.value = e.response?.data?.message || 'Gagal menyimpan RPP.';
   } finally {
     saving.value = false;

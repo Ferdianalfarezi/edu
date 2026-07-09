@@ -8,7 +8,7 @@ import {
 import { InjectQueue } from '@nestjs/bull';
 import { Queue } from 'bull';
 import { NodePgDatabase } from 'drizzle-orm/node-postgres';
-import { eq, and, sql, inArray } from 'drizzle-orm';
+import { eq, and, sql } from 'drizzle-orm';
 import { DRIZZLE } from '@/drizzle/drizzle.module';
 import { rapor, raporNilai, komponenPenilaian } from '@/drizzle/schema/rapor';
 import { kelas } from '@/drizzle/schema/kelas';

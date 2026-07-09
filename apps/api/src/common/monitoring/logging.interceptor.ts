@@ -1,6 +1,7 @@
 import { Injectable, NestInterceptor, ExecutionContext, CallHandler, Logger } from '@nestjs/common';
 import { Observable, tap } from 'rxjs';
-import { Request, Response } from 'express';
+import { Response } from 'express';
+import { AuthenticatedRequest } from '../interfaces/request.interface';
 
 /**
  * Logging interceptor that records structured request/response data with timing.
@@ -12,14 +13,14 @@ export class LoggingInterceptor implements NestInterceptor {
 
   intercept(context: ExecutionContext, next: CallHandler): Observable<unknown> {
     const ctx = context.switchToHttp();
-    const request = ctx.getRequest<Request>();
+    const request = ctx.getRequest<AuthenticatedRequest>();
     const startTime = Date.now();
 
     const { method, url, ip } = request;
-    const requestId = (request as any).requestId || request.headers['x-request-id'] || 'unknown';
+    const requestId = request.requestId || request.headers['x-request-id'] || 'unknown';
     const userAgent = request.headers['user-agent'] || 'unknown';
-    const userId = (request as any).user?.sub || 'anonymous';
-    const tenantId = (request as any).user?.tenant_id || null;
+    const userId = request.user?.sub || 'anonymous';
+    const tenantId = request.user?.tenant_id || null;
 
     return next.handle().pipe(
       tap({

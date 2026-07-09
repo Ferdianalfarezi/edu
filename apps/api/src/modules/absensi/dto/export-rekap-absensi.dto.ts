@@ -27,7 +27,7 @@ export class ExportRekapAbsensiQueryDto {
     message: 'format harus: xlsx',
   })
   @IsOptional()
-  format?: 'xlsx' = 'xlsx';
+  format?: 'xlsx' = 'xlsx' as const;
 }
 
 export interface ExportRekapAbsensiResponse {

@@ -1,6 +1,7 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import { Cron } from '@nestjs/schedule';
 import { and, isNotNull, lt, eq } from 'drizzle-orm';
+import { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import { DRIZZLE } from '@/drizzle/drizzle.module';
 import { StorageService } from '@/modules/storage/storage.service';
 import { tagihanTransaksi } from '@/drizzle/schema/tagihan';
@@ -19,7 +20,7 @@ export class FileCleanupService {
   private readonly logger = new Logger(FileCleanupService.name);
 
   constructor(
-    @Inject(DRIZZLE) private readonly db: any,
+    @Inject(DRIZZLE) private readonly db: NodePgDatabase,
     private readonly storageService: StorageService,
   ) {}
 
@@ -64,6 +65,8 @@ export class FileCleanupService {
 
     for (const transaction of expiredTransactions) {
       try {
+        if (!transaction.buktiTransferUrl) continue;
+
         // Delete file from R2 storage
         await this.storageService.delete(transaction.buktiTransferUrl);
 

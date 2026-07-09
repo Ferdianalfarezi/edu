@@ -1,6 +1,6 @@
 import { ConflictException, Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { NodePgDatabase } from 'drizzle-orm/node-postgres';
-import { eq, and, between, sql } from 'drizzle-orm';
+import { eq, and, between } from 'drizzle-orm';
 import { DRIZZLE } from '@/drizzle/drizzle.module';
 import { konfigurasiSekolah } from '@/drizzle/schema/konfigurasi';
 import { hariLibur } from '@/drizzle/schema/konfigurasi';

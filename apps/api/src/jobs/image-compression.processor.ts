@@ -36,7 +36,7 @@ export interface CompressBuktiTransferJobData {
 @Processor(QUEUE_NAMES.IMAGE)
 export class ImageCompressionProcessor extends BaseProcessor {
   constructor(
-    @Inject(DRIZZLE) private readonly db: NodePgDatabase<any>,
+    @Inject(DRIZZLE) private readonly db: NodePgDatabase,
     private readonly storageService: StorageService,
   ) {
     super('ImageCompressionProcessor', { concurrency: 3, maxAttempts: 3 });
@@ -44,7 +44,7 @@ export class ImageCompressionProcessor extends BaseProcessor {
 
   @Process('compress-bukti-transfer')
   async handleCompressBuktiTransfer(job: Job<CompressBuktiTransferJobData>): Promise<void> {
-    const { transaksi_id, storage_path, tenant_id, tagihan_id } = job.data;
+    const { transaksi_id, storage_path } = job.data;
 
     this.logger.log(`Compressing bukti transfer: transaksi=${transaksi_id}, path=${storage_path}`);
 

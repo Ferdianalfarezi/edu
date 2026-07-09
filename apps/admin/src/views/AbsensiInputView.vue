@@ -141,7 +141,7 @@ async function fetchStudentsAndAbsensi() {
         status: existing?.status || '',
       };
     });
-  } catch (err: unknown) {
+  } catch (err) {
     const error = err as { response?: { data?: { message?: string } } };
     errorMessage.value = error.response?.data?.message || 'Gagal memuat data siswa.';
   } finally {
@@ -169,7 +169,7 @@ async function submitAbsensi() {
     });
     successMessage.value = 'Absensi berhasil disimpan!';
     isReadOnly.value = true;
-  } catch (err: unknown) {
+  } catch (err) {
     const error = err as { response?: { data?: { message?: string } } };
     errorMessage.value = error.response?.data?.message || 'Gagal menyimpan absensi.';
   } finally {
@@ -297,9 +297,9 @@ onMounted(() => {
         class="flex flex-wrap gap-4 p-3 bg-surface-50 rounded-lg mb-4 text-xs text-text-secondary"
       >
         <span
-          class="inline-flex items-center gap-1.5"
           v-for="(count, status) in statusSummary"
           :key="status"
+          class="inline-flex items-center gap-1.5"
         >
           <span
             class="w-2.5 h-2.5 rounded-full inline-block"
@@ -358,10 +358,10 @@ onMounted(() => {
                       :style="record.status === status ? { background: STATUS_COLORS[status] } : {}"
                     >
                       <input
+                        v-model="record.status"
                         type="radio"
                         :name="`status-${record.siswa_id}`"
                         :value="status"
-                        v-model="record.status"
                         :disabled="isReadOnly"
                         class="sr-only"
                       />

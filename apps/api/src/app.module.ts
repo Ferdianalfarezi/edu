@@ -57,16 +57,19 @@ import { MONITORING_CONFIG } from './common/monitoring/monitoring.config';
               : { target: 'pino-pretty', options: { colorize: true, singleLine: true } },
             redact: MONITORING_CONFIG.logging.redactPaths as unknown as string[],
             serializers: {
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
               req: (req: any) => ({
                 id: req.id,
                 method: req.method,
                 url: req.url,
                 remoteAddress: req.remoteAddress,
               }),
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
               res: (res: any) => ({
                 statusCode: res.statusCode,
               }),
             },
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             genReqId: (req: any) => req.headers['x-request-id'] || req['requestId'] || undefined,
           },
         };

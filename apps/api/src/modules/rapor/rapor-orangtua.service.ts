@@ -6,7 +6,6 @@ import { rapor, raporNilai } from '@/drizzle/schema/rapor';
 import { mataPelajaran } from '@/drizzle/schema/mata-pelajaran';
 import { siswa } from '@/drizzle/schema/siswa';
 import { tahunAjaran } from '@/drizzle/schema/tahun-ajaran';
-import { kelas } from '@/drizzle/schema/kelas';
 
 /**
  * Represents a single subject's grade within a rapor period.

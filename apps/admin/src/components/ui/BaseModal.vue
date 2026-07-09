@@ -54,8 +54,8 @@ watch(
           <div class="flex items-center justify-between px-5 py-4 border-b border-border">
             <h2 class="text-base font-semibold text-text-primary">{{ title }}</h2>
             <button
-              @click="emit('close')"
               class="p-1 rounded-md text-text-tertiary hover:text-text-secondary hover:bg-surface-100 transition-colors"
+              @click="emit('close')"
             >
               <svg
                 class="w-4 h-4"

@@ -91,7 +91,9 @@ export class JwtAuthGuard extends AuthGuard('jwt') {
     return true;
   }
 
-  private extractTokenFromRequest(request: any): string | null {
+  private extractTokenFromRequest(request: {
+    headers?: { authorization?: string };
+  }): string | null {
     const authHeader = request.headers?.authorization;
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
       return null;

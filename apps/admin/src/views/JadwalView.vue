@@ -358,7 +358,7 @@ async function saveJadwal() {
     }
     showFormModal.value = false;
     await fetchJadwal();
-  } catch (error: any) {
+  } catch (error) {
     formError.value = error.response?.data?.message || 'Gagal menyimpan jadwal.';
   }
 }
@@ -410,7 +410,7 @@ async function savePengganti() {
     });
     showPenggantiModal.value = false;
     await fetchJadwal();
-  } catch (error: any) {
+  } catch (error) {
     penggantiError.value = error.response?.data?.message || 'Gagal menyimpan guru pengganti.';
   }
 }
@@ -564,8 +564,8 @@ onMounted(async () => {
     <BaseModal
       :show="showFormModal"
       :title="editingEntry ? 'Edit Jadwal' : 'Tambah Jadwal'"
-      @close="showFormModal = false"
       size="lg"
+      @close="showFormModal = false"
     >
       <p class="text-sm text-text-secondary mb-4">
         {{ HARI_LABELS[selectedHari] }} — Jam ke-{{ selectedJamKe }}
@@ -705,10 +705,10 @@ onMounted(async () => {
     <BaseModal
       :show="showPenggantiModal"
       title="Assign Guru Pengganti"
-      @close="showPenggantiModal = false"
       size="lg"
+      @close="showPenggantiModal = false"
     >
-      <p class="text-sm text-text-secondary mb-4" v-if="penggantiTarget">
+      <p v-if="penggantiTarget" class="text-sm text-text-secondary mb-4">
         {{
           penggantiTarget.mata_pelajaran?.nama ||
           getMapelNama(penggantiTarget.mata_pelajaran_id || '')

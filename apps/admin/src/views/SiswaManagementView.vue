@@ -249,7 +249,7 @@ async function saveSiswa() {
     else await api.post('/siswa', payload);
     showFormModal.value = false;
     await fetchSiswa();
-  } catch (error: any) {
+  } catch (error) {
     if (error.response?.status === 409)
       formErrors.value.nisn = 'NISN sudah terdaftar di sekolah ini';
     else console.error('Failed to save siswa:', error);
@@ -344,7 +344,7 @@ async function uploadCsvForImport() {
       importConflicts.value = data.conflicts.map((c) => ({ ...c, action: 'skip' as const }));
       importStep.value = 'conflicts';
     } else await executeImport();
-  } catch (error: any) {
+  } catch (error) {
     importErrors.value = error.response?.data?.errors || ['Gagal memproses file CSV'];
   } finally {
     importing.value = false;
@@ -367,7 +367,7 @@ async function executeImport() {
     importResult.value = data;
     importStep.value = 'done';
     await fetchSiswa();
-  } catch (error: any) {
+  } catch (error) {
     importErrors.value = error.response?.data?.errors || ['Gagal mengimport data siswa'];
   } finally {
     importing.value = false;
@@ -396,14 +396,14 @@ onMounted(() => {
     >
       <template #actions>
         <button
-          @click="openImportModal"
           class="px-3 py-2 text-sm font-medium text-text-secondary bg-white border border-border rounded-lg hover:bg-surface-50 transition-colors"
+          @click="openImportModal"
         >
           Import CSV
         </button>
         <button
-          @click="openCreateForm"
           class="px-3 py-2 text-sm font-medium text-white bg-primary-600 rounded-lg hover:bg-primary-700 transition-colors"
+          @click="openCreateForm"
         >
           Tambah Siswa
         </button>
@@ -477,7 +477,7 @@ onMounted(() => {
               </th>
               <th class="text-left px-4 py-3 font-medium text-text-secondary bg-surface-50">JK</th>
               <th class="text-left px-4 py-3 font-medium text-text-secondary bg-surface-50">
-                Wali
+                Wali / No. Telp
               </th>
               <th class="text-left px-4 py-3 font-medium text-text-secondary bg-surface-50">
                 Status
@@ -499,7 +499,9 @@ onMounted(() => {
               <td class="px-4 py-3 text-text-secondary">
                 {{ siswa.jenis_kelamin === 'L' ? 'L' : siswa.jenis_kelamin === 'P' ? 'P' : '-' }}
               </td>
-              <td class="px-4 py-3 text-text-secondary">{{ siswa.orang_tua_nama || '-' }}</td>
+              <td class="px-4 py-3 text-text-secondary">
+                {{ siswa.orang_tua_nama || '-' }} / {{ siswa.orang_tua_phone || '-' }}
+              </td>
               <td class="px-4 py-3">
                 <span
                   :class="[
@@ -578,8 +580,8 @@ onMounted(() => {
       <!-- Load more -->
       <div v-if="hasNext && !loading" class="px-4 py-3 border-t border-border text-center">
         <button
-          @click="loadMore"
           class="text-sm font-medium text-primary-600 hover:text-primary-700 transition-colors"
+          @click="loadMore"
         >
           Muat lebih banyak
         </button>
@@ -593,7 +595,7 @@ onMounted(() => {
       size="lg"
       @close="showFormModal = false"
     >
-      <form @submit.prevent="saveSiswa" class="space-y-4">
+      <form class="space-y-4" @submit.prevent="saveSiswa">
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <label class="block text-sm font-medium text-text-primary mb-1.5"
@@ -695,15 +697,15 @@ onMounted(() => {
       </form>
       <template #footer>
         <button
-          @click="showFormModal = false"
           class="px-4 py-2 text-sm font-medium text-text-secondary bg-white border border-border rounded-lg hover:bg-surface-50 transition-colors"
+          @click="showFormModal = false"
         >
           Batal
         </button>
         <button
-          @click="saveSiswa"
           :disabled="saving"
           class="px-4 py-2 text-sm font-medium text-white bg-primary-600 rounded-lg hover:bg-primary-700 disabled:opacity-50 transition-colors"
+          @click="saveSiswa"
         >
           {{ saving ? 'Menyimpan...' : 'Simpan' }}
         </button>
@@ -741,14 +743,14 @@ onMounted(() => {
       </div>
       <template #footer>
         <button
-          @click="showDeleteModal = false"
           class="px-4 py-2 text-sm font-medium text-text-secondary bg-white border border-border rounded-lg hover:bg-surface-50 transition-colors"
+          @click="showDeleteModal = false"
         >
           Batal
         </button>
         <button
-          @click="deleteSiswa"
           class="px-4 py-2 text-sm font-medium text-white bg-danger-500 rounded-lg hover:bg-danger-700 transition-colors"
+          @click="deleteSiswa"
         >
           Nonaktifkan
         </button>
@@ -775,8 +777,8 @@ onMounted(() => {
           <input
             type="file"
             accept=".csv"
-            @change="handleFileSelect"
             class="w-full text-sm text-text-secondary file:mr-3 file:py-2 file:px-3 file:rounded-lg file:border file:border-border file:bg-white file:text-sm file:font-medium file:text-text-primary hover:file:bg-surface-50"
+            @change="handleFileSelect"
           />
         </div>
         <div v-if="importErrors.length > 0" class="p-3 bg-danger-50 rounded-lg">
@@ -817,14 +819,14 @@ onMounted(() => {
           <h3 class="text-sm font-semibold text-text-primary">Konflik NISN Ditemukan</h3>
           <div class="flex gap-2">
             <button
-              @click="setAllConflictActions('update')"
               class="text-xs px-2 py-1 rounded border border-border hover:bg-surface-50"
+              @click="setAllConflictActions('update')"
             >
               Update Semua
             </button>
             <button
-              @click="setAllConflictActions('skip')"
               class="text-xs px-2 py-1 rounded border border-border hover:bg-surface-50"
+              @click="setAllConflictActions('skip')"
             >
               Lewati Semua
             </button>
@@ -897,31 +899,31 @@ onMounted(() => {
       <template #footer>
         <button
           v-if="importStep !== 'done'"
-          @click="showImportModal = false"
           class="px-4 py-2 text-sm font-medium text-text-secondary bg-white border border-border rounded-lg hover:bg-surface-50 transition-colors"
+          @click="showImportModal = false"
         >
           Batal
         </button>
         <button
           v-if="importStep === 'done'"
-          @click="showImportModal = false"
           class="px-4 py-2 text-sm font-medium text-white bg-primary-600 rounded-lg hover:bg-primary-700 transition-colors"
+          @click="showImportModal = false"
         >
           Tutup
         </button>
         <button
           v-if="importStep === 'preview'"
           :disabled="importing || importErrors.length > 0"
-          @click="uploadCsvForImport"
           class="px-4 py-2 text-sm font-medium text-white bg-primary-600 rounded-lg hover:bg-primary-700 disabled:opacity-50 transition-colors"
+          @click="uploadCsvForImport"
         >
           {{ importing ? 'Memproses...' : 'Proses Import' }}
         </button>
         <button
           v-if="importStep === 'conflicts'"
           :disabled="importing"
-          @click="executeImport"
           class="px-4 py-2 text-sm font-medium text-white bg-primary-600 rounded-lg hover:bg-primary-700 disabled:opacity-50 transition-colors"
+          @click="executeImport"
         >
           {{ importing ? 'Mengimport...' : 'Konfirmasi Import' }}
         </button>

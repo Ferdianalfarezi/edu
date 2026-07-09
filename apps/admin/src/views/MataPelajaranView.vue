@@ -83,7 +83,7 @@ async function deleteItem() {
     deletingItem.value = null;
     deleteError.value = '';
     await fetchItems();
-  } catch (error: any) {
+  } catch (error) {
     if (error.response?.status === 409 || error.response?.status === 400) {
       deleteError.value =
         error.response?.data?.message ||
@@ -184,7 +184,7 @@ onMounted(fetchItems);
       :title="editingItem ? 'Edit Mata Pelajaran' : 'Tambah Mata Pelajaran'"
       @close="showFormModal = false"
     >
-      <form @submit.prevent="saveItem" id="form-mapel" class="space-y-4">
+      <form id="form-mapel" class="space-y-4" @submit.prevent="saveItem">
         <div>
           <label class="block text-sm font-medium text-text-primary mb-1.5">Nama</label>
           <input

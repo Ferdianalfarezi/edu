@@ -298,7 +298,7 @@ async function generateTagihan() {
 
     generateResult.value = data.data;
     toast.success(`Berhasil! ${data.data.created} tagihan dibuat, ${data.data.skipped} dilewati.`);
-  } catch (error: any) {
+  } catch (error) {
     generateError.value = error.response?.data?.message || 'Gagal men-generate tagihan';
     toast.error(generateError.value);
   } finally {
@@ -378,7 +378,7 @@ async function verifyTransaksi(action: 'approve' | 'reject') {
     });
     showBuktiModal.value = false;
     await fetchVerifikasi();
-  } catch (error: any) {
+  } catch (error) {
     alert(error.response?.data?.message || 'Gagal memverifikasi');
   } finally {
     verifyingId.value = null;
@@ -467,7 +467,7 @@ async function saveManualPayment() {
     });
     showManualPaymentModal.value = false;
     await fetchTagihanList();
-  } catch (error: any) {
+  } catch (error) {
     manualPaymentError.value = error.response?.data?.message || 'Gagal mencatat pembayaran';
   } finally {
     savingManualPayment.value = false;
@@ -500,7 +500,7 @@ async function saveEditTagihan() {
     });
     showEditModal.value = false;
     await fetchTagihanList();
-  } catch (error: any) {
+  } catch (error) {
     editError.value = error.response?.data?.message || 'Gagal mengubah tagihan';
   } finally {
     savingEdit.value = false;
@@ -528,7 +528,7 @@ async function confirmCancelTagihan() {
     });
     showCancelModal.value = false;
     await fetchTagihanList();
-  } catch (error: any) {
+  } catch (error) {
     alert(error.response?.data?.message || 'Gagal membatalkan tagihan');
   } finally {
     cancelling.value = false;
@@ -1179,8 +1179,8 @@ onMounted(() => {
     <BaseModal
       :show="showBuktiModal"
       title="Verifikasi Bukti Transfer"
-      @close="showBuktiModal = false"
       size="lg"
+      @close="showBuktiModal = false"
     >
       <div v-if="selectedTransaksi">
         <div class="grid grid-cols-2 gap-2 text-sm mb-4">
@@ -1250,8 +1250,8 @@ onMounted(() => {
     <BaseModal
       :show="showManualPaymentModal"
       title="Pencatatan Pembayaran Manual"
-      @close="showManualPaymentModal = false"
       size="lg"
+      @close="showManualPaymentModal = false"
     >
       <div v-if="manualPaymentTagihan" class="grid grid-cols-2 gap-2 text-sm mb-4">
         <div><strong>Siswa:</strong> {{ manualPaymentTagihan.siswa_nama }}</div>
@@ -1327,7 +1327,7 @@ onMounted(() => {
     </BaseModal>
 
     <!-- ===== Edit Tagihan Modal ===== -->
-    <BaseModal :show="showEditModal" title="Edit Tagihan" @close="showEditModal = false" size="lg">
+    <BaseModal :show="showEditModal" title="Edit Tagihan" size="lg" @close="showEditModal = false">
       <div v-if="editingTagihan" class="grid grid-cols-2 gap-2 text-sm mb-4">
         <div><strong>Siswa:</strong> {{ editingTagihan.siswa_nama }}</div>
         <div>
@@ -1387,8 +1387,8 @@ onMounted(() => {
     <BaseModal
       :show="showCancelModal"
       title="Batalkan Tagihan"
-      @close="showCancelModal = false"
       size="lg"
+      @close="showCancelModal = false"
     >
       <p class="text-sm text-text-secondary mb-4">
         Anda akan membatalkan tagihan

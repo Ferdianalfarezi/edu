@@ -157,7 +157,7 @@ async function saveEdit() {
     setTimeout(() => {
       showEditModal.value = false;
     }, 1000);
-  } catch (err: unknown) {
+  } catch (err) {
     const error = err as { response?: { data?: { message?: string } } };
     editError.value = error.response?.data?.message || 'Gagal menyimpan perubahan.';
   } finally {
@@ -314,7 +314,7 @@ onMounted(() => {
 
     <!-- Edit Modal -->
     <BaseModal :show="showEditModal" title="Edit Status Absensi" @close="showEditModal = false">
-      <p class="text-sm text-text-secondary mb-4" v-if="editingItem">
+      <p v-if="editingItem" class="text-sm text-text-secondary mb-4">
         {{ editingItem.siswa_nama }} — {{ selectedTanggal }}
       </p>
 
@@ -332,7 +332,7 @@ onMounted(() => {
             "
             :style="editStatus === status ? { background: STATUS_COLORS[status] } : {}"
           >
-            <input type="radio" :value="status" v-model="editStatus" class="sr-only" />
+            <input v-model="editStatus" type="radio" :value="status" class="sr-only" />
             {{ STATUS_LABELS[status] }}
           </label>
         </div>
@@ -362,8 +362,8 @@ onMounted(() => {
     <BaseModal
       :show="showAuditModal"
       title="Riwayat Perubahan"
-      @close="showAuditModal = false"
       size="lg"
+      @close="showAuditModal = false"
     >
       <p class="text-sm text-text-secondary mb-4">{{ auditSiswaName }}</p>
 

@@ -132,7 +132,7 @@ async function fetchNilai() {
 
     nilaiData.value = data.data.siswa;
     komponenList.value = data.data.komponen;
-  } catch (err: any) {
+  } catch (err) {
     error.value = err.response?.data?.message || 'Gagal memuat data nilai.';
   } finally {
     loadingNilai.value = false;
@@ -171,7 +171,7 @@ async function saveNilai(status: 'draft' | 'submitted') {
         : 'Nilai berhasil di-submit ke wali kelas.';
 
     await fetchNilai();
-  } catch (err: any) {
+  } catch (err) {
     error.value = err.response?.data?.message || 'Gagal menyimpan nilai.';
   } finally {
     saving.value = false;

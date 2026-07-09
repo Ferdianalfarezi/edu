@@ -46,7 +46,7 @@ async function handleSubmit() {
     };
     await api.post('/auth/reset-password/confirm', payload);
     success.value = true;
-  } catch (err: unknown) {
+  } catch (err) {
     if (err && typeof err === 'object' && 'response' in err) {
       const axiosErr = err as { response?: { status?: number; data?: { message?: string } } };
       if (axiosErr.response?.status === 400 || axiosErr.response?.status === 410) {
@@ -94,15 +94,15 @@ function goToLogin() {
           </p>
         </div>
         <button
-          @click="goToLogin"
           class="w-full px-3 py-2 text-sm font-medium text-white bg-primary-600 rounded-lg hover:bg-primary-700 transition-colors"
+          @click="goToLogin"
         >
           Login
         </button>
       </template>
 
       <template v-else>
-        <form @submit.prevent="handleSubmit" class="flex flex-col gap-4">
+        <form class="flex flex-col gap-4" @submit.prevent="handleSubmit">
           <div>
             <label for="new-password" class="block text-sm font-medium text-text-primary mb-1.5"
               >Password Baru</label

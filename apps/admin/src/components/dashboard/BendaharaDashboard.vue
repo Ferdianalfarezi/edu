@@ -89,8 +89,8 @@ onMounted(fetchTunggakan);
     <div v-else-if="error" class="bg-white border border-border rounded-xl p-8 text-center">
       <p class="text-sm text-text-secondary mb-3">{{ error }}</p>
       <button
-        @click="fetchTunggakan"
         class="text-sm font-medium text-primary-600 hover:text-primary-700"
+        @click="fetchTunggakan"
       >
         Coba lagi
       </button>

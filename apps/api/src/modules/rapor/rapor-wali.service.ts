@@ -1,10 +1,9 @@
-import { Inject, Injectable, ForbiddenException } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import { eq, and } from 'drizzle-orm';
 import { DRIZZLE } from '@/drizzle/drizzle.module';
 import { kelas } from '@/drizzle/schema/kelas';
 import { jadwalPelajaran } from '@/drizzle/schema/jadwal';
-import { mataPelajaran } from '@/drizzle/schema/mata-pelajaran';
 import { tahunAjaran } from '@/drizzle/schema/tahun-ajaran';
 import { rapor } from '@/drizzle/schema/rapor';
 import { RaporFinalizationService } from './rapor-finalization.service';

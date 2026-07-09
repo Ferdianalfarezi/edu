@@ -83,8 +83,8 @@ onMounted(fetchDashboard);
     <div v-else-if="error" class="bg-white border border-border rounded-xl p-8 text-center">
       <p class="text-sm text-text-secondary mb-3">{{ error }}</p>
       <button
-        @click="fetchDashboard"
         class="text-sm font-medium text-primary-600 hover:text-primary-700"
+        @click="fetchDashboard"
       >
         Coba lagi
       </button>

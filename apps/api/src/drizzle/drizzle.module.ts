@@ -1,5 +1,4 @@
 import { Global, Module } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
 import { DrizzleService } from './drizzle.service';
 
 export const DRIZZLE = Symbol('DRIZZLE');

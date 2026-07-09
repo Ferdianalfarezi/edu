@@ -331,8 +331,8 @@ onMounted(fetchUsers);
     <BaseModal
       :show="showFormModal"
       :title="editingUser ? 'Edit User' : 'Tambah User'"
-      @close="showFormModal = false"
       size="lg"
+      @close="showFormModal = false"
     >
       <form @submit.prevent="saveUser">
         <div class="mb-4">
@@ -401,8 +401,8 @@ onMounted(fetchUsers);
     <BaseModal
       :show="showDeleteModal"
       title="Konfirmasi Hapus"
-      @close="showDeleteModal = false"
       size="lg"
+      @close="showDeleteModal = false"
     >
       <p class="text-sm text-text-secondary">
         Apakah Anda yakin ingin menghapus user <strong>{{ deletingUser?.nama }}</strong
@@ -428,8 +428,8 @@ onMounted(fetchUsers);
     <BaseModal
       :show="showImportModal"
       title="Import Guru dari CSV"
-      @close="showImportModal = false"
       size="lg"
+      @close="showImportModal = false"
     >
       <p class="text-sm text-text-secondary mb-4">
         Format CSV: kolom wajib
@@ -443,8 +443,8 @@ onMounted(fetchUsers);
         <input
           type="file"
           accept=".csv"
-          @change="handleFileSelect"
           class="w-full px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
+          @change="handleFileSelect"
         />
       </div>
 

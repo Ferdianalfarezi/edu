@@ -6,7 +6,6 @@ import { eq, and } from 'drizzle-orm';
 import { DRIZZLE } from '@/drizzle/drizzle.module';
 import { rapor } from '@/drizzle/schema/rapor';
 import { kelas } from '@/drizzle/schema/kelas';
-import { tahunAjaran } from '@/drizzle/schema/tahun-ajaran';
 import { QUEUE_NAMES } from '@/modules/queue/queue.constants';
 import { ExportRaporQueryDto } from './dto';
 

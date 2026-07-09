@@ -184,7 +184,7 @@ async function goToPreview() {
     }
 
     currentStep.value = 2;
-  } catch (err: any) {
+  } catch (err) {
     const msg = err.response?.data?.message;
     error.value = msg
       ? Array.isArray(msg)
@@ -243,7 +243,7 @@ async function executePromotion() {
 
     executionResult.value = data;
     successMessage.value = 'Kenaikan kelas berhasil diproses!';
-  } catch (err: any) {
+  } catch (err) {
     const msg = err.response?.data?.message;
     error.value = msg
       ? Array.isArray(msg)
@@ -463,8 +463,8 @@ onMounted(async () => {
             <input
               type="checkbox"
               :checked="excludedStudentIds.has(student.id)"
-              @change="toggleExclude(student.id)"
               class="rounded border-border"
+              @change="toggleExclude(student.id)"
             />
             <span class="flex-1 text-text-primary">{{ student.nama }}</span>
             <span v-if="student.nisn" class="text-xs text-text-tertiary">{{ student.nisn }}</span>

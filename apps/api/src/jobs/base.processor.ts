@@ -96,7 +96,7 @@ export abstract class BaseProcessor {
    * Override in subclasses to implement custom dead letter behavior
    * (e.g., persist to a dead letter table, send alert).
    */
-  protected async handleDeadLetter(job: Job, error: Error): Promise<void> {
+  protected async handleDeadLetter(job: Job, _error: Error): Promise<void> {
     // Default: log the full job data for manual inspection.
     // Subclasses can override to persist to DB or notify.
     this.logger.error(`Dead letter payload for job ${job.id}: ${JSON.stringify(job.data)}`);

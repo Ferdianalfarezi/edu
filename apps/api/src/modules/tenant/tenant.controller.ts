@@ -14,7 +14,7 @@ import { RolesGuard } from '@/common/guards/roles.guard';
 import { Roles } from '@/common/decorators/roles.decorator';
 import { TenantId } from '@/common/decorators/tenant-id.decorator';
 import { Role } from '@edu/shared';
-import { TenantService, TenantWithStats, CreateTenantResult, TenantStats } from './tenant.service';
+import { TenantService, CreateTenantResult, TenantStats } from './tenant.service';
 import { CreateTenantDto, UpdateTenantDto } from './dto';
 
 @Controller('tenants')

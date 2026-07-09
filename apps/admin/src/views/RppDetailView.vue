@@ -40,7 +40,7 @@ async function fetchDetail() {
   try {
     const { data } = await api.get<{ data: RppDetail }>(`/rpp/${rppId.value}`);
     rpp.value = data.data;
-  } catch (e: any) {
+  } catch (e) {
     error.value = e.response?.data?.message || 'Gagal memuat RPP.';
   } finally {
     loading.value = false;
@@ -72,7 +72,7 @@ async function deleteRpp() {
   try {
     await api.delete(`/rpp/${rpp.value.id}`);
     router.push({ name: 'rpp-portal' });
-  } catch (e: any) {
+  } catch (e) {
     error.value = e.response?.data?.message || 'Gagal menghapus RPP.';
     showDeleteModal.value = false;
   }
@@ -251,8 +251,8 @@ onMounted(fetchDetail);
     <BaseModal
       :show="showDeleteModal"
       title="Konfirmasi Hapus"
-      @close="showDeleteModal = false"
       size="lg"
+      @close="showDeleteModal = false"
     >
       <p class="text-sm text-text-secondary">
         Apakah Anda yakin ingin menghapus RPP <strong>{{ rpp?.judul }}</strong

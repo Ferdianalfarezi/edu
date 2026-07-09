@@ -27,7 +27,7 @@ async function handleLogin() {
 
     const redirect = (route.query.redirect as string) || '/';
     router.push(redirect);
-  } catch (err: unknown) {
+  } catch (err) {
     if (err && typeof err === 'object' && 'response' in err) {
       const axiosErr = err as { response?: { status?: number; data?: { message?: string } } };
       if (axiosErr.response?.status === 423) {
@@ -84,7 +84,7 @@ async function handleLogin() {
           <p class="text-sm text-text-secondary">Masukkan email dan password untuk melanjutkan</p>
         </div>
 
-        <form @submit.prevent="handleLogin" class="space-y-4">
+        <form class="space-y-4" @submit.prevent="handleLogin">
           <div>
             <label for="email" class="block text-sm font-medium text-text-primary mb-1.5">
               Email

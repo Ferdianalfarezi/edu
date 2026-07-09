@@ -8,7 +8,7 @@ import {
 } from '@nestjs/common';
 import { InjectQueue } from '@nestjs/bull';
 import { Queue } from 'bull';
-import { eq, and, or, inArray, asc, gt, sql } from 'drizzle-orm';
+import { eq, and, or, asc, gt, sql } from 'drizzle-orm';
 import { DrizzleService } from '@/drizzle/drizzle.service';
 import { StorageService, BUCKET_PATHS } from '@/modules/storage/storage.service';
 import { KonfigurasiService, DEFAULT_CONFIG } from '@/modules/konfigurasi/konfigurasi.service';

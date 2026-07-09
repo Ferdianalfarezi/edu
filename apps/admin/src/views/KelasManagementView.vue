@@ -175,7 +175,7 @@ async function saveKelas() {
     }
     showFormModal.value = false;
     await fetchKelas();
-  } catch (error: any) {
+  } catch (error) {
     const msg = error.response?.data?.message;
     if (msg) {
       formError.value = Array.isArray(msg) ? msg.join(', ') : msg;
@@ -193,7 +193,7 @@ async function deleteKelas() {
     deletingKelas.value = null;
     deleteError.value = '';
     await fetchKelas();
-  } catch (error: any) {
+  } catch (error) {
     const msg = error.response?.data?.message;
     if (msg) {
       deleteError.value = Array.isArray(msg) ? msg.join(', ') : msg;

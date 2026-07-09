@@ -246,8 +246,8 @@ onMounted(fetchKonfigurasi);
             </div>
             <button
               class="px-2 py-2 text-xs font-medium text-danger-700 bg-danger-50 rounded-md hover:bg-danger-50/80 transition-colors"
-              @click="removeSppEntry(index)"
               :disabled="sppEntries.length <= 1"
+              @click="removeSppEntry(index)"
             >
               ×
             </button>
@@ -311,8 +311,8 @@ onMounted(fetchKonfigurasi);
             </div>
             <button
               class="px-3 py-2 text-sm font-medium text-white bg-primary-600 rounded-lg hover:bg-primary-700 transition-colors"
-              @click="addHoliday"
               :disabled="!newHoliday.tanggal"
+              @click="addHoliday"
             >
               Tambah
             </button>

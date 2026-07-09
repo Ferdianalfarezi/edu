@@ -6,7 +6,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { NodePgDatabase } from 'drizzle-orm/node-postgres';
-import { eq, and, sql } from 'drizzle-orm';
+import { eq, and } from 'drizzle-orm';
 import { DRIZZLE } from '@/drizzle/drizzle.module';
 import { komponenPenilaian, rapor, raporNilai } from '@/drizzle/schema/rapor';
 import { jadwalPelajaran } from '@/drizzle/schema/jadwal';

@@ -110,7 +110,7 @@ async function fetchRaporOverview() {
     mapelStatuses.value = data.data.mapel_status;
     siswaRapors.value = data.data.siswa;
     raporStatus.value = data.data.rapor;
-  } catch (err: any) {
+  } catch (err) {
     error.value = err.response?.data?.message || 'Gagal memuat data rapor.';
   } finally {
     loading.value = false;
@@ -165,7 +165,7 @@ async function finalize() {
     successMessage.value =
       'Rapor berhasil difinalkan. Rapor sekarang dapat dilihat oleh orang tua.';
     await fetchRaporOverview();
-  } catch (err: any) {
+  } catch (err) {
     error.value = err.response?.data?.message || 'Gagal memfinalisasi rapor.';
   } finally {
     saving.value = false;
@@ -181,7 +181,7 @@ async function revertFinalize() {
     await api.post(`/rapor/kelas/${selectedKelas.value}/periode/${selectedPeriode.value}/revert`);
     successMessage.value = 'Finalisasi dibatalkan. Rapor kembali ke status draft.';
     await fetchRaporOverview();
-  } catch (err: any) {
+  } catch (err) {
     error.value = err.response?.data?.message || 'Gagal membatalkan finalisasi.';
   } finally {
     saving.value = false;
@@ -420,8 +420,8 @@ onMounted(fetchKelas);
     <BaseModal
       :show="showP5Modal"
       title="P5 - Profil Pelajar Pancasila"
-      @close="showP5Modal = false"
       size="lg"
+      @close="showP5Modal = false"
     >
       <p class="text-sm text-text-secondary mb-4">
         Isi deskripsi naratif per dimensi (opsional). Kosongkan jika tidak relevan.

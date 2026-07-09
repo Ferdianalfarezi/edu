@@ -62,7 +62,7 @@ async function handleChangePassword() {
           dibuat secara otomatis oleh admin.
         </p>
 
-        <form @submit.prevent="handleChangePassword" class="space-y-4">
+        <form class="space-y-4" @submit.prevent="handleChangePassword">
           <div>
             <label for="old-password" class="block text-sm font-medium text-text-primary mb-1.5"
               >Password Lama</label

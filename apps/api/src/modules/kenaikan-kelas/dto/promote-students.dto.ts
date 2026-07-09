@@ -1,4 +1,4 @@
-import { IsArray, IsNotEmpty, IsOptional, IsUUID, ArrayMinSize } from 'class-validator';
+import { IsArray, IsNotEmpty, IsOptional, IsUUID } from 'class-validator';
 
 /**
  * DTO for mass class promotion (kenaikan kelas massal).

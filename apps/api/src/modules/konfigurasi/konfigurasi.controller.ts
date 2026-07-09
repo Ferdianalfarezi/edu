@@ -15,7 +15,7 @@ import { RolesGuard } from '@/common/guards/roles.guard';
 import { Roles } from '@/common/decorators/roles.decorator';
 import { TenantId } from '@/common/decorators/tenant-id.decorator';
 import { KonfigurasiService, KonfigurasiItem } from './konfigurasi.service';
-import { UpsertKonfigurasiDto, BulkUpsertKonfigurasiDto } from './dto';
+import { UpsertKonfigurasiDto } from './dto';
 
 @Controller('konfigurasi')
 @UseGuards(JwtAuthGuard, RolesGuard)

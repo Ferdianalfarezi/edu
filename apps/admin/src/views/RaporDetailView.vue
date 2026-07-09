@@ -13,6 +13,7 @@ interface KelasOption {
 interface TahunAjaranOption {
   id: string;
   nama: string;
+  status?: string;
 }
 
 interface SiswaRaporView {
@@ -78,7 +79,7 @@ async function fetchTahunAjaran() {
   try {
     const { data } = await api.get<TahunAjaranOption[]>('/tahun-ajaran');
     tahunAjaranOptions.value = data;
-    const aktif = data.find((t: any) => t.status === 'aktif');
+    const aktif = data.find((t) => t.status === 'aktif');
     if (aktif) selectedTahunAjaran.value = aktif.id;
   } catch (err) {
     console.error('Failed to fetch tahun ajaran:', err);
@@ -125,7 +126,7 @@ async function fetchRapor() {
 
     raporOverview.value = data.data.overview;
     siswaRapors.value = data.data.siswa;
-  } catch (err: any) {
+  } catch (err) {
     error.value = err.response?.data?.message || 'Gagal memuat data rapor.';
   } finally {
     loading.value = false;
@@ -157,7 +158,7 @@ async function exportRapor() {
     link.click();
     link.remove();
     window.URL.revokeObjectURL(url);
-  } catch (err: any) {
+  } catch (err) {
     error.value = err.response?.data?.message || 'Gagal export rapor.';
   } finally {
     exporting.value = false;
@@ -356,8 +357,8 @@ onMounted(() => {
     <BaseModal
       :show="showDetailModal && !!detailSiswa"
       :title="'Rapor: ' + (detailSiswa?.siswa_nama || '')"
-      @close="showDetailModal = false"
       size="xl"
+      @close="showDetailModal = false"
     >
       <template v-if="detailSiswa">
         <!-- Summary cards -->

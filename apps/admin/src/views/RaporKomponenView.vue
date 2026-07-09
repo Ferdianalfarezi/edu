@@ -58,7 +58,7 @@ async function fetchItems() {
   try {
     const { data } = await api.get<KomponenPenilaian[]>('/rapor/komponen-penilaian');
     items.value = data;
-  } catch (err: any) {
+  } catch (err) {
     error.value = err.response?.data?.message || 'Gagal memuat komponen penilaian.';
     console.error('Failed to fetch komponen penilaian:', err);
   } finally {
@@ -139,7 +139,7 @@ async function saveItem() {
     }
     showFormModal.value = false;
     await fetchItems();
-  } catch (err: any) {
+  } catch (err) {
     formError.value = err.response?.data?.message || 'Gagal menyimpan komponen penilaian.';
   }
 }
@@ -151,7 +151,7 @@ async function deleteItem() {
     showDeleteModal.value = false;
     deletingItem.value = null;
     await fetchItems();
-  } catch (err: any) {
+  } catch (err) {
     deleteError.value = err.response?.data?.message || 'Gagal menghapus komponen penilaian.';
   }
 }

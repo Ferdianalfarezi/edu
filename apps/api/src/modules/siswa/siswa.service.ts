@@ -39,7 +39,7 @@ export class SiswaService {
 
   // ─── Create Siswa ─────────────────────────────────────────────
 
-  async createSiswa(tenantId: string, dto: CreateSiswaDto, processedByUserId: string) {
+  async createSiswa(tenantId: string, dto: CreateSiswaDto, _processedByUserId: string) {
     // Validate NISN uniqueness per tenant (active students only)
     if (dto.nisn) {
       await this.validateNisnUniqueness(dto.nisn, tenantId);
@@ -339,7 +339,7 @@ export class SiswaService {
   async bulkImportSiswa(
     tenantId: string,
     csvContent: string,
-    processedByUserId: string,
+    _processedByUserId: string,
   ): Promise<BulkImportSiswaResult> {
     const rows = this.parseSiswaCsv(csvContent);
 

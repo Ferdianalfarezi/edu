@@ -1,6 +1,6 @@
 import { Controller, Get, HttpCode, HttpStatus, Res } from '@nestjs/common';
 import { Response } from 'express';
-import { HealthService, HealthStatus } from './health.service';
+import { HealthService } from './health.service';
 
 /**
  * Health endpoints — no authentication required.
