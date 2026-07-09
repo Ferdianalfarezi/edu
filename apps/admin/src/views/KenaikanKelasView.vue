@@ -58,10 +58,8 @@ const executionResult = ref<{
   graduated: number;
 } | null>(null);
 
-const activeTahunAjaran = computed(() => tahunAjaranList.value.find((t) => t.status === 'aktif'));
-
-const preparedTahunAjaranList = computed(() =>
-  tahunAjaranList.value.filter((t) => t.status === 'disiapkan'),
+const targetTahunAjaranOptions = computed(() =>
+  tahunAjaranList.value.filter((t) => t.id !== sourceTahunAjaranId.value),
 );
 
 const selectedStudentCount = computed(
@@ -72,21 +70,35 @@ async function fetchTahunAjaran() {
   try {
     const { data } = await api.get<TahunAjaran[]>('/tahun-ajaran');
     tahunAjaranList.value = data;
-    // Default target to first prepared tahun ajaran
+    // Default target to the first 'disiapkan' or 'aktif' tahun ajaran
     const prepared = data.find((t) => t.status === 'disiapkan');
+    const aktif = data.find((t) => t.status === 'aktif');
     if (prepared) {
       targetTahunAjaranId.value = prepared.id;
+    } else if (aktif) {
+      targetTahunAjaranId.value = aktif.id;
     }
   } catch (err) {
     console.error('Failed to fetch tahun ajaran:', err);
   }
 }
 
+// Source kelas should come from a tahun ajaran that has students (typically the previous one)
+// Show all tahun ajaran in dropdown for source selection
+const sourceTahunAjaranId = ref('');
+
+const sourceTahunAjaranOptions = computed(() =>
+  tahunAjaranList.value.filter((t) => t.id !== targetTahunAjaranId.value),
+);
+
 async function fetchSourceKelas() {
-  if (!activeTahunAjaran.value) return;
+  if (!sourceTahunAjaranId.value) {
+    sourceKelasList.value = [];
+    return;
+  }
   try {
     const { data } = await api.get<{ data: Kelas[] }>('/kelas', {
-      params: { tahunAjaranId: activeTahunAjaran.value.id },
+      params: { tahunAjaranId: sourceTahunAjaranId.value },
     });
     sourceKelasList.value = data.data;
   } catch (err) {
@@ -241,8 +253,12 @@ function getTargetTahunAjaranName(): string {
 
 onMounted(async () => {
   await fetchTahunAjaran();
-  await fetchSourceKelas();
-  // Fetch target kelas if a prepared tahun ajaran was auto-selected
+  // Auto-select the first non-target tahun ajaran as source (e.g., the one with status nonaktif or aktif that has kelas)
+  const nonTarget = tahunAjaranList.value.find((t) => t.id !== targetTahunAjaranId.value);
+  if (nonTarget) {
+    sourceTahunAjaranId.value = nonTarget.id;
+    await fetchSourceKelas();
+  }
   if (targetTahunAjaranId.value) {
     await fetchTargetKelas();
   }
@@ -313,25 +329,32 @@ onMounted(async () => {
       <h2 class="text-lg font-semibold text-text-primary mb-4">Pilih Kelas Asal dan Tujuan</h2>
 
       <div
-        v-if="!activeTahunAjaran"
+        v-if="targetTahunAjaranOptions.length === 0"
         class="p-3 bg-warning-50 border border-warning-500/20 rounded-lg text-sm text-warning-700 mb-4"
       >
-        Tidak ada tahun ajaran aktif. Silakan aktifkan tahun ajaran terlebih dahulu.
-      </div>
-
-      <div
-        v-else-if="preparedTahunAjaranList.length === 0"
-        class="p-3 bg-warning-50 border border-warning-500/20 rounded-lg text-sm text-warning-700 mb-4"
-      >
-        Tidak ada tahun ajaran dengan status "Disiapkan". Buat tahun ajaran baru terlebih dahulu
-        sebelum melakukan kenaikan kelas.
+        Hanya ada satu tahun ajaran. Buat tahun ajaran baru terlebih dahulu sebelum melakukan
+        kenaikan kelas.
       </div>
 
       <template v-else>
         <div class="mb-4">
           <label class="block text-sm font-medium text-text-primary mb-1.5"
-            >Kelas Asal (Tahun Ajaran: {{ activeTahunAjaran?.nama }})</label
+            >Tahun Ajaran Asal</label
           >
+          <select
+            v-model="sourceTahunAjaranId"
+            class="w-full px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
+            @change="fetchSourceKelas"
+          >
+            <option value="">-- Pilih Tahun Ajaran Asal --</option>
+            <option v-for="ta in sourceTahunAjaranOptions" :key="ta.id" :value="ta.id">
+              {{ ta.nama }} ({{ ta.status }})
+            </option>
+          </select>
+        </div>
+
+        <div class="mb-4">
+          <label class="block text-sm font-medium text-text-primary mb-1.5">Kelas Asal</label>
           <select
             v-model="sourceKelasId"
             class="w-full px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
@@ -354,8 +377,8 @@ onMounted(async () => {
             @change="fetchTargetKelas"
           >
             <option value="">-- Pilih Tahun Ajaran Tujuan --</option>
-            <option v-for="ta in preparedTahunAjaranList" :key="ta.id" :value="ta.id">
-              {{ ta.nama }}
+            <option v-for="ta in targetTahunAjaranOptions" :key="ta.id" :value="ta.id">
+              {{ ta.nama }} ({{ ta.status }})
             </option>
           </select>
         </div>
