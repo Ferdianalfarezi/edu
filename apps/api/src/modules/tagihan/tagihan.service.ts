@@ -1195,19 +1195,13 @@ export class TagihanService {
       }
     }
 
-    // 4. Get approved transactions for this tagihan
+    // 4. Get ALL transactions for this tagihan (not just approved — parent should see full history)
     const transactions = await db
       .select()
       .from(tagihanTransaksi)
-      .where(
-        and(eq(tagihanTransaksi.tagihanId, tagihanId), eq(tagihanTransaksi.status, 'approved')),
-      );
+      .where(eq(tagihanTransaksi.tagihanId, tagihanId));
 
-    if (transactions.length === 0) {
-      throw new NotFoundException('Belum ada pembayaran yang disetujui untuk tagihan ini');
-    }
-
-    // 5. Build receipt response
+    // 5. Build response (return empty array if no transactions — don't throw 404)
     return {
       tagihan_id: tagihanRecord.id,
       siswa_nama: siswaRecord.nama,
@@ -1218,10 +1212,14 @@ export class TagihanService {
       status: tagihanRecord.status,
       pembayaran: transactions.map((t) => ({
         id: t.id,
+        jumlah_bayar: t.jumlahBayar,
         nominal_bayar: t.jumlahBayar,
         tanggal_bayar: t.createdAt,
+        created_at: t.createdAt,
         metode: t.metode,
+        status: t.status,
         nomor_referensi: t.nomorReferensi,
+        alasan_penolakan: t.alasanPenolakan,
         verified_at: t.verifiedAt,
       })),
     };
