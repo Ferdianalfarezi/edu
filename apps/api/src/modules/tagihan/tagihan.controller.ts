@@ -118,12 +118,12 @@ export class TagihanController {
    * GET /tagihan/export
    * Enqueue export job for billing report (Excel/CSV).
    * Returns { job_id, message } for client to poll status.
-   * Bendahara only.
+   * Bendahara and Admin.
    *
    * Requirements: 15.6–15.8
    */
   @Get('export')
-  @Roles(Role.BENDAHARA)
+  @Roles(Role.BENDAHARA, Role.ADMIN)
   async exportTagihan(
     @TenantId() tenantId: string,
     @CurrentUser('id') userId: string,
@@ -170,12 +170,12 @@ export class TagihanController {
   /**
    * PATCH /tagihan/:id/verify
    * Approve or reject a pending payment.
-   * Bendahara only.
+   * Bendahara and Admin.
    *
    * Requirements: 12.1–12.8
    */
   @Patch(':id/verify')
-  @Roles(Role.BENDAHARA)
+  @Roles(Role.BENDAHARA, Role.ADMIN)
   async verifyPayment(
     @CurrentUser('id') bendaharaId: string,
     @TenantId() tenantId: string,
@@ -215,13 +215,13 @@ export class TagihanController {
 
   /**
    * POST /tagihan/:id/manual-payment
-   * Record a manual payment (tunai/transfer_manual) by bendahara.
-   * No file upload needed — the bendahara records the payment directly.
+   * Record a manual payment (tunai/transfer_manual) by bendahara or admin.
+   * No file upload needed — the staff records the payment directly.
    *
    * Requirements: 13.1–13.7
    */
   @Post(':id/manual-payment')
-  @Roles(Role.BENDAHARA)
+  @Roles(Role.BENDAHARA, Role.ADMIN)
   async recordManualPayment(
     @CurrentUser('id') bendaharaId: string,
     @TenantId() tenantId: string,
@@ -234,12 +234,12 @@ export class TagihanController {
   /**
    * DELETE /tagihan/:id
    * Delete a tagihan — only if status is belum_bayar.
-   * Bendahara only. Records action in audit trail.
+   * Bendahara and Admin. Records action in audit trail.
    *
    * Requirements: 34.1, 34.2, 34.7
    */
   @Delete(':id')
-  @Roles(Role.BENDAHARA)
+  @Roles(Role.BENDAHARA, Role.ADMIN)
   async deleteTagihan(
     @CurrentUser('id') bendaharaId: string,
     @TenantId() tenantId: string,
@@ -252,12 +252,12 @@ export class TagihanController {
   /**
    * PATCH /tagihan/:id
    * Edit nominal of a tagihan — only if status is belum_bayar.
-   * Bendahara only. Records action in audit trail.
+   * Bendahara and Admin. Records action in audit trail.
    *
    * Requirements: 34.3, 34.4, 34.7
    */
   @Patch(':id')
-  @Roles(Role.BENDAHARA)
+  @Roles(Role.BENDAHARA, Role.ADMIN)
   async editTagihan(
     @CurrentUser('id') bendaharaId: string,
     @TenantId() tenantId: string,
@@ -270,12 +270,12 @@ export class TagihanController {
   /**
    * PATCH /tagihan/:id/cancel
    * Cancel a tagihan with required alasan — only if status is belum_bayar.
-   * Bendahara only. Records action in audit trail.
+   * Bendahara and Admin. Records action in audit trail.
    *
    * Requirements: 34.5, 34.6, 34.7
    */
   @Patch(':id/cancel')
-  @Roles(Role.BENDAHARA)
+  @Roles(Role.BENDAHARA, Role.ADMIN)
   async cancelTagihan(
     @CurrentUser('id') bendaharaId: string,
     @TenantId() tenantId: string,
