@@ -221,7 +221,7 @@ class _AttendanceInputScreenState extends ConsumerState<AttendanceInputScreen> {
         color: Colors.white,
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 4,
             offset: const Offset(0, -2),
           ),
@@ -283,7 +283,8 @@ class _AttendanceInputScreenState extends ConsumerState<AttendanceInputScreen> {
     );
   }
 
-  void _showResultFeedback(BuildContext context, AttendanceSubmitResult result) {
+  void _showResultFeedback(
+      BuildContext context, AttendanceSubmitResult result) {
     final message = result == AttendanceSubmitResult.syncedOnline
         ? 'Absensi berhasil disimpan ke server'
         : 'Absensi tersimpan offline — akan disinkronisasi saat online';
@@ -312,11 +313,13 @@ class _AttendanceInputScreenState extends ConsumerState<AttendanceInputScreen> {
     );
 
     // Pop back to home after successful save
-    Future.delayed(const Duration(milliseconds: 500), () {
-      if (mounted) {
-        Navigator.of(context).pop();
-      }
-    });
+    _popAfterDelay();
+  }
+
+  Future<void> _popAfterDelay() async {
+    await Future.delayed(const Duration(milliseconds: 500));
+    if (!mounted) return;
+    Navigator.of(context).pop();
   }
 }
 
@@ -461,7 +464,7 @@ class _StudentAttendanceRowState extends State<_StudentAttendanceRow> {
 
   Color _borderColor(AttendanceStatus? status) {
     if (status == null) return Colors.grey.shade300;
-    return _statusColor(status).withOpacity(0.5);
+    return _statusColor(status).withValues(alpha: 0.5);
   }
 
   Color _statusColor(AttendanceStatus status) {
@@ -499,7 +502,8 @@ class _StatusChip extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 6),
         decoration: BoxDecoration(
-          color: isSelected ? color.withOpacity(0.15) : Colors.grey.shade100,
+          color:
+              isSelected ? color.withValues(alpha: 0.15) : Colors.grey.shade100,
           borderRadius: BorderRadius.circular(6),
           border: Border.all(
             color: isSelected ? color : Colors.grey.shade300,

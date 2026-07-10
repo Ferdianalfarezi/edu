@@ -8,12 +8,6 @@ class StudentAttendance {
     this.keterangan,
   });
 
-  final String siswaId;
-  final String nama;
-  final String? nisn;
-  String? status; // hadir, izin, sakit, alpa
-  String? keterangan;
-
   factory StudentAttendance.fromJson(Map<String, dynamic> json) {
     return StudentAttendance(
       siswaId: json['siswa_id'] as String? ?? json['id'] as String,
@@ -23,6 +17,12 @@ class StudentAttendance {
       keterangan: json['keterangan'] as String?,
     );
   }
+
+  final String siswaId;
+  final String nama;
+  final String? nisn;
+  String? status; // hadir, izin, sakit, alpa
+  String? keterangan;
 }
 
 /// Possible attendance status values.

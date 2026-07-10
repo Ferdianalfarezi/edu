@@ -1,6 +1,6 @@
-/// Models for notification history and preferences.
-///
-/// Requirements: 7.1–7.3, 25.1–25.4
+// Models for notification history and preferences.
+//
+// Requirements: 7.1–7.3, 25.1–25.4
 
 /// A single notification history item.
 class NotificationItem {
@@ -16,17 +16,6 @@ class NotificationItem {
     this.data,
     this.sentAt,
   });
-
-  final String id;
-  final String tipe;
-  final String judul;
-  final String pesan;
-  final NotificationDeliveryStatus statusPengiriman;
-  final DateTime createdAt;
-  final String? siswaId;
-  final String? siswaName;
-  final Map<String, dynamic>? data;
-  final DateTime? sentAt;
 
   factory NotificationItem.fromJson(Map<String, dynamic> json) {
     return NotificationItem(
@@ -46,6 +35,17 @@ class NotificationItem {
           : null,
     );
   }
+
+  final String id;
+  final String tipe;
+  final String judul;
+  final String pesan;
+  final NotificationDeliveryStatus statusPengiriman;
+  final DateTime createdAt;
+  final String? siswaId;
+  final String? siswaName;
+  final Map<String, dynamic>? data;
+  final DateTime? sentAt;
 
   /// Whether this notification has been read (proxy: if it was delivered/sent).
   bool get isRead => sentAt != null;
@@ -140,10 +140,6 @@ class NotificationHistoryResponse {
     this.hasMore = false,
   });
 
-  final List<NotificationItem> items;
-  final String? nextCursor;
-  final bool hasMore;
-
   factory NotificationHistoryResponse.fromJson(Map<String, dynamic> json) {
     final data = json['data'] as List<dynamic>? ?? [];
     final items = data
@@ -159,6 +155,10 @@ class NotificationHistoryResponse {
       hasMore: meta?['has_next'] as bool? ?? json['has_more'] as bool? ?? false,
     );
   }
+
+  final List<NotificationItem> items;
+  final String? nextCursor;
+  final bool hasMore;
 }
 
 /// Notification preference for a single child.
@@ -171,12 +171,6 @@ class ChildNotificationPreference {
     required this.ketidakhadiranEnabled,
   });
 
-  final String siswaId;
-  final String siswaName;
-  final String kelasNama;
-  final bool kehadiranEnabled;
-  final bool ketidakhadiranEnabled;
-
   /// API returns: { anak_id, anak_nama, kehadiran_enabled, ketidakhadiran_enabled }
   factory ChildNotificationPreference.fromJson(Map<String, dynamic> json) {
     return ChildNotificationPreference(
@@ -188,6 +182,12 @@ class ChildNotificationPreference {
       ketidakhadiranEnabled: json['ketidakhadiran_enabled'] as bool? ?? true,
     );
   }
+
+  final String siswaId;
+  final String siswaName;
+  final String kelasNama;
+  final bool kehadiranEnabled;
+  final bool ketidakhadiranEnabled;
 
   ChildNotificationPreference copyWith({
     bool? kehadiranEnabled,
@@ -209,8 +209,6 @@ class ChildNotificationPreference {
 class NotificationPreferencesResponse {
   const NotificationPreferencesResponse({required this.preferences});
 
-  final List<ChildNotificationPreference> preferences;
-
   factory NotificationPreferencesResponse.fromJson(Map<String, dynamic> json) {
     // API returns { preferensi: [...] }, not { data: [...] }
     final data = json['preferensi'] as List<dynamic>? ??
@@ -223,4 +221,6 @@ class NotificationPreferencesResponse {
           .toList(),
     );
   }
+
+  final List<ChildNotificationPreference> preferences;
 }

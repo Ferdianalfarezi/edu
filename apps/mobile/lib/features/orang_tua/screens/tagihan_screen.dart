@@ -58,7 +58,8 @@ class _TagihanScreenState extends ConsumerState<TagihanScreen> {
                 ),
                 const SizedBox(height: 16),
                 ElevatedButton(
-                  onPressed: () => ref.invalidate(parentChildrenGroupedProvider),
+                  onPressed: () =>
+                      ref.invalidate(parentChildrenGroupedProvider),
                   child: const Text('Coba Lagi'),
                 ),
               ],
@@ -73,8 +74,7 @@ class _TagihanScreenState extends ConsumerState<TagihanScreen> {
           }
 
           final allChildren = groups.expand((g) => g.children).toList();
-          final selectedChildId =
-              _selectedChildId ?? allChildren.first.siswaId;
+          final selectedChildId = _selectedChildId ?? allChildren.first.siswaId;
 
           // Ensure selected child is valid
           if (!allChildren.any((c) => c.siswaId == selectedChildId)) {
@@ -138,7 +138,7 @@ class _ChildSelector extends StatelessWidget {
         ),
       ),
       child: DropdownButtonFormField<String>(
-        value: selectedChildId,
+        initialValue: selectedChildId,
         decoration: const InputDecoration(
           labelText: 'Pilih Anak',
           border: OutlineInputBorder(),
@@ -219,8 +219,7 @@ class _TagihanList extends ConsumerWidget {
               ),
               const SizedBox(height: 8),
               TextButton(
-                onPressed: () =>
-                    ref.invalidate(childTagihanProvider(siswaId)),
+                onPressed: () => ref.invalidate(childTagihanProvider(siswaId)),
                 child: const Text('Coba Lagi'),
               ),
             ],

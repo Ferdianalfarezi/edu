@@ -40,8 +40,9 @@ class RppDetailScreen extends ConsumerWidget {
                       isFavorited ? Icons.star : Icons.star_border,
                       color: isFavorited ? Colors.amber : null,
                     ),
-                    tooltip:
-                        isFavorited ? 'Hapus dari favorit' : 'Tambah ke favorit',
+                    tooltip: isFavorited
+                        ? 'Hapus dari favorit'
+                        : 'Tambah ke favorit',
                     onPressed: () {
                       favoriteNotifier.toggleFavorite(
                         rppId,
@@ -238,11 +239,13 @@ class _DetailContent extends ConsumerWidget {
   Future<void> _downloadRpp(BuildContext context, WidgetRef ref) async {
     try {
       final url = await getRppDownloadUrl(ref: ref, rppId: detail.id);
+      if (!context.mounted) return;
       // In production, use url_launcher to open the presigned URL
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Download URL: $url')),
       );
     } catch (e) {
+      if (!context.mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Gagal mendapatkan link download: $e')),
       );

@@ -121,8 +121,7 @@ class _NotificationHistoryScreenState
     }
 
     return RefreshIndicator(
-      onRefresh: () =>
-          ref.read(notificationHistoryProvider.notifier).refresh(),
+      onRefresh: () => ref.read(notificationHistoryProvider.notifier).refresh(),
       child: ListView.separated(
         controller: _scrollController,
         padding: const EdgeInsets.symmetric(vertical: 8),
@@ -242,7 +241,7 @@ class _TypeIcon extends StatelessWidget {
     };
 
     return CircleAvatar(
-      backgroundColor: color.withOpacity(0.15),
+      backgroundColor: color.withValues(alpha: 0.15),
       radius: 20,
       child: Icon(icon, color: color, size: 22),
     );
@@ -394,8 +393,18 @@ class _NotificationDetailSheet extends StatelessWidget {
 
   String _formatFullTimestamp(DateTime dt) {
     final months = [
-      'Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun',
-      'Jul', 'Ags', 'Sep', 'Okt', 'Nov', 'Des',
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'Mei',
+      'Jun',
+      'Jul',
+      'Ags',
+      'Sep',
+      'Okt',
+      'Nov',
+      'Des',
     ];
     final day = dt.day.toString().padLeft(2, '0');
     final hour = dt.hour.toString().padLeft(2, '0');

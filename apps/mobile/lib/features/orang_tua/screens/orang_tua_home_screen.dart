@@ -50,7 +50,8 @@ class OrangTuaHomeScreen extends ConsumerWidget {
                       children: [
                         _IconBtn(
                           icon: Icons.notifications_outlined,
-                          onTap: () => context.push(AppRoutes.orangTuaNotifications),
+                          onTap: () =>
+                              context.push(AppRoutes.orangTuaNotifications),
                         ),
                         const SizedBox(width: 8),
                         _IconBtn(
@@ -175,7 +176,7 @@ class _FeatureCard extends StatelessWidget {
                 width: 40,
                 height: 40,
                 decoration: BoxDecoration(
-                  color: color.withOpacity(0.1),
+                  color: color.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: Icon(icon, size: 20, color: color),

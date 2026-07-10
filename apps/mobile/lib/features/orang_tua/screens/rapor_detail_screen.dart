@@ -86,7 +86,7 @@ class _RaporDetailBody extends StatelessWidget {
           const SizedBox(height: 16),
 
           // Nilai per Mata Pelajaran
-          _SectionTitle(title: 'Nilai Mata Pelajaran'),
+          const _SectionTitle(title: 'Nilai Mata Pelajaran'),
           const SizedBox(height: 8),
           ...detail.nilaiMapel.map(
             (mapel) => Padding(
@@ -98,7 +98,7 @@ class _RaporDetailBody extends StatelessWidget {
           // P5 Section (if available)
           if (detail.p5 != null && detail.p5!.isNotEmpty) ...[
             const SizedBox(height: 16),
-            _SectionTitle(title: 'Profil Pelajar Pancasila (P5)'),
+            const _SectionTitle(title: 'Profil Pelajar Pancasila (P5)'),
             const SizedBox(height: 8),
             _P5Section(items: detail.p5!),
           ],
@@ -107,7 +107,7 @@ class _RaporDetailBody extends StatelessWidget {
           if (detail.catatanWaliKelas != null &&
               detail.catatanWaliKelas!.isNotEmpty) ...[
             const SizedBox(height: 16),
-            _SectionTitle(title: 'Catatan Wali Kelas'),
+            const _SectionTitle(title: 'Catatan Wali Kelas'),
             const SizedBox(height: 8),
             _CatatanWaliKelasCard(catatan: detail.catatanWaliKelas!),
           ],
@@ -194,9 +194,7 @@ class _HeaderCard extends StatelessWidget {
                 const SizedBox(width: 12),
                 _StatChip(
                   label: 'Peringkat',
-                  value: detail.peringkat != null
-                      ? '${detail.peringkat}'
-                      : '-',
+                  value: detail.peringkat != null ? '${detail.peringkat}' : '-',
                   icon: Icons.emoji_events,
                   color: Colors.amber.shade700,
                 ),
@@ -236,7 +234,7 @@ class _StatChip extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
         decoration: BoxDecoration(
-          color: color.withOpacity(0.1),
+          color: color.withValues(alpha: 0.1),
           borderRadius: BorderRadius.circular(8),
         ),
         child: Column(
@@ -255,7 +253,7 @@ class _StatChip extends StatelessWidget {
               label,
               style: TextStyle(
                 fontSize: 11,
-                color: color.withOpacity(0.8),
+                color: color.withValues(alpha: 0.8),
               ),
             ),
           ],

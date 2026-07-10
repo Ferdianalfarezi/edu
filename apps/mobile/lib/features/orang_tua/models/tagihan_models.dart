@@ -1,6 +1,6 @@
-/// Models for parent tagihan (billing) view.
-///
-/// Requirements: 11.1–11.17, 14.1–14.6
+// Models for parent tagihan (billing) view.
+//
+// Requirements: 11.1–11.17, 14.1–14.6
 
 /// Tagihan status enum matching the backend.
 enum TagihanStatus {
@@ -70,19 +70,6 @@ class Tagihan {
     this.tanggalJatuhTempo,
   });
 
-  final String id;
-  final String siswaId;
-  final int bulan;
-  final int tahun;
-  final int nominal;
-  final int totalDibayar;
-  final TagihanStatus status;
-  final DateTime? tanggalJatuhTempo;
-
-  /// Remaining amount to be paid.
-  /// Requirement 11.3: show sisa tagihan.
-  int get sisa => nominal - totalDibayar;
-
   factory Tagihan.fromJson(Map<String, dynamic> json, {String? siswaId}) {
     return Tagihan(
       id: json['id'] as String,
@@ -97,6 +84,19 @@ class Tagihan {
           : null,
     );
   }
+
+  final String id;
+  final String siswaId;
+  final int bulan;
+  final int tahun;
+  final int nominal;
+  final int totalDibayar;
+  final TagihanStatus status;
+  final DateTime? tanggalJatuhTempo;
+
+  /// Remaining amount to be paid.
+  /// Requirement 11.3: show sisa tagihan.
+  int get sisa => nominal - totalDibayar;
 }
 
 /// Transaction status for payment history.
@@ -144,15 +144,6 @@ class TagihanTransaksi {
     required this.createdAt,
   });
 
-  final String id;
-  final String tagihanId;
-  final int jumlahBayar;
-  final String metode;
-  final TransaksiStatus status;
-  final String? alasanPenolakan;
-  final String? nomorReferensi;
-  final DateTime createdAt;
-
   /// API pembayaran items: { id, nominal_bayar, tanggal_bayar, metode, nomor_referensi, verified_at }
   factory TagihanTransaksi.fromJson(Map<String, dynamic> json) {
     return TagihanTransaksi(
@@ -173,4 +164,13 @@ class TagihanTransaksi {
               : DateTime.now(),
     );
   }
+
+  final String id;
+  final String tagihanId;
+  final int jumlahBayar;
+  final String metode;
+  final TransaksiStatus status;
+  final String? alasanPenolakan;
+  final String? nomorReferensi;
+  final DateTime createdAt;
 }

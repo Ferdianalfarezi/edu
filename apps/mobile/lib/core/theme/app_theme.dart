@@ -74,7 +74,8 @@ class AppTheme {
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
         fillColor: _surfaceCard,
-        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        contentPadding:
+            const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(10),
           borderSide: const BorderSide(color: _border),
@@ -85,7 +86,7 @@ class AppTheme {
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(10),
-          borderSide: BorderSide(color: _primaryColor, width: 1.5),
+          borderSide: const BorderSide(color: _primaryColor, width: 1.5),
         ),
         errorBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(10),
@@ -159,21 +160,27 @@ class AppTheme {
         unselectedItemColor: _textTertiary,
         elevation: 0,
         type: BottomNavigationBarType.fixed,
-        selectedLabelStyle: TextStyle(fontSize: 11, fontWeight: FontWeight.w600),
-        unselectedLabelStyle: TextStyle(fontSize: 11, fontWeight: FontWeight.w500),
+        selectedLabelStyle:
+            TextStyle(fontSize: 11, fontWeight: FontWeight.w600),
+        unselectedLabelStyle:
+            TextStyle(fontSize: 11, fontWeight: FontWeight.w500),
       ),
 
       // Navigation bar (Material 3)
       navigationBarTheme: NavigationBarThemeData(
         backgroundColor: _surfaceCard,
-        indicatorColor: _primaryColor.withOpacity(0.1),
+        indicatorColor: _primaryColor.withValues(alpha: 0.1),
         elevation: 0,
         height: 64,
         labelTextStyle: WidgetStateProperty.resolveWith((states) {
           if (states.contains(WidgetState.selected)) {
-            return const TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: _primaryColor);
+            return const TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w600,
+                color: _primaryColor);
           }
-          return const TextStyle(fontSize: 11, fontWeight: FontWeight.w500, color: _textTertiary);
+          return const TextStyle(
+              fontSize: 11, fontWeight: FontWeight.w500, color: _textTertiary);
         }),
         iconTheme: WidgetStateProperty.resolveWith((states) {
           if (states.contains(WidgetState.selected)) {
@@ -239,13 +246,14 @@ class AppTheme {
       ),
 
       // Tab bar
-      tabBarTheme: TabBarThemeData(
+      tabBarTheme: const TabBarThemeData(
         labelColor: _primaryColor,
         unselectedLabelColor: _textTertiary,
         indicatorColor: _primaryColor,
         indicatorSize: TabBarIndicatorSize.tab,
-        labelStyle: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
-        unselectedLabelStyle: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
+        labelStyle: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+        unselectedLabelStyle:
+            TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
       ),
 
       // Snackbar
@@ -258,18 +266,48 @@ class AppTheme {
 
       // Text theme
       textTheme: const TextTheme(
-        headlineLarge: TextStyle(fontSize: 28, fontWeight: FontWeight.w700, color: _textPrimary, letterSpacing: -0.5),
-        headlineMedium: TextStyle(fontSize: 24, fontWeight: FontWeight.w600, color: _textPrimary, letterSpacing: -0.3),
-        headlineSmall: TextStyle(fontSize: 20, fontWeight: FontWeight.w600, color: _textPrimary, letterSpacing: -0.2),
-        titleLarge: TextStyle(fontSize: 18, fontWeight: FontWeight.w600, color: _textPrimary),
-        titleMedium: TextStyle(fontSize: 16, fontWeight: FontWeight.w500, color: _textPrimary),
-        titleSmall: TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: _textPrimary),
-        bodyLarge: TextStyle(fontSize: 16, fontWeight: FontWeight.w400, color: _textPrimary, height: 1.5),
-        bodyMedium: TextStyle(fontSize: 14, fontWeight: FontWeight.w400, color: _textSecondary, height: 1.5),
-        bodySmall: TextStyle(fontSize: 12, fontWeight: FontWeight.w400, color: _textTertiary, height: 1.4),
-        labelLarge: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: _textPrimary),
-        labelMedium: TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: _textSecondary),
-        labelSmall: TextStyle(fontSize: 11, fontWeight: FontWeight.w500, color: _textTertiary),
+        headlineLarge: TextStyle(
+            fontSize: 28,
+            fontWeight: FontWeight.w700,
+            color: _textPrimary,
+            letterSpacing: -0.5),
+        headlineMedium: TextStyle(
+            fontSize: 24,
+            fontWeight: FontWeight.w600,
+            color: _textPrimary,
+            letterSpacing: -0.3),
+        headlineSmall: TextStyle(
+            fontSize: 20,
+            fontWeight: FontWeight.w600,
+            color: _textPrimary,
+            letterSpacing: -0.2),
+        titleLarge: TextStyle(
+            fontSize: 18, fontWeight: FontWeight.w600, color: _textPrimary),
+        titleMedium: TextStyle(
+            fontSize: 16, fontWeight: FontWeight.w500, color: _textPrimary),
+        titleSmall: TextStyle(
+            fontSize: 14, fontWeight: FontWeight.w500, color: _textPrimary),
+        bodyLarge: TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.w400,
+            color: _textPrimary,
+            height: 1.5),
+        bodyMedium: TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.w400,
+            color: _textSecondary,
+            height: 1.5),
+        bodySmall: TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.w400,
+            color: _textTertiary,
+            height: 1.4),
+        labelLarge: TextStyle(
+            fontSize: 14, fontWeight: FontWeight.w600, color: _textPrimary),
+        labelMedium: TextStyle(
+            fontSize: 12, fontWeight: FontWeight.w500, color: _textSecondary),
+        labelSmall: TextStyle(
+            fontSize: 11, fontWeight: FontWeight.w500, color: _textTertiary),
       ),
     );
   }

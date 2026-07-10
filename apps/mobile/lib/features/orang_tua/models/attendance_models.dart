@@ -1,6 +1,6 @@
-/// Models for parent attendance view.
-///
-/// Requirements: 8.1–8.4, 21.9, 21.10
+// Models for parent attendance view.
+//
+// Requirements: 8.1–8.4, 21.9, 21.10
 
 /// Single attendance record for a day.
 class AttendanceRecord {
@@ -9,15 +9,15 @@ class AttendanceRecord {
     required this.status,
   });
 
-  final DateTime tanggal;
-  final AttendanceStatus status;
-
   factory AttendanceRecord.fromJson(Map<String, dynamic> json) {
     return AttendanceRecord(
       tanggal: DateTime.parse(json['tanggal'] as String),
       status: AttendanceStatus.fromString(json['status'] as String),
     );
   }
+
+  final DateTime tanggal;
+  final AttendanceStatus status;
 }
 
 /// Attendance status enum matching the backend.
@@ -65,11 +65,6 @@ class AttendanceSummary {
     this.alpa = 0,
   });
 
-  final int hadir;
-  final int izin;
-  final int sakit;
-  final int alpa;
-
   factory AttendanceSummary.fromJson(Map<String, dynamic> json) {
     return AttendanceSummary(
       hadir: (json['hadir'] as num?)?.toInt() ?? 0,
@@ -100,6 +95,11 @@ class AttendanceSummary {
     return AttendanceSummary(
         hadir: hadir, izin: izin, sakit: sakit, alpa: alpa);
   }
+
+  final int hadir;
+  final int izin;
+  final int sakit;
+  final int alpa;
 }
 
 /// Response model for GET /absensi/anak/:siswaId.
@@ -109,9 +109,6 @@ class ChildAttendanceResponse {
     required this.records,
     required this.summary,
   });
-
-  final List<AttendanceRecord> records;
-  final AttendanceSummary summary;
 
   factory ChildAttendanceResponse.fromJson(Map<String, dynamic> json) {
     // API returns attendance records in 'hari' array, not 'data'
@@ -130,6 +127,9 @@ class ChildAttendanceResponse {
 
     return ChildAttendanceResponse(records: records, summary: summary);
   }
+
+  final List<AttendanceRecord> records;
+  final AttendanceSummary summary;
 }
 
 /// Represents a child (siswa) belonging to a parent.
@@ -142,12 +142,6 @@ class ChildInfo {
     required this.tenantNama,
   });
 
-  final String siswaId;
-  final String nama;
-  final String kelasNama;
-  final String tenantId;
-  final String tenantNama;
-
   factory ChildInfo.fromJson(Map<String, dynamic> json) {
     return ChildInfo(
       siswaId: json['siswa_id'] as String? ?? json['id'] as String,
@@ -159,6 +153,12 @@ class ChildInfo {
           '',
     );
   }
+
+  final String siswaId;
+  final String nama;
+  final String kelasNama;
+  final String tenantId;
+  final String tenantNama;
 }
 
 /// Groups children by school (tenant) for cross-tenant parent view.

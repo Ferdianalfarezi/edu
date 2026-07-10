@@ -5,7 +5,6 @@ import 'package:go_router/go_router.dart';
 import '../../../core/di/providers.dart';
 import '../../../core/network/connectivity_service.dart';
 import '../../../core/router/app_router.dart';
-import '../../../core/theme/app_theme.dart';
 import '../models/jadwal_item.dart';
 import '../models/sync_result.dart';
 import '../providers/attendance_provider.dart';
@@ -125,7 +124,8 @@ class _GuruHomeScreenState extends ConsumerState<GuruHomeScreen>
                 color: Colors.red.shade50,
                 child: Row(
                   children: [
-                    Icon(Icons.access_time, size: 16, color: Colors.red.shade700),
+                    Icon(Icons.access_time,
+                        size: 16, color: Colors.red.shade700),
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(
@@ -181,8 +181,8 @@ class _GuruHomeScreenState extends ConsumerState<GuruHomeScreen>
                           child: Column(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              const Icon(Icons.error_outline, size: 48,
-                                  color: Colors.grey),
+                              const Icon(Icons.error_outline,
+                                  size: 48, color: Colors.grey),
                               const SizedBox(height: 8),
                               Text(
                                 'Gagal memuat jadwal',
@@ -323,9 +323,8 @@ class _ConflictBanner extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final overridden = syncResult.conflicts
-        .where((c) => c.winner == 'server')
-        .toList();
+    final overridden =
+        syncResult.conflicts.where((c) => c.winner == 'server').toList();
 
     if (overridden.isEmpty) return const SizedBox.shrink();
 
@@ -414,7 +413,7 @@ class _JadwalCard extends StatelessWidget {
           width: 48,
           height: 48,
           decoration: BoxDecoration(
-            color: Theme.of(context).primaryColor.withOpacity(0.1),
+            color: Theme.of(context).primaryColor.withValues(alpha: 0.1),
             borderRadius: BorderRadius.circular(8),
           ),
           child: Icon(

@@ -52,7 +52,8 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
                 ),
                 const SizedBox(height: 16),
                 ElevatedButton(
-                  onPressed: () => ref.invalidate(parentChildrenGroupedProvider),
+                  onPressed: () =>
+                      ref.invalidate(parentChildrenGroupedProvider),
                   child: const Text('Coba Lagi'),
                 ),
               ],
@@ -67,16 +68,17 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
           }
 
           // Flatten all children to create child list
-          final allChildren =
-              groups.expand((g) => g.children).toList();
+          final allChildren = groups.expand((g) => g.children).toList();
 
           // Auto-select first child if none selected
-          final selectedChildId = viewState.selectedChildId ?? allChildren.first.siswaId;
+          final selectedChildId =
+              viewState.selectedChildId ?? allChildren.first.siswaId;
 
           // Ensure selected child is valid
           if (!allChildren.any((c) => c.siswaId == selectedChildId)) {
             WidgetsBinding.instance.addPostFrameCallback((_) {
-              ref.read(attendanceViewStateProvider.notifier)
+              ref
+                  .read(attendanceViewStateProvider.notifier)
                   .selectChild(allChildren.first.siswaId);
             });
           }
@@ -89,7 +91,9 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
                   groups: groups,
                   selectedChildId: selectedChildId,
                   onChildSelected: (id) {
-                    ref.read(attendanceViewStateProvider.notifier).selectChild(id);
+                    ref
+                        .read(attendanceViewStateProvider.notifier)
+                        .selectChild(id);
                   },
                 ),
 
@@ -98,7 +102,9 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
                 month: viewState.selectedMonth,
                 year: viewState.selectedYear,
                 onPrevious: () {
-                  ref.read(attendanceViewStateProvider.notifier).previousMonth();
+                  ref
+                      .read(attendanceViewStateProvider.notifier)
+                      .previousMonth();
                 },
                 onNext: () {
                   ref.read(attendanceViewStateProvider.notifier).nextMonth();
@@ -148,7 +154,7 @@ class _ChildSelector extends StatelessWidget {
         ),
       ),
       child: DropdownButtonFormField<String>(
-        value: selectedChildId,
+        initialValue: selectedChildId,
         decoration: const InputDecoration(
           labelText: 'Pilih Anak',
           border: OutlineInputBorder(),
@@ -304,7 +310,8 @@ class _AttendanceBody extends ConsumerWidget {
               ),
               const SizedBox(height: 8),
               TextButton(
-                onPressed: () => ref.invalidate(childAttendanceProvider(params)),
+                onPressed: () =>
+                    ref.invalidate(childAttendanceProvider(params)),
                 child: const Text('Coba Lagi'),
               ),
             ],
@@ -388,7 +395,6 @@ class _CalendarGrid extends StatelessWidget {
     Map<int, AttendanceStatus> statusMap,
   ) {
     final rows = <Widget>[];
-    var currentDay = 1;
 
     // Calculate number of rows needed
     final totalCells = (startWeekday - 1) + daysInMonth;

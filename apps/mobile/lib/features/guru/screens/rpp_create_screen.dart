@@ -164,7 +164,7 @@ class _RppCreateScreenState extends ConsumerState<RppCreateScreen> {
             // Mata Pelajaran dropdown (Req 41.2)
             mapelAsync.when(
               data: (mapelList) => DropdownButtonFormField<String>(
-                value: _selectedMapelId,
+                initialValue: _selectedMapelId,
                 decoration: const InputDecoration(
                   labelText: 'Mata Pelajaran *',
                   border: OutlineInputBorder(),
@@ -175,8 +175,7 @@ class _RppCreateScreenState extends ConsumerState<RppCreateScreen> {
                           child: Text(m.nama),
                         ))
                     .toList(),
-                onChanged: (value) =>
-                    setState(() => _selectedMapelId = value),
+                onChanged: (value) => setState(() => _selectedMapelId = value),
                 validator: (value) {
                   if (value == null || value.isEmpty) {
                     return 'Mata pelajaran wajib dipilih';
@@ -246,7 +245,7 @@ class _RppCreateScreenState extends ConsumerState<RppCreateScreen> {
 
             // Tahun Terbit (Req 41.2)
             DropdownButtonFormField<int>(
-              value: _tahunTerbit,
+              initialValue: _tahunTerbit,
               decoration: const InputDecoration(
                 labelText: 'Tahun Terbit *',
                 border: OutlineInputBorder(),

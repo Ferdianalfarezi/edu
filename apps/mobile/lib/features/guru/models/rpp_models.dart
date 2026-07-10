@@ -1,6 +1,6 @@
-/// Models for the RPP (Modul Ajar) feature.
-///
-/// Requirements: 41.1–41.11, 43.1–43.7, 44.1–44.5
+// Models for the RPP (Modul Ajar) feature.
+//
+// Requirements: 41.1–41.11, 43.1–43.7, 44.1–44.5
 
 /// Represents an RPP item in listing/search results.
 class RppItem {
@@ -16,17 +16,6 @@ class RppItem {
     this.tanggalPublish,
     this.isFavorited = false,
   });
-
-  final String id;
-  final String judul;
-  final String guruNama;
-  final String mataPelajaranNama;
-  final String kategoriNama;
-  final String kontenType; // 'richtext' or 'file'
-  final int tahunTerbit;
-  final String status; // 'draft' or 'published'
-  final String? tanggalPublish;
-  final bool isFavorited;
 
   /// API returns snake_case keys: konten_type, tahun_terbit, guru_nama, mata_pelajaran, kategori
   factory RppItem.fromJson(Map<String, dynamic> json) {
@@ -57,6 +46,17 @@ class RppItem {
           false,
     );
   }
+
+  final String id;
+  final String judul;
+  final String guruNama;
+  final String mataPelajaranNama;
+  final String kategoriNama;
+  final String kontenType; // 'richtext' or 'file'
+  final int tahunTerbit;
+  final String status; // 'draft' or 'published'
+  final String? tanggalPublish;
+  final bool isFavorited;
 }
 
 /// Full detail of a single RPP.
@@ -80,24 +80,6 @@ class RppDetail {
     this.tanggalUpdated,
     this.isFavorited = false,
   });
-
-  final String id;
-  final String judul;
-  final String guruId;
-  final String guruNama;
-  final String mataPelajaranId;
-  final String mataPelajaranNama;
-  final String kategoriId;
-  final String kategoriNama;
-  final String kontenType;
-  final int tahunTerbit;
-  final String status;
-  final String? konten; // Rich text HTML content
-  final String? fileNama;
-  final int? fileSize;
-  final String? tanggalPublish;
-  final String? tanggalUpdated;
-  final bool isFavorited;
 
   /// API returns snake_case keys with nested guru object
   factory RppDetail.fromJson(Map<String, dynamic> json) {
@@ -146,6 +128,24 @@ class RppDetail {
           false,
     );
   }
+
+  final String id;
+  final String judul;
+  final String guruId;
+  final String guruNama;
+  final String mataPelajaranId;
+  final String mataPelajaranNama;
+  final String kategoriId;
+  final String kategoriNama;
+  final String kontenType;
+  final int tahunTerbit;
+  final String status;
+  final String? konten; // Rich text HTML content
+  final String? fileNama;
+  final int? fileSize;
+  final String? tanggalPublish;
+  final String? tanggalUpdated;
+  final bool isFavorited;
 }
 
 /// Paginated list response for RPP endpoints.
@@ -155,10 +155,6 @@ class RppListResponse {
     this.nextCursor,
     this.total,
   });
-
-  final List<RppItem> data;
-  final String? nextCursor;
-  final int? total;
 
   /// API returns: { data: [...], meta: { has_next, cursor } }
   factory RppListResponse.fromJson(Map<String, dynamic> json) {
@@ -172,14 +168,15 @@ class RppListResponse {
       total: meta?['total'] as int? ?? json['total'] as int?,
     );
   }
+
+  final List<RppItem> data;
+  final String? nextCursor;
+  final int? total;
 }
 
 /// Mata pelajaran option for dropdowns.
 class MapelOption {
   const MapelOption({required this.id, required this.nama});
-
-  final String id;
-  final String nama;
 
   factory MapelOption.fromJson(Map<String, dynamic> json) {
     return MapelOption(
@@ -187,14 +184,14 @@ class MapelOption {
       nama: json['nama'] as String,
     );
   }
+
+  final String id;
+  final String nama;
 }
 
 /// Kategori RPP option for dropdowns.
 class KategoriOption {
   const KategoriOption({required this.id, required this.nama});
-
-  final String id;
-  final String nama;
 
   factory KategoriOption.fromJson(Map<String, dynamic> json) {
     return KategoriOption(
@@ -202,4 +199,7 @@ class KategoriOption {
       nama: json['nama'] as String,
     );
   }
+
+  final String id;
+  final String nama;
 }

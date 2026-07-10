@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../database/app_database.dart';
 import '../models/auth_state.dart';
 import '../network/api_client.dart';
-import '../network/connectivity_service.dart';
 import '../services/auth_service.dart';
 import '../services/notification_service.dart';
 import '../services/token_storage.dart';

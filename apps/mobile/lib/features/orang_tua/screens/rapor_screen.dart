@@ -75,8 +75,7 @@ class _RaporScreenState extends ConsumerState<RaporScreen> {
           final allChildren = groups.expand((g) => g.children).toList();
 
           // Auto-select first child if none selected
-          final selectedChildId =
-              _selectedChildId ?? allChildren.first.siswaId;
+          final selectedChildId = _selectedChildId ?? allChildren.first.siswaId;
 
           // Ensure selected child is valid
           if (!allChildren.any((c) => c.siswaId == selectedChildId)) {
@@ -140,7 +139,7 @@ class _ChildSelector extends StatelessWidget {
         ),
       ),
       child: DropdownButtonFormField<String>(
-        value: selectedChildId,
+        initialValue: selectedChildId,
         decoration: const InputDecoration(
           labelText: 'Pilih Anak',
           border: OutlineInputBorder(),

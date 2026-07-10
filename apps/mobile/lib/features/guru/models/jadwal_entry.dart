@@ -10,14 +10,6 @@ class JadwalEntry {
     this.guruPenggantiNama,
   });
 
-  final String id;
-  final String kelasNama;
-  final String mataPelajaranNama;
-  final String jamMulai;
-  final String jamSelesai;
-  final bool hasGuruPengganti;
-  final String? guruPenggantiNama;
-
   factory JadwalEntry.fromJson(Map<String, dynamic> json) {
     return JadwalEntry(
       id: json['id'] as String,
@@ -29,6 +21,14 @@ class JadwalEntry {
       guruPenggantiNama: json['guruPenggantiNama'] as String?,
     );
   }
+
+  final String id;
+  final String kelasNama;
+  final String mataPelajaranNama;
+  final String jamMulai;
+  final String jamSelesai;
+  final bool hasGuruPengganti;
+  final String? guruPenggantiNama;
 }
 
 /// Response from GET /jadwal/saya.
@@ -39,10 +39,6 @@ class JadwalSayaResponse {
     required this.jadwal,
   });
 
-  final String hari;
-  final String tanggal;
-  final List<JadwalEntry> jadwal;
-
   factory JadwalSayaResponse.fromJson(Map<String, dynamic> json) {
     return JadwalSayaResponse(
       hari: json['hari'] as String,
@@ -52,4 +48,8 @@ class JadwalSayaResponse {
           .toList(),
     );
   }
+
+  final String hari;
+  final String tanggal;
+  final List<JadwalEntry> jadwal;
 }
