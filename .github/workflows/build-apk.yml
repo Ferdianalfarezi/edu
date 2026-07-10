@@ -29,9 +29,8 @@ jobs:
       - name: Set up Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.24.x'
+          flutter-version: '3.44.5'
           channel: stable
-          cache: true
 
       - name: Create google-services.json
         run: |
@@ -65,7 +64,6 @@ jobs:
             "configuration_version": "1"
           }
           EOF
-        shell: bash
 
       - name: Get Flutter dependencies
         working-directory: apps/mobile
