@@ -53,8 +53,7 @@ Desktop.ini
 **/ios/Runner/GoogleService-Info.plist
 **/ios/firebase_app_id_file.json
 
-# Generated Dart files
-*.g.dart
+# Generated Dart files (freezed only - .g.dart committed for CI)
 *.freezed.dart
 
 # Coverage
