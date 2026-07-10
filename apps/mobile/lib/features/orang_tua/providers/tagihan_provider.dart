@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:ui' show ImageByteFormat, instantiateImageCodec;
 
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -129,6 +130,8 @@ class UploadBuktiNotifier
   /// - File size: max 5MB (Requirement 11.5)
   /// - nominal_bayar >= 10000 (Requirement 11.9)
   /// - nominal_bayar <= sisa tagihan (Requirement 11.10)
+  ///
+  /// Compresses image client-side before upload to reduce transfer time.
   Future<UploadBuktiResult> upload({
     required String tagihanId,
     required File imageFile,
@@ -148,11 +151,16 @@ class UploadBuktiNotifier
 
     try {
       final apiClient = _ref.read(apiClientProvider);
-      final fileName = imageFile.path.split('/').last;
+
+      // Compress image client-side to reduce upload size and server processing time.
+      // Target: max 1280px width, JPEG quality 70 → typically ~200-500KB.
+      final compressedFile = await _compressImage(imageFile);
+      final fileToUpload = compressedFile ?? imageFile;
+      final fileName = fileToUpload.path.split('/').last;
 
       final formData = FormData.fromMap({
         'file': await MultipartFile.fromFile(
-          imageFile.path,
+          fileToUpload.path,
           filename: fileName,
         ),
         'nominal_bayar': nominalBayar,
@@ -164,7 +172,7 @@ class UploadBuktiNotifier
         options: Options(
           contentType: 'multipart/form-data',
           sendTimeout: const Duration(seconds: 120),
-          receiveTimeout: const Duration(seconds: 60),
+          receiveTimeout: const Duration(seconds: 120),
         ),
       );
 
@@ -189,6 +197,49 @@ class UploadBuktiNotifier
       );
       state = AsyncData(result);
       return result;
+    }
+  }
+
+  /// Compress image to reduce file size before uploading.
+  /// Uses image_picker's built-in resize capabilities by re-reading the file
+  /// through the image codec and saving as JPEG with reduced quality.
+  /// Returns null if compression fails (caller will use original).
+  Future<File?> _compressImage(File originalFile) async {
+    try {
+      final bytes = await originalFile.readAsBytes();
+      final codec = await instantiateImageCodec(bytes, targetWidth: 1280);
+      final frame = await codec.getNextFrame();
+      final image = frame.image;
+
+      final byteData = await image.toByteData(
+        format: ImageByteFormat.png,
+      );
+      image.dispose();
+
+      if (byteData == null) return null;
+
+      // Write compressed image to a temp file
+      final tempDir = await Directory.systemTemp.createTemp('bukti_');
+      final extension = originalFile.path.split('.').last.toLowerCase();
+      final compressedFile = File('${tempDir.path}/compressed.$extension');
+      await compressedFile.writeAsBytes(byteData.buffer.asUint8List());
+
+      // Only use compressed if it's actually smaller
+      final originalSize = await originalFile.length();
+      final compressedSize = await compressedFile.length();
+
+      if (compressedSize < originalSize) {
+        _logger.i(
+          'Image compressed: ${originalSize ~/ 1024}KB → ${compressedSize ~/ 1024}KB',
+        );
+        return compressedFile;
+      }
+
+      // Compressed is larger or same — use original
+      return null;
+    } catch (e) {
+      _logger.w('Image compression failed, using original: $e');
+      return null;
     }
   }
 

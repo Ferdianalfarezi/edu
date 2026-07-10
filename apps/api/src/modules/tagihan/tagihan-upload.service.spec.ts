@@ -349,7 +349,7 @@ describe('TagihanService - uploadBuktiTransfer', () => {
     expect(result.sisa_tagihan).toBe(0);
     expect(result.nomor_referensi).toBeDefined();
 
-    // Verify storage upload was called
+    // Verify storage upload was called (inline with timeout)
     expect(mockStorageService.upload).toHaveBeenCalledTimes(1);
     expect(mockStorageService.upload).toHaveBeenCalledWith(
       expect.stringContaining('bukti-transfer/'),
@@ -366,6 +366,7 @@ describe('TagihanService - uploadBuktiTransfer', () => {
         tenant_id: tenantId,
         tagihan_id: tagihanId,
       }),
+      expect.objectContaining({ attempts: 3 }),
     );
 
     // Verify DB operations

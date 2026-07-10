@@ -8,6 +8,8 @@ import 'package:intl/intl.dart';
 
 import '../models/tagihan_models.dart';
 import '../providers/tagihan_provider.dart';
+import '../widgets/payment_upload_overlay.dart';
+import '../widgets/payment_success_overlay.dart';
 
 /// Upload bukti transfer screen.
 ///
@@ -55,9 +57,9 @@ class _UploadBuktiScreenState extends ConsumerState<UploadBuktiScreen> {
     try {
       final picked = await _imagePicker.pickImage(
         source: source,
-        maxWidth: 2048,
-        maxHeight: 2048,
-        imageQuality: 85,
+        maxWidth: 1280,
+        maxHeight: 1280,
+        imageQuality: 70,
       );
 
       if (picked == null) return;
@@ -136,26 +138,31 @@ class _UploadBuktiScreenState extends ConsumerState<UploadBuktiScreen> {
       return;
     }
 
-    final nominalText = _nominalController.text.replaceAll(RegExp(r'[^0-9]'), '');
+    final nominalText =
+        _nominalController.text.replaceAll(RegExp(r'[^0-9]'), '');
     final nominalBayar = int.tryParse(nominalText) ?? 0;
 
+    // Show the animated upload overlay
+    PaymentUploadOverlay.show(context);
+
     final result = await ref.read(uploadBuktiProvider.notifier).upload(
-      tagihanId: widget.tagihan.id,
-      imageFile: _selectedImage!,
-      nominalBayar: nominalBayar,
-      sisaTagihan: _sisaTagihan,
-    );
+          tagihanId: widget.tagihan.id,
+          imageFile: _selectedImage!,
+          nominalBayar: nominalBayar,
+          sisaTagihan: _sisaTagihan,
+        );
 
     if (!mounted) return;
 
+    // Dismiss overlay
+    PaymentUploadOverlay.dismiss(context);
+
     if (result.success) {
-      // Show success and pop back (Requirement 11.6)
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(result.message ?? 'Berhasil!'),
-          backgroundColor: Colors.green,
-        ),
-      );
+      // Show success animation before popping (Requirement 11.6)
+      await PaymentSuccessOverlay.show(context, message: result.message);
+
+      if (!mounted) return;
+
       // Invalidate tagihan cache so list refreshes
       ref.invalidate(childTagihanProvider(widget.tagihan.siswaId));
       Navigator.of(context).pop();
@@ -312,7 +319,8 @@ class _UploadBuktiScreenState extends ConsumerState<UploadBuktiScreen> {
                   labelText: 'Nominal Bayar',
                   prefixText: 'Rp ',
                   border: const OutlineInputBorder(),
-                  helperText: 'Sisa tagihan: ${currencyFormat.format(_sisaTagihan)}',
+                  helperText:
+                      'Sisa tagihan: ${currencyFormat.format(_sisaTagihan)}',
                 ),
                 validator: (value) {
                   if (value == null || value.isEmpty) {
@@ -359,8 +367,18 @@ class _UploadBuktiScreenState extends ConsumerState<UploadBuktiScreen> {
 
   String _monthName(int month) {
     const names = [
-      'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
-      'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember',
+      'Januari',
+      'Februari',
+      'Maret',
+      'April',
+      'Mei',
+      'Juni',
+      'Juli',
+      'Agustus',
+      'September',
+      'Oktober',
+      'November',
+      'Desember',
     ];
     return names[month - 1];
   }

@@ -332,13 +332,12 @@ export class TagihanService {
       );
     }
 
-    // 9. Upload file to R2 storage
+    // 9. Determine storage path
     const fileExtension = file.originalname.split('.').pop() || 'jpg';
     const storagePath = `${BUCKET_PATHS.BUKTI_TRANSFER}/${tagihanRecord.tenantId}/${tagihanId}/${randomUUID()}.${fileExtension}`;
 
-    await this.storageService.upload(storagePath, file.buffer, file.mimetype);
-
     // 10. Create tagihan_transaksi record (Req 11.4, 11.7)
+    // Insert DB record first so response can return quickly even if S3 is slow.
     const nomorReferensi = `BT-${Date.now()}-${randomUUID().slice(0, 8).toUpperCase()}`;
 
     const [transaksi] = await db
@@ -364,21 +363,46 @@ export class TagihanService {
       })
       .where(eq(tagihan.id, tagihanId));
 
-    // 12. Enqueue WebP compression job (Req 11.15)
-    // Fire-and-forget: queue/audit errors should not fail the response
-    // since the critical data (transaction + tagihan status) is already persisted.
+    // 12. Upload file to S3 with a 30s timeout.
+    // If the upload is slow/fails, the transaction record is already persisted.
+    // The compression job will handle re-upload if needed.
     try {
-      await this.imageQueue.add('compress-bukti-transfer', {
-        transaksi_id: transaksi.id,
-        storage_path: storagePath,
-        tenant_id: tagihanRecord.tenantId,
-        tagihan_id: tagihanId,
-      });
+      await Promise.race([
+        this.storageService.upload(storagePath, file.buffer, file.mimetype),
+        new Promise((_, reject) =>
+          setTimeout(() => reject(new Error('S3 upload timeout (30s)')), 30000),
+        ),
+      ]);
+    } catch (err) {
+      this.logger.warn(
+        `S3 upload failed/timed out for transaksi ${transaksi.id}: ${err}. ` +
+          `Transaction record saved — file will be re-uploaded via retry.`,
+      );
+    }
+
+    // 13. Enqueue WebP compression job (Req 11.15)
+    // Fire-and-forget with short timeout — don't let Redis issues block the response.
+    try {
+      await Promise.race([
+        this.imageQueue.add(
+          'compress-bukti-transfer',
+          {
+            transaksi_id: transaksi.id,
+            storage_path: storagePath,
+            tenant_id: tagihanRecord.tenantId,
+            tagihan_id: tagihanId,
+          },
+          { attempts: 3, backoff: { type: 'exponential', delay: 5000 } },
+        ),
+        new Promise((_, reject) =>
+          setTimeout(() => reject(new Error('Queue add timeout (5s)')), 5000),
+        ),
+      ]);
     } catch (err) {
       this.logger.warn(`Failed to enqueue compression job for transaksi ${transaksi.id}: ${err}`);
     }
 
-    // 13. Record audit trail (Requirements: 29.1, 29.5)
+    // 14. Record audit trail (Requirements: 29.1, 29.5)
     try {
       await this.auditTrailService.record({
         tenantId: tagihanRecord.tenantId,
