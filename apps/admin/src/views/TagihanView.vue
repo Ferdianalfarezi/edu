@@ -1,9 +1,88 @@
 <script setup lang="ts">
-import { ref, reactive, onMounted, watch, computed } from 'vue';
+import { ref, reactive, onMounted, watch, computed, h } from 'vue';
 import { api } from '@/api/client';
 import { PageHeader, BaseModal, SearchSelect, ActionButton } from '@/components/ui';
 import type { SelectOption } from '@/components/ui';
 import { useToast } from '@/composables/useToast';
+
+// ===== Tab Icons (inline SVG render functions) =====
+const IconGenerate = {
+  render() {
+    return h(
+      'svg',
+      { xmlns: 'http://www.w3.org/2000/svg', viewBox: '0 0 20 20', fill: 'currentColor' },
+      [
+        h('path', {
+          'fill-rule': 'evenodd',
+          d: 'M4.5 2A1.5 1.5 0 003 3.5v13A1.5 1.5 0 004.5 18h11a1.5 1.5 0 001.5-1.5V7.621a1.5 1.5 0 00-.44-1.06l-4.12-4.122A1.5 1.5 0 0011.378 2H4.5zm4.75 6.75a.75.75 0 011.5 0v2.25h2.25a.75.75 0 010 1.5h-2.25v2.25a.75.75 0 01-1.5 0v-2.25H7a.75.75 0 010-1.5h2.25V8.75z',
+          'clip-rule': 'evenodd',
+        }),
+      ],
+    );
+  },
+};
+
+const IconList = {
+  render() {
+    return h(
+      'svg',
+      { xmlns: 'http://www.w3.org/2000/svg', viewBox: '0 0 20 20', fill: 'currentColor' },
+      [
+        h('path', {
+          'fill-rule': 'evenodd',
+          d: 'M.99 5.24A2.25 2.25 0 013.25 3h13.5A2.25 2.25 0 0119 5.25l.01 9.5A2.25 2.25 0 0116.76 17H3.26A2.25 2.25 0 011 14.75l-.01-9.51zm8.26 9.52v-.625a.75.75 0 00-.75-.75H3.25a.75.75 0 00-.75.75v.615c0 .414.336.75.75.75h5.373a.75.75 0 00.627-.74zm1.5 0a.75.75 0 00.627.74h5.373a.75.75 0 00.75-.75v-.615a.75.75 0 00-.75-.75H11.5a.75.75 0 00-.75.75v.625zm6.75-5.26v-.625a.75.75 0 00-.75-.75H11.5a.75.75 0 00-.75.75v.625c0 .414.336.75.75.75h5.25a.75.75 0 00.75-.75zm-8.5 0v-.625a.75.75 0 00-.75-.75H3.25a.75.75 0 00-.75.75v.625c0 .414.336.75.75.75H8.5a.75.75 0 00.75-.75zM17.5 6.5v-.625a.75.75 0 00-.75-.75H11.5a.75.75 0 00-.75.75V6.5c0 .414.336.75.75.75h5.25a.75.75 0 00.75-.75zm-8.5 0v-.625a.75.75 0 00-.75-.75H3.25a.75.75 0 00-.75.75V6.5c0 .414.336.75.75.75H8.5a.75.75 0 00.75-.75z',
+          'clip-rule': 'evenodd',
+        }),
+      ],
+    );
+  },
+};
+
+const IconVerifikasi = {
+  render() {
+    return h(
+      'svg',
+      { xmlns: 'http://www.w3.org/2000/svg', viewBox: '0 0 20 20', fill: 'currentColor' },
+      [
+        h('path', {
+          'fill-rule': 'evenodd',
+          d: 'M16.403 12.652a3 3 0 000-5.304 3 3 0 00-3.75-3.751 3 3 0 00-5.305 0 3 3 0 00-3.751 3.75 3 3 0 000 5.305 3 3 0 003.75 3.751 3 3 0 005.305 0 3 3 0 003.751-3.75zm-2.546-4.46a.75.75 0 00-1.214-.882l-3.483 4.79-1.88-1.88a.75.75 0 10-1.06 1.061l2.5 2.5a.75.75 0 001.137-.089l4-5.5z',
+          'clip-rule': 'evenodd',
+        }),
+      ],
+    );
+  },
+};
+
+const IconTunggakan = {
+  render() {
+    return h(
+      'svg',
+      { xmlns: 'http://www.w3.org/2000/svg', viewBox: '0 0 20 20', fill: 'currentColor' },
+      [
+        h('path', {
+          'fill-rule': 'evenodd',
+          d: 'M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-8-5a.75.75 0 01.75.75v4.5a.75.75 0 01-1.5 0v-4.5A.75.75 0 0110 5zm0 10a1 1 0 100-2 1 1 0 000 2z',
+          'clip-rule': 'evenodd',
+        }),
+      ],
+    );
+  },
+};
+
+const IconAudit = {
+  render() {
+    return h(
+      'svg',
+      { xmlns: 'http://www.w3.org/2000/svg', viewBox: '0 0 20 20', fill: 'currentColor' },
+      [
+        h('path', {
+          d: 'M10 1a6 6 0 00-3.815 10.631C7.237 12.5 8 13.443 8 14.456v.644a.75.75 0 00.572.729 6.016 6.016 0 002.856 0A.75.75 0 0012 15.1v-.644c0-1.013.762-1.957 1.815-2.825A6 6 0 0010 1zM8.863 17.414a.75.75 0 00-.226 1.483 9.066 9.066 0 002.726 0 .75.75 0 00-.226-1.483 7.553 7.553 0 01-2.274 0z',
+        }),
+      ],
+    );
+  },
+};
 
 const toast = useToast();
 
@@ -212,6 +291,15 @@ const sisaTagihanManual = computed(() => {
   if (!manualPaymentTagihan.value) return 0;
   return manualPaymentTagihan.value.nominal - manualPaymentTagihan.value.total_dibayar;
 });
+
+// ===== Tab Items =====
+const tabItems = computed(() => [
+  { key: 'generate' as Tab, label: 'Generate', icon: IconGenerate },
+  { key: 'list' as Tab, label: 'Daftar Tagihan', icon: IconList },
+  { key: 'verifikasi' as Tab, label: 'Verifikasi', icon: IconVerifikasi },
+  { key: 'tunggakan' as Tab, label: 'Tunggakan', icon: IconTunggakan },
+  { key: 'audit' as Tab, label: 'Audit Trail', icon: IconAudit },
+]);
 
 // ===== Helper Functions =====
 function formatCurrency(amount: number): string {
@@ -596,62 +684,49 @@ onMounted(() => {
     <PageHeader title="Manajemen Tagihan" description=""> </PageHeader>
 
     <!-- Tabs -->
-    <div class="flex gap-1 p-1 bg-surface-100 rounded-lg mb-4">
-      <button
-        :class="[
-          'px-3 py-1.5 text-sm font-medium rounded-md transition-colors',
-          activeTab === 'generate'
-            ? 'bg-white text-text-primary shadow-xs'
-            : 'text-text-secondary hover:text-text-primary',
-        ]"
-        @click="activeTab = 'generate'"
+    <div class="tagihan-tabs mb-6">
+      <nav
+        class="flex gap-0.5 overflow-x-auto scrollbar-hide border-b border-border"
+        role="tablist"
       >
-        Generate
-      </button>
-      <button
-        :class="[
-          'px-3 py-1.5 text-sm font-medium rounded-md transition-colors',
-          activeTab === 'list'
-            ? 'bg-white text-text-primary shadow-xs'
-            : 'text-text-secondary hover:text-text-primary',
-        ]"
-        @click="activeTab = 'list'"
-      >
-        Daftar Tagihan
-      </button>
-      <button
-        :class="[
-          'px-3 py-1.5 text-sm font-medium rounded-md transition-colors',
-          activeTab === 'verifikasi'
-            ? 'bg-white text-text-primary shadow-xs'
-            : 'text-text-secondary hover:text-text-primary',
-        ]"
-        @click="activeTab = 'verifikasi'"
-      >
-        Verifikasi
-      </button>
-      <button
-        :class="[
-          'px-3 py-1.5 text-sm font-medium rounded-md transition-colors',
-          activeTab === 'tunggakan'
-            ? 'bg-white text-text-primary shadow-xs'
-            : 'text-text-secondary hover:text-text-primary',
-        ]"
-        @click="activeTab = 'tunggakan'"
-      >
-        Tunggakan
-      </button>
-      <button
-        :class="[
-          'px-3 py-1.5 text-sm font-medium rounded-md transition-colors',
-          activeTab === 'audit'
-            ? 'bg-white text-text-primary shadow-xs'
-            : 'text-text-secondary hover:text-text-primary',
-        ]"
-        @click="activeTab = 'audit'"
-      >
-        Audit Trail
-      </button>
+        <button
+          v-for="tab in tabItems"
+          :key="tab.key"
+          role="tab"
+          :aria-selected="activeTab === tab.key"
+          :class="[
+            'tagihan-tab group relative flex items-center gap-2 px-4 py-3 text-sm font-medium whitespace-nowrap transition-all duration-200 outline-none',
+            activeTab === tab.key
+              ? 'text-primary-600'
+              : 'text-text-tertiary hover:text-text-secondary',
+          ]"
+          @click="activeTab = tab.key"
+        >
+          <!-- Tab Icon -->
+          <component :is="tab.icon" class="w-4 h-4 shrink-0 transition-colors duration-200" />
+
+          <!-- Tab Label -->
+          <span>{{ tab.label }}</span>
+
+          <!-- Badge (for verifikasi pending count) -->
+          <span
+            v-if="tab.key === 'verifikasi' && verifikasiList.length > 0"
+            class="inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 text-[10px] font-bold leading-none text-white bg-danger-500 rounded-full shadow-sm animate-pulse"
+          >
+            {{ verifikasiList.length > 99 ? '99+' : verifikasiList.length }}
+          </span>
+
+          <!-- Active indicator bar -->
+          <span
+            :class="[
+              'absolute bottom-0 left-2 right-2 h-[2px] rounded-full transition-all duration-300 ease-out',
+              activeTab === tab.key
+                ? 'bg-primary-600 scale-x-100 opacity-100'
+                : 'bg-transparent scale-x-0 opacity-0',
+            ]"
+          />
+        </button>
+      </nav>
     </div>
 
     <!-- ===== Generate Tab ===== -->
@@ -1463,3 +1538,37 @@ onMounted(() => {
     </Teleport>
   </div>
 </template>
+
+<style scoped>
+/* Tab scrollbar hide for mobile overflow */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
+/* Tab hover background effect */
+.tagihan-tab::before {
+  content: '';
+  position: absolute;
+  inset: 4px 4px 6px;
+  border-radius: 6px;
+  background: transparent;
+  transition: background-color 0.15s ease;
+}
+.tagihan-tab:hover::before {
+  background: var(--color-surface-100);
+}
+.tagihan-tab:focus-visible {
+  outline: 2px solid var(--color-primary-400);
+  outline-offset: -2px;
+  border-radius: 6px;
+}
+
+/* Subtle gradient line under tabs */
+.tagihan-tabs {
+  position: relative;
+}
+</style>
