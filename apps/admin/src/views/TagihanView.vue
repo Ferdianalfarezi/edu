@@ -1549,18 +1549,7 @@ onMounted(() => {
   display: none;
 }
 
-/* Tab hover background effect */
-.tagihan-tab::before {
-  content: '';
-  position: absolute;
-  inset: 4px 4px 6px;
-  border-radius: 6px;
-  background: transparent;
-  transition: background-color 0.15s ease;
-}
-.tagihan-tab:hover::before {
-  background: var(--color-surface-100);
-}
+/* Tab focus style */
 .tagihan-tab:focus-visible {
   outline: 2px solid var(--color-primary-400);
   outline-offset: -2px;

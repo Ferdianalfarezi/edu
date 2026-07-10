@@ -212,11 +212,12 @@ onMounted(() => {
         />
       </div>
       <div class="flex items-center gap-2">
+        <label class="text-sm font-medium text-text-primary">Kelas:</label>
         <SearchSelect
           v-model="selectedKelasId"
-          label="Kelas"
           :options="kelasSelectOptions"
           placeholder="Pilih Kelas"
+          class="min-w-[200px] max-w-xs"
         />
       </div>
     </div>
