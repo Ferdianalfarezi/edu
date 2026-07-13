@@ -55,9 +55,7 @@ async function handleLogin() {
       <div class="absolute inset-0 bg-black/50" />
 
       <div class="relative z-10 max-w-md text-white">
-        <div class="w-12 h-12 rounded-xl bg-white/20 flex items-center justify-center mb-8">
-          <span class="text-xl font-bold">E</span>
-        </div>
+        <img src="/logo-text.png" alt="Teman Sekolah" class="h-10 mb-8" />
         <h1 class="text-3xl font-semibold leading-tight mb-4">
           Kelola sekolah dengan lebih efisien
         </h1>
@@ -73,10 +71,7 @@ async function handleLogin() {
       <div class="w-full max-w-sm">
         <!-- Mobile logo -->
         <div class="lg:hidden flex items-center gap-2.5 mb-8">
-          <div class="w-9 h-9 rounded-lg bg-primary-600 flex items-center justify-center">
-            <span class="text-white font-semibold">TS</span>
-          </div>
-          <span class="font-semibold text-text-primary">Teman Sekolah</span>
+          <img src="/logo-text.png" alt="Teman Sekolah" class="h-8" />
         </div>
 
         <div class="mb-8">

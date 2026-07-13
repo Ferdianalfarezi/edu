@@ -62,10 +62,10 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(
-              Icons.school_rounded,
-              size: 80,
-              color: Color(0xFF1565C0),
+            Image(
+              image: AssetImage('assets/images/logo.png'),
+              width: 80,
+              height: 80,
             ),
             SizedBox(height: 24),
             Text(

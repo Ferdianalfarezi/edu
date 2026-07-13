@@ -190,9 +190,7 @@ function toggleSidebar() {
       <!-- Logo / Brand -->
       <div class="flex items-center h-14 px-4 border-b border-border shrink-0">
         <div class="flex items-center gap-2.5 overflow-hidden">
-          <div class="w-8 h-8 rounded-lg bg-primary-600 flex items-center justify-center shrink-0">
-            <span class="text-white font-semibold text-sm">TS</span>
-          </div>
+          <img src="/logo.png" alt="Teman Sekolah" class="w-8 h-8 rounded-lg shrink-0" />
           <span
             v-if="!sidebarCollapsed"
             class="font-semibold text-text-primary text-sm whitespace-nowrap"
