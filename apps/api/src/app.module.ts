@@ -24,6 +24,8 @@ import { TagihanModule } from './modules/tagihan/tagihan.module';
 import { RaporModule } from './modules/rapor/rapor.module';
 import { RppModule } from './modules/rpp/rpp.module';
 import { KenaikanKelasModule } from './modules/kenaikan-kelas/kenaikan-kelas.module';
+import { AuditLogModule } from './modules/audit-log';
+import { DashboardModule } from './modules/dashboard/dashboard.module';
 import { HealthModule } from './modules/health/health.module';
 import { TenantInterceptor } from './common/interceptors/tenant.interceptor';
 import { AppVersionInterceptor } from './common/interceptors/app-version.interceptor';
@@ -149,6 +151,12 @@ import { MONITORING_CONFIG } from './common/monitoring/monitoring.config';
 
     // Kenaikan Kelas (class promotion)
     KenaikanKelasModule,
+
+    // Audit Log (global — cross-tenant audit trail)
+    AuditLogModule,
+
+    // Dashboard (Superadmin cross-tenant metrics)
+    DashboardModule,
   ],
   controllers: [],
   providers: [

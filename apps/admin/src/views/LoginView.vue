@@ -74,9 +74,9 @@ async function handleLogin() {
         <!-- Mobile logo -->
         <div class="lg:hidden flex items-center gap-2.5 mb-8">
           <div class="w-9 h-9 rounded-lg bg-primary-600 flex items-center justify-center">
-            <span class="text-white font-semibold">E</span>
+            <span class="text-white font-semibold">TS</span>
           </div>
-          <span class="font-semibold text-text-primary">Edu Admin</span>
+          <span class="font-semibold text-text-primary">Teman Sekolah</span>
         </div>
 
         <div class="mb-8">

@@ -6,17 +6,19 @@ import KepalaSekolahDashboard from '@/components/dashboard/KepalaSekolahDashboar
 import BendaharaDashboard from '@/components/dashboard/BendaharaDashboard.vue';
 import AdminDashboard from '@/components/dashboard/AdminDashboard.vue';
 import DefaultDashboard from '@/components/dashboard/DefaultDashboard.vue';
+import SuperadminDashboard from '@/components/dashboard/SuperadminDashboard.vue';
 
 const authStore = useAuthStore();
 
 const dashboardComponent = computed(() => {
   switch (authStore.user?.role) {
+    case Role.SUPER_ADMIN:
+      return SuperadminDashboard;
     case Role.KEPALA_SEKOLAH:
       return KepalaSekolahDashboard;
     case Role.BENDAHARA:
       return BendaharaDashboard;
     case Role.ADMIN:
-    case Role.SUPER_ADMIN:
       return AdminDashboard;
     default:
       return DefaultDashboard;

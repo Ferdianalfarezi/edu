@@ -2,7 +2,7 @@
   "name": "@edu/shared",
   "version": "0.0.1",
   "private": true,
-  "description": "Shared TypeScript types and interfaces for Edu School Management",
+  "description": "Shared TypeScript types and interfaces for Teman Sekolah",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "scripts": {

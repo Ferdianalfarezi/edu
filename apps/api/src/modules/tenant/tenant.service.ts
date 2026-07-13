@@ -1,7 +1,7 @@
 import { BadRequestException, Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectQueue } from '@nestjs/bull';
 import { NodePgDatabase } from 'drizzle-orm/node-postgres';
-import { eq, and, count } from 'drizzle-orm';
+import { eq, and, count, ilike } from 'drizzle-orm';
 import * as bcrypt from 'bcrypt';
 import * as crypto from 'crypto';
 import { Queue } from 'bull';
@@ -13,6 +13,8 @@ import { kelas } from '@/drizzle/schema/kelas';
 import { tahunAjaran } from '@/drizzle/schema/tahun-ajaran';
 import { AuthService } from '@/modules/auth/auth.service';
 import { QUEUE_NAMES } from '@/modules/queue';
+import { paginate } from '@/common/utils/paginate';
+import { PaginatedResponse } from '@/common/interfaces/pagination.interface';
 import { CreateTenantDto, UpdateTenantDto } from './dto';
 
 const BCRYPT_SALT_ROUNDS = 10;
@@ -32,6 +34,7 @@ export interface TenantWithStats {
 }
 
 export interface CreateTenantResult {
+  id: string;
   tenant: {
     id: string;
     nama: string;
@@ -160,6 +163,7 @@ export class TenantService {
     });
 
     return {
+      id: newTenant.id,
       tenant: {
         id: newTenant.id,
         nama: newTenant.nama,
@@ -279,6 +283,61 @@ export class TenantService {
       ...r,
       userCount: Number(r.userCount),
     }));
+  }
+
+  /**
+   * List all tenants with pagination and stats (user count).
+   */
+  async listTenantsPaginated(
+    page: number = 1,
+    pageSize: number = 20,
+  ): Promise<PaginatedResponse<TenantWithStats>> {
+    // Count total tenants
+    const [countResult] = await this.db.select({ count: count() }).from(tenant);
+    const totalCount = Number(countResult.count);
+
+    // Get paginated data
+    const offset = (page - 1) * pageSize;
+    const results = await this.db
+      .select({
+        id: tenant.id,
+        nama: tenant.nama,
+        alamat: tenant.alamat,
+        telepon: tenant.telepon,
+        email: tenant.email,
+        logoUrl: tenant.logoUrl,
+        isActive: tenant.isActive,
+        createdAt: tenant.createdAt,
+        updatedAt: tenant.updatedAt,
+        userCount: count(user.id),
+      })
+      .from(tenant)
+      .leftJoin(user, and(eq(user.tenantId, tenant.id), eq(user.isActive, true)))
+      .groupBy(tenant.id)
+      .orderBy(tenant.createdAt)
+      .limit(pageSize)
+      .offset(offset);
+
+    const mappedResults = results.map((r) => ({
+      ...r,
+      userCount: Number(r.userCount),
+    }));
+
+    return paginate(mappedResults, totalCount, page, pageSize);
+  }
+
+  /**
+   * Search tenants by name (case-insensitive partial match).
+   * Returns only id and nama for use in search/select controls.
+   */
+  async searchTenants(query: string): Promise<{ id: string; nama: string }[]> {
+    const results = await this.db
+      .select({ id: tenant.id, nama: tenant.nama })
+      .from(tenant)
+      .where(ilike(tenant.nama, `%${query}%`))
+      .orderBy(tenant.nama)
+      .limit(20);
+    return results;
   }
 
   /**

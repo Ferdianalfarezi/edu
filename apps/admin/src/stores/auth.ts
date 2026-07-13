@@ -3,6 +3,7 @@ import { ref, computed } from 'vue';
 import type { AuthUser, LoginRequest, LoginResponse, ChangePasswordRequest } from '@edu/shared';
 import { Role, Platform } from '@edu/shared';
 import { api, clearTokens, setAccessToken } from '@/api/client';
+import { useTenantContextStore } from '@/stores/tenant-context';
 
 export const useAuthStore = defineStore('auth', () => {
   const user = ref<AuthUser | null>(loadUserFromStorage());
@@ -80,6 +81,10 @@ export const useAuthStore = defineStore('auth', () => {
     localStorage.removeItem('must_change_password');
     mustChangePassword.value = false;
     user.value = null;
+
+    // Clear tenant context on logout
+    const tenantContextStore = useTenantContextStore();
+    tenantContextStore.clearTenant();
   }
 
   function hasRole(...roles: Role[]): boolean {

@@ -152,6 +152,12 @@ export const router = createRouter({
       meta: { roles: [Role.ADMIN, Role.BENDAHARA] },
     },
     {
+      path: '/audit-logs',
+      name: 'audit-logs',
+      component: () => import('@/views/AuditLogView.vue'),
+      meta: { roles: [Role.SUPER_ADMIN, Role.ADMIN, Role.BENDAHARA] },
+    },
+    {
       path: '/tenants',
       name: 'tenants',
       component: () => import('@/views/TenantManagementView.vue'),

@@ -2,24 +2,36 @@ import {
   Body,
   Controller,
   Get,
+  HttpCode,
+  HttpStatus,
   Param,
   ParseUUIDPipe,
   Patch,
   Post,
   Query,
+  Req,
   UploadedFile,
   UseGuards,
   UseInterceptors,
   BadRequestException,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
+import { Request } from 'express';
 import { Role } from '@edu/shared';
 import { JwtAuthGuard } from '@/common/guards/jwt-auth.guard';
 import { RolesGuard } from '@/common/guards/roles.guard';
 import { Roles } from '@/common/decorators/roles.decorator';
 import { TenantId } from '@/common/decorators/tenant-id.decorator';
+import { Auditable, AuditInterceptor } from '@/modules/audit-log';
+import { RequestUser } from '@/modules/auth/interfaces';
 import { UserService } from './user.service';
-import { CreateUserDto, UpdateUserDto, ListUsersQueryDto } from './dto';
+import {
+  CreateUserDto,
+  UpdateUserDto,
+  UpdateUserRoleDto,
+  ListUsersQueryDto,
+  ListUsersCrossTenantQueryDto,
+} from './dto';
 
 @Controller('users')
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -39,11 +51,33 @@ export class UserController {
 
   /**
    * GET /users
-   * List all users within the tenant. Cursor-paginated.
-   * Supports filtering by role and search by name/email.
+   * For ADMIN: List all users within the tenant. Cursor-paginated.
+   * For SUPER_ADMIN: Cross-tenant user list with tenant name, offset-paginated (default page_size 50).
+   * Supports search by email/nama/phone (min 3 chars for cross-tenant).
+   * When X-Tenant-Context is set, scopes to that tenant.
    */
   @Get()
-  async listUsers(@TenantId() tenantId: string, @Query() query: ListUsersQueryDto) {
+  @Roles(Role.ADMIN, Role.SUPER_ADMIN)
+  async listUsers(
+    @Req() req: Request,
+    @TenantId() tenantId: string,
+    @Query() query: ListUsersQueryDto,
+    @Query() crossTenantQuery: ListUsersCrossTenantQueryDto,
+  ) {
+    const requestUser = (req as Request & { user: RequestUser }).user;
+
+    if (requestUser.role === Role.SUPER_ADMIN) {
+      // Detect tenant context via X-Tenant-Context header
+      const tenantContext = req.headers['x-tenant-context'] as string | undefined;
+      return this.userService.listUsersCrossTenant(
+        crossTenantQuery.page,
+        crossTenantQuery.page_size,
+        crossTenantQuery.search,
+        tenantContext || undefined,
+      );
+    }
+
+    // ADMIN: existing tenant-scoped, cursor-paginated behavior
     return this.userService.listUsers(tenantId, query);
   }
 
@@ -70,12 +104,88 @@ export class UserController {
   }
 
   /**
+   * PATCH /users/:id/role
+   * Update user role (SUPER_ADMIN only).
+   * Validates role is in allowed set; rejects SUPER_ADMIN assignment.
+   */
+  @Patch(':id/role')
+  @Roles(Role.SUPER_ADMIN)
+  @HttpCode(HttpStatus.OK)
+  @UseInterceptors(AuditInterceptor)
+  @Auditable({
+    entityType: 'role_assignment',
+    action: 'role_change',
+    entityIdSource: 'params.id',
+    strictMode: true,
+  })
+  async updateUserRole(@Param('id', ParseUUIDPipe) id: string, @Body() dto: UpdateUserRoleDto) {
+    return this.userService.updateUserRole(id, dto.role);
+  }
+
+  /**
    * PATCH /users/:id/deactivate
    * Deactivate user and invalidate all their tokens.
+   * ADMIN: tenant-scoped deactivation.
+   * SUPER_ADMIN: cross-tenant deactivation with session invalidation.
    */
   @Patch(':id/deactivate')
-  async deactivateUser(@TenantId() tenantId: string, @Param('id', ParseUUIDPipe) id: string) {
-    return this.userService.deactivateUser(tenantId, id);
+  @Roles(Role.ADMIN, Role.SUPER_ADMIN)
+  @HttpCode(HttpStatus.OK)
+  @UseInterceptors(AuditInterceptor)
+  @Auditable({
+    entityType: 'user',
+    action: 'deactivate',
+    entityIdSource: 'params.id',
+    strictMode: true,
+  })
+  async deactivateUser(
+    @TenantId() tenantId: string | null,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Req() req: Request,
+  ) {
+    const currentUser = req.user as RequestUser;
+    if (currentUser.role === Role.SUPER_ADMIN) {
+      return this.userService.superadminDeactivateUser(id);
+    }
+    return this.userService.deactivateUser(tenantId!, id);
+  }
+
+  /**
+   * PATCH /users/:id/activate
+   * Activate a previously deactivated user (SUPER_ADMIN only).
+   */
+  @Patch(':id/activate')
+  @Roles(Role.SUPER_ADMIN)
+  @HttpCode(HttpStatus.OK)
+  @UseInterceptors(AuditInterceptor)
+  @Auditable({
+    entityType: 'user',
+    action: 'activate',
+    entityIdSource: 'params.id',
+    strictMode: true,
+  })
+  async activateUser(@Param('id', ParseUUIDPipe) id: string) {
+    return this.userService.superadminActivateUser(id);
+  }
+
+  /**
+   * POST /users/:id/reset-password
+   * Reset user password (SUPER_ADMIN only). Generates temp password,
+   * marks must_change_password, and sends email with credentials.
+   */
+  @Post(':id/reset-password')
+  @Roles(Role.SUPER_ADMIN)
+  @HttpCode(HttpStatus.OK)
+  @UseInterceptors(AuditInterceptor)
+  @Auditable({
+    entityType: 'user',
+    action: 'password_reset',
+    entityIdSource: 'params.id',
+    strictMode: true,
+    excludeFields: ['password', 'password_hash', 'temp_password'],
+  })
+  async resetPassword(@Param('id', ParseUUIDPipe) id: string) {
+    return this.userService.resetPassword(id);
   }
 
   /**

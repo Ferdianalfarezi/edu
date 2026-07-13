@@ -22,6 +22,13 @@
       "when": 1783563447253,
       "tag": "0002_perpetual_maggott",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "6",
+      "when": 1783931868709,
+      "tag": "0003_equal_gargoyle",
+      "breakpoints": true
     }
   ]
 }

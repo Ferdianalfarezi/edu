@@ -163,7 +163,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   ),
                   const SizedBox(height: 16),
                   const Text(
-                    'Edu School',
+                    'Teman Sekolah',
                     textAlign: TextAlign.center,
                     style: TextStyle(
                       fontSize: 24,
@@ -257,7 +257,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         prefixIcon: Icon(Icons.phone_outlined),
                         border: OutlineInputBorder(),
                         hintText: '08xxxxxxxxxx',
-                        helperText: 'Masukkan nomor yang didaftarkan oleh sekolah',
+                        helperText:
+                            'Masukkan nomor yang didaftarkan oleh sekolah',
                       ),
                       validator: _validatePhone,
                     ),

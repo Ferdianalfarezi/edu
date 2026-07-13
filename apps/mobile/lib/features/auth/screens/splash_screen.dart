@@ -69,7 +69,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
             ),
             SizedBox(height: 24),
             Text(
-              'Edu School',
+              'Teman Sekolah',
               style: TextStyle(
                 fontSize: 24,
                 fontWeight: FontWeight.bold,

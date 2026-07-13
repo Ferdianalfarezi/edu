@@ -1,6 +1,7 @@
 import axios, { type AxiosError, type AxiosInstance, type InternalAxiosRequestConfig } from 'axios';
 import type { LoginResponse } from '@edu/shared';
 import { useToast } from '@/composables/useToast';
+import { useTenantContextStore } from '@/stores/tenant-context';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api/v1';
 
@@ -84,6 +85,18 @@ api.interceptors.request.use(
     const token = getAccessToken();
     if (token && config.headers) {
       config.headers.Authorization = `Bearer ${token}`;
+    }
+    return config;
+  },
+  (error) => Promise.reject(error),
+);
+
+// Request interceptor: attach X-Tenant-Context header when active tenant is set
+api.interceptors.request.use(
+  (config: InternalAxiosRequestConfig) => {
+    const tenantStore = useTenantContextStore();
+    if (tenantStore.activeTenant && config.headers) {
+      config.headers['X-Tenant-Context'] = tenantStore.activeTenant.id;
     }
     return config;
   },

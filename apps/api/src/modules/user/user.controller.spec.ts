@@ -1,8 +1,11 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { BadRequestException } from '@nestjs/common';
+import { Reflector } from '@nestjs/core';
 import { UserController } from './user.controller';
 import { UserService } from './user.service';
 import { RedisService } from '@/modules/redis/redis.service';
+import { AuditLogService, AuditInterceptor } from '@/modules/audit-log';
+import { DrizzleService } from '@/drizzle/drizzle.service';
 import { DRIZZLE } from '@/drizzle/drizzle.module';
 import { Role } from '@edu/shared';
 
@@ -17,6 +20,8 @@ describe('UserController', () => {
       getUserById: jest.fn(),
       updateUser: jest.fn(),
       deactivateUser: jest.fn(),
+      superadminDeactivateUser: jest.fn(),
+      superadminActivateUser: jest.fn(),
       bulkImportGuru: jest.fn(),
     };
 
@@ -26,6 +31,10 @@ describe('UserController', () => {
         { provide: UserService, useValue: mockUserService },
         { provide: RedisService, useValue: {} },
         { provide: DRIZZLE, useValue: {} },
+        { provide: AuditLogService, useValue: { create: jest.fn() } },
+        { provide: DrizzleService, useValue: { getClient: jest.fn() } },
+        AuditInterceptor,
+        Reflector,
       ],
     }).compile();
 
@@ -48,14 +57,24 @@ describe('UserController', () => {
   });
 
   describe('GET /users', () => {
-    it('should call listUsers with tenantId and query', async () => {
+    it('should call listUsers with tenantId and query for ADMIN role', async () => {
       const tenantId = 'tenant-1';
       const query = { role: Role.GURU };
+      const crossTenantQuery = { page: 1, page_size: 50 };
       const expected = { data: [], nextCursor: null };
+      const mockReq = {
+        user: { id: 'user-1', role: Role.ADMIN, tenant_id: tenantId },
+        headers: {},
+      } as unknown as import('express').Request;
 
       mockUserService.listUsers!.mockResolvedValue(expected);
 
-      const result = await controller.listUsers(tenantId, query);
+      const result = await controller.listUsers(
+        mockReq,
+        tenantId,
+        query as any,
+        crossTenantQuery as any,
+      );
 
       expect(mockUserService.listUsers).toHaveBeenCalledWith(tenantId, query);
       expect(result).toEqual(expected);
@@ -94,16 +113,30 @@ describe('UserController', () => {
   });
 
   describe('PATCH /users/:id/deactivate', () => {
-    it('should call deactivateUser with tenantId and id', async () => {
+    it('should call deactivateUser with tenantId and id for ADMIN role', async () => {
       const tenantId = 'tenant-1';
       const userId = 'user-1';
       const expected = { id: userId, nama: 'Test', isActive: false };
+      const mockReq = { user: { id: 'admin-1', role: Role.ADMIN, tenant_id: tenantId } } as any;
 
       mockUserService.deactivateUser!.mockResolvedValue(expected);
 
-      const result = await controller.deactivateUser(tenantId, userId);
+      const result = await controller.deactivateUser(tenantId, userId, mockReq);
 
       expect(mockUserService.deactivateUser).toHaveBeenCalledWith(tenantId, userId);
+      expect(result.isActive).toBe(false);
+    });
+
+    it('should call superadminDeactivateUser for SUPER_ADMIN role', async () => {
+      const userId = 'user-1';
+      const expected = { id: userId, nama: 'Test', isActive: false };
+      const mockReq = { user: { id: 'sa-1', role: Role.SUPER_ADMIN, tenant_id: null } } as any;
+
+      mockUserService.superadminDeactivateUser = jest.fn().mockResolvedValue(expected);
+
+      const result = await controller.deactivateUser(null, userId, mockReq);
+
+      expect(mockUserService.superadminDeactivateUser).toHaveBeenCalledWith(userId);
       expect(result.isActive).toBe(false);
     });
   });

@@ -7,18 +7,21 @@ import {
 } from '@nestjs/common';
 import { InjectQueue } from '@nestjs/bull';
 import { NodePgDatabase } from 'drizzle-orm/node-postgres';
-import { and, eq, ilike, or, gt, asc, sql, inArray } from 'drizzle-orm';
+import { and, eq, ilike, or, gt, asc, sql, inArray, count } from 'drizzle-orm';
 import * as bcrypt from 'bcrypt';
 import * as crypto from 'crypto';
 import { Queue } from 'bull';
 import { DRIZZLE } from '@/drizzle/drizzle.module';
 import { user } from '@/drizzle/schema/user';
+import { tenant } from '@/drizzle/schema/tenant';
 import { jadwalPelajaran } from '@/drizzle/schema/jadwal';
 import { kelas } from '@/drizzle/schema/kelas';
 import { tahunAjaran } from '@/drizzle/schema/tahun-ajaran';
 import { QUEUE_NAMES } from '@/modules/queue';
 import { Role } from '@edu/shared';
 import { CreateUserDto, UpdateUserDto, ListUsersQueryDto } from './dto';
+import { paginate } from '@/common/utils/paginate';
+import { PaginatedResponse } from '@/common/interfaces/pagination.interface';
 
 const BCRYPT_SALT_ROUNDS = 10;
 const DEFAULT_PAGE_SIZE = 20;
@@ -181,6 +184,76 @@ export class UserService {
     };
   }
 
+  // ─── List Users Cross-Tenant (SUPER_ADMIN) ────────────────────
+
+  async listUsersCrossTenant(
+    page: number,
+    pageSize: number,
+    search?: string,
+    tenantId?: string,
+  ): Promise<PaginatedResponse<Record<string, unknown>>> {
+    const conditions: ReturnType<typeof eq>[] = [];
+
+    // Scope to tenant if context is set
+    if (tenantId) {
+      conditions.push(eq(user.tenantId, tenantId));
+    }
+
+    // Search across email, nama, phone (min 3 chars enforced at DTO level)
+    if (search) {
+      const escapedSearch = search.replace(/[%_\\]/g, '\\$&');
+      conditions.push(
+        or(
+          ilike(user.nama, `%${escapedSearch}%`),
+          ilike(user.email, `%${escapedSearch}%`),
+          ilike(user.phone, `%${escapedSearch}%`),
+        )!,
+      );
+    }
+
+    const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
+
+    // Get total count
+    const [countResult] = await this.db.select({ total: count() }).from(user).where(whereClause);
+
+    const totalCount = Number(countResult?.total ?? 0);
+
+    // Get paginated results with tenant name via LEFT JOIN
+    const offset = (page - 1) * pageSize;
+    const results = await this.db
+      .select({
+        id: user.id,
+        nama: user.nama,
+        email: user.email,
+        phone: user.phone,
+        role: user.role,
+        isActive: user.isActive,
+        tenantId: user.tenantId,
+        tenantNama: tenant.nama,
+        createdAt: user.createdAt,
+      })
+      .from(user)
+      .leftJoin(tenant, eq(user.tenantId, tenant.id))
+      .where(whereClause)
+      .orderBy(asc(user.createdAt))
+      .limit(pageSize)
+      .offset(offset);
+
+    const data = results.map((r) => ({
+      id: r.id,
+      nama: r.nama,
+      email: r.email,
+      phone: r.phone,
+      role: r.role,
+      is_active: r.isActive,
+      tenant_id: r.tenantId,
+      tenant_nama: r.tenantNama,
+      created_at: r.createdAt,
+    }));
+
+    return paginate(data, totalCount, page, pageSize);
+  }
+
   // ─── Get Single User ──────────────────────────────────────────
 
   async getUserById(tenantId: string, userId: string) {
@@ -242,6 +315,39 @@ export class UserService {
     };
   }
 
+  // ─── Update User Role (SUPER_ADMIN only) ───────────────────────
+
+  async updateUserRole(userId: string, newRole: string) {
+    // Reject SUPER_ADMIN assignment
+    if (newRole === Role.SUPER_ADMIN) {
+      throw new BadRequestException('Role super_admin tidak dapat diberikan ke user');
+    }
+
+    // Find user regardless of tenant (cross-tenant operation)
+    const [existing] = await this.db.select().from(user).where(eq(user.id, userId)).limit(1);
+
+    if (!existing) {
+      throw new NotFoundException('User tidak ditemukan');
+    }
+
+    const [updated] = await this.db
+      .update(user)
+      .set({ role: newRole as Role, updatedAt: new Date() })
+      .where(eq(user.id, userId))
+      .returning();
+
+    return {
+      id: updated.id,
+      nama: updated.nama,
+      email: updated.email,
+      phone: updated.phone,
+      role: updated.role,
+      isActive: updated.isActive,
+      tenant_id: updated.tenantId,
+      updatedAt: updated.updatedAt,
+    };
+  }
+
   // ─── Deactivate User ──────────────────────────────────────────
 
   async deactivateUser(tenantId: string, userId: string) {
@@ -263,6 +369,87 @@ export class UserService {
       id: deactivated.id,
       nama: deactivated.nama,
       isActive: deactivated.isActive,
+    };
+  }
+
+  // ─── Superadmin: Deactivate User (cross-tenant) ────────────────
+
+  async superadminDeactivateUser(userId: string) {
+    // Find user by ID without tenant scoping
+    const results = await this.db
+      .select({
+        id: user.id,
+        nama: user.nama,
+        isActive: user.isActive,
+        tenantId: user.tenantId,
+      })
+      .from(user)
+      .where(eq(user.id, userId))
+      .limit(1);
+
+    if (!results[0]) {
+      throw new NotFoundException('User tidak ditemukan');
+    }
+
+    if (results[0].isActive === false) {
+      throw new BadRequestException('User sudah dalam status nonaktif');
+    }
+
+    // Deactivate and invalidate tokens
+    const [deactivated] = await this.db
+      .update(user)
+      .set({
+        isActive: false,
+        tokensInvalidatedAt: new Date(),
+        updatedAt: new Date(),
+      })
+      .where(eq(user.id, userId))
+      .returning();
+
+    return {
+      id: deactivated.id,
+      nama: deactivated.nama,
+      isActive: deactivated.isActive,
+    };
+  }
+
+  // ─── Superadmin: Activate User (cross-tenant) ─────────────────
+
+  async superadminActivateUser(userId: string) {
+    // Find user by ID without tenant scoping
+    const results = await this.db
+      .select({
+        id: user.id,
+        nama: user.nama,
+        isActive: user.isActive,
+        tenantId: user.tenantId,
+      })
+      .from(user)
+      .where(eq(user.id, userId))
+      .limit(1);
+
+    if (!results[0]) {
+      throw new NotFoundException('User tidak ditemukan');
+    }
+
+    if (results[0].isActive === true) {
+      throw new BadRequestException('User sudah aktif');
+    }
+
+    // Activate user
+    const [activated] = await this.db
+      .update(user)
+      .set({
+        isActive: true,
+        updatedAt: new Date(),
+      })
+      .where(eq(user.id, userId))
+      .returning();
+
+    return {
+      id: activated.id,
+      nama: activated.nama,
+      isActive: activated.isActive,
     };
   }
 
@@ -569,6 +756,51 @@ export class UserService {
    */
   generateRandomPassword(): string {
     return crypto.randomBytes(9).toString('base64url').slice(0, 12);
+  }
+
+  // ─── Reset Password (SUPER_ADMIN) ────────────────────────────
+
+  async resetPassword(userId: string) {
+    // Find user by ID (cross-tenant, no tenant scoping)
+    const results = await this.db
+      .select({
+        id: user.id,
+        nama: user.nama,
+        email: user.email,
+        tenantId: user.tenantId,
+      })
+      .from(user)
+      .where(eq(user.id, userId))
+      .limit(1);
+
+    if (!results[0]) {
+      throw new NotFoundException('User tidak ditemukan');
+    }
+
+    const existingUser = results[0];
+
+    // Generate temporary password (12+ chars)
+    const tempPassword = this.generateRandomPassword();
+    const passwordHash = await bcrypt.hash(tempPassword, BCRYPT_SALT_ROUNDS);
+
+    // Update user: set new password hash and must_change_password flag
+    await this.db
+      .update(user)
+      .set({
+        passwordHash,
+        mustChangePassword: true,
+        updatedAt: new Date(),
+      })
+      .where(eq(user.id, userId));
+
+    // Enqueue email with temporary password
+    await this.emailQueue.add('send-password-reset', {
+      to: existingUser.email,
+      name: existingUser.nama,
+      password: tempPassword,
+    });
+
+    return { message: 'Password berhasil direset' };
   }
 
   private async validateEmailUniqueness(

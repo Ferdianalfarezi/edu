@@ -2,7 +2,7 @@
   "name": "@edu/api",
   "version": "0.0.1",
   "private": true,
-  "description": "Edu School Management API - NestJS Backend",
+  "description": "Teman Sekolah API - NestJS Backend",
   "scripts": {
     "build": "nest build",
     "dev": "nest start --watch",

@@ -1,8 +1,10 @@
 import {
+  BadRequestException,
   CallHandler,
   ExecutionContext,
   ForbiddenException,
   Injectable,
+  InternalServerErrorException,
   Logger,
   NestInterceptor,
 } from '@nestjs/common';
@@ -49,8 +51,25 @@ export class TenantInterceptor implements NestInterceptor {
       return next.handle();
     }
 
-    // Super admin bypasses all tenant isolation
+    // Super admin: check for X-Tenant-Context header to optionally scope to a tenant
     if (user.role === Role.SUPER_ADMIN) {
+      const tenantContext = request.headers['x-tenant-context'] as string | undefined;
+      if (tenantContext) {
+        return this.executeWithSuperAdminTenantContext(request, tenantContext, next);
+      }
+
+      // For POST (create) without tenant context, require tenant_id in body
+      // unless the route is exempt (e.g., /tenants, /auth, or operating on existing entity)
+      if (request.method === 'POST') {
+        const url = request.originalUrl || request.url;
+        if (!this.isExemptFromTenantIdCheck(url) && !request.body?.tenant_id) {
+          throw new BadRequestException(
+            'tenant_id wajib disertakan untuk operasi create oleh Superadmin',
+          );
+        }
+      }
+
+      // No header: bypass RLS entirely (cross-tenant access)
       return next.handle();
     }
 
@@ -114,6 +133,109 @@ export class TenantInterceptor implements NestInterceptor {
         }
       }),
     );
+  }
+
+  private executeWithSuperAdminTenantContext(
+    request: Request,
+    tenantContext: string,
+    next: CallHandler,
+  ): Observable<unknown> {
+    let client: PoolClient;
+    let released = false;
+
+    const safeCommitAndRelease = async () => {
+      if (released) return;
+      released = true;
+      await this.commitAndRelease(client);
+    };
+
+    const safeRollbackAndRelease = async () => {
+      if (released) return;
+      released = true;
+      await this.rollbackAndRelease(client);
+    };
+
+    return from(this.acquireAndSetSuperAdminTenantContext(request, tenantContext)).pipe(
+      switchMap((poolClient) => {
+        client = poolClient;
+        return next.handle();
+      }),
+      tap({
+        next: () => {
+          safeCommitAndRelease();
+        },
+        error: () => {
+          safeRollbackAndRelease();
+        },
+      }),
+      finalize(() => {
+        if (!released && client) {
+          this.rollbackAndRelease(client);
+          released = true;
+        }
+      }),
+    );
+  }
+
+  private async acquireAndSetSuperAdminTenantContext(
+    request: Request,
+    tenantContext: string,
+  ): Promise<PoolClient> {
+    // Validate UUID format
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (!uuidRegex.test(tenantContext)) {
+      throw new BadRequestException('Tenant tidak tersedia atau tidak aktif');
+    }
+
+    const pool = this.drizzleService.getPool();
+
+    // Verify tenant exists and is active
+    const tenantResult = await pool.query(
+      `SELECT id, is_active FROM tenant WHERE id = $1 LIMIT 1`,
+      [tenantContext],
+    );
+    if (!tenantResult.rows[0] || !tenantResult.rows[0].is_active) {
+      throw new BadRequestException('Tenant tidak tersedia atau tidak aktif');
+    }
+
+    // Acquire pool client and set tenant context
+    const client = await pool.connect();
+
+    try {
+      await client.query('BEGIN');
+
+      try {
+        await client.query(`SET LOCAL app.tenant_id = '${tenantContext}'`);
+      } catch (error) {
+        try {
+          await client.query('ROLLBACK');
+        } catch {
+          // Ignore rollback errors
+        }
+        client.release();
+        this.logger.error(`Failed to SET LOCAL for super admin tenant context: ${error}`);
+        throw new InternalServerErrorException('Konteks tenant tidak dapat disiapkan');
+      }
+
+      // Store the tenant-scoped client on the request for downstream use
+      (request as unknown as Record<string, unknown>)[TENANT_CLIENT_KEY] = client;
+
+      return client;
+    } catch (error) {
+      // Re-throw known HTTP exceptions
+      if (error instanceof BadRequestException || error instanceof InternalServerErrorException) {
+        throw error;
+      }
+      // If setup fails, rollback and release immediately
+      try {
+        await client.query('ROLLBACK');
+      } catch {
+        // Ignore rollback errors
+      }
+      client.release();
+      this.logger.error(`Failed to set super admin tenant context: ${error}`);
+      throw error;
+    }
   }
 
   private async acquireAndSetTenant(request: Request, user: RequestUser): Promise<PoolClient> {
@@ -196,5 +318,29 @@ export class TenantInterceptor implements NestInterceptor {
    */
   private escapeTenantIds(tenants: string[]): string {
     return tenants.map((t) => this.escapeUuid(t)).join(',');
+  }
+
+  /**
+   * Routes that are exempt from the tenant_id body requirement for SUPER_ADMIN POST requests.
+   * - /tenants: creating a tenant itself doesn't need tenant_id
+   * - /auth: authentication endpoints
+   * - URLs containing a UUID path segment: operating on existing entities (e.g., /users/:id/reset-password)
+   */
+  private isExemptFromTenantIdCheck(url: string): boolean {
+    // Strip query params for cleaner matching
+    const path = url.split('?')[0];
+
+    // Exempt known route prefixes
+    if (path.startsWith('/tenants') || path.startsWith('/auth')) {
+      return true;
+    }
+
+    // Exempt routes that contain a UUID segment (operating on existing entities, not creating new ones)
+    const uuidPattern = /\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i;
+    if (uuidPattern.test(path)) {
+      return true;
+    }
+
+    return false;
   }
 }

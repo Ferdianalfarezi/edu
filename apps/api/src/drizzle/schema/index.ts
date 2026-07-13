@@ -22,6 +22,9 @@ export * from './rpp';
 // Tagihan & Billing
 export * from './tagihan';
 
+// Audit Logging
+export * from './audit-log';
+
 // Notifikasi
 export * from './notifikasi';
 

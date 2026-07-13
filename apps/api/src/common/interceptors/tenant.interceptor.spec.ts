@@ -1,5 +1,11 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { CallHandler, ExecutionContext, ForbiddenException } from '@nestjs/common';
+import {
+  BadRequestException,
+  CallHandler,
+  ExecutionContext,
+  ForbiddenException,
+  InternalServerErrorException,
+} from '@nestjs/common';
 import { of, lastValueFrom, throwError } from 'rxjs';
 import { Role } from '@edu/shared';
 import { TenantInterceptor, TENANT_CLIENT_KEY } from './tenant.interceptor';
@@ -36,8 +42,18 @@ describe('TenantInterceptor', () => {
     interceptor = module.get<TenantInterceptor>(TenantInterceptor);
   });
 
-  function createMockContext(user?: RequestUser): ExecutionContext {
-    const request: Record<string, unknown> = {};
+  function createMockContext(
+    user?: RequestUser,
+    headers?: Record<string, string>,
+    options?: { method?: string; body?: Record<string, unknown>; url?: string },
+  ): ExecutionContext {
+    const request: Record<string, unknown> = {
+      headers: headers || {},
+      method: options?.method || 'GET',
+      body: options?.body || {},
+      originalUrl: options?.url || '/',
+      url: options?.url || '/',
+    };
     if (user) {
       request['user'] = user;
     }
@@ -174,7 +190,7 @@ describe('TenantInterceptor', () => {
     });
 
     it('should store the client on the request as TENANT_CLIENT_KEY', async () => {
-      const request: Record<string, unknown> = { user: staffUser };
+      const request: Record<string, unknown> = { user: staffUser, headers: {} };
       const context = {
         switchToHttp: () => ({
           getRequest: () => request,
@@ -271,6 +287,293 @@ describe('TenantInterceptor', () => {
       expect(mockClient.query).toHaveBeenCalledWith(
         `SET LOCAL app.tenant_id = 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee'`,
       );
+    });
+  });
+
+  describe('super_admin with X-Tenant-Context header', () => {
+    const validTenantId = 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee';
+
+    it('should scope to tenant when valid X-Tenant-Context header is provided', async () => {
+      mockPool.connect.mockResolvedValue(mockClient);
+      // Mock pool.query for tenant existence check (pool-level query, not client-level)
+      (mockDrizzleService.getPool as jest.Mock).mockReturnValue({
+        connect: mockPool.connect,
+        query: jest.fn().mockResolvedValue({
+          rows: [{ id: validTenantId, is_active: true }],
+        }),
+      });
+
+      const context = createMockContext(superAdminUser, {
+        'x-tenant-context': validTenantId,
+      });
+      const handler = createMockCallHandler('scoped-response');
+
+      const result = await lastValueFrom(interceptor.intercept(context, handler));
+
+      expect(result).toBe('scoped-response');
+      expect(mockClient.query).toHaveBeenCalledWith('BEGIN');
+      expect(mockClient.query).toHaveBeenCalledWith(`SET LOCAL app.tenant_id = '${validTenantId}'`);
+      expect(mockClient.query).toHaveBeenCalledWith('COMMIT');
+      expect(mockClient.release).toHaveBeenCalled();
+    });
+
+    it('should throw BadRequestException for invalid UUID format in header', async () => {
+      const context = createMockContext(superAdminUser, {
+        'x-tenant-context': 'not-a-valid-uuid',
+      });
+      const handler = createMockCallHandler();
+
+      await expect(lastValueFrom(interceptor.intercept(context, handler))).rejects.toThrow(
+        BadRequestException,
+      );
+      await expect(lastValueFrom(interceptor.intercept(context, handler))).rejects.toThrow(
+        'Tenant tidak tersedia atau tidak aktif',
+      );
+      expect(mockPool.connect).not.toHaveBeenCalled();
+    });
+
+    it('should throw BadRequestException when tenant does not exist', async () => {
+      (mockDrizzleService.getPool as jest.Mock).mockReturnValue({
+        connect: mockPool.connect,
+        query: jest.fn().mockResolvedValue({ rows: [] }),
+      });
+
+      const context = createMockContext(superAdminUser, {
+        'x-tenant-context': validTenantId,
+      });
+      const handler = createMockCallHandler();
+
+      await expect(lastValueFrom(interceptor.intercept(context, handler))).rejects.toThrow(
+        BadRequestException,
+      );
+      await expect(lastValueFrom(interceptor.intercept(context, handler))).rejects.toThrow(
+        'Tenant tidak tersedia atau tidak aktif',
+      );
+    });
+
+    it('should throw BadRequestException when tenant is inactive', async () => {
+      (mockDrizzleService.getPool as jest.Mock).mockReturnValue({
+        connect: mockPool.connect,
+        query: jest.fn().mockResolvedValue({
+          rows: [{ id: validTenantId, is_active: false }],
+        }),
+      });
+
+      const context = createMockContext(superAdminUser, {
+        'x-tenant-context': validTenantId,
+      });
+      const handler = createMockCallHandler();
+
+      await expect(lastValueFrom(interceptor.intercept(context, handler))).rejects.toThrow(
+        BadRequestException,
+      );
+      await expect(lastValueFrom(interceptor.intercept(context, handler))).rejects.toThrow(
+        'Tenant tidak tersedia atau tidak aktif',
+      );
+    });
+
+    it('should throw InternalServerErrorException when SET LOCAL fails', async () => {
+      (mockDrizzleService.getPool as jest.Mock).mockReturnValue({
+        connect: mockPool.connect,
+        query: jest.fn().mockResolvedValue({
+          rows: [{ id: validTenantId, is_active: true }],
+        }),
+      });
+
+      mockClient.query.mockImplementation((sql: string) => {
+        if (sql.startsWith('SET LOCAL')) {
+          return Promise.reject(new Error('SET LOCAL failed'));
+        }
+        return Promise.resolve();
+      });
+
+      const context = createMockContext(superAdminUser, {
+        'x-tenant-context': validTenantId,
+      });
+      const handler = createMockCallHandler();
+
+      await expect(lastValueFrom(interceptor.intercept(context, handler))).rejects.toThrow(
+        InternalServerErrorException,
+      );
+      await expect(lastValueFrom(interceptor.intercept(context, handler))).rejects.toThrow(
+        'Konteks tenant tidak dapat disiapkan',
+      );
+    });
+
+    it('should bypass RLS when no X-Tenant-Context header is present', async () => {
+      const context = createMockContext(superAdminUser);
+      const handler = createMockCallHandler('bypass-response');
+
+      const result = await lastValueFrom(interceptor.intercept(context, handler));
+
+      expect(result).toBe('bypass-response');
+      expect(mockPool.connect).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('super_admin POST create validation (tenant_id required)', () => {
+    it('should throw BadRequestException when SUPER_ADMIN does POST without tenant context and without tenant_id in body', () => {
+      const context = createMockContext(
+        superAdminUser,
+        {},
+        {
+          method: 'POST',
+          url: '/users',
+          body: { name: 'Test User', email: 'test@test.com' },
+        },
+      );
+      const handler = createMockCallHandler();
+
+      expect(() => interceptor.intercept(context, handler)).toThrow(BadRequestException);
+      expect(() => interceptor.intercept(context, handler)).toThrow(
+        'tenant_id wajib disertakan untuk operasi create oleh Superadmin',
+      );
+    });
+
+    it('should allow POST when tenant_id is present in body', async () => {
+      const context = createMockContext(
+        superAdminUser,
+        {},
+        {
+          method: 'POST',
+          url: '/users',
+          body: { name: 'Test User', tenant_id: 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee' },
+        },
+      );
+      const handler = createMockCallHandler('created');
+
+      const result = await lastValueFrom(interceptor.intercept(context, handler));
+
+      expect(result).toBe('created');
+      expect(mockPool.connect).not.toHaveBeenCalled();
+    });
+
+    it('should allow POST when X-Tenant-Context header is set', async () => {
+      const validTenantId = 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee';
+      (mockDrizzleService.getPool as jest.Mock).mockReturnValue({
+        connect: mockPool.connect,
+        query: jest.fn().mockResolvedValue({
+          rows: [{ id: validTenantId, is_active: true }],
+        }),
+      });
+
+      const context = createMockContext(
+        superAdminUser,
+        {
+          'x-tenant-context': validTenantId,
+        },
+        {
+          method: 'POST',
+          url: '/users',
+          body: { name: 'Test User' },
+        },
+      );
+      const handler = createMockCallHandler('scoped-create');
+
+      const result = await lastValueFrom(interceptor.intercept(context, handler));
+
+      expect(result).toBe('scoped-create');
+    });
+
+    it('should exempt /tenants route from tenant_id check', async () => {
+      const context = createMockContext(
+        superAdminUser,
+        {},
+        {
+          method: 'POST',
+          url: '/tenants',
+          body: { nama: 'New School' },
+        },
+      );
+      const handler = createMockCallHandler('tenant-created');
+
+      const result = await lastValueFrom(interceptor.intercept(context, handler));
+
+      expect(result).toBe('tenant-created');
+    });
+
+    it('should exempt /auth routes from tenant_id check', async () => {
+      const context = createMockContext(
+        superAdminUser,
+        {},
+        {
+          method: 'POST',
+          url: '/auth/login',
+          body: { email: 'admin@test.com', password: 'pass' },
+        },
+      );
+      const handler = createMockCallHandler('login-response');
+
+      const result = await lastValueFrom(interceptor.intercept(context, handler));
+
+      expect(result).toBe('login-response');
+    });
+
+    it('should exempt routes with UUID path segments (operating on existing entities)', async () => {
+      const context = createMockContext(
+        superAdminUser,
+        {},
+        {
+          method: 'POST',
+          url: '/users/11111111-1111-1111-1111-111111111111/reset-password',
+          body: {},
+        },
+      );
+      const handler = createMockCallHandler('password-reset');
+
+      const result = await lastValueFrom(interceptor.intercept(context, handler));
+
+      expect(result).toBe('password-reset');
+    });
+
+    it('should not apply validation for non-POST methods (GET, PATCH, DELETE)', async () => {
+      const context = createMockContext(
+        superAdminUser,
+        {},
+        {
+          method: 'GET',
+          url: '/users',
+          body: {},
+        },
+      );
+      const handler = createMockCallHandler('get-response');
+
+      const result = await lastValueFrom(interceptor.intercept(context, handler));
+
+      expect(result).toBe('get-response');
+    });
+
+    it('should reject POST to non-exempt route with empty body', () => {
+      const context = createMockContext(
+        superAdminUser,
+        {},
+        {
+          method: 'POST',
+          url: '/siswa',
+          body: {},
+        },
+      );
+      const handler = createMockCallHandler();
+
+      expect(() => interceptor.intercept(context, handler)).toThrow(BadRequestException);
+      expect(() => interceptor.intercept(context, handler)).toThrow(
+        'tenant_id wajib disertakan untuk operasi create oleh Superadmin',
+      );
+    });
+
+    it('should reject POST to non-exempt route with null body', () => {
+      const context = createMockContext(
+        superAdminUser,
+        {},
+        {
+          method: 'POST',
+          url: '/kelas',
+          body: undefined as unknown as Record<string, unknown>,
+        },
+      );
+      const handler = createMockCallHandler();
+
+      expect(() => interceptor.intercept(context, handler)).toThrow(BadRequestException);
     });
   });
 

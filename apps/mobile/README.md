@@ -1,6 +1,6 @@
-# Edu Mobile App
+# Teman Sekolah Mobile App
 
-Flutter mobile application for the Edu School Management system.
+Flutter mobile application for the Teman Sekolah system.
 
 ## Roles
 

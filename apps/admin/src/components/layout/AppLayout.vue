@@ -3,6 +3,7 @@ import { ref, computed } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useAuthStore } from '@/stores/auth';
 import { Role } from '@edu/shared';
+import TenantContextSwitcher from '@/components/layout/TenantContextSwitcher.vue';
 
 const route = useRoute();
 const router = useRouter();
@@ -120,6 +121,12 @@ const navigation = computed<NavGroup[]>(() => {
           icon: 'user-plus',
           roles: [Role.ADMIN, Role.SUPER_ADMIN],
         },
+        {
+          name: 'Audit Log',
+          path: '/audit-logs',
+          icon: 'file-text',
+          roles: [Role.SUPER_ADMIN, Role.ADMIN, Role.BENDAHARA],
+        },
         { name: 'Tenant', path: '/tenants', icon: 'globe', roles: [Role.SUPER_ADMIN] },
       ],
     },
@@ -184,13 +191,13 @@ function toggleSidebar() {
       <div class="flex items-center h-14 px-4 border-b border-border shrink-0">
         <div class="flex items-center gap-2.5 overflow-hidden">
           <div class="w-8 h-8 rounded-lg bg-primary-600 flex items-center justify-center shrink-0">
-            <span class="text-white font-semibold text-sm">E</span>
+            <span class="text-white font-semibold text-sm">TS</span>
           </div>
           <span
             v-if="!sidebarCollapsed"
             class="font-semibold text-text-primary text-sm whitespace-nowrap"
           >
-            Edu Admin
+            Teman Sekolah
           </span>
         </div>
       </div>
@@ -471,6 +478,7 @@ function toggleSidebar() {
         </div>
 
         <div class="flex items-center gap-2">
+          <TenantContextSwitcher />
           <span
             v-if="authStore.user?.tenants?.length"
             class="text-xs text-text-tertiary hidden sm:block"

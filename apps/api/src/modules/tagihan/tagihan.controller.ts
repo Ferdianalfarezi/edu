@@ -20,6 +20,7 @@ import { RolesGuard } from '@/common/guards/roles.guard';
 import { Roles } from '@/common/decorators/roles.decorator';
 import { TenantId } from '@/common/decorators/tenant-id.decorator';
 import { CurrentUser } from '@/common/decorators/current-user.decorator';
+import { Auditable, AuditInterceptor } from '@/modules/audit-log';
 import { TagihanService } from './tagihan.service';
 import {
   GenerateTagihanDto,
@@ -59,6 +60,14 @@ export class TagihanController {
    */
   @Post('generate')
   @Roles(Role.BENDAHARA, Role.ADMIN)
+  @Auditable({
+    entityType: 'tagihan',
+    action: 'create',
+    entityIdSource: 'response.id',
+    strictMode: true,
+    excludeFields: ['bukti_transfer_url'],
+  })
+  @UseInterceptors(AuditInterceptor)
   async generateTagihan(@TenantId() tenantId: string, @Body() dto: GenerateTagihanDto) {
     const result = await this.tagihanService.generateTagihan(tenantId, dto);
     return {
@@ -176,6 +185,14 @@ export class TagihanController {
    */
   @Patch(':id/verify')
   @Roles(Role.BENDAHARA, Role.ADMIN)
+  @Auditable({
+    entityType: 'pembayaran',
+    action: 'update',
+    entityIdSource: 'params.id',
+    strictMode: true,
+    excludeFields: ['bukti_transfer_url'],
+  })
+  @UseInterceptors(AuditInterceptor)
   async verifyPayment(
     @CurrentUser('id') bendaharaId: string,
     @TenantId() tenantId: string,
@@ -194,7 +211,14 @@ export class TagihanController {
    */
   @Post(':id/upload-bukti')
   @Roles(Role.ORANG_TUA)
-  @UseInterceptors(FileInterceptor('file'))
+  @Auditable({
+    entityType: 'pembayaran',
+    action: 'create',
+    entityIdSource: 'response.id',
+    strictMode: true,
+    excludeFields: ['bukti_transfer_url'],
+  })
+  @UseInterceptors(AuditInterceptor, FileInterceptor('file'))
   async uploadBuktiTransfer(
     @CurrentUser('id') userId: string,
     @Param('id', ParseUUIDPipe) tagihanId: string,
@@ -222,6 +246,14 @@ export class TagihanController {
    */
   @Post(':id/manual-payment')
   @Roles(Role.BENDAHARA, Role.ADMIN)
+  @Auditable({
+    entityType: 'pembayaran',
+    action: 'create',
+    entityIdSource: 'response.id',
+    strictMode: true,
+    excludeFields: ['bukti_transfer_url'],
+  })
+  @UseInterceptors(AuditInterceptor)
   async recordManualPayment(
     @CurrentUser('id') bendaharaId: string,
     @TenantId() tenantId: string,
@@ -240,6 +272,14 @@ export class TagihanController {
    */
   @Delete(':id')
   @Roles(Role.BENDAHARA, Role.ADMIN)
+  @Auditable({
+    entityType: 'tagihan',
+    action: 'delete',
+    entityIdSource: 'params.id',
+    strictMode: true,
+    excludeFields: ['bukti_transfer_url'],
+  })
+  @UseInterceptors(AuditInterceptor)
   async deleteTagihan(
     @CurrentUser('id') bendaharaId: string,
     @TenantId() tenantId: string,
@@ -258,6 +298,14 @@ export class TagihanController {
    */
   @Patch(':id')
   @Roles(Role.BENDAHARA, Role.ADMIN)
+  @Auditable({
+    entityType: 'tagihan',
+    action: 'update',
+    entityIdSource: 'params.id',
+    strictMode: true,
+    excludeFields: ['bukti_transfer_url'],
+  })
+  @UseInterceptors(AuditInterceptor)
   async editTagihan(
     @CurrentUser('id') bendaharaId: string,
     @TenantId() tenantId: string,
