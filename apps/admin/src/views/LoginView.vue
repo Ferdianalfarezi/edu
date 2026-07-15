@@ -52,14 +52,18 @@ async function handleLogin() {
       style="background-image: url('/bg.webp'); background-size: cover; background-position: center"
     >
       <!-- Dark overlay for text readability -->
-      <div class="absolute inset-0 bg-black/50" />
+      <div class="absolute inset-0 bg-white/70 backdrop-blur-sm" />
 
-      <div class="relative z-10 max-w-md text-white">
-        <img src="/logo-text.png" alt="Teman Sekolah" class="h-10 mb-8" />
+      <div class="relative z-10 max-w-md text-black">
+        <img
+          src="/logo-text.png"
+          alt="Teman Sekolah"
+          class="h-18 w-64 object-right object-cover -ml-8 mb-8"
+        />
         <h1 class="text-3xl font-semibold leading-tight mb-4">
           Kelola sekolah dengan lebih efisien
         </h1>
-        <p class="text-white/80 text-base leading-relaxed">
+        <p class="text-base leading-relaxed">
           Absensi, pembayaran SPP, rapor, dan komunikasi orang tua — semua dalam satu platform
           terintegrasi.
         </p>
@@ -71,7 +75,7 @@ async function handleLogin() {
       <div class="w-full max-w-sm">
         <!-- Mobile logo -->
         <div class="lg:hidden flex items-center gap-2.5 mb-8">
-          <img src="/logo-text.png" alt="Teman Sekolah" class="h-8" />
+          <img src="/logo-text.png" alt="Teman Sekolah" class="h-16 w-36 -ml-4 object-cover" />
         </div>
 
         <div class="mb-8">

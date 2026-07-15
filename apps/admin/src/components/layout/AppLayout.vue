@@ -188,16 +188,13 @@ function toggleSidebar() {
       ]"
     >
       <!-- Logo / Brand -->
-      <div class="flex items-center h-14 px-4 border-b border-border shrink-0">
-        <div class="flex items-center gap-2.5 overflow-hidden">
-          <img src="/logo.png" alt="Teman Sekolah" class="w-8 h-8 rounded-lg shrink-0" />
-          <span
-            v-if="!sidebarCollapsed"
-            class="font-semibold text-text-primary text-sm whitespace-nowrap"
-          >
-            Teman Sekolah
-          </span>
-        </div>
+      <div class="flex items-center h-20 px-4 border-b border-border shrink-0">
+        <img
+          :src="sidebarCollapsed ? '/logo.png' : '/logo-text.png'"
+          alt="Teman Sekolah"
+          class="w-34 h-8 object-cover rounded-lg shrink-0 transition-all"
+          :class="!sidebarCollapsed ? '-ml-2' : ''"
+        />
       </div>
 
       <!-- Navigation -->
@@ -440,7 +437,7 @@ function toggleSidebar() {
     <div class="flex-1 flex flex-col overflow-hidden">
       <!-- Top bar -->
       <header
-        class="h-14 flex items-center justify-between px-4 lg:px-6 bg-white border-b border-border shrink-0"
+        class="h-20 flex items-center justify-between px-4 lg:px-6 bg-white border-b border-border shrink-0"
       >
         <div class="flex items-center gap-3">
           <!-- Mobile hamburger -->
