@@ -95,8 +95,14 @@ const canUnsubmit = computed(() => {
 
 async function fetchMapel() {
   try {
-    const { data } = await api.get<{ data: MapelOption[] }>('/rapor/mata-pelajaran');
-    mapelOptions.value = data.data;
+    const { data } = await api.get<{
+      data: {
+        mapel_id: string;
+        mapel_nama: string;
+        kelas: { kelas_id: string; kelas_nama: string }[];
+      }[];
+    }>('/rapor/mata-pelajaran');
+    mapelOptions.value = data.data.map((m) => ({ id: m.mapel_id, nama: m.mapel_nama }));
   } catch (err) {
     console.error('Failed to fetch mata pelajaran:', err);
   }
