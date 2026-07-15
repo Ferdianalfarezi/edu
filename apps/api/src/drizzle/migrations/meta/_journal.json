@@ -29,6 +29,13 @@
       "when": 1783931868709,
       "tag": "0003_equal_gargoyle",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "6",
+      "when": 1784101136181,
+      "tag": "0004_striped_silver_fox",
+      "breakpoints": true
     }
   ]
 }

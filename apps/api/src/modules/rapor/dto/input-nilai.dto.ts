@@ -1,6 +1,7 @@
 import {
   IsArray,
   IsEnum,
+  IsIn,
   IsNotEmpty,
   IsOptional,
   IsString,
@@ -50,7 +51,10 @@ export class InputNilaiDto {
   @IsUUID('4', { message: 'mata_pelajaran_id harus berupa UUID' })
   mata_pelajaran_id: string;
 
-  @IsUUID('4', { message: 'periode_rapor_id harus berupa UUID' })
+  @IsIn(['uts_semester_1', 'semester_1', 'uts_semester_2', 'semester_2'], {
+    message:
+      'periode_rapor_id harus salah satu dari: uts_semester_1, semester_1, uts_semester_2, semester_2',
+  })
   periode_rapor_id: string;
 
   @IsArray({ message: 'nilai harus berupa array' })

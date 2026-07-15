@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, watch } from 'vue';
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue';
 import { api } from '@/api/client';
 import { PeriodeRapor } from '@edu/shared';
 import { PageHeader, SearchSelect } from '@/components/ui';
@@ -44,8 +44,12 @@ const nilaiData = ref<SiswaNilai[]>([]);
 
 const loadingNilai = ref(false);
 const saving = ref(false);
+const unsubmitting = ref(false);
 const error = ref('');
 const successMessage = ref('');
+
+const isDirty = ref(false);
+let autoSaveTimer: ReturnType<typeof setInterval> | null = null;
 
 const periodeOptions: SelectOption[] = [
   { value: PeriodeRapor.UTS_SEMESTER_1, label: 'UTS Semester 1' },
@@ -82,6 +86,10 @@ const canSubmit = computed(() => {
 });
 
 const isRaporFinalized = computed(() => {
+  return nilaiData.value.length > 0 && nilaiData.value.every((s) => s.status === 'submitted');
+});
+
+const canUnsubmit = computed(() => {
   return nilaiData.value.length > 0 && nilaiData.value.every((s) => s.status === 'submitted');
 });
 
@@ -127,11 +135,33 @@ async function fetchNilai() {
     });
 
     const { data } = await api.get<{
-      data: { siswa: SiswaNilai[]; komponen: KomponenPenilaian[] };
+      data: {
+        kelas_id: string;
+        kelas_nama: string;
+        mapel_id: string;
+        mapel_nama: string;
+        periode: string;
+        komponen_penilaian: KomponenPenilaian[];
+        students: {
+          siswa_id: string;
+          siswa_nama: string;
+          komponen_nilai: { komponen_id: string; nilai: string | number }[] | null;
+          capaian_pembelajaran: string | null;
+          status: 'draft' | 'submitted' | null;
+        }[];
+      };
     }>(`/rapor/nilai?${params.toString()}`);
 
-    nilaiData.value = data.data.siswa;
-    komponenList.value = data.data.komponen;
+    komponenList.value = data.data.komponen_penilaian;
+    nilaiData.value = data.data.students.map((s) => ({
+      siswa_id: s.siswa_id,
+      siswa_nama: s.siswa_nama,
+      komponen:
+        s.komponen_nilai ??
+        data.data.komponen_penilaian.map((k) => ({ komponen_id: k.id, nilai: null })),
+      capaian_pembelajaran: s.capaian_pembelajaran ?? '',
+      status: s.status ?? 'draft',
+    }));
   } catch (err) {
     error.value = err.response?.data?.message || 'Gagal memuat data nilai.';
   } finally {
@@ -170,11 +200,33 @@ async function saveNilai(status: 'draft' | 'submitted') {
         ? 'Nilai berhasil disimpan sebagai draft.'
         : 'Nilai berhasil di-submit ke wali kelas.';
 
+    isDirty.value = false;
     await fetchNilai();
   } catch (err) {
     error.value = err.response?.data?.message || 'Gagal menyimpan nilai.';
   } finally {
     saving.value = false;
+  }
+}
+
+async function unsubmitNilai() {
+  unsubmitting.value = true;
+  error.value = '';
+  successMessage.value = '';
+
+  try {
+    await api.post('/rapor/nilai/unsubmit', {
+      kelas_id: selectedKelas.value,
+      mata_pelajaran_id: selectedMapel.value,
+      periode_rapor_id: selectedPeriode.value,
+    });
+
+    successMessage.value = 'Nilai berhasil ditarik kembali ke draft.';
+    await fetchNilai();
+  } catch (err: any) {
+    error.value = err.response?.data?.message || 'Gagal menarik kembali nilai.';
+  } finally {
+    unsubmitting.value = false;
   }
 }
 
@@ -209,8 +261,46 @@ watch([selectedKelas, selectedPeriode], () => {
   fetchNilai();
 });
 
+watch(
+  nilaiData,
+  () => {
+    isDirty.value = true;
+  },
+  { deep: true },
+);
+
 onMounted(() => {
   fetchMapel();
+  autoSaveTimer = setInterval(async () => {
+    if (isDirty.value && nilaiData.value.length > 0 && !saving.value && !isRaporFinalized.value) {
+      try {
+        await api.post('/rapor/nilai', {
+          kelas_id: selectedKelas.value,
+          mata_pelajaran_id: selectedMapel.value,
+          periode_rapor_id: selectedPeriode.value,
+          nilai: nilaiData.value.map((siswa) => ({
+            siswa_id: siswa.siswa_id,
+            komponen: siswa.komponen.map((k) => ({
+              komponen_id: k.komponen_id,
+              nilai: k.nilai,
+            })),
+            capaian_pembelajaran: siswa.capaian_pembelajaran || undefined,
+          })),
+          status: 'draft',
+        });
+        isDirty.value = false;
+      } catch {
+        // Silently fail auto-save — don't disrupt user with errors
+      }
+    }
+  }, 30000);
+});
+
+onUnmounted(() => {
+  if (autoSaveTimer) {
+    clearInterval(autoSaveTimer);
+    autoSaveTimer = null;
+  }
 });
 </script>
 
@@ -400,7 +490,22 @@ onMounted(() => {
       </div>
 
       <!-- Action buttons -->
-      <div v-if="!isRaporFinalized" class="flex justify-end gap-3 mt-4 pt-4 border-t border-border">
+      <div v-if="canUnsubmit" class="flex justify-end gap-3 mt-4 pt-4 border-t border-border">
+        <button
+          class="px-3 py-2 text-sm font-medium text-warning-700 bg-warning-50 border border-warning-200 rounded-lg hover:bg-warning-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          :disabled="unsubmitting"
+          @click="unsubmitNilai"
+        >
+          {{ unsubmitting ? 'Menarik kembali...' : 'Tarik Kembali' }}
+        </button>
+      </div>
+      <div
+        v-if="!isRaporFinalized"
+        class="flex items-center justify-end gap-3 mt-4 pt-4 border-t border-border"
+      >
+        <span v-if="nilaiData.length > 0 && !isRaporFinalized" class="text-xs text-text-tertiary">
+          Auto-save aktif (30 detik)
+        </span>
         <button
           class="px-3 py-2 text-sm font-medium text-text-secondary bg-white border border-border rounded-lg hover:bg-surface-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           :disabled="saving"

@@ -74,12 +74,16 @@ export class RaporFinalizationService {
    * Finalize rapor for a class+period.
    *
    * Steps:
-   * 1. Validate wali_kelas ownership
-   * 2. Validate all mapel submitted
-   * 3. Save P5 + catatan wali kelas (if provided)
-   * 4. Calculate rata_rata and peringkat
-   * 5. Set rapor.status = 'final'
-   * 6. Send notification to parents
+   * 1. Validate wali_kelas ownership (outside transaction — read-only)
+   * 2. START TRANSACTION with SELECT ... FOR UPDATE (row-level lock)
+   * 3. Validate all mapel submitted
+   * 4. Save P5 + catatan wali kelas (if provided)
+   * 5. Calculate rata_rata and peringkat
+   * 6. Set rapor.status = 'final'
+   * 7. COMMIT TRANSACTION
+   * 8. Send notification to parents (outside transaction — idempotent)
+   *
+   * Requirements: 2.6 — prevents concurrent finalization via pessimistic locking
    */
   async finalizeRapor(
     tenantId: string,
@@ -88,71 +92,100 @@ export class RaporFinalizationService {
     periodeId: string,
     dto: FinalizeRaporDto,
   ): Promise<FinalizeResult> {
-    // 1. Validate period
+    // 1. Validate period (outside transaction — read-only validation)
     this.validatePeriode(periodeId);
 
-    // 2. Validate wali kelas
+    // 2. Validate wali kelas (outside transaction — read-only validation)
     await this.validateWaliKelas(tenantId, userId, kelasId);
 
-    // 3. Get or create rapor record
+    // 3. Get active tahun ajaran (outside transaction — read-only)
     const activeTa = await this.getActiveTahunAjaran(tenantId);
     if (!activeTa) {
       throw new BadRequestException('Tidak ada tahun ajaran aktif');
     }
 
-    const raporRecord = await this.getOrCreateRapor(tenantId, kelasId, activeTa.id, periodeId);
+    // 4. Execute finalization inside a transaction with row-level lock
+    const result = await this.db.transaction(async (tx) => {
+      // SELECT FOR UPDATE acquires a row-level lock on the rapor row.
+      // A second concurrent request will block here until the first transaction commits/rolls back.
+      const raporRows = await tx.execute(
+        sql`SELECT id, status FROM rapor WHERE kelas_id = ${kelasId} AND tahun_ajaran_id = ${activeTa.id} AND periode = ${periodeId} AND tenant_id = ${tenantId} FOR UPDATE`,
+      );
 
-    // Already final? reject
-    if (raporRecord.status === 'final') {
-      throw new BadRequestException('Rapor sudah dalam status final');
-    }
+      let raporRecord: { id: string; status: string };
 
-    // 4. Validate all mapel submitted (Req 38.1, 38.2)
-    const mapelStatuses = await this.getMapelSubmissionStatuses(
-      tenantId,
-      kelasId,
-      raporRecord.id,
-      activeTa.id,
-    );
-    const missingMapel = mapelStatuses.filter((m) => !m.submitted);
-    if (missingMapel.length > 0) {
-      throw new BadRequestException({
-        message: 'Tidak dapat memfinalisasi rapor. Beberapa mata pelajaran belum di-submit.',
-        missing_mapel: missingMapel.map((m) => ({
-          mata_pelajaran_id: m.mata_pelajaran_id,
-          mata_pelajaran_nama: m.mata_pelajaran_nama,
-        })),
-      });
-    }
+      if ((raporRows as any).rows.length === 0) {
+        // Create new rapor inside the transaction
+        const newRapor = await tx
+          .insert(rapor)
+          .values({
+            tenantId,
+            kelasId,
+            tahunAjaranId: activeTa.id,
+            periode: periodeId as any,
+            status: 'draft',
+          })
+          .returning({ id: rapor.id, status: rapor.status });
+        raporRecord = newRapor[0];
+      } else {
+        raporRecord = (raporRows as any).rows[0] as { id: string; status: string };
+      }
 
-    // 5. Save P5 + catatan wali kelas if provided (Req 38.4, 38.5)
-    if (dto.student_notes && dto.student_notes.length > 0) {
-      await this.saveStudentNotes(tenantId, raporRecord.id, dto.student_notes);
-    }
+      // Already final? reject (second concurrent request will see this after lock is released)
+      if (raporRecord.status === 'final') {
+        throw new BadRequestException('Rapor sudah dalam status final');
+      }
 
-    // 6. Calculate rata_rata and peringkat (Req 38.6)
-    const rankings = await this.calculateRankings(tenantId, raporRecord.id, kelasId);
+      // Validate all mapel submitted (Req 38.1, 38.2) — inside tx for consistency
+      const mapelStatuses = await this.getMapelSubmissionStatuses(
+        tenantId,
+        kelasId,
+        raporRecord.id,
+        activeTa.id,
+        tx,
+      );
+      const missingMapel = mapelStatuses.filter((m) => !m.submitted);
+      if (missingMapel.length > 0) {
+        throw new BadRequestException({
+          message: 'Tidak dapat memfinalisasi rapor. Beberapa mata pelajaran belum di-submit.',
+          missing_mapel: missingMapel.map((m) => ({
+            mata_pelajaran_id: m.mata_pelajaran_id,
+            mata_pelajaran_nama: m.mata_pelajaran_nama,
+          })),
+        });
+      }
 
-    // 7. Update rapor status to final (Req 38.7)
-    await this.db
-      .update(rapor)
-      .set({
-        status: 'final',
-        finalizedBy: userId,
-        finalizedAt: new Date(),
-        updatedAt: new Date(),
-      })
-      .where(eq(rapor.id, raporRecord.id));
+      // Save P5 + catatan wali kelas if provided (Req 38.4, 38.5) — inside tx
+      if (dto.student_notes && dto.student_notes.length > 0) {
+        await this.saveStudentNotes(tenantId, raporRecord.id, dto.student_notes, tx);
+      }
 
-    // 8. Send notification to parents (Req 38.10)
+      // Calculate rata_rata and peringkat (Req 38.6) — inside tx
+      const rankings = await this.calculateRankings(tenantId, raporRecord.id, kelasId, tx);
+
+      // Update rapor status to final (Req 38.7) — inside tx
+      await tx
+        .update(rapor)
+        .set({
+          status: 'final',
+          finalizedBy: userId,
+          finalizedAt: new Date(),
+          updatedAt: new Date(),
+        })
+        .where(eq(rapor.id, raporRecord.id));
+
+      return {
+        rapor_id: raporRecord.id,
+        status: 'final' as const,
+        total_students: rankings.length,
+        rankings,
+      };
+    });
+
+    // 5. Send notification to parents (outside transaction — idempotent, Req 38.10)
     await this.sendFinalizationNotification(tenantId, kelasId, periodeId);
 
-    return {
-      rapor_id: raporRecord.id,
-      status: 'final',
-      total_students: rankings.length,
-      rankings,
-    };
+    return result;
   }
 
   // ═══════════════════════════════════════════════════════════════════
@@ -324,9 +357,10 @@ export class RaporFinalizationService {
     kelasId: string,
     raporId: string,
     tahunAjaranId: string,
+    dbOrTx: any = this.db,
   ): Promise<MapelSubmissionStatus[]> {
     // Get all mapel scheduled for this class (distinct mapel from jadwal)
-    const mapelRows = await this.db
+    const mapelRows = await dbOrTx
       .select({
         mapelId: jadwalPelajaran.mataPelajaranId,
         mapelNama: mataPelajaran.nama,
@@ -355,7 +389,7 @@ export class RaporFinalizationService {
     }
 
     // Get count of active students in kelas
-    const activeStudents = await this.db
+    const activeStudents = await dbOrTx
       .select({ id: siswa.id })
       .from(siswa)
       .where(
@@ -377,7 +411,7 @@ export class RaporFinalizationService {
     const results: MapelSubmissionStatus[] = [];
 
     for (const [mapelId, mapelNama] of uniqueMapel) {
-      const submittedCount = await this.db
+      const submittedCount = await dbOrTx
         .select({ count: sql<number>`count(*)` })
         .from(raporNilai)
         .where(
@@ -408,6 +442,7 @@ export class RaporFinalizationService {
     tenantId: string,
     raporId: string,
     notes: { siswa_id: string; p5_deskripsi?: any[]; catatan_wali_kelas?: string }[],
+    dbOrTx: any = this.db,
   ): Promise<void> {
     for (const note of notes) {
       // Update all rapor_nilai entries for this student in this rapor
@@ -422,7 +457,7 @@ export class RaporFinalizationService {
         updateData.catatanWaliKelas = note.catatan_wali_kelas;
       }
 
-      await this.db
+      await dbOrTx
         .update(raporNilai)
         .set(updateData)
         .where(
@@ -445,9 +480,10 @@ export class RaporFinalizationService {
     tenantId: string,
     raporId: string,
     kelasId: string,
+    dbOrTx: any = this.db,
   ): Promise<{ siswa_id: string; siswa_nama: string; rata_rata: number; peringkat: number }[]> {
     // Get all rapor_nilai for this rapor
-    const nilaiRows = await this.db
+    const nilaiRows = await dbOrTx
       .select({
         siswaId: raporNilai.siswaId,
         komponenNilai: raporNilai.komponenNilai,
@@ -455,17 +491,31 @@ export class RaporFinalizationService {
       .from(raporNilai)
       .where(and(eq(raporNilai.raporId, raporId), eq(raporNilai.tenantId, tenantId)));
 
-    // Get komponen penilaian to identify "angka" type components
-    const komponenRows = await this.db
-      .select({ id: komponenPenilaian.id, tipe: komponenPenilaian.tipe })
+    // Default huruf-to-numeric mapping for ranking calculation
+    const HURUF_TO_NUMERIC: Record<string, number> = { A: 4, B: 3, C: 2, D: 1, E: 0 };
+
+    // Get komponen penilaian to identify type and custom bobot_huruf
+    const komponenRows = await dbOrTx
+      .select({
+        id: komponenPenilaian.id,
+        tipe: komponenPenilaian.tipe,
+        bobotHuruf: komponenPenilaian.bobotHuruf,
+      })
       .from(komponenPenilaian)
       .where(eq(komponenPenilaian.tenantId, tenantId));
 
-    const angkaKomponenIds = new Set(
-      komponenRows.filter((k) => k.tipe === 'angka').map((k) => k.id),
+    // Build a map of komponen id → { tipe, bobotHuruf } (includes angka and huruf, skips deskripsi in loop)
+    const komponenMap = new Map<
+      string,
+      { tipe: string; bobotHuruf: Record<string, number> | null }
+    >(
+      komponenRows.map((k: any) => [
+        k.id,
+        { tipe: k.tipe, bobotHuruf: k.bobotHuruf as Record<string, number> | null },
+      ]),
     );
 
-    // Calculate rata_rata per student: average of ALL angka komponen values across ALL subjects
+    // Calculate rata_rata per student: average of ALL angka + huruf komponen values across ALL subjects
     const studentTotals = new Map<string, { sum: number; count: number }>();
 
     for (const row of nilaiRows) {
@@ -473,10 +523,20 @@ export class RaporFinalizationService {
       if (!Array.isArray(komponenArr)) continue;
 
       for (const item of komponenArr) {
-        if (!angkaKomponenIds.has(item.komponen_id)) continue;
+        const def = komponenMap.get(item.komponen_id);
+        if (!def) continue;
 
-        const numVal = typeof item.nilai === 'string' ? parseFloat(item.nilai) : item.nilai;
-        if (isNaN(numVal)) continue;
+        let numVal: number;
+        if (def.tipe === 'angka') {
+          numVal = typeof item.nilai === 'string' ? parseFloat(item.nilai) : item.nilai;
+          if (isNaN(numVal)) continue;
+        } else if (def.tipe === 'huruf') {
+          // Use custom bobot_huruf mapping if exists, otherwise use default
+          const mapping = def.bobotHuruf ?? HURUF_TO_NUMERIC;
+          numVal = mapping[String(item.nilai).toUpperCase()] ?? 0;
+        } else {
+          continue; // skip deskripsi
+        }
 
         const existing = studentTotals.get(row.siswaId) ?? { sum: 0, count: 0 };
         existing.sum += numVal;
@@ -486,14 +546,14 @@ export class RaporFinalizationService {
     }
 
     // Get student names
-    const activeStudents = await this.db
+    const activeStudents = await dbOrTx
       .select({ id: siswa.id, nama: siswa.nama })
       .from(siswa)
       .where(
         and(eq(siswa.kelasId, kelasId), eq(siswa.tenantId, tenantId), eq(siswa.status, 'aktif')),
       );
 
-    const studentNameMap = new Map(activeStudents.map((s) => [s.id, s.nama]));
+    const studentNameMap = new Map<string, string>(activeStudents.map((s: any) => [s.id, s.nama]));
 
     // Calculate averages
     const studentAverages: { siswa_id: string; siswa_nama: string; rata_rata: number }[] = [];
@@ -532,7 +592,7 @@ export class RaporFinalizationService {
 
     // Persist rata_rata and peringkat to rapor_nilai
     for (const ranking of rankings) {
-      await this.db
+      await dbOrTx
         .update(raporNilai)
         .set({
           rataRata: String(ranking.rata_rata),

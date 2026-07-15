@@ -59,6 +59,7 @@ export const komponenPenilaian = pgTable('komponen_penilaian', {
   isWajib: boolean('is_wajib').default(true),
   urutan: integer('urutan').default(0),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
+  bobotHuruf: jsonb('bobot_huruf'),
 });
 
 /**
@@ -81,6 +82,7 @@ export const rapor = pgTable(
     finalizedAt: timestamp('finalized_at', { withTimezone: true }),
     createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow(),
+    deadline: timestamp('deadline', { withTimezone: true }),
   },
   (table) => ({
     uniqueKelasAjaranPeriode: unique('rapor_kelas_ajaran_periode_unique').on(
@@ -120,5 +122,56 @@ export const raporNilai = pgTable(
   (table) => ({
     /** Composite index for rapor grade lookup by rapor and student (Requirements: 35.1) */
     raporSiswaIdx: index('idx_rapor_nilai_rapor').on(table.raporId, table.siswaId),
+    /** Unique constraint for bulk upsert ON CONFLICT support (Requirements: 2.2, 2.7) */
+    uniqueRaporSiswaMapelTenant: unique('rapor_nilai_upsert_unique').on(
+      table.raporId,
+      table.siswaId,
+      table.mataPelajaranId,
+      table.tenantId,
+    ),
+  }),
+);
+
+/**
+ * rapor_nilai_audit — Audit trail for grade changes.
+ * Records who changed what value, when, and what the old/new values were.
+ *
+ * Requirements: 2.5
+ */
+export const raporNilaiAudit = pgTable('rapor_nilai_audit', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  tenantId: uuid('tenant_id').notNull(),
+  raporNilaiId: uuid('rapor_nilai_id').notNull(),
+  userId: uuid('user_id').notNull(),
+  action: varchar('action', { length: 10 }).notNull(), // 'insert' | 'update'
+  siswaId: uuid('siswa_id').notNull(),
+  mataPelajaranId: uuid('mata_pelajaran_id').notNull(),
+  komponenId: uuid('komponen_id'),
+  oldValue: text('old_value'),
+  newValue: text('new_value').notNull(),
+  changedAt: timestamp('changed_at', { withTimezone: true }).defaultNow(),
+});
+
+/**
+ * komponen_penilaian_mapel — Junction table for per-mapel komponen assignment.
+ * Allows different subjects to have different assessment components.
+ * If no entries exist for a mapel, all global komponen apply (backward compatible).
+ *
+ * Requirements: 2.10
+ */
+export const komponenPenilaianMapel = pgTable(
+  'komponen_penilaian_mapel',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    tenantId: uuid('tenant_id').notNull(),
+    komponenPenilaianId: uuid('komponen_penilaian_id').notNull(),
+    mataPelajaranId: uuid('mata_pelajaran_id').notNull(),
+  },
+  (table) => ({
+    uniqueTenantKomponenMapel: unique('komponen_penilaian_mapel_unique').on(
+      table.tenantId,
+      table.komponenPenilaianId,
+      table.mataPelajaranId,
+    ),
   }),
 );

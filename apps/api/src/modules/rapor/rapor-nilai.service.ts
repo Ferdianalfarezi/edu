@@ -6,9 +6,15 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { NodePgDatabase } from 'drizzle-orm/node-postgres';
-import { eq, and } from 'drizzle-orm';
+import { eq, and, sql } from 'drizzle-orm';
 import { DRIZZLE } from '@/drizzle/drizzle.module';
-import { komponenPenilaian, rapor, raporNilai } from '@/drizzle/schema/rapor';
+import {
+  komponenPenilaian,
+  komponenPenilaianMapel,
+  rapor,
+  raporNilai,
+  raporNilaiAudit,
+} from '@/drizzle/schema/rapor';
 import { jadwalPelajaran } from '@/drizzle/schema/jadwal';
 import { mataPelajaran } from '@/drizzle/schema/mata-pelajaran';
 import { kelas } from '@/drizzle/schema/kelas';
@@ -176,19 +182,53 @@ export class RaporNilaiService {
       );
     }
 
-    // Get komponen penilaian for this tenant
-    const komponen = await this.db
-      .select({
-        id: komponenPenilaian.id,
-        nama: komponenPenilaian.nama,
-        tipe: komponenPenilaian.tipe,
-        skala_min: komponenPenilaian.skalaMin,
-        skala_max: komponenPenilaian.skalaMax,
-        is_wajib: komponenPenilaian.isWajib,
-      })
-      .from(komponenPenilaian)
-      .where(eq(komponenPenilaian.tenantId, tenantId))
-      .orderBy(komponenPenilaian.urutan);
+    // Get komponen penilaian for this tenant, filtered by mapel if per-mapel config exists
+    // Requirements: 2.10
+
+    // Check if mapel-specific komponen assignments exist
+    const mapelKomponenRows = await this.db
+      .select({ komponenPenilaianId: komponenPenilaianMapel.komponenPenilaianId })
+      .from(komponenPenilaianMapel)
+      .where(
+        and(
+          eq(komponenPenilaianMapel.tenantId, tenantId),
+          eq(komponenPenilaianMapel.mataPelajaranId, mapelId),
+        ),
+      );
+
+    let komponen;
+    if (mapelKomponenRows.length > 0) {
+      // Per-mapel config exists — filter komponen to only those assigned to this mapel
+      const mapelKomponenIds = mapelKomponenRows.map((r) => r.komponenPenilaianId);
+      const allKomponen = await this.db
+        .select({
+          id: komponenPenilaian.id,
+          nama: komponenPenilaian.nama,
+          tipe: komponenPenilaian.tipe,
+          skala_min: komponenPenilaian.skalaMin,
+          skala_max: komponenPenilaian.skalaMax,
+          is_wajib: komponenPenilaian.isWajib,
+        })
+        .from(komponenPenilaian)
+        .where(eq(komponenPenilaian.tenantId, tenantId))
+        .orderBy(komponenPenilaian.urutan);
+
+      komponen = allKomponen.filter((k) => mapelKomponenIds.includes(k.id));
+    } else {
+      // No per-mapel config — use all tenant komponen (backward compatible)
+      komponen = await this.db
+        .select({
+          id: komponenPenilaian.id,
+          nama: komponenPenilaian.nama,
+          tipe: komponenPenilaian.tipe,
+          skala_min: komponenPenilaian.skalaMin,
+          skala_max: komponenPenilaian.skalaMax,
+          is_wajib: komponenPenilaian.isWajib,
+        })
+        .from(komponenPenilaian)
+        .where(eq(komponenPenilaian.tenantId, tenantId))
+        .orderBy(komponenPenilaian.urutan);
+    }
 
     // Get active students in this kelas
     const students = await this.db
@@ -304,96 +344,176 @@ export class RaporNilaiService {
       throw new BadRequestException('Tidak ada tahun ajaran aktif');
     }
 
-    // Check if rapor is already finalized
-    const existingRapor = await this.db
-      .select({ id: rapor.id, status: rapor.status })
-      .from(rapor)
-      .where(
-        and(
-          eq(rapor.kelasId, kelas_id),
-          eq(rapor.tahunAjaranId, activeTa.id),
-          eq(rapor.periode, periode_rapor_id as any),
-          eq(rapor.tenantId, tenantId),
-        ),
-      );
-
-    if (existingRapor.length > 0 && existingRapor[0].status === 'final') {
-      throw new ForbiddenException(
-        'Rapor sudah difinalkan. Tidak dapat mengedit nilai setelah finalisasi.',
-      );
-    }
-
-    // Get komponen penilaian for validation
-    const komponen = await this.db
-      .select({
-        id: komponenPenilaian.id,
-        tipe: komponenPenilaian.tipe,
-        skalaMin: komponenPenilaian.skalaMin,
-        skalaMax: komponenPenilaian.skalaMax,
-        isWajib: komponenPenilaian.isWajib,
-      })
-      .from(komponenPenilaian)
-      .where(eq(komponenPenilaian.tenantId, tenantId));
-
-    const komponenMap = new Map(komponen.map((k) => [k.id, k]));
-
-    // Validate each student's grade values
-    const isUts = UTS_PERIODS.includes(periode_rapor_id);
-    for (const entry of nilai) {
-      this.validateNilaiEntry(entry, komponenMap, isUts, status);
-    }
-
-    // Create or get rapor record
-    let raporId: string;
-    if (existingRapor.length > 0) {
-      raporId = existingRapor[0].id;
-    } else {
-      const newRapor = await this.db
-        .insert(rapor)
-        .values({
-          tenantId,
-          kelasId: kelas_id,
-          tahunAjaranId: activeTa.id,
-          periode: periode_rapor_id as any,
-          status: 'draft',
-        })
-        .returning({ id: rapor.id });
-      raporId = newRapor[0].id;
-    }
-
-    // Upsert rapor_nilai records for each student
-    let savedCount = 0;
-    for (const entry of nilai) {
-      // Check if existing rapor_nilai exists for this student+mapel
-      const existing = await this.db
-        .select({ id: raporNilai.id })
-        .from(raporNilai)
+    // Wrap all DB-mutating operations in a transaction for atomicity.
+    // On any error mid-operation, the entire transaction rolls back (0 records persisted).
+    return await this.db.transaction(async (tx) => {
+      // Check if rapor is already finalized
+      const existingRapor = await tx
+        .select({ id: rapor.id, status: rapor.status, deadline: rapor.deadline })
+        .from(rapor)
         .where(
           and(
-            eq(raporNilai.raporId, raporId),
-            eq(raporNilai.siswaId, entry.siswa_id),
-            eq(raporNilai.mataPelajaranId, mata_pelajaran_id),
-            eq(raporNilai.tenantId, tenantId),
+            eq(rapor.kelasId, kelas_id),
+            eq(rapor.tahunAjaranId, activeTa.id),
+            eq(rapor.periode, periode_rapor_id as any),
+            eq(rapor.tenantId, tenantId),
           ),
         );
 
-      if (existing.length > 0) {
-        // Update existing
-        await this.db
-          .update(raporNilai)
-          .set({
-            komponenNilai: entry.komponen.map((k) => ({
-              komponen_id: k.komponen_id,
-              nilai: k.nilai,
-            })),
-            capaianPembelajaran: entry.capaian_pembelajaran || null,
-            status: status as any,
-            updatedAt: new Date(),
+      if (existingRapor.length > 0 && existingRapor[0].status === 'final') {
+        throw new ForbiddenException(
+          'Rapor sudah difinalkan. Tidak dapat mengedit nilai setelah finalisasi.',
+        );
+      }
+
+      // Deadline enforcement (Requirements: 2.13)
+      if (existingRapor.length > 0 && existingRapor[0].deadline) {
+        if (new Date() > new Date(existingRapor[0].deadline)) {
+          throw new ForbiddenException('Batas waktu input nilai untuk periode ini sudah terlewat.');
+        }
+      }
+
+      // Get komponen penilaian for validation, filtered by mapel if per-mapel config exists
+      // Requirements: 2.10
+      const mapelKomponenForValidation = await tx
+        .select({ komponenPenilaianId: komponenPenilaianMapel.komponenPenilaianId })
+        .from(komponenPenilaianMapel)
+        .where(
+          and(
+            eq(komponenPenilaianMapel.tenantId, tenantId),
+            eq(komponenPenilaianMapel.mataPelajaranId, mata_pelajaran_id),
+          ),
+        );
+
+      let komponen;
+      if (mapelKomponenForValidation.length > 0) {
+        const allowedIds = mapelKomponenForValidation.map((r) => r.komponenPenilaianId);
+        const allKomponen = await tx
+          .select({
+            id: komponenPenilaian.id,
+            tipe: komponenPenilaian.tipe,
+            skalaMin: komponenPenilaian.skalaMin,
+            skalaMax: komponenPenilaian.skalaMax,
+            isWajib: komponenPenilaian.isWajib,
           })
-          .where(eq(raporNilai.id, existing[0].id));
+          .from(komponenPenilaian)
+          .where(eq(komponenPenilaian.tenantId, tenantId));
+        komponen = allKomponen.filter((k) => allowedIds.includes(k.id));
       } else {
-        // Insert new
-        await this.db.insert(raporNilai).values({
+        komponen = await tx
+          .select({
+            id: komponenPenilaian.id,
+            tipe: komponenPenilaian.tipe,
+            skalaMin: komponenPenilaian.skalaMin,
+            skalaMax: komponenPenilaian.skalaMax,
+            isWajib: komponenPenilaian.isWajib,
+          })
+          .from(komponenPenilaian)
+          .where(eq(komponenPenilaian.tenantId, tenantId));
+      }
+
+      const komponenMap = new Map(komponen.map((k) => [k.id, k]));
+
+      // Validate each student's grade values
+      const isUts = UTS_PERIODS.includes(periode_rapor_id);
+      for (const entry of nilai) {
+        this.validateNilaiEntry(entry, komponenMap, isUts, status);
+      }
+
+      // Completeness validation on submit (Requirements: 2.9)
+      // When submitting, verify ALL active students have entries with all wajib komponen filled
+      if (status === 'submitted') {
+        // Get all active students in this kelas
+        const activeStudents = await tx
+          .select({ id: siswa.id, nama: siswa.nama })
+          .from(siswa)
+          .where(
+            and(
+              eq(siswa.kelasId, kelas_id),
+              eq(siswa.tenantId, tenantId),
+              eq(siswa.status, 'aktif'),
+            ),
+          );
+
+        // Check that every active student is included in the submission
+        const submittedSiswaIds = new Set(nilai.map((n) => n.siswa_id));
+        const missingSiswa = activeStudents.filter((s) => !submittedSiswaIds.has(s.id));
+
+        if (missingSiswa.length > 0) {
+          throw new BadRequestException({
+            message: 'Tidak dapat submit. Beberapa siswa belum memiliki data nilai.',
+            missing_students: missingSiswa.map((s) => ({ siswa_id: s.id, siswa_nama: s.nama })),
+          });
+        }
+
+        // Check that every submitted student has all wajib komponen filled
+        const wajibKomponenIds = komponen.filter((k) => k.isWajib).map((k) => k.id);
+
+        for (const entry of nilai) {
+          const filledKomponenIds = new Set(
+            entry.komponen
+              .filter((k) => k.nilai !== null && k.nilai !== '')
+              .map((k) => k.komponen_id),
+          );
+
+          const missingKomponen = wajibKomponenIds.filter((id) => !filledKomponenIds.has(id));
+          if (missingKomponen.length > 0) {
+            throw new BadRequestException({
+              message: `Siswa ${entry.siswa_id} belum mengisi semua komponen wajib.`,
+              siswa_id: entry.siswa_id,
+              missing_komponen: missingKomponen,
+            });
+          }
+        }
+      }
+
+      // Create or get rapor record
+      let raporId: string;
+      if (existingRapor.length > 0) {
+        raporId = existingRapor[0].id;
+      } else {
+        const newRapor = await tx
+          .insert(rapor)
+          .values({
+            tenantId,
+            kelasId: kelas_id,
+            tahunAjaranId: activeTa.id,
+            periode: periode_rapor_id as any,
+            status: 'draft',
+          })
+          .returning({ id: rapor.id });
+        raporId = newRapor[0].id;
+      }
+
+      // Query existing nilai for audit trail (capture old values before upsert)
+      // Requirements: 2.5
+      const existingNilaiForAudit =
+        nilai.length > 0
+          ? await tx
+              .select({
+                id: raporNilai.id,
+                siswaId: raporNilai.siswaId,
+                komponenNilai: raporNilai.komponenNilai,
+              })
+              .from(raporNilai)
+              .where(
+                and(
+                  eq(raporNilai.raporId, raporId),
+                  eq(raporNilai.mataPelajaranId, mata_pelajaran_id),
+                  eq(raporNilai.tenantId, tenantId),
+                ),
+              )
+          : [];
+
+      const existingNilaiMap = new Map(
+        existingNilaiForAudit.map((n) => [n.siswaId, { id: n.id, komponenNilai: n.komponenNilai }]),
+      );
+
+      // Bulk upsert rapor_nilai records using INSERT...ON CONFLICT
+      // This replaces O(N) individual SELECT+INSERT/UPDATE queries with a single O(1) bulk operation.
+      // Requires the unique constraint rapor_nilai_upsert_unique(rapor_id, siswa_id, mata_pelajaran_id, tenant_id).
+      if (nilai.length > 0) {
+        const values = nilai.map((entry) => ({
           tenantId,
           raporId,
           siswaId: entry.siswa_id,
@@ -405,12 +525,167 @@ export class RaporNilaiService {
           })),
           capaianPembelajaran: entry.capaian_pembelajaran || null,
           status: status as any,
-        });
+        }));
+
+        await tx
+          .insert(raporNilai)
+          .values(values)
+          .onConflictDoUpdate({
+            target: [
+              raporNilai.raporId,
+              raporNilai.siswaId,
+              raporNilai.mataPelajaranId,
+              raporNilai.tenantId,
+            ],
+            set: {
+              komponenNilai: sql`excluded.komponen_nilai`,
+              capaianPembelajaran: sql`excluded.capaian_pembelajaran`,
+              status: sql`excluded.status`,
+              updatedAt: new Date(),
+            },
+          });
       }
-      savedCount++;
+
+      // Insert audit trail records (Requirements: 2.5)
+      if (nilai.length > 0) {
+        // Re-query to get the actual rapor_nilai IDs after upsert
+        const afterUpsert = await tx
+          .select({ id: raporNilai.id, siswaId: raporNilai.siswaId })
+          .from(raporNilai)
+          .where(
+            and(
+              eq(raporNilai.raporId, raporId),
+              eq(raporNilai.mataPelajaranId, mata_pelajaran_id),
+              eq(raporNilai.tenantId, tenantId),
+            ),
+          );
+
+        const afterUpsertMap = new Map(afterUpsert.map((n) => [n.siswaId, n.id]));
+
+        const auditRecords = nilai.map((entry) => {
+          const existing = existingNilaiMap.get(entry.siswa_id);
+          const raporNilaiId = afterUpsertMap.get(entry.siswa_id) ?? raporId;
+          return {
+            tenantId,
+            raporNilaiId,
+            userId: guruId,
+            action: existing ? 'update' : 'insert',
+            siswaId: entry.siswa_id,
+            mataPelajaranId: mata_pelajaran_id,
+            oldValue: existing ? JSON.stringify(existing.komponenNilai) : null,
+            newValue: JSON.stringify(
+              entry.komponen.map((k) => ({ komponen_id: k.komponen_id, nilai: k.nilai })),
+            ),
+          };
+        });
+
+        await tx.insert(raporNilaiAudit).values(auditRecords);
+      }
+
+      return { saved: nilai.length, rapor_id: raporId };
+    });
+  }
+
+  // ═══════════════════════════════════════════════════════════════════
+  // POST /rapor/nilai/unsubmit — Un-submit grades
+  // Requirements: 2.4
+  // ═══════════════════════════════════════════════════════════════════
+
+  /**
+   * Un-submit (revert) grades from 'submitted' back to 'draft'.
+   * Only allowed when the rapor itself is still in 'draft' status (not finalized).
+   * Requirements: 2.4
+   */
+  async unsubmitNilai(
+    tenantId: string,
+    guruId: string,
+    dto: { kelas_id: string; mata_pelajaran_id: string; periode_rapor_id: string },
+  ): Promise<{ unsubmitted: number }> {
+    const { kelas_id, mata_pelajaran_id, periode_rapor_id } = dto;
+
+    // Validate guru is assigned to this mapel+kelas
+    await this.validateGuruAssignment(tenantId, guruId, kelas_id, mata_pelajaran_id);
+
+    // Validate periode
+    const validPeriods = ['uts_semester_1', 'semester_1', 'uts_semester_2', 'semester_2'];
+    if (!validPeriods.includes(periode_rapor_id)) {
+      throw new BadRequestException(
+        'Periode tidak valid. Gunakan: uts_semester_1, semester_1, uts_semester_2, semester_2',
+      );
     }
 
-    return { saved: savedCount, rapor_id: raporId };
+    // Get active tahun_ajaran
+    const activeTa = await this.getActiveTahunAjaran(tenantId);
+    if (!activeTa) {
+      throw new BadRequestException('Tidak ada tahun ajaran aktif');
+    }
+
+    // Find rapor record
+    const raporRecord = await this.db
+      .select({ id: rapor.id, status: rapor.status })
+      .from(rapor)
+      .where(
+        and(
+          eq(rapor.kelasId, kelas_id),
+          eq(rapor.tahunAjaranId, activeTa.id),
+          eq(rapor.periode, periode_rapor_id as any),
+          eq(rapor.tenantId, tenantId),
+        ),
+      );
+
+    if (raporRecord.length === 0) {
+      throw new BadRequestException('Rapor tidak ditemukan untuk kelas dan periode ini');
+    }
+
+    // Check rapor is not finalized
+    if (raporRecord[0].status === 'final') {
+      throw new ForbiddenException('Tidak dapat menarik kembali nilai. Rapor sudah difinalkan.');
+    }
+
+    // Update rapor_nilai status from 'submitted' back to 'draft'
+    const result = await this.db
+      .update(raporNilai)
+      .set({ status: 'draft', updatedAt: new Date() })
+      .where(
+        and(
+          eq(raporNilai.raporId, raporRecord[0].id),
+          eq(raporNilai.mataPelajaranId, mata_pelajaran_id),
+          eq(raporNilai.guruId, guruId),
+          eq(raporNilai.tenantId, tenantId),
+          eq(raporNilai.status, 'submitted'),
+        ),
+      )
+      .returning({ id: raporNilai.id });
+
+    return { unsubmitted: result.length };
+  }
+
+  // ═══════════════════════════════════════════════════════════════════
+  // PATCH /rapor/:raporId/deadline — Set or clear deadline
+  // Requirements: 2.13
+  // ═══════════════════════════════════════════════════════════════════
+
+  /**
+   * Set or clear the deadline for a rapor record.
+   * Requirements: 2.13
+   */
+  async setDeadline(tenantId: string, raporId: string, deadline: string | null): Promise<void> {
+    const raporRecord = await this.db
+      .select({ id: rapor.id })
+      .from(rapor)
+      .where(and(eq(rapor.id, raporId), eq(rapor.tenantId, tenantId)));
+
+    if (raporRecord.length === 0) {
+      throw new NotFoundException('Rapor tidak ditemukan');
+    }
+
+    await this.db
+      .update(rapor)
+      .set({
+        deadline: deadline ? new Date(deadline) : null,
+        updatedAt: new Date(),
+      })
+      .where(eq(rapor.id, raporId));
   }
 
   // ═══════════════════════════════════════════════════════════════════

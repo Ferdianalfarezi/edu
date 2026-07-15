@@ -4,6 +4,7 @@ import { RaporNilaiService } from './rapor-nilai.service';
 import { RaporOverviewService } from './rapor-overview.service';
 import { RaporFinalizationService } from './rapor-finalization.service';
 import { RaporExportService } from './rapor-export.service';
+import { RaporWaliService } from './rapor-wali.service';
 import { JwtAuthGuard } from '@/common/guards/jwt-auth.guard';
 import { RolesGuard } from '@/common/guards/roles.guard';
 
@@ -19,6 +20,7 @@ describe('RaporController', () => {
   let mockOverviewService: Record<string, jest.Mock>;
   let mockFinalizationService: Record<string, jest.Mock>;
   let mockExportService: Record<string, jest.Mock>;
+  let mockWaliService: Record<string, jest.Mock>;
 
   const tenantId = '11111111-1111-1111-1111-111111111111';
   const guruId = '22222222-2222-2222-2222-222222222222';
@@ -43,6 +45,11 @@ describe('RaporController', () => {
       exportRapor: jest.fn(),
     };
 
+    mockWaliService = {
+      getKelasWali: jest.fn(),
+      saveCatatan: jest.fn(),
+    };
+
     const module: TestingModule = await Test.createTestingModule({
       controllers: [RaporController],
       providers: [
@@ -50,6 +57,7 @@ describe('RaporController', () => {
         { provide: RaporOverviewService, useValue: mockOverviewService },
         { provide: RaporFinalizationService, useValue: mockFinalizationService },
         { provide: RaporExportService, useValue: mockExportService },
+        { provide: RaporWaliService, useValue: mockWaliService },
       ],
     })
       .overrideGuard(JwtAuthGuard)

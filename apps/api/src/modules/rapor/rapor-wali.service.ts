@@ -1,11 +1,11 @@
-import { Inject, Injectable } from '@nestjs/common';
+import { BadRequestException, Inject, Injectable } from '@nestjs/common';
 import { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import { eq, and } from 'drizzle-orm';
 import { DRIZZLE } from '@/drizzle/drizzle.module';
 import { kelas } from '@/drizzle/schema/kelas';
 import { jadwalPelajaran } from '@/drizzle/schema/jadwal';
 import { tahunAjaran } from '@/drizzle/schema/tahun-ajaran';
-import { rapor } from '@/drizzle/schema/rapor';
+import { rapor, raporNilai } from '@/drizzle/schema/rapor';
 import { RaporFinalizationService } from './rapor-finalization.service';
 import { SaveCatatanDto } from './dto';
 
@@ -141,8 +141,55 @@ export class RaporWaliService {
     // Validate wali kelas
     await this.raporFinalizationService.validateWaliKelas(tenantId, userId, dto.kelas_id);
 
-    // Save catatan via finalization service (it has the saveStudentNotes method)
-    // For now, return success — the actual note persistence depends on schema
+    // Get active tahun ajaran
+    const [activeTa] = await this.db
+      .select({ id: tahunAjaran.id })
+      .from(tahunAjaran)
+      .where(and(eq(tahunAjaran.tenantId, tenantId), eq(tahunAjaran.status, 'aktif')))
+      .limit(1);
+
+    if (!activeTa) {
+      throw new BadRequestException('Tidak ada tahun ajaran aktif');
+    }
+
+    // Get rapor record for this kelas + periode
+    const raporRecords = await this.db
+      .select({ id: rapor.id })
+      .from(rapor)
+      .where(
+        and(
+          eq(rapor.kelasId, dto.kelas_id),
+          eq(rapor.tahunAjaranId, activeTa.id),
+          eq(rapor.periode, dto.periode_rapor_id as any),
+          eq(rapor.tenantId, tenantId),
+        ),
+      );
+
+    if (raporRecords.length === 0) {
+      throw new BadRequestException('Rapor tidak ditemukan untuk kelas dan periode ini');
+    }
+
+    const raporId = raporRecords[0].id;
+
+    // Persist catatan for each student
+    for (const item of dto.catatan) {
+      const updateData: Record<string, any> = {
+        catatanWaliKelas: item.catatan ?? null,
+        updatedAt: new Date(),
+      };
+
+      await this.db
+        .update(raporNilai)
+        .set(updateData)
+        .where(
+          and(
+            eq(raporNilai.raporId, raporId),
+            eq(raporNilai.siswaId, item.siswa_id),
+            eq(raporNilai.tenantId, tenantId),
+          ),
+        );
+    }
+
     return { saved: dto.catatan.length };
   }
 }

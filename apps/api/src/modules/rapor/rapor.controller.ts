@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Post, Query, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Param, Patch, Post, Query, UseGuards } from '@nestjs/common';
 import { Role } from '@edu/shared';
 import { JwtAuthGuard } from '@/common/guards/jwt-auth.guard';
 import { RolesGuard } from '@/common/guards/roles.guard';
@@ -16,6 +16,8 @@ import {
   FinalizeRaporDto,
   ExportRaporQueryDto,
   SaveCatatanDto,
+  UnsubmitNilaiDto,
+  SetDeadlineDto,
 } from './dto';
 
 /**
@@ -65,7 +67,7 @@ export class RaporController {
   /**
    * GET /rapor/nilai
    * Returns student grades for a specific kelas, mapel, and periode.
-   * Query: ?kelas_id=&mapel_id=&periode_rapor_id=
+   * Query: ?kelas_id=&mapel_id=&periode_id=
    */
   @Get('nilai')
   @Roles(Role.GURU)
@@ -74,7 +76,7 @@ export class RaporController {
     @CurrentUser('id') guruId: string,
     @Query('kelas_id') kelasId: string,
     @Query('mapel_id') mapelId: string,
-    @Query('periode_rapor_id') periodeId: string,
+    @Query('periode_id') periodeId: string,
   ) {
     const data = await this.raporNilaiService.getKelasGrades(
       tenantId,
@@ -165,6 +167,27 @@ export class RaporController {
     const result = await this.raporWaliService.saveCatatan(tenantId, userId, dto);
     return {
       message: 'Catatan berhasil disimpan',
+      data: result,
+    };
+  }
+
+  /**
+   * POST /rapor/nilai/unsubmit
+   * Revert submitted grades back to draft for a specific mapel+kelas+periode.
+   * Only allowed when rapor is still in draft (not finalized).
+   *
+   * Requirements: 2.4
+   */
+  @Post('nilai/unsubmit')
+  @Roles(Role.GURU)
+  async unsubmitNilai(
+    @TenantId() tenantId: string,
+    @CurrentUser('id') guruId: string,
+    @Body() dto: UnsubmitNilaiDto,
+  ) {
+    const result = await this.raporNilaiService.unsubmitNilai(tenantId, guruId, dto);
+    return {
+      message: 'Nilai berhasil ditarik kembali ke draft',
       data: result,
     };
   }
@@ -281,6 +304,26 @@ export class RaporController {
     return {
       message: 'Rapor berhasil dikembalikan ke status draft',
       data: result,
+    };
+  }
+
+  /**
+   * PATCH /rapor/:raporId/deadline
+   * Set or clear the deadline for grade input on a rapor.
+   * Admin only.
+   *
+   * Requirements: 2.13
+   */
+  @Patch(':raporId/deadline')
+  @Roles(Role.ADMIN)
+  async setDeadline(
+    @TenantId() tenantId: string,
+    @Param('raporId') raporId: string,
+    @Body() dto: SetDeadlineDto,
+  ) {
+    await this.raporNilaiService.setDeadline(tenantId, raporId, dto.deadline);
+    return {
+      message: dto.deadline ? 'Deadline berhasil ditetapkan' : 'Deadline berhasil dihapus',
     };
   }
 

@@ -27,10 +27,35 @@ describe('RaporFinalizationService', () => {
   const siswaId2 = 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb';
   const komponenAngkaId = 'cccccccc-cccc-cccc-cccc-cccccccccccc';
 
-  const mockDb = {};
+  const mockDb: any = {
+    transaction: jest.fn(),
+  };
 
   beforeEach(async () => {
     mockNotificationQueue = { add: jest.fn().mockResolvedValue(undefined) };
+
+    // Default: transaction executes the callback immediately with a mock tx
+    mockDb.transaction = jest.fn().mockImplementation(async (cb: any) => {
+      const mockTx = {
+        execute: jest.fn().mockResolvedValue({ rows: [] }),
+        insert: jest.fn().mockReturnValue({
+          values: jest.fn().mockReturnValue({
+            returning: jest.fn().mockResolvedValue([{ id: 'new-rapor-id', status: 'draft' }]),
+          }),
+        }),
+        update: jest.fn().mockReturnValue({
+          set: jest.fn().mockReturnValue({
+            where: jest.fn().mockResolvedValue(undefined),
+          }),
+        }),
+        select: jest.fn().mockReturnValue({
+          from: jest.fn().mockReturnValue({
+            where: jest.fn().mockResolvedValue([]),
+          }),
+        }),
+      };
+      return cb(mockTx);
+    });
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -84,9 +109,13 @@ describe('RaporFinalizationService', () => {
         id: tahunAjaranId,
         nama: '2024/2025',
       });
-      jest.spyOn(service as any, 'getOrCreateRapor').mockResolvedValue({
-        id: raporId,
-        status: 'final',
+
+      // Mock transaction so SELECT FOR UPDATE returns a 'final' rapor
+      mockDb.transaction.mockImplementation(async (cb: any) => {
+        const mockTx = {
+          execute: jest.fn().mockResolvedValue({ rows: [{ id: raporId, status: 'final' }] }),
+        };
+        return cb(mockTx);
       });
 
       await expect(
@@ -100,10 +129,15 @@ describe('RaporFinalizationService', () => {
         id: tahunAjaranId,
         nama: '2024/2025',
       });
-      jest.spyOn(service as any, 'getOrCreateRapor').mockResolvedValue({
-        id: raporId,
-        status: 'draft',
+
+      // Mock transaction: rapor exists with status 'draft', then getMapelSubmissionStatuses called inside tx
+      mockDb.transaction.mockImplementation(async (cb: any) => {
+        const mockTx = {
+          execute: jest.fn().mockResolvedValue({ rows: [{ id: raporId, status: 'draft' }] }),
+        };
+        return cb(mockTx);
       });
+
       jest.spyOn(service, 'getMapelSubmissionStatuses').mockResolvedValue([
         { mata_pelajaran_id: mapelId1, mata_pelajaran_nama: 'Matematika', submitted: true },
         { mata_pelajaran_id: mapelId2, mata_pelajaran_nama: 'Bahasa Indonesia', submitted: false },
@@ -126,10 +160,20 @@ describe('RaporFinalizationService', () => {
         id: tahunAjaranId,
         nama: '2024/2025',
       });
-      jest.spyOn(service as any, 'getOrCreateRapor').mockResolvedValue({
-        id: raporId,
-        status: 'draft',
+
+      // Mock transaction: rapor exists with status 'draft', all mapel submitted, rankings calculated, status updated
+      mockDb.transaction.mockImplementation(async (cb: any) => {
+        const mockTx = {
+          execute: jest.fn().mockResolvedValue({ rows: [{ id: raporId, status: 'draft' }] }),
+          update: jest.fn().mockReturnValue({
+            set: jest.fn().mockReturnValue({
+              where: jest.fn().mockResolvedValue(undefined),
+            }),
+          }),
+        };
+        return cb(mockTx);
       });
+
       jest.spyOn(service, 'getMapelSubmissionStatuses').mockResolvedValue([
         { mata_pelajaran_id: mapelId1, mata_pelajaran_nama: 'Matematika', submitted: true },
         { mata_pelajaran_id: mapelId2, mata_pelajaran_nama: 'Bahasa Indonesia', submitted: true },
@@ -138,14 +182,6 @@ describe('RaporFinalizationService', () => {
         { siswa_id: siswaId1, siswa_nama: 'Budi', rata_rata: 90, peringkat: 1 },
         { siswa_id: siswaId2, siswa_nama: 'Ani', rata_rata: 85, peringkat: 2 },
       ]);
-
-      // Mock the DB update chain directly
-      const mockUpdate = jest.fn().mockReturnValue({
-        set: jest.fn().mockReturnValue({
-          where: jest.fn().mockResolvedValue(undefined),
-        }),
-      });
-      (service as any).db = { update: mockUpdate };
 
       // Mock notification sender
       jest.spyOn(service as any, 'sendFinalizationNotification').mockResolvedValue(undefined);
@@ -165,10 +201,20 @@ describe('RaporFinalizationService', () => {
         id: tahunAjaranId,
         nama: '2024/2025',
       });
-      jest.spyOn(service as any, 'getOrCreateRapor').mockResolvedValue({
-        id: raporId,
-        status: 'draft',
+
+      // Mock transaction: rapor exists with status 'draft'
+      mockDb.transaction.mockImplementation(async (cb: any) => {
+        const mockTx = {
+          execute: jest.fn().mockResolvedValue({ rows: [{ id: raporId, status: 'draft' }] }),
+          update: jest.fn().mockReturnValue({
+            set: jest.fn().mockReturnValue({
+              where: jest.fn().mockResolvedValue(undefined),
+            }),
+          }),
+        };
+        return cb(mockTx);
       });
+
       jest
         .spyOn(service, 'getMapelSubmissionStatuses')
         .mockResolvedValue([
@@ -180,26 +226,6 @@ describe('RaporFinalizationService', () => {
           { siswa_id: siswaId1, siswa_nama: 'Budi', rata_rata: 90, peringkat: 1 },
         ]);
 
-      // Mock DB update
-      const mockUpdate = jest.fn().mockReturnValue({
-        set: jest.fn().mockReturnValue({
-          where: jest.fn().mockResolvedValue(undefined),
-        }),
-      });
-      const mockSelect = jest.fn().mockReturnValue({
-        from: jest.fn().mockReturnValue({
-          where: jest
-            .fn()
-            .mockResolvedValue([{ siswaId: siswaId1, siswaNama: 'Budi', orangTuaId: 'parent-1' }]),
-        }),
-      });
-      // For kelas name query
-      const mockSelectKelas = jest.fn().mockReturnValue({
-        from: jest.fn().mockReturnValue({
-          where: jest.fn().mockResolvedValue([{ nama: '6A' }]),
-        }),
-      });
-
       // Since sendFinalizationNotification is private, let's spy on the queue directly
       jest.spyOn(service as any, 'sendFinalizationNotification').mockImplementation(async () => {
         await mockNotificationQueue.add('send-rapor-finalization-notification', {
@@ -209,8 +235,6 @@ describe('RaporFinalizationService', () => {
           notifications: [{ orang_tua_id: 'parent-1', siswa_nama: 'Budi' }],
         });
       });
-
-      (service as any).db = { update: mockUpdate };
 
       await service.finalizeRapor(tenantId, waliKelasId, kelasId, 'semester_1', {});
 
@@ -455,9 +479,13 @@ describe('RaporFinalizationService', () => {
         id: tahunAjaranId,
         nama: '2024/2025',
       });
-      jest.spyOn(service as any, 'getOrCreateRapor').mockResolvedValue({
-        id: raporId,
-        status: 'final',
+
+      // Mock transaction: SELECT FOR UPDATE returns rapor with status 'final'
+      mockDb.transaction.mockImplementation(async (cb: any) => {
+        const mockTx = {
+          execute: jest.fn().mockResolvedValue({ rows: [{ id: raporId, status: 'final' }] }),
+        };
+        return cb(mockTx);
       });
 
       await expect(
