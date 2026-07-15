@@ -78,7 +78,8 @@ const kelasList = ref<Kelas[]>([]);
 const mataPelajaranList = ref<MataPelajaran[]>([]);
 const guruList = ref<Guru[]>([]);
 const jadwalEntries = ref<JadwalEntry[]>([]);
-const activeTahunAjaran = ref<{ id: string; nama: string } | null>(null);
+const tahunAjaranList = ref<{ id: string; nama: string; status: string }[]>([]);
+const selectedTahunAjaranId = ref('');
 
 const selectedKelasId = ref('');
 const loading = ref(false);
@@ -113,6 +114,13 @@ const showDeleteModal = ref(false);
 const deletingEntry = ref<JadwalEntry | null>(null);
 
 // Computed options
+const tahunAjaranSelectOptions = computed<SelectOption[]>(() =>
+  tahunAjaranList.value.map((ta) => ({
+    value: ta.id,
+    label: `${ta.nama}${ta.status === 'aktif' ? ' (Aktif)' : ''}`,
+  })),
+);
+
 const kelasSelectOptions = computed<SelectOption[]>(() =>
   kelasList.value.map((k) => ({ value: k.id, label: k.nama })),
 );
@@ -185,10 +193,15 @@ async function fetchDropdowns() {
     ]);
     mataPelajaranList.value = mapelRes.data.data;
     guruList.value = guruRes.data.data;
-    // Find active tahun ajaran (API returns flat array)
+    // Populate tahun ajaran list and auto-select active one
     const taList = taRes.data;
+    tahunAjaranList.value = taList;
     const aktif = taList.find((ta) => ta.status === 'aktif');
-    activeTahunAjaran.value = aktif || taList[0] || null;
+    if (aktif) {
+      selectedTahunAjaranId.value = aktif.id;
+    } else if (taList.length > 0) {
+      selectedTahunAjaranId.value = taList[0].id;
+    }
   } catch (error) {
     console.error('Failed to fetch dropdowns:', error);
   }
@@ -198,9 +211,11 @@ async function fetchJadwal() {
   if (!selectedKelasId.value) return;
   loading.value = true;
   try {
-    const { data } = await api.get<JadwalEntry[]>('/jadwal', {
-      params: { kelasId: selectedKelasId.value },
-    });
+    const params: Record<string, string> = { kelasId: selectedKelasId.value };
+    if (selectedTahunAjaranId.value) {
+      params.tahunAjaranId = selectedTahunAjaranId.value;
+    }
+    const { data } = await api.get<JadwalEntry[]>('/jadwal', { params });
     jadwalEntries.value = data;
   } catch (error) {
     console.error('Failed to fetch jadwal:', error);
@@ -210,6 +225,10 @@ async function fetchJadwal() {
 }
 
 watch(selectedKelasId, () => {
+  fetchJadwal();
+});
+
+watch(selectedTahunAjaranId, () => {
   fetchJadwal();
 });
 
@@ -320,8 +339,8 @@ async function saveJadwal() {
     return;
   }
 
-  if (!activeTahunAjaran.value) {
-    formError.value = 'Tidak ada tahun ajaran aktif. Harap buat tahun ajaran terlebih dahulu.';
+  if (!selectedTahunAjaranId.value) {
+    formError.value = 'Tidak ada tahun ajaran dipilih. Harap pilih tahun ajaran terlebih dahulu.';
     return;
   }
 
@@ -329,9 +348,8 @@ async function saveJadwal() {
   const currentMonth = new Date().getMonth() + 1;
   const semester = currentMonth >= 7 ? 1 : 2;
 
-  // Use kelas's tahun_ajaran_id if available, fallback to active tahun ajaran
-  const selectedKelas = kelasList.value.find((k) => k.id === selectedKelasId.value);
-  const tahunAjaranId = selectedKelas?.tahun_ajaran_id || activeTahunAjaran.value.id;
+  // Use selected tahun ajaran from the filter
+  const tahunAjaranId = selectedTahunAjaranId.value;
 
   const payload: Record<string, unknown> = {
     kelasId: selectedKelasId.value,
@@ -454,8 +472,14 @@ onMounted(async () => {
   <div class="p-4 lg:p-6 max-w-7xl mx-auto">
     <PageHeader title="Manajemen Jadwal Pelajaran" />
 
-    <!-- Kelas Selector -->
+    <!-- Filter: Tahun Ajaran & Kelas -->
     <div class="flex items-center gap-3 mb-4">
+      <SearchSelect
+        v-model="selectedTahunAjaranId"
+        label="Tahun Ajaran"
+        :options="tahunAjaranSelectOptions"
+        placeholder="Pilih Tahun Ajaran"
+      />
       <SearchSelect
         v-model="selectedKelasId"
         label="Kelas"
