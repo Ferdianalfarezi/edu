@@ -1,10 +1,39 @@
 import { fileURLToPath, URL } from 'node:url';
-import { defineConfig } from 'vite';
+import { defineConfig, type Plugin } from 'vite';
 import vue from '@vitejs/plugin-vue';
 import tailwindcss from '@tailwindcss/vite';
 
+/**
+ * Inject noindex meta tag for non-production environments
+ * to prevent search engines from indexing dev/staging sites.
+ * Also generates the appropriate robots.txt at build time.
+ */
+function noIndexPlugin(): Plugin {
+  const isProduction = process.env.VITE_APP_ENV === 'production';
+
+  return {
+    name: 'inject-noindex',
+    transformIndexHtml(html) {
+      if (isProduction) return html;
+      return html.replace(
+        '</head>',
+        '    <meta name="robots" content="noindex, nofollow" />\n  </head>',
+      );
+    },
+    generateBundle() {
+      // Emit the correct robots.txt based on environment
+      const content = isProduction ? 'User-agent: *\nAllow: /\n' : 'User-agent: *\nDisallow: /\n';
+      this.emitFile({
+        type: 'asset',
+        fileName: 'robots.txt',
+        source: content,
+      });
+    },
+  };
+}
+
 export default defineConfig({
-  plugins: [tailwindcss(), vue()],
+  plugins: [tailwindcss(), vue(), noIndexPlugin()],
   resolve: {
     alias: {
       '@': fileURLToPath(new URL('./src', import.meta.url)),
