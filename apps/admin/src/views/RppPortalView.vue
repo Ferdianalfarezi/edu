@@ -4,6 +4,8 @@ import { useRouter } from 'vue-router';
 import { api } from '@/api/client';
 import { PageHeader, SearchSelect, ActionButton } from '@/components/ui';
 import type { SelectOption } from '@/components/ui';
+import { useAuthStore } from '@/stores/auth';
+import { Role } from '@edu/shared';
 
 interface RppItem {
   id: string;
@@ -37,6 +39,8 @@ interface PaginatedResponse {
 }
 
 const router = useRouter();
+const authStore = useAuthStore();
+const canCreateRpp = computed(() => !authStore.hasRole(Role.ADMIN));
 
 const items = ref<RppItem[]>([]);
 const loading = ref(false);
@@ -178,6 +182,7 @@ onMounted(async () => {
     <PageHeader title="Portal RPP / Modul Ajar" description="">
       <template #actions>
         <button
+          v-if="canCreateRpp"
           class="px-3 py-2 text-sm font-medium text-white bg-primary-600 rounded-lg hover:bg-primary-700 transition-colors"
           @click="router.push({ name: 'rpp-create' })"
         >

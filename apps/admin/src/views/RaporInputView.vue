@@ -95,8 +95,14 @@ const canUnsubmit = computed(() => {
 
 async function fetchMapel() {
   try {
-    const { data } = await api.get<{ data: MapelOption[] }>('/rapor/mata-pelajaran');
-    mapelOptions.value = data.data;
+    const { data } = await api.get<{
+      data: {
+        mapel_id: string;
+        mapel_nama: string;
+        kelas: { kelas_id: string; kelas_nama: string }[];
+      }[];
+    }>('/rapor/mata-pelajaran');
+    mapelOptions.value = data.data.map((m) => ({ id: m.mapel_id, nama: m.mapel_nama }));
   } catch (err) {
     console.error('Failed to fetch mata pelajaran:', err);
   }
@@ -158,8 +164,11 @@ async function fetchNilai() {
       siswa_nama: s.siswa_nama,
       komponen:
         s.komponen_nilai ??
-        data.data.komponen_penilaian.map((k) => ({ komponen_id: k.id, nilai: null })),
-      capaian_pembelajaran: s.capaian_pembelajaran ?? '',
+        data.data.komponen_penilaian.map((k) => ({
+          komponen_id: k.id,
+          nilai: k.tipe === 'angka' ? 0 : '-',
+        })),
+      capaian_pembelajaran: s.capaian_pembelajaran ?? '-',
       status: s.status ?? 'draft',
     }));
   } catch (err) {

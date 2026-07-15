@@ -60,7 +60,6 @@ describe('UserController', () => {
     it('should call listUsers with tenantId and query for ADMIN role', async () => {
       const tenantId = 'tenant-1';
       const query = { role: Role.GURU };
-      const crossTenantQuery = { page: 1, page_size: 50 };
       const expected = { data: [], nextCursor: null };
       const mockReq = {
         user: { id: 'user-1', role: Role.ADMIN, tenant_id: tenantId },
@@ -69,12 +68,7 @@ describe('UserController', () => {
 
       mockUserService.listUsers!.mockResolvedValue(expected);
 
-      const result = await controller.listUsers(
-        mockReq,
-        tenantId,
-        query as any,
-        crossTenantQuery as any,
-      );
+      const result = await controller.listUsers(mockReq, tenantId, query as any);
 
       expect(mockUserService.listUsers).toHaveBeenCalledWith(tenantId, query);
       expect(result).toEqual(expected);

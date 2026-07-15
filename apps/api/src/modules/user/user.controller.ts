@@ -25,13 +25,7 @@ import { TenantId } from '@/common/decorators/tenant-id.decorator';
 import { Auditable, AuditInterceptor } from '@/modules/audit-log';
 import { RequestUser } from '@/modules/auth/interfaces';
 import { UserService } from './user.service';
-import {
-  CreateUserDto,
-  UpdateUserDto,
-  UpdateUserRoleDto,
-  ListUsersQueryDto,
-  ListUsersCrossTenantQueryDto,
-} from './dto';
+import { CreateUserDto, UpdateUserDto, UpdateUserRoleDto, ListUsersQueryDto } from './dto';
 
 @Controller('users')
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -62,7 +56,6 @@ export class UserController {
     @Req() req: Request,
     @TenantId() tenantId: string,
     @Query() query: ListUsersQueryDto,
-    @Query() crossTenantQuery: ListUsersCrossTenantQueryDto,
   ) {
     const requestUser = (req as Request & { user: RequestUser }).user;
 
@@ -70,9 +63,9 @@ export class UserController {
       // Detect tenant context via X-Tenant-Context header
       const tenantContext = req.headers['x-tenant-context'] as string | undefined;
       return this.userService.listUsersCrossTenant(
-        crossTenantQuery.page,
-        crossTenantQuery.page_size,
-        crossTenantQuery.search,
+        query.page || 1,
+        query.page_size || 50,
+        query.search,
         tenantContext || undefined,
       );
     }
