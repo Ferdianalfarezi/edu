@@ -164,8 +164,11 @@ async function fetchNilai() {
       siswa_nama: s.siswa_nama,
       komponen:
         s.komponen_nilai ??
-        data.data.komponen_penilaian.map((k) => ({ komponen_id: k.id, nilai: null })),
-      capaian_pembelajaran: s.capaian_pembelajaran ?? '',
+        data.data.komponen_penilaian.map((k) => ({
+          komponen_id: k.id,
+          nilai: k.tipe === 'angka' ? 0 : '-',
+        })),
+      capaian_pembelajaran: s.capaian_pembelajaran ?? '-',
       status: s.status ?? 'draft',
     }));
   } catch (err) {

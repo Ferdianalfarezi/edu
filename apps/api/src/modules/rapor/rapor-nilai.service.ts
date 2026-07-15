@@ -758,7 +758,29 @@ export class RaporNilaiService {
         throw new BadRequestException(`Komponen penilaian "${item.komponen_id}" tidak ditemukan`);
       }
 
-      // Validate value based on tipe
+      // For draft saves, allow any non-null value without strict type validation
+      // This lets teachers save progress even with placeholder values
+      if (status === 'draft') {
+        if (item.nilai === null || item.nilai === undefined) {
+          continue; // Allow null values in draft
+        }
+        // For angka in draft, still validate range if it's a number
+        if (def.tipe === 'angka') {
+          const numVal = typeof item.nilai === 'string' ? parseFloat(item.nilai) : item.nilai;
+          if (!isNaN(numVal)) {
+            const min = def.skalaMin ?? 0;
+            const max = def.skalaMax ?? 100;
+            if (numVal < min || numVal > max) {
+              throw new BadRequestException(
+                `Nilai angka harus dalam rentang ${min}-${max} (siswa: ${entry.siswa_id})`,
+              );
+            }
+          }
+        }
+        continue;
+      }
+
+      // Strict validation for submitted status
       switch (def.tipe) {
         case 'angka': {
           const numVal = typeof item.nilai === 'string' ? parseFloat(item.nilai) : item.nilai;
