@@ -5,11 +5,12 @@ export class RekapAbsensiQueryDto {
   @IsUUID()
   kelas_id: string;
 
-  @Transform(({ value }) => parseInt(value, 10))
+  @Transform(({ value }) => (value !== undefined ? parseInt(value, 10) : undefined))
   @IsInt()
   @Min(1)
   @Max(12)
-  bulan: number;
+  @IsOptional()
+  bulan?: number;
 
   @Transform(({ value }) => parseInt(value, 10))
   @IsInt()
@@ -22,6 +23,13 @@ export class RekapAbsensiQueryDto {
   })
   @IsOptional()
   periode?: 'bulanan' | 'semester' = 'bulanan';
+
+  @Transform(({ value }) => (value !== undefined ? parseInt(value, 10) : undefined))
+  @IsInt()
+  @Min(1)
+  @Max(2)
+  @IsOptional()
+  semester?: number;
 }
 
 export interface RekapAbsensiItem {

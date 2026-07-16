@@ -638,7 +638,16 @@ export class AbsensiService {
     query: RekapAbsensiQueryDto,
   ): Promise<RekapAbsensiResponse> {
     const db = this.drizzleService.db;
-    const { kelas_id, bulan, tahun, periode = 'bulanan' } = query;
+    const { kelas_id, tahun, periode = 'bulanan' } = query;
+
+    // Derive bulan: for semester period, use semester field to determine start month
+    // Semester 1 = bulan 7 (Juli), Semester 2 = bulan 1 (Januari)
+    let bulan: number;
+    if (periode === 'semester' && query.semester) {
+      bulan = query.semester === 1 ? 7 : 1;
+    } else {
+      bulan = query.bulan ?? new Date().getMonth() + 1;
+    }
 
     // Validate kelas exists
     const [kelasData] = await db
