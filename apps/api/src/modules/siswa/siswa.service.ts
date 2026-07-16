@@ -283,14 +283,7 @@ export class SiswaService {
         avgRataRata: sql<string>`ROUND(AVG(${raporNilai.rataRata}::numeric), 2)`.as(
           'avg_rata_rata',
         ),
-        peringkat: sql<number | null>`(
-          SELECT rn2.peringkat
-          FROM rapor_nilai AS rn2
-          WHERE rn2.rapor_id = ${rapor.id}
-            AND rn2.siswa_id = ${siswaId}
-            AND rn2.peringkat IS NOT NULL
-          LIMIT 1
-        )`.as('peringkat'),
+        peringkat: sql<number | null>`MAX(${raporNilai.peringkat})`.as('peringkat'),
       })
       .from(rapor)
       .innerJoin(raporNilai, and(eq(raporNilai.raporId, rapor.id), eq(raporNilai.siswaId, siswaId)))
