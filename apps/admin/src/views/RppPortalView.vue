@@ -5,6 +5,7 @@ import { api } from '@/api/client';
 import { PageHeader, SearchSelect, ActionButton, TablePagination } from '@/components/ui';
 import type { SelectOption } from '@/components/ui';
 import { useAuthStore } from '@/stores/auth';
+import { useTableUrlState } from '@/composables/useTableUrlState';
 import { Role } from '@edu/shared';
 
 interface RppItem {
@@ -48,17 +49,19 @@ const items = ref<RppItem[]>([]);
 const loading = ref(false);
 const errorMessage = ref('');
 
-// Pagination state
-const currentPage = ref(1);
-const pageSize = ref(15);
+// URL-synced table state
+const { page, pageSize, search, filters } = useTableUrlState({
+  searchKey: 'search',
+  defaultPageSize: 15,
+  filters: [
+    { key: 'mapel', type: 'string' },
+    { key: 'kategori', type: 'string' },
+    { key: 'tahun', type: 'string' },
+  ],
+});
+
 const totalCount = ref(0);
 const totalPages = ref(0);
-
-// Filters
-const search = ref('');
-const filterMapel = ref('');
-const filterKategori = ref('');
-const filterTahun = ref('');
 
 // Selectors
 const mataPelajaranList = ref<MataPelajaran[]>([]);
@@ -76,8 +79,6 @@ const mapelFilterOptions = computed<SelectOption[]>(() =>
 const kategoriFilterOptions = computed<SelectOption[]>(() =>
   kategoriList.value.map((k) => ({ value: k.id, label: k.nama })),
 );
-
-let searchTimeout: ReturnType<typeof setTimeout> | null = null;
 
 async function fetchMataPelajaran() {
   try {
@@ -102,13 +103,13 @@ async function fetchRpp() {
   errorMessage.value = '';
   try {
     const params: Record<string, string | number> = {
-      page: currentPage.value,
+      page: page.value,
       page_size: pageSize.value,
     };
     if (search.value) params.search = search.value;
-    if (filterMapel.value) params.mapel = filterMapel.value;
-    if (filterKategori.value) params.kategori = filterKategori.value;
-    if (filterTahun.value) params.tahun = filterTahun.value;
+    if (filters['mapel'].value) params.mapel = filters['mapel'].value;
+    if (filters['kategori'].value) params.kategori = filters['kategori'].value;
+    if (filters['tahun'].value) params.tahun = filters['tahun'].value;
 
     const { data } = await api.get<OffsetPaginatedResponse>('/rpp', { params });
     items.value = data.data;
@@ -121,25 +122,6 @@ async function fetchRpp() {
   } finally {
     loading.value = false;
   }
-}
-
-function onSearchInput() {
-  if (searchTimeout) clearTimeout(searchTimeout);
-  searchTimeout = setTimeout(() => {
-    currentPage.value = 1;
-    fetchRpp();
-  }, 300);
-}
-
-function onPageChange(page: number) {
-  currentPage.value = page;
-  fetchRpp();
-}
-
-function onPageSizeChange(size: number) {
-  pageSize.value = size;
-  currentPage.value = 1;
-  fetchRpp();
 }
 
 async function toggleFavorite(item: RppItem) {
@@ -173,11 +155,8 @@ function formatDate(dateStr: string): string {
   });
 }
 
-// Filter change → reset to page 1 immediately
-watch([filterMapel, filterKategori, filterTahun], () => {
-  currentPage.value = 1;
-  fetchRpp();
-});
+// Watch composable state to trigger fetch
+watch([page, pageSize, search, filters['mapel'], filters['kategori'], filters['tahun']], fetchRpp);
 
 onMounted(async () => {
   await Promise.all([fetchMataPelajaran(), fetchKategori()]);
@@ -208,23 +187,22 @@ onMounted(async () => {
           type="text"
           class="w-full pl-8 pr-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
           placeholder="Cari judul RPP..."
-          @input="onSearchInput"
         />
       </div>
       <SearchSelect
-        v-model="filterMapel"
+        v-model="filters['mapel'].value"
         :options="mapelFilterOptions"
         placeholder="Semua Mata Pelajaran"
         clearable
       />
       <SearchSelect
-        v-model="filterKategori"
+        v-model="filters['kategori'].value"
         :options="kategoriFilterOptions"
         placeholder="Semua Kategori"
         clearable
       />
       <SearchSelect
-        v-model="filterTahun"
+        v-model="filters['tahun'].value"
         :options="tahunFilterOptions"
         placeholder="Semua Tahun"
         clearable
@@ -307,13 +285,13 @@ onMounted(async () => {
 
     <!-- Pagination -->
     <TablePagination
-      :current-page="currentPage"
+      :current-page="page"
       :total-pages="totalPages"
       :total-count="totalCount"
       :page-size="pageSize"
       :loading="loading"
-      @page-change="onPageChange"
-      @page-size-change="onPageSizeChange"
+      @page-change="page = $event"
+      @page-size-change="pageSize = $event"
     />
   </div>
 </template>

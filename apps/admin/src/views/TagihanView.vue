@@ -10,6 +10,7 @@ import {
 } from '@/components/ui';
 import type { SelectOption } from '@/components/ui';
 import { useToast } from '@/composables/useToast';
+import { useTableUrlState } from '@/composables/useTableUrlState';
 
 // ===== Tab Icons (inline SVG render functions) =====
 const IconGenerate = {
@@ -163,7 +164,24 @@ interface TahunAjaran {
 
 // ===== Tabs =====
 type Tab = 'generate' | 'list' | 'verifikasi' | 'tunggakan' | 'audit';
-const activeTab = ref<Tab>('list');
+
+// ===== URL State Composable =====
+const { page, pageSize, search, filters } = useTableUrlState({
+  searchKey: 'search',
+  defaultPageSize: 15,
+  filters: [
+    {
+      key: 'tab',
+      type: 'enum',
+      enumValues: ['generate', 'list', 'verifikasi', 'tunggakan', 'audit'],
+    },
+    { key: 'status', type: 'string' },
+    { key: 'kelas_id', type: 'string' },
+    { key: 'bulan', type: 'string' },
+  ],
+});
+
+const activeTab = computed<Tab>(() => (filters['tab'].value || 'list') as Tab);
 
 // ===== Shared State =====
 const kelasList = ref<Kelas[]>([]);
@@ -188,15 +206,7 @@ const generateError = ref('');
 
 // ===== List Tab =====
 const tagihanList = ref<Tagihan[]>([]);
-const listFilter = reactive({
-  status: '' as StatusTagihan | '',
-  kelas_id: '',
-  bulan: '' as number | '',
-  tahun: new Date().getFullYear(),
-  search: '',
-});
-const currentPage = ref(1);
-const pageSize = ref(15);
+const listFilterTahun = ref(new Date().getFullYear());
 const totalCount = ref(0);
 const totalPages = ref(0);
 
@@ -414,14 +424,14 @@ async function fetchTagihanList() {
 
   try {
     const params: Record<string, string | number> = {
-      page: currentPage.value,
+      page: page.value,
       page_size: pageSize.value,
     };
-    if (listFilter.status) params.status = listFilter.status;
-    if (listFilter.kelas_id) params.kelas_id = listFilter.kelas_id;
-    if (listFilter.bulan) params.bulan = listFilter.bulan;
-    if (listFilter.tahun) params.tahun = listFilter.tahun;
-    if (listFilter.search) params.search = listFilter.search;
+    if (filters['status'].value) params.status = filters['status'].value;
+    if (filters['kelas_id'].value) params.kelas_id = filters['kelas_id'].value;
+    if (filters['bulan'].value) params.bulan = filters['bulan'].value;
+    if (listFilterTahun.value) params.tahun = listFilterTahun.value;
+    if (search.value) params.search = search.value;
 
     const { data } = await api.get<{
       data: Tagihan[];
@@ -436,17 +446,6 @@ async function fetchTagihanList() {
   } finally {
     loading.value = false;
   }
-}
-
-function onPageChange(page: number) {
-  currentPage.value = page;
-  fetchTagihanList();
-}
-
-function onPageSizeChange(size: number) {
-  pageSize.value = size;
-  currentPage.value = 1;
-  fetchTagihanList();
 }
 
 // --- Verifikasi ---
@@ -660,25 +659,22 @@ async function fetchAuditLogs() {
 }
 
 // ===== Watchers =====
-let searchTimeout: ReturnType<typeof setTimeout> | null = null;
-watch(
-  () => listFilter.search,
-  () => {
-    if (searchTimeout) clearTimeout(searchTimeout);
-    searchTimeout = setTimeout(() => {
-      currentPage.value = 1;
-      fetchTagihanList();
-    }, 300);
-  },
-);
+// Watch composable state changes to trigger list fetch
+watch([page, pageSize, search, filters['status'], filters['kelas_id'], filters['bulan']], () => {
+  if (activeTab.value === 'list') fetchTagihanList();
+});
 
-watch(
-  () => [listFilter.status, listFilter.kelas_id, listFilter.bulan, listFilter.tahun],
-  () => {
-    currentPage.value = 1;
-    fetchTagihanList();
-  },
-);
+// Watch tahun separately (local ref, not URL-persisted)
+watch(listFilterTahun, () => {
+  if (activeTab.value === 'list') fetchTagihanList();
+});
+
+// Watch activeTab to fetch data when tab changes
+watch(activeTab, (tab) => {
+  if (tab === 'list') fetchTagihanList();
+  if (tab === 'verifikasi') fetchVerifikasi();
+  if (tab === 'tunggakan') fetchTunggakan();
+});
 
 watch(
   () => [tunggakanFilter.kelas_id, tunggakanFilter.bulan, tunggakanFilter.tahun],
@@ -686,12 +682,6 @@ watch(
     if (activeTab.value === 'tunggakan') fetchTunggakan();
   },
 );
-
-watch(activeTab, (tab) => {
-  if (tab === 'list') fetchTagihanList();
-  if (tab === 'verifikasi') fetchVerifikasi();
-  if (tab === 'tunggakan') fetchTunggakan();
-});
 
 // ===== Init =====
 onMounted(() => {
@@ -722,7 +712,7 @@ onMounted(() => {
               ? 'text-primary-600'
               : 'text-text-tertiary hover:text-text-secondary',
           ]"
-          @click="activeTab = tab.key"
+          @click="filters['tab'].value = tab.key"
         >
           <!-- Tab Icon -->
           <component :is="tab.icon" class="w-4 h-4 shrink-0 transition-colors duration-200" />
@@ -896,7 +886,7 @@ onMounted(() => {
       <div class="flex flex-wrap items-end gap-2 mb-4">
         <div class="relative w-48 min-w-[150px]">
           <input
-            v-model="listFilter.search"
+            v-model="search"
             type="text"
             placeholder="Cari nama siswa..."
             class="w-full px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
@@ -904,7 +894,7 @@ onMounted(() => {
         </div>
         <div class="w-40">
           <SearchSelect
-            v-model="listFilter.status"
+            v-model="filters['status'].value"
             :options="statusFilterOptions"
             placeholder="Semua Status"
             clearable
@@ -912,7 +902,7 @@ onMounted(() => {
         </div>
         <div class="w-40">
           <SearchSelect
-            v-model="listFilter.kelas_id"
+            v-model="filters['kelas_id'].value"
             :options="kelasSelectOptions"
             placeholder="Semua Kelas"
             clearable
@@ -920,14 +910,14 @@ onMounted(() => {
         </div>
         <div class="w-40">
           <SearchSelect
-            v-model="listFilter.bulan"
+            v-model="filters['bulan'].value"
             :options="bulanSelectOptions"
             placeholder="Semua Bulan"
             clearable
           />
         </div>
         <input
-          v-model.number="listFilter.tahun"
+          v-model.number="listFilterTahun"
           type="number"
           class="w-20 px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
           placeholder="Tahun"
@@ -1023,13 +1013,13 @@ onMounted(() => {
 
       <!-- Pagination -->
       <TablePagination
-        :current-page="currentPage"
+        :current-page="page"
         :total-pages="totalPages"
         :total-count="totalCount"
         :page-size="pageSize"
         :loading="loading"
-        @page-change="onPageChange"
-        @page-size-change="onPageSizeChange"
+        @page-change="page = $event"
+        @page-size-change="pageSize = $event"
       />
     </div>
 

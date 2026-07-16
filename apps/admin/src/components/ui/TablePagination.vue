@@ -7,18 +7,18 @@ interface Props {
   totalCount: number;
   pageSize: number;
   loading?: boolean;
+  pageSizeOptions?: number[];
 }
 
 const props = withDefaults(defineProps<Props>(), {
   loading: false,
+  pageSizeOptions: () => [10, 15, 25, 50],
 });
 
 const emit = defineEmits<{
   (e: 'page-change', page: number): void;
   (e: 'page-size-change', size: number): void;
 }>();
-
-const pageSizeOptions = [15, 50, 100];
 
 const visiblePages = computed(() => {
   const pages: number[] = [];

@@ -10,6 +10,7 @@ import {
   TablePagination,
 } from '@/components/ui';
 import type { SelectOption } from '@/components/ui';
+import { useTableUrlState } from '@/composables/useTableUrlState';
 
 interface Siswa {
   id: string;
@@ -68,15 +69,23 @@ const siswaList = ref<Siswa[]>([]);
 const kelasList = ref<Kelas[]>([]);
 const tahunAjaranList = ref<TahunAjaran[]>([]);
 const loading = ref(false);
-const currentPage = ref(1);
-const pageSize = ref(15);
 const totalCount = ref(0);
 const totalPages = ref(0);
 
-const search = ref('');
-const filterKelas = ref('');
-const filterStatus = ref<StatusSiswa | ''>('');
-const filterTahunAjaran = ref('');
+const { page, pageSize, search, filters, queryParams } = useTableUrlState({
+  searchKey: 'search',
+  defaultPageSize: 15,
+  filters: [
+    { key: 'kelas_id', type: 'string' },
+    { key: 'status', type: 'enum', enumValues: ['aktif', 'pindah_sekolah', 'keluar', 'alumni'] },
+    { key: 'tahun_ajaran_id', type: 'string' },
+  ],
+});
+
+// Shorthand refs for template v-model bindings
+const filterKelas = filters['kelas_id'];
+const filterStatus = filters['status'];
+const filterTahunAjaran = filters['tahun_ajaran_id'];
 
 const showFormModal = ref(false);
 const showDeleteModal = ref(false);
@@ -136,14 +145,7 @@ const tahunAjaranSelectOptions = computed<SelectOption[]>(() =>
 async function fetchSiswa() {
   loading.value = true;
   try {
-    const params: Record<string, string | number> = {
-      page: currentPage.value,
-      page_size: pageSize.value,
-    };
-    if (search.value) params.search = search.value;
-    if (filterKelas.value) params.kelas_id = filterKelas.value;
-    if (filterStatus.value) params.status = filterStatus.value;
-    if (filterTahunAjaran.value) params.tahun_ajaran_id = filterTahunAjaran.value;
+    const params = { ...queryParams.value };
     const { data } = await api.get<{
       data: Siswa[];
       meta: { page: number; page_size: number; total_count: number; total_pages: number };
@@ -176,29 +178,8 @@ async function fetchTahunAjaran() {
   }
 }
 
-function onPageChange(page: number) {
-  currentPage.value = page;
-  fetchSiswa();
-}
-
-function onPageSizeChange(size: number) {
-  pageSize.value = size;
-  currentPage.value = 1;
-  fetchSiswa();
-}
-
-let searchTimeout: ReturnType<typeof setTimeout> | null = null;
-watch(search, () => {
-  if (searchTimeout) clearTimeout(searchTimeout);
-  searchTimeout = setTimeout(() => {
-    currentPage.value = 1;
-    fetchSiswa();
-  }, 300);
-});
-watch([filterKelas, filterStatus, filterTahunAjaran], () => {
-  currentPage.value = 1;
-  fetchSiswa();
-});
+// Watch composable state changes to trigger fetch
+watch([page, pageSize, search, filterKelas, filterStatus, filterTahunAjaran], fetchSiswa);
 
 function validateForm(): boolean {
   formErrors.value = {};
@@ -605,13 +586,13 @@ onMounted(() => {
 
     <!-- Pagination -->
     <TablePagination
-      :current-page="currentPage"
+      :current-page="page"
       :total-pages="totalPages"
       :total-count="totalCount"
       :page-size="pageSize"
       :loading="loading"
-      @page-change="onPageChange"
-      @page-size-change="onPageSizeChange"
+      @page-change="page = $event"
+      @page-size-change="pageSize = $event"
     />
 
     <!-- Create/Edit Modal -->

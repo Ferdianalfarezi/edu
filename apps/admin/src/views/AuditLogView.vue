@@ -3,6 +3,7 @@ import { ref, computed, watch, onMounted } from 'vue';
 import { Role } from '@edu/shared';
 import { api } from '@/api/client';
 import { useAuthStore } from '@/stores/auth';
+import { useTableUrlState } from '@/composables/useTableUrlState';
 import { PageHeader, SearchSelect, BaseModal, TablePagination } from '@/components/ui';
 import type { SelectOption } from '@/components/ui';
 
@@ -37,17 +38,35 @@ const authStore = useAuthStore();
 const isSuperAdmin = computed(() => authStore.user?.role === Role.SUPER_ADMIN);
 const isBendahara = computed(() => authStore.user?.role === Role.BENDAHARA);
 
-// Filters
+// URL-synced table state (action, user_id, date_from, date_to, page, page_size)
+const { page, pageSize, filters } = useTableUrlState({
+  searchKey: 'search',
+  defaultPageSize: 15,
+  filters: [
+    { key: 'action', type: 'string' },
+    { key: 'user_id', type: 'string' },
+    { key: 'date_from', type: 'string' },
+    { key: 'date_to', type: 'string' },
+  ],
+});
+
+// Local-only filters (not URL-persisted per spec)
 const filterTenantId = ref('');
 const filterEntityType = ref('');
-const filterAction = ref('');
-const filterActorUserId = ref('');
-const filterDateFrom = ref('');
-const filterDateTo = ref('');
 
-// Pagination
-const currentPage = ref(1);
-const pageSize = ref(15);
+// Date validation: treat invalid ISO dates as undefined
+const validDateFrom = computed(() => {
+  const val = filters['date_from'].value;
+  if (!val || isNaN(Date.parse(val))) return undefined;
+  return val;
+});
+const validDateTo = computed(() => {
+  const val = filters['date_to'].value;
+  if (!val || isNaN(Date.parse(val))) return undefined;
+  return val;
+});
+
+// Pagination metadata
 const totalCount = ref(0);
 const totalPages = ref(0);
 
@@ -88,15 +107,15 @@ async function fetchAuditLogs() {
   loading.value = true;
   try {
     const params: Record<string, string | number> = {
-      page: currentPage.value,
+      page: page.value,
       page_size: pageSize.value,
     };
     if (filterTenantId.value) params.tenantId = filterTenantId.value;
     if (filterEntityType.value) params.entityType = filterEntityType.value;
-    if (filterAction.value) params.action = filterAction.value;
-    if (filterActorUserId.value) params.actorUserId = filterActorUserId.value;
-    if (filterDateFrom.value) params.dateFrom = filterDateFrom.value;
-    if (filterDateTo.value) params.dateTo = filterDateTo.value;
+    if (filters['action'].value) params.action = filters['action'].value;
+    if (filters['user_id'].value) params.actorUserId = filters['user_id'].value;
+    if (validDateFrom.value) params.dateFrom = validDateFrom.value;
+    if (validDateTo.value) params.dateTo = validDateTo.value;
 
     const { data } = await api.get<AuditLogResponse>('/audit-logs', { params });
     entries.value = data.data;
@@ -130,25 +149,24 @@ async function loadTenantOptions() {
   }
 }
 
-// Reset to page 1 on filter change
+// Watcher for local-only filters (reset page and fetch)
+watch([filterTenantId, filterEntityType], () => {
+  page.value = 1;
+  fetchAuditLogs();
+});
+
+// Watcher for URL-synced state to trigger fetches
 watch(
-  [filterTenantId, filterEntityType, filterAction, filterActorUserId, filterDateFrom, filterDateTo],
-  () => {
-    currentPage.value = 1;
-    fetchAuditLogs();
-  },
+  [
+    page,
+    pageSize,
+    () => filters['action'].value,
+    () => filters['user_id'].value,
+    () => filters['date_from'].value,
+    () => filters['date_to'].value,
+  ],
+  fetchAuditLogs,
 );
-
-function onPageChange(page: number) {
-  currentPage.value = page;
-  fetchAuditLogs();
-}
-
-function onPageSizeChange(size: number) {
-  pageSize.value = size;
-  currentPage.value = 1;
-  fetchAuditLogs();
-}
 
 function formatTimestamp(iso: string): string {
   const date = new Date(iso);
@@ -292,7 +310,7 @@ onMounted(() => {
       <!-- Action Type filter -->
       <div class="w-40">
         <SearchSelect
-          v-model="filterAction"
+          v-model="filters['action'].value"
           :options="actionTypeOptions"
           placeholder="Action"
           clearable
@@ -303,7 +321,7 @@ onMounted(() => {
       <!-- Actor filter -->
       <div class="w-44">
         <input
-          v-model="filterActorUserId"
+          v-model="filters['user_id'].value"
           type="text"
           placeholder="Actor User ID..."
           class="w-full px-3 py-2 text-sm border border-border rounded-lg bg-white placeholder:text-text-tertiary focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-colors"
@@ -313,7 +331,7 @@ onMounted(() => {
       <!-- Date From -->
       <div class="w-40">
         <input
-          v-model="filterDateFrom"
+          v-model="filters['date_from'].value"
           type="date"
           title="Dari tanggal"
           class="w-full px-3 py-2 text-sm border border-border rounded-lg bg-white placeholder:text-text-tertiary focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-colors"
@@ -323,7 +341,7 @@ onMounted(() => {
       <!-- Date To -->
       <div class="w-40">
         <input
-          v-model="filterDateTo"
+          v-model="filters['date_to'].value"
           type="date"
           title="Sampai tanggal"
           class="w-full px-3 py-2 text-sm border border-border rounded-lg bg-white placeholder:text-text-tertiary focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-colors"
@@ -437,13 +455,13 @@ onMounted(() => {
 
       <!-- Pagination -->
       <TablePagination
-        :current-page="currentPage"
+        :current-page="page"
         :total-pages="totalPages"
         :total-count="totalCount"
         :page-size="pageSize"
         :loading="loading"
-        @page-change="onPageChange"
-        @page-size-change="onPageSizeChange"
+        @page-change="page = $event"
+        @page-size-change="pageSize = $event"
       />
     </div>
 
