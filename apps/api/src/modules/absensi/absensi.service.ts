@@ -23,6 +23,7 @@ import {
   UpdateAbsensiDto,
   RekapAbsensiQueryDto,
   RekapAbsensiItem,
+  RekapAbsensiResponse,
   ExportRekapAbsensiQueryDto,
   ExportRekapAbsensiResponse,
   SyncAbsensiDto,
@@ -635,7 +636,7 @@ export class AbsensiService {
   async getRekapAbsensi(
     tenantId: string,
     query: RekapAbsensiQueryDto,
-  ): Promise<RekapAbsensiItem[]> {
+  ): Promise<RekapAbsensiResponse> {
     const db = this.drizzleService.db;
     const { kelas_id, bulan, tahun, periode = 'bulanan' } = query;
 
@@ -652,16 +653,25 @@ export class AbsensiService {
     // Determine date range based on period
     const { startDate, endDate } = this.getDateRange(bulan, tahun, periode);
 
-    // Get all active students in the class
+    // Get all active students in the class (include nisn)
     const students = await db
-      .select({ id: siswa.id, nama: siswa.nama })
+      .select({ id: siswa.id, nama: siswa.nama, nisn: siswa.nisn })
       .from(siswa)
       .where(
         and(eq(siswa.kelasId, kelas_id), eq(siswa.tenantId, tenantId), eq(siswa.status, 'aktif')),
       );
 
     if (students.length === 0) {
-      return [];
+      return {
+        kelas_id: kelasData.id,
+        kelas_nama: kelasData.nama,
+        bulan,
+        tahun,
+        periode,
+        total_hari_efektif: null,
+        hari_efektif_source: null,
+        data: [],
+      };
     }
 
     // Get attendance records for all students in the period
@@ -693,11 +703,12 @@ export class AbsensiService {
       counts[record.status]++;
     }
 
-    // Calculate hari efektif
+    // Calculate hari efektif and determine source
     const hariEfektif = await this.calculateHariEfektif(tenantId, bulan, tahun, periode);
+    const hariEfektifSource = await this.getHariEfektifSource(tenantId, bulan, tahun);
 
     // Build result
-    const result: RekapAbsensiItem[] = students.map((student) => {
+    const data: RekapAbsensiItem[] = students.map((student) => {
       const counts = countsMap.get(student.id) ?? { hadir: 0, izin: 0, sakit: 0, alpa: 0 };
 
       let persentaseKehadiran: number | null = null;
@@ -708,16 +719,25 @@ export class AbsensiService {
       return {
         siswa_id: student.id,
         siswa_nama: student.nama,
+        siswa_nisn: student.nisn ?? null,
         hadir: counts.hadir,
         izin: counts.izin,
         sakit: counts.sakit,
         alpa: counts.alpa,
-        total_hari_efektif: hariEfektif,
         persentase_kehadiran: persentaseKehadiran,
       };
     });
 
-    return result;
+    return {
+      kelas_id: kelasData.id,
+      kelas_nama: kelasData.nama,
+      bulan,
+      tahun,
+      periode,
+      total_hari_efektif: hariEfektif,
+      hari_efektif_source: hariEfektifSource,
+      data,
+    };
   }
 
   // ─── Export Rekap Absensi (Task 8.14) ──────────────────────────────────
@@ -865,6 +885,27 @@ export class AbsensiService {
 
     const hariEfektif = weekdays - holidaysOnWeekdays;
     return hariEfektif > 0 ? hariEfektif : null;
+  }
+
+  /**
+   * Determine whether hari efektif was sourced from manual config or auto-calculated.
+   */
+  private async getHariEfektifSource(
+    tenantId: string,
+    bulan: number,
+    tahun: number,
+  ): Promise<'manual' | 'otomatis' | null> {
+    const manualKey = `hari_efektif_manual_${bulan}_${tahun}`;
+    try {
+      const config = await this.konfigurasiService.getConfigByKey(tenantId, manualKey);
+      const value = config.value?.value ?? config.value;
+      if (typeof value === 'number' && value > 0) {
+        return 'manual';
+      }
+    } catch {
+      // No manual override
+    }
+    return 'otomatis';
   }
 
   /**

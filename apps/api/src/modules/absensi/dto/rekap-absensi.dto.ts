@@ -27,10 +27,21 @@ export class RekapAbsensiQueryDto {
 export interface RekapAbsensiItem {
   siswa_id: string;
   siswa_nama: string;
+  siswa_nisn: string | null;
   hadir: number;
   izin: number;
   sakit: number;
   alpa: number;
-  total_hari_efektif: number | null;
   persentase_kehadiran: number | null;
+}
+
+export interface RekapAbsensiResponse {
+  kelas_id: string;
+  kelas_nama: string;
+  bulan: number;
+  tahun: number;
+  periode: 'bulanan' | 'semester';
+  total_hari_efektif: number | null;
+  hari_efektif_source: 'manual' | 'otomatis' | null;
+  data: RekapAbsensiItem[];
 }

@@ -145,7 +145,9 @@ describe('AbsensiService — Rekap Absensi (Task 8.8)', () => {
         periode: 'bulanan',
       });
 
-      expect(result).toEqual([]);
+      expect(result.data).toEqual([]);
+      expect(result.kelas_id).toBe(kelasId);
+      expect(result.kelas_nama).toBe('6A');
     });
 
     it('should calculate per-student counts correctly for bulanan period', async () => {
@@ -182,16 +184,16 @@ describe('AbsensiService — Rekap Absensi (Task 8.8)', () => {
         periode: 'bulanan',
       });
 
-      expect(result).toHaveLength(2);
+      expect(result.data).toHaveLength(2);
 
-      const andi = result.find((r) => r.siswa_id === 'siswa-1');
+      const andi = result.data.find((r) => r.siswa_id === 'siswa-1');
       expect(andi).toBeDefined();
       expect(andi!.hadir).toBe(2);
       expect(andi!.izin).toBe(1);
       expect(andi!.sakit).toBe(1);
       expect(andi!.alpa).toBe(1);
 
-      const budi = result.find((r) => r.siswa_id === 'siswa-2');
+      const budi = result.data.find((r) => r.siswa_id === 'siswa-2');
       expect(budi).toBeDefined();
       expect(budi!.hadir).toBe(3);
       expect(budi!.izin).toBe(0);
@@ -241,10 +243,10 @@ describe('AbsensiService — Rekap Absensi (Task 8.8)', () => {
         periode: 'bulanan',
       });
 
-      expect(result).toHaveLength(1);
-      expect(result[0].total_hari_efektif).toBe(25);
+      expect(result.data).toHaveLength(1);
+      expect(result.total_hari_efektif).toBe(25);
       // persentase = (20 / 25) * 100 = 80.0
-      expect(result[0].persentase_kehadiran).toBe(80.0);
+      expect(result.data[0].persentase_kehadiran).toBe(80.0);
     });
 
     it('should return null for persentase_kehadiran when hari_efektif cannot be determined', async () => {
@@ -276,9 +278,9 @@ describe('AbsensiService — Rekap Absensi (Task 8.8)', () => {
         periode: 'bulanan',
       });
 
-      expect(result).toHaveLength(1);
-      expect(result[0].total_hari_efektif).toBeNull();
-      expect(result[0].persentase_kehadiran).toBeNull();
+      expect(result.data).toHaveLength(1);
+      expect(result.total_hari_efektif).toBeNull();
+      expect(result.data[0].persentase_kehadiran).toBeNull();
     });
 
     it('should calculate persentase_kehadiran rounded to 1 decimal place', async () => {
@@ -310,11 +312,11 @@ describe('AbsensiService — Rekap Absensi (Task 8.8)', () => {
         periode: 'bulanan',
       });
 
-      expect(result).toHaveLength(1);
-      expect(result[0].hadir).toBe(7);
-      expect(result[0].total_hari_efektif).toBe(22);
+      expect(result.data).toHaveLength(1);
+      expect(result.data[0].hadir).toBe(7);
+      expect(result.total_hari_efektif).toBe(22);
       // 7/22 * 100 = 31.818... → rounded to 1 decimal = 31.8
-      expect(result[0].persentase_kehadiran).toBe(31.8);
+      expect(result.data[0].persentase_kehadiran).toBe(31.8);
     });
 
     it('should handle semester period by summing 6 months', async () => {
@@ -350,14 +352,14 @@ describe('AbsensiService — Rekap Absensi (Task 8.8)', () => {
         periode: 'semester',
       });
 
-      expect(result).toHaveLength(1);
-      expect(result[0].hadir).toBe(3);
-      expect(result[0].izin).toBe(1);
-      expect(result[0].alpa).toBe(1);
+      expect(result.data).toHaveLength(1);
+      expect(result.data[0].hadir).toBe(3);
+      expect(result.data[0].izin).toBe(1);
+      expect(result.data[0].alpa).toBe(1);
       // total hari efektif = 22+22+20+22+21+18 = 125
-      expect(result[0].total_hari_efektif).toBe(125);
+      expect(result.total_hari_efektif).toBe(125);
       // persentase = (3 / 125) * 100 = 2.4
-      expect(result[0].persentase_kehadiran).toBe(2.4);
+      expect(result.data[0].persentase_kehadiran).toBe(2.4);
     });
 
     it('should auto-calculate hari_efektif from weekdays minus holidays when no manual override', async () => {
@@ -388,16 +390,16 @@ describe('AbsensiService — Rekap Absensi (Task 8.8)', () => {
         periode: 'bulanan',
       });
 
-      expect(result).toHaveLength(1);
+      expect(result.data).toHaveLength(1);
       // October 2024: 31 days
       // Weekdays (Mon-Sat): Oct has 4 Sundays (6, 13, 20, 27) → 31 - 4 = 27 weekdays
       // Minus 2 holidays on weekdays = 25 effective days
       // Actually: let's compute properly
       // Oct 2024: Sun=6,13,20,27 → 4 Sundays → 27 weekdays (Mon-Sat)
       // 2 holidays on weekdays → 27-2 = 25
-      expect(result[0].total_hari_efektif).toBe(25);
+      expect(result.total_hari_efektif).toBe(25);
       // persentase = (5/25) * 100 = 20.0
-      expect(result[0].persentase_kehadiran).toBe(20.0);
+      expect(result.data[0].persentase_kehadiran).toBe(20.0);
     });
 
     it('should return zero counts for students with no attendance records', async () => {
@@ -426,9 +428,9 @@ describe('AbsensiService — Rekap Absensi (Task 8.8)', () => {
         periode: 'bulanan',
       });
 
-      expect(result).toHaveLength(2);
+      expect(result.data).toHaveLength(2);
 
-      const budi = result.find((r) => r.siswa_id === 'siswa-2');
+      const budi = result.data.find((r) => r.siswa_id === 'siswa-2');
       expect(budi).toBeDefined();
       expect(budi!.hadir).toBe(0);
       expect(budi!.izin).toBe(0);
