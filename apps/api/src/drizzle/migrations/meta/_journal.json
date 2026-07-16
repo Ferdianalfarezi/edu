@@ -36,6 +36,13 @@
       "when": 1784101136181,
       "tag": "0004_striped_silver_fox",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "6",
+      "when": 1784166707090,
+      "tag": "0005_misty_hannibal_king",
+      "breakpoints": true
     }
   ]
 }

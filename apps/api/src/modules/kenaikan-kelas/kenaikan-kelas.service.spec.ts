@@ -1,5 +1,6 @@
 import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { KenaikanKelasService } from './kenaikan-kelas.service';
+import { RiwayatKelasHelper } from '../siswa/riwayat-kelas.helper';
 
 /**
  * Creates a mock DB that tracks query chains for sequential resolution.
@@ -50,7 +51,11 @@ describe('KenaikanKelasService', () => {
 
   function buildService(queryResults: any[]): KenaikanKelasService {
     const db = createMockDb(queryResults);
-    return new KenaikanKelasService(db);
+    const riwayatKelasHelper = {
+      record: jest.fn().mockResolvedValue(undefined),
+      recordBatch: jest.fn().mockResolvedValue(undefined),
+    } as unknown as RiwayatKelasHelper;
+    return new KenaikanKelasService(db, riwayatKelasHelper);
   }
 
   // ─── getStudentsForPromotion ──────────────────────────────────

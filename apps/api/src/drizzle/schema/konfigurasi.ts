@@ -79,5 +79,6 @@ export const riwayatKelas = pgTable('riwayat_kelas', {
   tahunAjaranId: uuid('tahun_ajaran_id')
     .notNull()
     .references(() => tahunAjaran.id),
+  tanggalMulai: date('tanggal_mulai'),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
 });

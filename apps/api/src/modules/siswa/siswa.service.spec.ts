@@ -2,6 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { ConflictException, NotFoundException, BadRequestException } from '@nestjs/common';
 import { SiswaService } from './siswa.service';
 import { DRIZZLE } from '@/drizzle/drizzle.module';
+import { RiwayatKelasHelper } from './riwayat-kelas.helper';
 
 // Mock database helper — chainable mock
 const createMockDb = () => ({
@@ -18,18 +19,29 @@ const createMockDb = () => ({
   set: jest.fn().mockReturnThis(),
 });
 
+const createMockRiwayatKelasHelper = () => ({
+  record: jest.fn().mockResolvedValue(undefined),
+  recordBatch: jest.fn().mockResolvedValue(undefined),
+});
+
 describe('SiswaService', () => {
   let service: SiswaService;
   let mockDb: ReturnType<typeof createMockDb>;
+  let mockRiwayatHelper: ReturnType<typeof createMockRiwayatKelasHelper>;
 
   const tenantId = '11111111-1111-1111-1111-111111111111';
   const adminUserId = '22222222-2222-2222-2222-222222222222';
 
   beforeEach(async () => {
     mockDb = createMockDb();
+    mockRiwayatHelper = createMockRiwayatKelasHelper();
 
     const module: TestingModule = await Test.createTestingModule({
-      providers: [SiswaService, { provide: DRIZZLE, useValue: mockDb }],
+      providers: [
+        SiswaService,
+        { provide: DRIZZLE, useValue: mockDb },
+        { provide: RiwayatKelasHelper, useValue: mockRiwayatHelper },
+      ],
     }).compile();
 
     service = module.get<SiswaService>(SiswaService);
@@ -67,6 +79,9 @@ describe('SiswaService', () => {
         },
       ]);
 
+      // Kelas lookup for riwayat recording (kelasId is non-null)
+      mockDb.limit.mockResolvedValueOnce([{ tahunAjaranId: 'ta-1' }]);
+
       const result = await service.createSiswa(tenantId, baseDto, adminUserId);
 
       expect(result.id).toBe('new-siswa-id');
@@ -74,6 +89,12 @@ describe('SiswaService', () => {
       expect(result.nisn).toBe('1234567890');
       expect(result.orangTuaId).toBeNull();
       expect(result.status).toBe('aktif');
+      expect(mockRiwayatHelper.record).toHaveBeenCalledWith({
+        tenantId,
+        siswaId: 'new-siswa-id',
+        kelasId: baseDto.kelasId,
+        tahunAjaranId: 'ta-1',
+      });
     });
 
     it('should create siswa and link to existing parent when phone exists', async () => {
@@ -106,9 +127,13 @@ describe('SiswaService', () => {
         },
       ]);
 
+      // Kelas lookup for riwayat recording (kelasId is non-null)
+      mockDb.limit.mockResolvedValueOnce([{ tahunAjaranId: 'ta-1' }]);
+
       const result = await service.createSiswa(tenantId, dto, adminUserId);
 
       expect(result.orangTuaId).toBe('existing-parent-id');
+      expect(mockRiwayatHelper.record).toHaveBeenCalled();
     });
 
     it('should create siswa and create new parent when phone does not exist', async () => {
@@ -144,9 +169,13 @@ describe('SiswaService', () => {
         },
       ]);
 
+      // Kelas lookup for riwayat recording (kelasId is non-null)
+      mockDb.limit.mockResolvedValueOnce([{ tahunAjaranId: 'ta-1' }]);
+
       const result = await service.createSiswa(tenantId, dto, adminUserId);
 
       expect(result.orangTuaId).toBe('new-parent-id');
+      expect(mockRiwayatHelper.record).toHaveBeenCalled();
     });
 
     it('should throw ConflictException when NISN is duplicate in same tenant', async () => {

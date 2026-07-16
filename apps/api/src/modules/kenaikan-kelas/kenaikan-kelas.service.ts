@@ -5,12 +5,15 @@ import { DRIZZLE } from '@/drizzle/drizzle.module';
 import { kelas } from '@/drizzle/schema/kelas';
 import { siswa } from '@/drizzle/schema/siswa';
 import { tahunAjaran } from '@/drizzle/schema/tahun-ajaran';
-import { riwayatKelas } from '@/drizzle/schema/konfigurasi';
 import { PromoteStudentsDto, PreviewPromotionDto } from './dto';
+import { RiwayatKelasHelper } from '../siswa/riwayat-kelas.helper';
 
 @Injectable()
 export class KenaikanKelasService {
-  constructor(@Inject(DRIZZLE) private readonly db: NodePgDatabase) {}
+  constructor(
+    @Inject(DRIZZLE) private readonly db: NodePgDatabase,
+    private readonly riwayatKelasHelper: RiwayatKelasHelper,
+  ) {}
 
   // ─── GET /kenaikan-kelas/kelas/:kelasId ───────────────────────
 
@@ -326,18 +329,18 @@ export class KenaikanKelasService {
         siswaId,
         kelasId: sourceKelasId,
         tahunAjaranId: sourceKelas.tahunAjaranId,
+        tanggalMulai: new Date().toISOString().split('T')[0],
       })),
       ...(lulusIds || []).map((siswaId) => ({
         tenantId,
         siswaId,
         kelasId: sourceKelasId,
         tahunAjaranId: sourceKelas.tahunAjaranId,
+        tanggalMulai: new Date().toISOString().split('T')[0],
       })),
     ];
 
-    if (riwayatRecords.length > 0) {
-      await this.db.insert(riwayatKelas).values(riwayatRecords);
-    }
+    await this.riwayatKelasHelper.recordBatch(riwayatRecords);
 
     return {
       promoted: promotedCount,

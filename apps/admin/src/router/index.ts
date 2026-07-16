@@ -32,6 +32,12 @@ export const router = createRouter({
       meta: { roles: [Role.ADMIN, Role.SUPER_ADMIN] },
     },
     {
+      path: '/siswa/:id',
+      name: 'siswa-detail',
+      component: () => import('@/views/SiswaDetailView.vue'),
+      meta: { roles: [Role.ADMIN, Role.GURU, Role.KEPALA_SEKOLAH] },
+    },
+    {
       path: '/siswa',
       name: 'siswa',
       component: () => import('@/views/SiswaManagementView.vue'),

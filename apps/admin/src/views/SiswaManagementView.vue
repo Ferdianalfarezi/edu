@@ -493,7 +493,11 @@ onMounted(() => {
               :key="siswa.id"
               class="hover:bg-surface-50 transition-colors"
             >
-              <td class="px-4 py-3 font-medium text-text-primary">{{ siswa.nama }}</td>
+              <td class="px-4 py-3 font-medium text-text-primary">
+                <router-link :to="'/siswa/' + siswa.id" class="text-primary-600 hover:underline">{{
+                  siswa.nama
+                }}</router-link>
+              </td>
               <td class="px-4 py-3 text-text-secondary font-mono text-xs">{{ siswa.nisn }}</td>
               <td class="px-4 py-3 text-text-secondary">{{ siswa.kelas_nama || '-' }}</td>
               <td class="px-4 py-3 text-text-secondary">

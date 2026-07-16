@@ -70,6 +70,36 @@ export class SiswaController {
   }
 
   /**
+   * GET /siswa/:id/detail
+   * Get comprehensive student detail: profile, class history timeline, and rapor summary.
+   * Accessible by admin, guru, kepala_sekolah.
+   *
+   * Requirements: 3.5, 4.3, 9.1
+   */
+  @Get(':id/detail')
+  @Roles(Role.ADMIN, Role.GURU, Role.KEPALA_SEKOLAH)
+  async getSiswaDetail(@TenantId() tenantId: string, @Param('id', ParseUUIDPipe) id: string) {
+    return this.siswaService.getSiswaDetail(tenantId, id);
+  }
+
+  /**
+   * GET /siswa/:id/rapor/:raporId
+   * Get per-subject rapor detail for a specific period.
+   * Accessible by admin, guru, kepala_sekolah.
+   *
+   * Requirements: 4.3, 9.1
+   */
+  @Get(':id/rapor/:raporId')
+  @Roles(Role.ADMIN, Role.GURU, Role.KEPALA_SEKOLAH)
+  async getSiswaRaporDetail(
+    @TenantId() tenantId: string,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Param('raporId', ParseUUIDPipe) raporId: string,
+  ) {
+    return this.siswaService.getSiswaRaporDetail(tenantId, id, raporId);
+  }
+
+  /**
    * GET /siswa/:id
    * Get single student detail.
    * Accessible by admin, guru, kepala_sekolah.
