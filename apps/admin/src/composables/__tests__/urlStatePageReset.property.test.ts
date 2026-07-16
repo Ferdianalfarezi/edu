@@ -1,5 +1,5 @@
 import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { reactive, nextTick, effectScope, type EffectScope } from 'vue';
+import { reactive, nextTick, effectScope } from 'vue';
 import fc from 'fast-check';
 
 const mockQuery = reactive<Record<string, string | undefined>>({});

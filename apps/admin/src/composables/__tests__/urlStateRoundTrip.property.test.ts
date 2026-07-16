@@ -7,11 +7,7 @@ import {
   parseEnumFilter,
   buildQueryObject,
 } from '../urlStateParsers';
-import {
-  ALLOWED_PAGE_SIZES,
-  DEFAULT_PAGE_SIZE,
-  type TableUrlStateConfig,
-} from '../useTableUrlState';
+import { DEFAULT_PAGE_SIZE, type TableUrlStateConfig } from '../useTableUrlState';
 
 /**
  * Property 1: State-to-URL Round Trip

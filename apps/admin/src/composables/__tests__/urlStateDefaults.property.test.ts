@@ -1,11 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import fc from 'fast-check';
 import { buildQueryObject } from '../urlStateParsers';
-import {
-  ALLOWED_PAGE_SIZES,
-  DEFAULT_PAGE_SIZE,
-  type TableUrlStateConfig,
-} from '../useTableUrlState';
+import { ALLOWED_PAGE_SIZES, type TableUrlStateConfig } from '../useTableUrlState';
 
 /**
  * Property 2: Default Values Are Omitted from URL
@@ -24,11 +20,6 @@ describe('Feature: url-state-persistence, Property 2: Default Values Are Omitted
   const arbFilterKey = fc
     .string({ minLength: 1, maxLength: 20 })
     .filter((s) => /^[a-z][a-z0-9_]*$/.test(s) && !['page', 'page_size', 'search'].includes(s));
-
-  const arbFilterDefault = fc.oneof(
-    fc.constant(undefined as string | undefined),
-    fc.string({ minLength: 1, maxLength: 10 }),
-  );
 
   it('when page === 1, the result should NOT have a "page" key', () => {
     fc.assert(

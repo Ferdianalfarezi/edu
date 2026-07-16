@@ -53,22 +53,6 @@ describe('Property 7: Batching — Multiple Changes Produce Single URL Update', 
     'filter_tahun' as StateChangeType,
   );
 
-  // Generate a value appropriate for a given state change type
-  function generateValueForChange(changeType: StateChangeType): fc.Arbitrary<string | number> {
-    switch (changeType) {
-      case 'page':
-        return fc.integer({ min: 2, max: 100 });
-      case 'pageSize':
-        return fc.constantFrom(10, 25, 50);
-      case 'filter_kelas':
-        return fc.string({ minLength: 1, maxLength: 20 });
-      case 'filter_status':
-        return fc.constantFrom('aktif', 'pindah_sekolah', 'keluar', 'alumni');
-      case 'filter_tahun':
-        return fc.string({ minLength: 1, maxLength: 20 });
-    }
-  }
-
   // Arbitrary for a sequence of state changes
   const stateChangesArb = fc
     .integer({ min: 2, max: 10 })
@@ -147,11 +131,11 @@ describe('Property 7: Batching — Multiple Changes Produce Single URL Update', 
         fc.constantFrom('aktif', 'pindah_sekolah', 'keluar', 'alumni'),
         fc.string({ minLength: 1, maxLength: 10 }),
         fc.string({ minLength: 1, maxLength: 10 }),
-        async (newPage, newStatus, newKelas, newTahun) => {
+        async (_newPage, newStatus, newKelas, newTahun) => {
           mockReplace.mockReset();
           Object.keys(mockQuery).forEach((key) => delete mockQuery[key]);
 
-          const { page, filters } = useTableUrlState(config);
+          const { filters } = useTableUrlState(config);
 
           await nextTick();
           await nextTick();

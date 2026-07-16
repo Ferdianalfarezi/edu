@@ -1,5 +1,5 @@
 import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { ref, nextTick, reactive } from 'vue';
+import { nextTick, reactive } from 'vue';
 
 // Mock vue-router
 const mockRoute = reactive({ query: {} as Record<string, string | string[] | undefined> });
