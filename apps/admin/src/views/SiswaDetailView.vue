@@ -392,12 +392,17 @@ onMounted(() => {
           Belum ada riwayat kelas
         </div>
 
-        <div v-else class="relative pl-6 border-l-2 border-surface-200 space-y-4">
-          <div v-for="(entry, idx) in detail.riwayat_kelas" :key="idx" class="relative">
+        <div v-else class="space-y-4">
+          <div v-for="(entry, idx) in detail.riwayat_kelas" :key="idx" class="relative pl-6">
+            <!-- Timeline line (connects dots vertically) -->
+            <div
+              v-if="idx < detail.riwayat_kelas.length - 1"
+              class="absolute left-[5px] top-4 bottom-[-16px] w-0.5 bg-surface-200"
+            ></div>
             <!-- Timeline dot -->
             <div
               :class="[
-                'absolute left-[-25px] top-1 w-3 h-3 rounded-full border-2',
+                'absolute left-0 top-1 w-3 h-3 rounded-full border-2',
                 entry.is_current
                   ? 'bg-success-500 border-success-200'
                   : 'bg-surface-200 border-surface-100',
