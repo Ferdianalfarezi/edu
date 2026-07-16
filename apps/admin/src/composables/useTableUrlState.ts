@@ -270,7 +270,7 @@ export function useTableUrlState(config: TableUrlStateConfig): TableUrlStateRetu
 
     for (const fc of filterConfigs) {
       const val = filters[fc.key].value;
-      if (val != null) {
+      if (val != null && val !== '') {
         params[fc.key] = val;
       }
     }

@@ -116,8 +116,8 @@ export function buildQueryObject(
     const value = state.filters[filterConfig.key];
     const filterDefault = filterConfig.default != null ? String(filterConfig.default) : undefined;
 
-    if (value == null) {
-      // undefined — omit from URL
+    if (value == null || value === '') {
+      // undefined or empty string — omit from URL
       continue;
     }
 
