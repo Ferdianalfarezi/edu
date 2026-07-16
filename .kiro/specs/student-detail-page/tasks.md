@@ -22,19 +22,19 @@ This plan implements the Student Detail Page feature in sequential steps: databa
     - Both methods MUST always set `tanggalMulai` to a non-null date value
     - _Requirements: 1.1, 1.2, 1.3, 1.4, 1.5, 1.6, 2.3_
 
-  - [ ]* 2.2 Write property tests for RiwayatKelasHelper — Property 1: Creation records riwayat iff kelas_id non-null
+  - [x] 2.2 Write property tests for RiwayatKelasHelper — Property 1: Creation records riwayat iff kelas_id non-null
     - **Property 1: Student creation records riwayat if and only if kelas_id is non-null**
     - **Validates: Requirements 1.1, 1.5, 1.6**
     - Use fast-check to generate arbitrary student creation params with random nullable kelas_id
     - Assert: riwayat record created ⟺ kelas_id is non-null; tanggal_mulai is always a valid date string
 
-  - [ ]* 2.3 Write property tests for RiwayatKelasHelper — Property 2: Update records riwayat for non-null target only
+  - [x] 2.3 Write property tests for RiwayatKelasHelper — Property 2: Update records riwayat for non-null target only
     - **Property 2: Class update records riwayat for non-null target only**
     - **Validates: Requirements 1.2, 1.5**
     - Use fast-check to generate arbitrary kelas_id transitions (null→non-null, non-null→non-null, non-null→null, null→null)
     - Assert: riwayat record created ⟺ new kelas_id is non-null; tanggal_mulai is always non-null
 
-  - [ ]* 2.4 Write property tests for RiwayatKelasHelper — Property 3: Promotion batch recording
+  - [x] 2.4 Write property tests for RiwayatKelasHelper — Property 3: Promotion batch recording
     - **Property 3: Promotion records riwayat for all promoted students**
     - **Validates: Requirements 1.3, 1.4**
     - Use fast-check to generate N students (1..50) being promoted from a source class
@@ -83,25 +83,25 @@ This plan implements the Student Detail Page feature in sequential steps: databa
     - Wire to SiswaService methods with `@TenantId()` and `@Param('id', ParseUUIDPipe)`
     - _Requirements: 3.5, 4.3, 9.1_
 
-  - [ ]* 5.4 Write property tests — Property 4: Riwayat merge and sort invariant
+  - [x] 5.4 Write property tests — Property 4: Riwayat merge and sort invariant
     - **Property 4: Detail endpoint riwayat merge and sort invariant**
     - **Validates: Requirements 3.2, 7.1**
     - Use fast-check to generate K historical riwayat entries with random dates, and optionally a current kelas
     - Assert: result length = K+1 (if current kelas) or K; sorted by tanggal_mulai DESC; exactly 0 or 1 `is_current: true`
 
-  - [ ]* 5.5 Write property tests — Property 5: Rapor ringkasan arithmetic mean
+  - [x] 5.5 Write property tests — Property 5: Rapor ringkasan arithmetic mean
     - **Property 5: Rapor ringkasan computes correct arithmetic mean**
     - **Validates: Requirements 3.3**
     - Use fast-check to generate N rapor_nilai records with random rata_rata values (decimal 0-100)
     - Assert: computed rata_rata equals arithmetic mean of all rata_rata values, rounded to 2 decimal places
 
-  - [ ]* 5.6 Write property tests — Property 6: Rapor detail filter and sort
+  - [x] 5.6 Write property tests — Property 6: Rapor detail filter and sort
     - **Property 6: Rapor detail returns only submitted entries sorted by subject name**
     - **Validates: Requirements 4.1, 4.4**
     - Use fast-check to generate a mix of 'draft' and 'submitted' rapor_nilai entries with random mata_pelajaran names
     - Assert: result contains only 'submitted' entries; sorted alphabetically by mata_pelajaran name; komponen with missing komponen_penilaian has null name
 
-  - [ ]* 5.7 Write property tests — Property 7: Multi-tenant isolation
+  - [x] 5.7 Write property tests — Property 7: Multi-tenant isolation
     - **Property 7: Multi-tenant isolation**
     - **Validates: Requirements 9.1, 9.2**
     - Use fast-check to generate two tenantIds and a siswaId belonging to tenant A

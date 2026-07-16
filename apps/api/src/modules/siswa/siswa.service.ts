@@ -284,8 +284,8 @@ export class SiswaService {
           'avg_rata_rata',
         ),
         peringkat: sql<number | null>`(
-          SELECT ${raporNilai.peringkat}
-          FROM ${raporNilai} AS rn2
+          SELECT rn2.peringkat
+          FROM rapor_nilai AS rn2
           WHERE rn2.rapor_id = ${rapor.id}
             AND rn2.siswa_id = ${siswaId}
             AND rn2.peringkat IS NOT NULL
