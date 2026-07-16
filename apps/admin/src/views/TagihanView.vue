@@ -1,7 +1,13 @@
 <script setup lang="ts">
 import { ref, reactive, onMounted, watch, computed, h } from 'vue';
 import { api } from '@/api/client';
-import { PageHeader, BaseModal, SearchSelect, ActionButton } from '@/components/ui';
+import {
+  PageHeader,
+  BaseModal,
+  SearchSelect,
+  ActionButton,
+  TablePagination,
+} from '@/components/ui';
 import type { SelectOption } from '@/components/ui';
 import { useToast } from '@/composables/useToast';
 
@@ -189,8 +195,10 @@ const listFilter = reactive({
   tahun: new Date().getFullYear(),
   search: '',
 });
-const listCursor = ref<string | null>(null);
-const listHasNext = ref(false);
+const currentPage = ref(1);
+const pageSize = ref(15);
+const totalCount = ref(0);
+const totalPages = ref(0);
 
 // ===== Verifikasi Tab =====
 const verifikasiList = ref<TransaksiVerifikasi[]>([]);
@@ -401,13 +409,14 @@ async function generateTagihan() {
 }
 
 // --- List ---
-async function fetchTagihanList(resetCursor = true) {
+async function fetchTagihanList() {
   loading.value = true;
-  if (resetCursor) listCursor.value = null;
 
   try {
-    const params: Record<string, string | number> = { limit: 20 };
-    if (listCursor.value) params.cursor = listCursor.value;
+    const params: Record<string, string | number> = {
+      page: currentPage.value,
+      page_size: pageSize.value,
+    };
     if (listFilter.status) params.status = listFilter.status;
     if (listFilter.kelas_id) params.kelas_id = listFilter.kelas_id;
     if (listFilter.bulan) params.bulan = listFilter.bulan;
@@ -416,21 +425,28 @@ async function fetchTagihanList(resetCursor = true) {
 
     const { data } = await api.get<{
       data: Tagihan[];
-      meta: { has_next: boolean; cursor: string | null };
+      meta: { page: number; page_size: number; total_count: number; total_pages: number };
     }>('/tagihan', { params });
 
-    if (resetCursor) {
-      tagihanList.value = data.data;
-    } else {
-      tagihanList.value = [...tagihanList.value, ...data.data];
-    }
-    listHasNext.value = data.meta.has_next;
-    listCursor.value = data.meta.cursor;
+    tagihanList.value = data.data;
+    totalCount.value = data.meta.total_count;
+    totalPages.value = data.meta.total_pages;
   } catch (error) {
     console.error('Failed to fetch tagihan:', error);
   } finally {
     loading.value = false;
   }
+}
+
+function onPageChange(page: number) {
+  currentPage.value = page;
+  fetchTagihanList();
+}
+
+function onPageSizeChange(size: number) {
+  pageSize.value = size;
+  currentPage.value = 1;
+  fetchTagihanList();
 }
 
 // --- Verifikasi ---
@@ -649,13 +665,19 @@ watch(
   () => listFilter.search,
   () => {
     if (searchTimeout) clearTimeout(searchTimeout);
-    searchTimeout = setTimeout(() => fetchTagihanList(), 300);
+    searchTimeout = setTimeout(() => {
+      currentPage.value = 1;
+      fetchTagihanList();
+    }, 300);
   },
 );
 
 watch(
   () => [listFilter.status, listFilter.kelas_id, listFilter.bulan, listFilter.tahun],
-  () => fetchTagihanList(),
+  () => {
+    currentPage.value = 1;
+    fetchTagihanList();
+  },
 );
 
 watch(
@@ -997,16 +1019,18 @@ onMounted(() => {
         >
           Tidak ada tagihan ditemukan.
         </p>
-
-        <div v-if="listHasNext && !loading" class="flex justify-center p-4 border-t border-border">
-          <button
-            class="px-3 py-2 text-sm font-medium text-text-secondary bg-white border border-border rounded-lg hover:bg-surface-50 transition-colors"
-            @click="fetchTagihanList(false)"
-          >
-            Muat Lebih Banyak
-          </button>
-        </div>
       </div>
+
+      <!-- Pagination -->
+      <TablePagination
+        :current-page="currentPage"
+        :total-pages="totalPages"
+        :total-count="totalCount"
+        :page-size="pageSize"
+        :loading="loading"
+        @page-change="onPageChange"
+        @page-size-change="onPageSizeChange"
+      />
     </div>
 
     <!-- ===== Verifikasi Tab ===== -->

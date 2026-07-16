@@ -9,9 +9,12 @@ const createMockDb = () => ({
   select: jest.fn().mockReturnThis(),
   from: jest.fn().mockReturnThis(),
   leftJoin: jest.fn().mockReturnThis(),
+  innerJoin: jest.fn().mockReturnThis(),
   where: jest.fn().mockReturnThis(),
   limit: jest.fn().mockReturnThis(),
+  offset: jest.fn().mockReturnThis(),
   orderBy: jest.fn().mockReturnThis(),
+  groupBy: jest.fn().mockReturnThis(),
   insert: jest.fn().mockReturnThis(),
   values: jest.fn().mockReturnThis(),
   returning: jest.fn(),
@@ -436,8 +439,8 @@ describe('SiswaService', () => {
   // ─── LIST / SEARCH / FILTER ───────────────────────────────────
 
   describe('listSiswa', () => {
-    it('should return paginated list with meta.cursor', async () => {
-      const students = Array.from({ length: 21 }, (_, i) => ({
+    it('should return paginated list with offset-based meta', async () => {
+      const students = Array.from({ length: 15 }, (_, i) => ({
         id: `siswa-${String(i).padStart(2, '0')}`,
         kelas_id: 'kelas-1',
         kelas_nama: '1A',
@@ -454,44 +457,36 @@ describe('SiswaService', () => {
         created_at: new Date(),
       }));
 
-      mockDb.limit.mockResolvedValueOnce(students);
+      // COUNT query resolves from where (via Promise.all)
+      mockDb.where.mockResolvedValueOnce([{ count: 30 }]);
+      // DATA query resolves from offset
+      mockDb.offset.mockResolvedValueOnce(students);
 
       const result = await service.listSiswa(tenantId, {});
 
-      expect(result.data).toHaveLength(20);
-      expect(result.meta.cursor).toBe('siswa-19');
-      expect(result.meta.has_next).toBe(true);
+      expect(result.data).toHaveLength(15);
+      expect(result.meta.page).toBe(1);
+      expect(result.meta.page_size).toBe(15);
+      expect(result.meta.total_count).toBe(30);
+      expect(result.meta.total_pages).toBe(2);
     });
 
-    it('should return null cursor when no more data', async () => {
-      mockDb.limit.mockResolvedValueOnce([
-        {
-          id: 'siswa-1',
-          kelas_id: 'kelas-1',
-          kelas_nama: '1A',
-          tahun_ajaran_id: 'ta-1',
-          tahun_ajaran_nama: '2024/2025',
-          nama: 'Student 1',
-          nisn: '0000000001',
-          jenis_kelamin: 'L',
-          tanggal_lahir: '2015-01-01',
-          alamat: null,
-          orang_tua_nama: null,
-          orang_tua_phone: null,
-          status: 'aktif',
-          created_at: new Date(),
-        },
-      ]);
+    it('should return empty data for out-of-range page', async () => {
+      // COUNT query
+      mockDb.where.mockResolvedValueOnce([{ count: 5 }]);
+      // DATA query (page 2 with only 5 total items at page_size=15 → empty)
+      mockDb.offset.mockResolvedValueOnce([]);
 
-      const result = await service.listSiswa(tenantId, {});
+      const result = await service.listSiswa(tenantId, { page: 2 });
 
-      expect(result.data).toHaveLength(1);
-      expect(result.meta.cursor).toBeNull();
-      expect(result.meta.has_next).toBe(false);
+      expect(result.data).toHaveLength(0);
+      expect(result.meta.total_count).toBe(5);
+      expect(result.meta.total_pages).toBe(1);
     });
 
     it('should support search by name (ILIKE)', async () => {
-      mockDb.limit.mockResolvedValueOnce([
+      mockDb.where.mockResolvedValueOnce([{ count: 1 }]);
+      mockDb.offset.mockResolvedValueOnce([
         {
           id: 'siswa-1',
           kelas_id: 'kelas-1',
@@ -517,7 +512,8 @@ describe('SiswaService', () => {
     });
 
     it('should support exact NISN filter', async () => {
-      mockDb.limit.mockResolvedValueOnce([
+      mockDb.where.mockResolvedValueOnce([{ count: 1 }]);
+      mockDb.offset.mockResolvedValueOnce([
         {
           id: 'siswa-1',
           kelas_id: 'kelas-1',

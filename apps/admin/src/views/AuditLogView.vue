@@ -3,7 +3,7 @@ import { ref, computed, watch, onMounted } from 'vue';
 import { Role } from '@edu/shared';
 import { api } from '@/api/client';
 import { useAuthStore } from '@/stores/auth';
-import { PageHeader, SearchSelect, BaseModal } from '@/components/ui';
+import { PageHeader, SearchSelect, BaseModal, TablePagination } from '@/components/ui';
 import type { SelectOption } from '@/components/ui';
 
 interface AuditLogEntry {
@@ -47,7 +47,7 @@ const filterDateTo = ref('');
 
 // Pagination
 const currentPage = ref(1);
-const pageSize = 20;
+const pageSize = ref(15);
 const totalCount = ref(0);
 const totalPages = ref(0);
 
@@ -89,7 +89,7 @@ async function fetchAuditLogs() {
   try {
     const params: Record<string, string | number> = {
       page: currentPage.value,
-      page_size: pageSize,
+      page_size: pageSize.value,
     };
     if (filterTenantId.value) params.tenantId = filterTenantId.value;
     if (filterEntityType.value) params.entityType = filterEntityType.value;
@@ -139,47 +139,16 @@ watch(
   },
 );
 
-function goToPage(page: number) {
-  if (page < 1 || page > totalPages.value) return;
+function onPageChange(page: number) {
   currentPage.value = page;
   fetchAuditLogs();
 }
 
-function goFirst() {
-  goToPage(1);
+function onPageSizeChange(size: number) {
+  pageSize.value = size;
+  currentPage.value = 1;
+  fetchAuditLogs();
 }
-
-function goPrev() {
-  goToPage(currentPage.value - 1);
-}
-
-function goNext() {
-  goToPage(currentPage.value + 1);
-}
-
-function goLast() {
-  goToPage(totalPages.value);
-}
-
-// Page numbers to display (show a window of pages around current)
-const visiblePages = computed(() => {
-  const pages: number[] = [];
-  const total = totalPages.value;
-  const current = currentPage.value;
-
-  if (total <= 7) {
-    for (let i = 1; i <= total; i++) pages.push(i);
-  } else {
-    pages.push(1);
-    if (current > 3) pages.push(-1); // ellipsis marker
-    const start = Math.max(2, current - 1);
-    const end = Math.min(total - 1, current + 1);
-    for (let i = start; i <= end; i++) pages.push(i);
-    if (current < total - 2) pages.push(-1); // ellipsis marker
-    pages.push(total);
-  }
-  return pages;
-});
 
 function formatTimestamp(iso: string): string {
   const date = new Date(iso);
@@ -467,75 +436,15 @@ onMounted(() => {
       </div>
 
       <!-- Pagination -->
-      <div
-        v-if="totalPages > 0"
-        class="px-4 py-3 border-t border-border flex flex-col sm:flex-row items-center justify-between gap-3"
-      >
-        <p class="text-sm text-text-secondary">
-          Menampilkan {{ entries.length }} dari {{ totalCount }} entri (Halaman
-          {{ currentPage }} dari {{ totalPages }})
-        </p>
-
-        <div class="flex items-center gap-1">
-          <!-- First -->
-          <button
-            :disabled="currentPage === 1"
-            class="px-2 py-1 text-sm font-medium rounded-md border border-border hover:bg-surface-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-            title="Halaman pertama"
-            @click="goFirst"
-          >
-            ««
-          </button>
-          <!-- Previous -->
-          <button
-            :disabled="currentPage === 1"
-            class="px-2 py-1 text-sm font-medium rounded-md border border-border hover:bg-surface-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-            title="Sebelumnya"
-            @click="goPrev"
-          >
-            «
-          </button>
-
-          <!-- Page numbers -->
-          <template v-for="(p, idx) in visiblePages">
-            <span v-if="p === -1" :key="'ellipsis-' + idx" class="px-1 text-text-tertiary"
-              >...</span
-            >
-            <button
-              v-else
-              :key="'page-' + p"
-              :class="[
-                'px-2.5 py-1 text-sm font-medium rounded-md border transition-colors',
-                p === currentPage
-                  ? 'bg-primary-600 text-white border-primary-600'
-                  : 'border-border hover:bg-surface-50 text-text-primary',
-              ]"
-              @click="goToPage(p)"
-            >
-              {{ p }}
-            </button>
-          </template>
-
-          <!-- Next -->
-          <button
-            :disabled="currentPage === totalPages"
-            class="px-2 py-1 text-sm font-medium rounded-md border border-border hover:bg-surface-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-            title="Berikutnya"
-            @click="goNext"
-          >
-            »
-          </button>
-          <!-- Last -->
-          <button
-            :disabled="currentPage === totalPages"
-            class="px-2 py-1 text-sm font-medium rounded-md border border-border hover:bg-surface-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-            title="Halaman terakhir"
-            @click="goLast"
-          >
-            »»
-          </button>
-        </div>
-      </div>
+      <TablePagination
+        :current-page="currentPage"
+        :total-pages="totalPages"
+        :total-count="totalCount"
+        :page-size="pageSize"
+        :loading="loading"
+        @page-change="onPageChange"
+        @page-size-change="onPageSizeChange"
+      />
     </div>
 
     <!-- Audit Log Detail Modal -->

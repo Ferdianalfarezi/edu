@@ -1,9 +1,14 @@
 <script setup lang="ts">
 import { ref, reactive, onMounted, watch, computed } from 'vue';
 import { StatusSiswa } from '@edu/shared';
-import type { PaginatedResponse } from '@edu/shared';
 import { api } from '@/api/client';
-import { PageHeader, BaseModal, SearchSelect, ActionButton } from '@/components/ui';
+import {
+  PageHeader,
+  BaseModal,
+  SearchSelect,
+  ActionButton,
+  TablePagination,
+} from '@/components/ui';
 import type { SelectOption } from '@/components/ui';
 
 interface Siswa {
@@ -63,10 +68,10 @@ const siswaList = ref<Siswa[]>([]);
 const kelasList = ref<Kelas[]>([]);
 const tahunAjaranList = ref<TahunAjaran[]>([]);
 const loading = ref(false);
+const currentPage = ref(1);
+const pageSize = ref(15);
 const totalCount = ref(0);
-const cursor = ref<string | null>(null);
-const hasNext = ref(false);
-const pageSize = 20;
+const totalPages = ref(0);
 
 const search = ref('');
 const filterKelas = ref('');
@@ -128,21 +133,24 @@ const tahunAjaranSelectOptions = computed<SelectOption[]>(() =>
   tahunAjaranList.value.map((ta) => ({ value: ta.id, label: ta.nama })),
 );
 
-async function fetchSiswa(resetCursor = true) {
+async function fetchSiswa() {
   loading.value = true;
-  if (resetCursor) cursor.value = null;
   try {
-    const params: Record<string, string | number> = { limit: pageSize };
-    if (cursor.value) params.cursor = cursor.value;
+    const params: Record<string, string | number> = {
+      page: currentPage.value,
+      page_size: pageSize.value,
+    };
     if (search.value) params.search = search.value;
     if (filterKelas.value) params.kelas_id = filterKelas.value;
     if (filterStatus.value) params.status = filterStatus.value;
     if (filterTahunAjaran.value) params.tahun_ajaran_id = filterTahunAjaran.value;
-    const { data } = await api.get<PaginatedResponse<Siswa>>('/siswa', { params });
-    siswaList.value = resetCursor ? data.data : [...siswaList.value, ...data.data];
-    hasNext.value = data.meta.has_next;
-    cursor.value = data.meta.cursor;
-    if (data.meta.total !== undefined) totalCount.value = data.meta.total;
+    const { data } = await api.get<{
+      data: Siswa[];
+      meta: { page: number; page_size: number; total_count: number; total_pages: number };
+    }>('/siswa', { params });
+    siswaList.value = data.data;
+    totalCount.value = data.meta.total_count;
+    totalPages.value = data.meta.total_pages;
   } catch (error) {
     console.error('Failed to fetch siswa:', error);
   } finally {
@@ -168,16 +176,29 @@ async function fetchTahunAjaran() {
   }
 }
 
-function loadMore() {
-  if (hasNext.value && !loading.value) fetchSiswa(false);
+function onPageChange(page: number) {
+  currentPage.value = page;
+  fetchSiswa();
+}
+
+function onPageSizeChange(size: number) {
+  pageSize.value = size;
+  currentPage.value = 1;
+  fetchSiswa();
 }
 
 let searchTimeout: ReturnType<typeof setTimeout> | null = null;
 watch(search, () => {
   if (searchTimeout) clearTimeout(searchTimeout);
-  searchTimeout = setTimeout(() => fetchSiswa(), 300);
+  searchTimeout = setTimeout(() => {
+    currentPage.value = 1;
+    fetchSiswa();
+  }, 300);
 });
-watch([filterKelas, filterStatus, filterTahunAjaran], () => fetchSiswa());
+watch([filterKelas, filterStatus, filterTahunAjaran], () => {
+  currentPage.value = 1;
+  fetchSiswa();
+});
 
 function validateForm(): boolean {
   formErrors.value = {};
@@ -580,17 +601,18 @@ onMounted(() => {
           <p class="text-sm text-text-tertiary">Tidak ada siswa ditemukan.</p>
         </div>
       </div>
-
-      <!-- Load more -->
-      <div v-if="hasNext && !loading" class="px-4 py-3 border-t border-border text-center">
-        <button
-          class="text-sm font-medium text-primary-600 hover:text-primary-700 transition-colors"
-          @click="loadMore"
-        >
-          Muat lebih banyak
-        </button>
-      </div>
     </div>
+
+    <!-- Pagination -->
+    <TablePagination
+      :current-page="currentPage"
+      :total-pages="totalPages"
+      :total-count="totalCount"
+      :page-size="pageSize"
+      :loading="loading"
+      @page-change="onPageChange"
+      @page-size-change="onPageSizeChange"
+    />
 
     <!-- Create/Edit Modal -->
     <BaseModal

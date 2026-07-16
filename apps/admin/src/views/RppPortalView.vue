@@ -2,7 +2,7 @@
 import { ref, computed, onMounted, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import { api } from '@/api/client';
-import { PageHeader, SearchSelect, ActionButton } from '@/components/ui';
+import { PageHeader, SearchSelect, ActionButton, TablePagination } from '@/components/ui';
 import type { SelectOption } from '@/components/ui';
 import { useAuthStore } from '@/stores/auth';
 import { Role } from '@edu/shared';
@@ -30,11 +30,13 @@ interface KategoriRpp {
   nama: string;
 }
 
-interface PaginatedResponse {
+interface OffsetPaginatedResponse {
   data: RppItem[];
   meta: {
-    has_next: boolean;
-    cursor: string | null;
+    page: number;
+    page_size: number;
+    total_count: number;
+    total_pages: number;
   };
 }
 
@@ -44,8 +46,13 @@ const canCreateRpp = computed(() => !authStore.hasRole(Role.ADMIN));
 
 const items = ref<RppItem[]>([]);
 const loading = ref(false);
-const nextCursor = ref<string | null>(null);
-const hasMore = ref(false);
+const errorMessage = ref('');
+
+// Pagination state
+const currentPage = ref(1);
+const pageSize = ref(15);
+const totalCount = ref(0);
+const totalPages = ref(0);
 
 // Filters
 const search = ref('');
@@ -90,32 +97,27 @@ async function fetchKategori() {
   }
 }
 
-async function fetchRpp(reset = false) {
-  if (reset) {
-    items.value = [];
-    nextCursor.value = null;
-    hasMore.value = false;
-  }
-
+async function fetchRpp() {
   loading.value = true;
+  errorMessage.value = '';
   try {
-    const params: Record<string, string> = {};
+    const params: Record<string, string | number> = {
+      page: currentPage.value,
+      page_size: pageSize.value,
+    };
     if (search.value) params.search = search.value;
     if (filterMapel.value) params.mapel = filterMapel.value;
     if (filterKategori.value) params.kategori = filterKategori.value;
     if (filterTahun.value) params.tahun = filterTahun.value;
-    if (nextCursor.value) params.cursor = nextCursor.value;
 
-    const { data } = await api.get<PaginatedResponse>('/rpp', { params });
-    if (reset) {
-      items.value = data.data;
-    } else {
-      items.value.push(...data.data);
-    }
-    nextCursor.value = data.meta.cursor;
-    hasMore.value = data.meta.has_next;
+    const { data } = await api.get<OffsetPaginatedResponse>('/rpp', { params });
+    items.value = data.data;
+    totalCount.value = data.meta.total_count;
+    totalPages.value = data.meta.total_pages;
   } catch (e) {
     console.error('Failed to fetch RPP:', e);
+    errorMessage.value = 'Gagal memuat data RPP. Silakan coba lagi.';
+    // Keep existing data on error (don't clear items.value)
   } finally {
     loading.value = false;
   }
@@ -124,18 +126,20 @@ async function fetchRpp(reset = false) {
 function onSearchInput() {
   if (searchTimeout) clearTimeout(searchTimeout);
   searchTimeout = setTimeout(() => {
-    fetchRpp(true);
+    currentPage.value = 1;
+    fetchRpp();
   }, 300);
 }
 
-function onFilterChange() {
-  fetchRpp(true);
+function onPageChange(page: number) {
+  currentPage.value = page;
+  fetchRpp();
 }
 
-function loadMore() {
-  if (hasMore.value && !loading.value) {
-    fetchRpp(false);
-  }
+function onPageSizeChange(size: number) {
+  pageSize.value = size;
+  currentPage.value = 1;
+  fetchRpp();
 }
 
 async function toggleFavorite(item: RppItem) {
@@ -169,11 +173,15 @@ function formatDate(dateStr: string): string {
   });
 }
 
-watch([filterMapel, filterKategori, filterTahun], onFilterChange);
+// Filter change → reset to page 1 immediately
+watch([filterMapel, filterKategori, filterTahun], () => {
+  currentPage.value = 1;
+  fetchRpp();
+});
 
 onMounted(async () => {
   await Promise.all([fetchMataPelajaran(), fetchKategori()]);
-  await fetchRpp(true);
+  await fetchRpp();
 });
 </script>
 
@@ -221,6 +229,14 @@ onMounted(async () => {
         placeholder="Semua Tahun"
         clearable
       />
+    </div>
+
+    <!-- Error message -->
+    <div
+      v-if="errorMessage"
+      class="mb-4 p-3 bg-danger-50 border border-danger-200 rounded-lg text-sm text-danger-700"
+    >
+      {{ errorMessage }}
     </div>
 
     <!-- RPP List -->
@@ -289,15 +305,15 @@ onMounted(async () => {
       </div>
     </div>
 
-    <!-- Load more -->
-    <div v-if="hasMore" class="flex justify-center mt-6">
-      <button
-        class="px-3 py-2 text-sm font-medium text-text-secondary bg-white border border-border rounded-lg hover:bg-surface-50 transition-colors"
-        :disabled="loading"
-        @click="loadMore"
-      >
-        {{ loading ? 'Memuat...' : 'Muat Lebih Banyak' }}
-      </button>
-    </div>
+    <!-- Pagination -->
+    <TablePagination
+      :current-page="currentPage"
+      :total-pages="totalPages"
+      :total-count="totalCount"
+      :page-size="pageSize"
+      :loading="loading"
+      @page-change="onPageChange"
+      @page-size-change="onPageSizeChange"
+    />
   </div>
 </template>

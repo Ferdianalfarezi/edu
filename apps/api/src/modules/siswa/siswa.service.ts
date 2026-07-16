@@ -6,7 +6,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { NodePgDatabase } from 'drizzle-orm/node-postgres';
-import { and, eq, ilike, gt, asc, desc, sql, inArray } from 'drizzle-orm';
+import { and, eq, ilike, asc, desc, sql, inArray } from 'drizzle-orm';
 import { DRIZZLE } from '@/drizzle/drizzle.module';
 import { siswa } from '@/drizzle/schema/siswa';
 import { user } from '@/drizzle/schema/user';
@@ -18,6 +18,7 @@ import { rapor, raporNilai, komponenPenilaian } from '@/drizzle/schema/rapor';
 import { mataPelajaran } from '@/drizzle/schema/mata-pelajaran';
 import { CreateSiswaDto, UpdateSiswaDto, SoftDeleteSiswaDto, ListSiswaQueryDto } from './dto';
 import { RiwayatKelasHelper, RiwayatKelasEntry } from './riwayat-kelas.helper';
+import { paginate } from '../../common/utils/paginate';
 
 export interface SiswaDetailResponse {
   profil: {
@@ -59,8 +60,6 @@ export interface RaporDetailResponse {
     capaian_pembelajaran: string | null;
   }>;
 }
-
-const DEFAULT_PAGE_SIZE = 20;
 
 export interface BulkImportSiswaResult {
   created: number;
@@ -562,9 +561,13 @@ export class SiswaService {
     };
   }
 
-  // ─── List Siswa (cursor paginated, search, filter) ────────────
+  // ─── List Siswa (offset paginated, search, filter) ─────────────
 
   async listSiswa(tenantId: string, query: ListSiswaQueryDto) {
+    const page = query.page ?? 1;
+    const pageSize = query.page_size ?? 15;
+    const offset = (page - 1) * pageSize;
+
     const conditions: ReturnType<typeof eq>[] = [eq(siswa.tenantId, tenantId)];
 
     // Exact NISN search
@@ -598,52 +601,47 @@ export class SiswaService {
       conditions.push(sql`${siswa.kelasId} IN (${kelasIds})`);
     }
 
-    // Cursor pagination
-    if (query.cursor) {
-      conditions.push(gt(siswa.id, query.cursor));
-    }
-
-    const pageSize = query.limit ?? DEFAULT_PAGE_SIZE;
-
     // Alias the user table for the parent join
     const orangTuaUser = user;
 
-    const results = await this.db
-      .select({
-        id: siswa.id,
-        kelas_id: siswa.kelasId,
-        kelas_nama: kelas.nama,
-        tahun_ajaran_id: kelas.tahunAjaranId,
-        tahun_ajaran_nama: tahunAjaran.nama,
-        nama: siswa.nama,
-        nisn: siswa.nisn,
-        jenis_kelamin: siswa.jenisKelamin,
-        tanggal_lahir: siswa.tanggalLahir,
-        alamat: siswa.alamat,
-        orang_tua_nama: orangTuaUser.nama,
-        orang_tua_phone: orangTuaUser.phone,
-        status: siswa.status,
-        created_at: siswa.createdAt,
-      })
-      .from(siswa)
-      .leftJoin(kelas, eq(siswa.kelasId, kelas.id))
-      .leftJoin(tahunAjaran, eq(kelas.tahunAjaranId, tahunAjaran.id))
-      .leftJoin(orangTuaUser, eq(siswa.orangTuaId, orangTuaUser.id))
-      .where(and(...conditions))
-      .orderBy(asc(siswa.id))
-      .limit(pageSize + 1);
+    // Parallel COUNT + SELECT queries for performance
+    const [countResult, dataResult] = await Promise.all([
+      this.db
+        .select({ count: sql<number>`count(*)::int` })
+        .from(siswa)
+        .leftJoin(kelas, eq(siswa.kelasId, kelas.id))
+        .leftJoin(tahunAjaran, eq(kelas.tahunAjaranId, tahunAjaran.id))
+        .leftJoin(orangTuaUser, eq(siswa.orangTuaId, orangTuaUser.id))
+        .where(and(...conditions)),
+      this.db
+        .select({
+          id: siswa.id,
+          kelas_id: siswa.kelasId,
+          kelas_nama: kelas.nama,
+          tahun_ajaran_id: kelas.tahunAjaranId,
+          tahun_ajaran_nama: tahunAjaran.nama,
+          nama: siswa.nama,
+          nisn: siswa.nisn,
+          jenis_kelamin: siswa.jenisKelamin,
+          tanggal_lahir: siswa.tanggalLahir,
+          alamat: siswa.alamat,
+          orang_tua_nama: orangTuaUser.nama,
+          orang_tua_phone: orangTuaUser.phone,
+          status: siswa.status,
+          created_at: siswa.createdAt,
+        })
+        .from(siswa)
+        .leftJoin(kelas, eq(siswa.kelasId, kelas.id))
+        .leftJoin(tahunAjaran, eq(kelas.tahunAjaranId, tahunAjaran.id))
+        .leftJoin(orangTuaUser, eq(siswa.orangTuaId, orangTuaUser.id))
+        .where(and(...conditions))
+        .orderBy(asc(siswa.id))
+        .limit(pageSize)
+        .offset(offset),
+    ]);
 
-    const hasNext = results.length > pageSize;
-    const data = hasNext ? results.slice(0, pageSize) : results;
-    const nextCursor = hasNext ? data[data.length - 1].id : null;
-
-    return {
-      data,
-      meta: {
-        has_next: hasNext,
-        cursor: nextCursor,
-      },
-    };
+    const totalCount = countResult[0]?.count ?? 0;
+    return paginate(dataResult, totalCount, page, pageSize);
   }
 
   // ─── Bulk Import via CSV ──────────────────────────────────────
