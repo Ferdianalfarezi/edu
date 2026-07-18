@@ -1,6 +1,6 @@
 import { BadRequestException, Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { NodePgDatabase } from 'drizzle-orm/node-postgres';
-import { eq, and } from 'drizzle-orm';
+import { eq, and, desc, sql } from 'drizzle-orm';
 import { DRIZZLE } from '@/drizzle/drizzle.module';
 import { tahunAjaran } from '@/drizzle/schema/tahun-ajaran';
 import { KelasService } from '@/modules/kelas/kelas.service';
@@ -26,7 +26,7 @@ export class TahunAjaranService {
 
   /**
    * Create a new tahun ajaran with status 'disiapkan'.
-   * Duplicates class structure from the currently active tahun ajaran.
+   * Optionally duplicates class structure from the most recent tahun ajaran with kelas.
    */
   async create(tenantId: string, dto: CreateTahunAjaranDto) {
     // Validate tanggal_mulai < tanggal_selesai
@@ -46,20 +46,20 @@ export class TahunAjaranService {
       })
       .returning();
 
-    // Find the currently active tahun ajaran to duplicate class structure
-    const activeList = await this.db
-      .select()
-      .from(tahunAjaran)
-      .where(and(eq(tahunAjaran.tenantId, tenantId), eq(tahunAjaran.status, 'aktif')));
-
+    // Determine whether to generate kelas (default: true when omitted)
+    const shouldGenerate = dto.generate_kelas !== false;
     let duplicatedCount = 0;
-    if (activeList.length > 0) {
-      const result = await this.kelasService.duplicateClassStructure(
-        tenantId,
-        activeList[0].id,
-        created.id,
-      );
-      duplicatedCount = result.duplicated;
+
+    if (shouldGenerate) {
+      const sourceTahunAjaran = await this.findSourceTahunAjaran(tenantId, created.id);
+      if (sourceTahunAjaran) {
+        const result = await this.kelasService.duplicateClassStructure(
+          tenantId,
+          sourceTahunAjaran.id,
+          created.id,
+        );
+        duplicatedCount = result.duplicated;
+      }
     }
 
     return {
@@ -164,5 +164,30 @@ export class TahunAjaranService {
       status: 'aktif',
       previousActiveId: activeList.length > 0 ? activeList[0].id : null,
     };
+  }
+
+  /**
+   * Find the most recent tahun ajaran (by tanggal_mulai DESC, created_at DESC)
+   * within the same tenant that has at least one kelas record.
+   * Excludes the provided excludeId (the newly created tahun ajaran).
+   */
+  private async findSourceTahunAjaran(
+    tenantId: string,
+    excludeId: string,
+  ): Promise<{ id: string } | null> {
+    const result = await this.db
+      .select({ id: tahunAjaran.id })
+      .from(tahunAjaran)
+      .where(
+        and(
+          eq(tahunAjaran.tenantId, tenantId),
+          sql`${tahunAjaran.id} != ${excludeId}`,
+          sql`EXISTS (SELECT 1 FROM kelas WHERE kelas.tahun_ajaran_id = ${tahunAjaran.id} AND kelas.tenant_id = ${tenantId})`,
+        ),
+      )
+      .orderBy(desc(tahunAjaran.tanggalMulai), desc(tahunAjaran.createdAt))
+      .limit(1);
+
+    return result[0] ?? null;
   }
 }
