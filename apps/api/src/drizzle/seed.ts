@@ -84,6 +84,7 @@ async function seed() {
       alamat: 'Jl. Pendidikan No. 1, Jakarta Selatan',
       telepon: '021-1234567',
       email: 'admin@sekolahcontoh.sch.id',
+      jumlahTingkat: 3,
       isActive: true,
     });
 

@@ -27,6 +27,7 @@ export interface TenantWithStats {
   telepon: string | null;
   email: string | null;
   logoUrl: string | null;
+  jumlahTingkat: number;
   isActive: boolean | null;
   createdAt: Date | null;
   updatedAt: Date | null;
@@ -131,6 +132,7 @@ export class TenantService {
         alamat: dto.alamat ?? null,
         telepon: dto.telepon ?? null,
         email: dto.email,
+        jumlahTingkat: dto.jumlah_tingkat,
         isActive: true,
       })
       .returning();
@@ -269,6 +271,7 @@ export class TenantService {
         telepon: tenant.telepon,
         email: tenant.email,
         logoUrl: tenant.logoUrl,
+        jumlahTingkat: tenant.jumlahTingkat,
         isActive: tenant.isActive,
         createdAt: tenant.createdAt,
         updatedAt: tenant.updatedAt,
@@ -306,6 +309,7 @@ export class TenantService {
         telepon: tenant.telepon,
         email: tenant.email,
         logoUrl: tenant.logoUrl,
+        jumlahTingkat: tenant.jumlahTingkat,
         isActive: tenant.isActive,
         createdAt: tenant.createdAt,
         updatedAt: tenant.updatedAt,
@@ -338,6 +342,52 @@ export class TenantService {
       .orderBy(tenant.nama)
       .limit(20);
     return results;
+  }
+
+  /**
+   * Returns the jumlah_tingkat for a given tenant.
+   * Used by KelasService, KenaikanKelasService, and KonfigurasiService.
+   */
+  async getJumlahTingkat(tenantId: string): Promise<number> {
+    const result = await this.db
+      .select({ jumlahTingkat: tenant.jumlahTingkat })
+      .from(tenant)
+      .where(eq(tenant.id, tenantId))
+      .limit(1);
+
+    if (result.length === 0) {
+      throw new NotFoundException(`Tenant dengan id ${tenantId} tidak ditemukan`);
+    }
+
+    return result[0].jumlahTingkat;
+  }
+
+  /**
+   * Returns tenant profile including jumlah_tingkat for non-super-admin roles.
+   * Used by admin panel to know school's structure.
+   */
+  async getTenantProfile(
+    tenantId: string,
+  ): Promise<{ id: string; nama: string; jumlah_tingkat: number }> {
+    const result = await this.db
+      .select({
+        id: tenant.id,
+        nama: tenant.nama,
+        jumlahTingkat: tenant.jumlahTingkat,
+      })
+      .from(tenant)
+      .where(eq(tenant.id, tenantId))
+      .limit(1);
+
+    if (result.length === 0) {
+      throw new NotFoundException(`Tenant dengan id ${tenantId} tidak ditemukan`);
+    }
+
+    return {
+      id: result[0].id,
+      nama: result[0].nama,
+      jumlah_tingkat: result[0].jumlahTingkat,
+    };
   }
 
   /**

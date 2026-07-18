@@ -1,4 +1,13 @@
-import { IsString, IsNotEmpty, IsOptional, IsEmail, MaxLength } from 'class-validator';
+import {
+  IsString,
+  IsNotEmpty,
+  IsOptional,
+  IsEmail,
+  IsInt,
+  MaxLength,
+  Min,
+  Max,
+} from 'class-validator';
 
 export class CreateTenantDto {
   @IsString()
@@ -19,6 +28,13 @@ export class CreateTenantDto {
   @IsNotEmpty()
   @MaxLength(255)
   email: string;
+
+  /** Jumlah tingkat kelas untuk sekolah ini (e.g., 6 for SD, 3 for SMP/SMA) */
+  @IsInt()
+  @IsNotEmpty()
+  @Min(1)
+  @Max(13)
+  jumlah_tingkat: number;
 
   /** Name of the default admin user for this tenant */
   @IsString()

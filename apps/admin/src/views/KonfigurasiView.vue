@@ -15,9 +15,18 @@ interface HariLibur {
   keterangan: string;
 }
 
+interface TenantProfile {
+  id: string;
+  nama: string;
+  jumlah_tingkat: number;
+}
+
 const loading = ref(false);
 const saving = ref(false);
 const saveSuccess = ref(false);
+
+// Jumlah tingkat from tenant profile
+const jumlahTingkat = ref(0);
 
 // Configuration form
 const config = ref<KonfigurasiData>({
@@ -26,27 +35,43 @@ const config = ref<KonfigurasiData>({
   tanggal_jatuh_tempo: 10,
 });
 
-// Nominal SPP per tingkat - editable entries
-const sppEntries = ref<Array<{ tingkat: string; nominal: number }>>([]);
+// Nominal SPP per tingkat - fixed entries based on jumlah_tingkat
+const sppEntries = ref<Array<{ tingkat: number; nominal: number }>>([]);
 
 // Hari libur
 const hariLibur = ref<HariLibur[]>([]);
 const showAddHoliday = ref(false);
 const newHoliday = ref({ tanggal: '', keterangan: '' });
 
+/**
+ * Initialize SPP entries as exactly jumlahTingkat entries (1..N),
+ * filling in existing values from nominal_spp or defaulting to 0.
+ */
+function initSppEntries(nominalSpp: Record<string, number>, count: number) {
+  sppEntries.value = Array.from({ length: count }, (_, i) => {
+    const tingkat = i + 1;
+    // Check both key formats: "tingkat_1" and "1"
+    const nominal = nominalSpp[`tingkat_${tingkat}`] ?? nominalSpp[String(tingkat)] ?? 0;
+    return { tingkat, nominal };
+  });
+}
+
 async function fetchKonfigurasi() {
   loading.value = true;
+
+  // Fetch tenant profile to get jumlah_tingkat
+  try {
+    const { data } = await api.get<TenantProfile>('/tenants/profile');
+    jumlahTingkat.value = data.jumlah_tingkat;
+  } catch (error) {
+    console.error('Failed to fetch tenant profile:', error);
+  }
+
   try {
     const { data } = await api.get<{ data: KonfigurasiData }>('/konfigurasi');
     config.value = data.data;
-    // Convert nominal_spp object to array for editing
-    sppEntries.value = Object.entries(data.data.nominal_spp || {}).map(([tingkat, nominal]) => ({
-      tingkat,
-      nominal: nominal as number,
-    }));
-    if (sppEntries.value.length === 0) {
-      sppEntries.value = [{ tingkat: '1', nominal: 0 }];
-    }
+    // Initialize fixed SPP entries based on jumlah_tingkat
+    initSppEntries(data.data.nominal_spp || {}, jumlahTingkat.value);
   } catch (error) {
     console.error('Failed to fetch konfigurasi:', error);
   }
@@ -61,27 +86,14 @@ async function fetchKonfigurasi() {
   loading.value = false;
 }
 
-function addSppEntry() {
-  const lastTingkat =
-    sppEntries.value.length > 0
-      ? parseInt(sppEntries.value[sppEntries.value.length - 1].tingkat) + 1
-      : 1;
-  sppEntries.value.push({ tingkat: String(lastTingkat), nominal: 0 });
-}
-
-function removeSppEntry(index: number) {
-  sppEntries.value.splice(index, 1);
-}
-
 async function saveKonfigurasi() {
   saving.value = true;
   saveSuccess.value = false;
 
+  // Construct nominal_spp with keys tingkat_1 through tingkat_N
   const nominal_spp: Record<string, number> = {};
   sppEntries.value.forEach((entry) => {
-    if (entry.tingkat) {
-      nominal_spp[entry.tingkat] = entry.nominal;
-    }
+    nominal_spp[`tingkat_${entry.tingkat}`] = entry.nominal;
   });
 
   const payload = {
@@ -219,15 +231,13 @@ onMounted(fetchKonfigurasi);
           Nominal SPP per Tingkat Kelas
         </h2>
         <div class="space-y-3">
-          <div v-for="(entry, index) in sppEntries" :key="index" class="flex items-end gap-3">
+          <div v-for="entry in sppEntries" :key="entry.tingkat" class="flex items-end gap-3">
             <div>
               <label class="block text-sm font-medium text-text-primary mb-1.5">Tingkat</label>
-              <input
-                v-model="entry.tingkat"
-                type="text"
-                class="w-20 px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
-                placeholder="1"
-              />
+              <span
+                class="inline-block w-24 px-3 py-2 text-sm bg-surface-50 border border-border rounded-lg text-text-primary"
+                >Tingkat {{ entry.tingkat }}</span
+              >
             </div>
             <div>
               <label class="block text-sm font-medium text-text-primary mb-1.5">Nominal</label>
@@ -244,21 +254,8 @@ onMounted(fetchKonfigurasi);
                 }}</span>
               </div>
             </div>
-            <button
-              class="px-2 py-2 text-xs font-medium text-danger-700 bg-danger-50 rounded-md hover:bg-danger-50/80 transition-colors"
-              :disabled="sppEntries.length <= 1"
-              @click="removeSppEntry(index)"
-            >
-              ×
-            </button>
           </div>
         </div>
-        <button
-          class="px-3 py-2 text-sm font-medium text-text-secondary bg-white border border-border rounded-lg hover:bg-surface-50 transition-colors mt-3"
-          @click="addSppEntry"
-        >
-          + Tambah Tingkat
-        </button>
       </section>
 
       <!-- Save Button -->

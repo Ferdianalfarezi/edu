@@ -43,6 +43,13 @@
       "when": 1784166707090,
       "tag": "0005_misty_hannibal_king",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "6",
+      "when": 1784356907035,
+      "tag": "0006_parched_chimera",
+      "breakpoints": true
     }
   ]
 }

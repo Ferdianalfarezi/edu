@@ -1,11 +1,13 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { ConflictException, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ConflictException, NotFoundException } from '@nestjs/common';
 import { DRIZZLE } from '@/drizzle/drizzle.module';
+import { TenantService } from '@/modules/tenant/tenant.service';
 import { KonfigurasiService, DEFAULT_CONFIG } from './konfigurasi.service';
 
 describe('KonfigurasiService', () => {
   let service: KonfigurasiService;
   let mockDb: any;
+  let mockTenantService: { getJumlahTingkat: jest.Mock };
 
   const TENANT_ID = '11111111-1111-1111-1111-111111111111';
 
@@ -22,8 +24,16 @@ describe('KonfigurasiService', () => {
       delete: jest.fn().mockReturnThis(),
     };
 
+    mockTenantService = {
+      getJumlahTingkat: jest.fn().mockResolvedValue(3),
+    };
+
     const module: TestingModule = await Test.createTestingModule({
-      providers: [KonfigurasiService, { provide: DRIZZLE, useValue: mockDb }],
+      providers: [
+        KonfigurasiService,
+        { provide: DRIZZLE, useValue: mockDb },
+        { provide: TenantService, useValue: mockTenantService },
+      ],
     }).compile();
 
     service = module.get<KonfigurasiService>(KonfigurasiService);
@@ -195,6 +205,113 @@ describe('KonfigurasiService', () => {
       await expect(service.deleteHariLibur(TENANT_ID, 'nonexistent')).rejects.toThrow(
         NotFoundException,
       );
+    });
+  });
+
+  describe('bulkUpsertConfig - SPP validation', () => {
+    it('should accept valid nominal_spp with exactly jumlah_tingkat keys', async () => {
+      mockTenantService.getJumlahTingkat.mockResolvedValue(3);
+      mockDb.returning.mockResolvedValue([
+        { key: 'nominal_spp', value: { tingkat_1: 100000, tingkat_2: 150000, tingkat_3: 200000 } },
+      ]);
+
+      const result = await service.bulkUpsertConfig(TENANT_ID, [
+        { key: 'nominal_spp', value: { tingkat_1: 100000, tingkat_2: 150000, tingkat_3: 200000 } },
+      ]);
+
+      expect(result).toHaveLength(1);
+      expect(mockTenantService.getJumlahTingkat).toHaveBeenCalledWith(TENANT_ID);
+    });
+
+    it('should throw BadRequestException when extra keys are present', async () => {
+      mockTenantService.getJumlahTingkat.mockResolvedValue(3);
+
+      await expect(
+        service.bulkUpsertConfig(TENANT_ID, [
+          {
+            key: 'nominal_spp',
+            value: { tingkat_1: 100000, tingkat_2: 150000, tingkat_3: 200000, tingkat_4: 250000 },
+          },
+        ]),
+      ).rejects.toThrow(BadRequestException);
+
+      await expect(
+        service.bulkUpsertConfig(TENANT_ID, [
+          {
+            key: 'nominal_spp',
+            value: { tingkat_1: 100000, tingkat_2: 150000, tingkat_3: 200000, tingkat_4: 250000 },
+          },
+        ]),
+      ).rejects.toThrow('Tingkat SPP melebihi batas (maks 3): tingkat_4');
+    });
+
+    it('should throw BadRequestException when keys are missing', async () => {
+      mockTenantService.getJumlahTingkat.mockResolvedValue(3);
+
+      await expect(
+        service.bulkUpsertConfig(TENANT_ID, [
+          { key: 'nominal_spp', value: { tingkat_1: 100000, tingkat_3: 200000 } },
+        ]),
+      ).rejects.toThrow(BadRequestException);
+
+      await expect(
+        service.bulkUpsertConfig(TENANT_ID, [
+          { key: 'nominal_spp', value: { tingkat_1: 100000, tingkat_3: 200000 } },
+        ]),
+      ).rejects.toThrow('Nominal SPP untuk tingkat 2 wajib diisi');
+    });
+
+    it('should throw BadRequestException for negative nominal value', async () => {
+      mockTenantService.getJumlahTingkat.mockResolvedValue(3);
+
+      await expect(
+        service.bulkUpsertConfig(TENANT_ID, [
+          { key: 'nominal_spp', value: { tingkat_1: -100, tingkat_2: 150000, tingkat_3: 200000 } },
+        ]),
+      ).rejects.toThrow(BadRequestException);
+
+      await expect(
+        service.bulkUpsertConfig(TENANT_ID, [
+          { key: 'nominal_spp', value: { tingkat_1: -100, tingkat_2: 150000, tingkat_3: 200000 } },
+        ]),
+      ).rejects.toThrow('Nominal SPP untuk tingkat_1 harus berupa bilangan bulat non-negatif');
+    });
+
+    it('should throw BadRequestException for non-integer nominal value', async () => {
+      mockTenantService.getJumlahTingkat.mockResolvedValue(3);
+
+      await expect(
+        service.bulkUpsertConfig(TENANT_ID, [
+          {
+            key: 'nominal_spp',
+            value: { tingkat_1: 100000, tingkat_2: 150.5, tingkat_3: 200000 },
+          },
+        ]),
+      ).rejects.toThrow('Nominal SPP untuk tingkat_2 harus berupa bilangan bulat non-negatif');
+    });
+
+    it('should accept nominal_spp value of zero', async () => {
+      mockTenantService.getJumlahTingkat.mockResolvedValue(2);
+      mockDb.returning.mockResolvedValue([
+        { key: 'nominal_spp', value: { tingkat_1: 0, tingkat_2: 0 } },
+      ]);
+
+      const result = await service.bulkUpsertConfig(TENANT_ID, [
+        { key: 'nominal_spp', value: { tingkat_1: 0, tingkat_2: 0 } },
+      ]);
+
+      expect(result).toHaveLength(1);
+    });
+
+    it('should skip SPP validation when nominal_spp is not in items', async () => {
+      mockDb.returning.mockResolvedValue([{ key: 'threshold_alpa', value: { value: 5 } }]);
+
+      const result = await service.bulkUpsertConfig(TENANT_ID, [
+        { key: 'threshold_alpa', value: { value: 5 } },
+      ]);
+
+      expect(result).toHaveLength(1);
+      expect(mockTenantService.getJumlahTingkat).not.toHaveBeenCalled();
     });
   });
 });

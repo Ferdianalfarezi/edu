@@ -7,12 +7,14 @@ import { siswa } from '@/drizzle/schema/siswa';
 import { tahunAjaran } from '@/drizzle/schema/tahun-ajaran';
 import { PromoteStudentsDto, PreviewPromotionDto } from './dto';
 import { RiwayatKelasHelper } from '../siswa/riwayat-kelas.helper';
+import { TenantService } from '../tenant/tenant.service';
 
 @Injectable()
 export class KenaikanKelasService {
   constructor(
     @Inject(DRIZZLE) private readonly db: NodePgDatabase,
     private readonly riwayatKelasHelper: RiwayatKelasHelper,
+    private readonly tenantService: TenantService,
   ) {}
 
   // ─── GET /kenaikan-kelas/kelas/:kelasId ───────────────────────
@@ -52,43 +54,47 @@ export class KenaikanKelasService {
         and(eq(siswa.kelasId, kelasId), eq(siswa.tenantId, tenantId), eq(siswa.status, 'aktif')),
       );
 
-    // 3. Find suggested target class: same tenant, tingkat+1, in the newest
-    //    tahun_ajaran that is 'disiapkan' (prepared for next year)
-    const targetTingkat = sourceKelas.tingkat + 1;
-
-    // Find tahun_ajaran 'disiapkan' for this tenant (next academic year)
-    const [preparedTahunAjaran] = await this.db
-      .select({ id: tahunAjaran.id, nama: tahunAjaran.nama })
-      .from(tahunAjaran)
-      .where(and(eq(tahunAjaran.tenantId, tenantId), eq(tahunAjaran.status, 'disiapkan')))
-      .limit(1);
+    // 3. Determine is_highest_grade using jumlah_tingkat
+    const jumlahTingkat = await this.tenantService.getJumlahTingkat(tenantId);
+    const isHighestGrade = sourceKelas.tingkat >= jumlahTingkat;
 
     let suggestedTarget: { kelasId: string; nama: string; tingkat: number } | null = null;
 
-    if (preparedTahunAjaran) {
-      // Find a class at tingkat+1 in the prepared tahun_ajaran
-      const [targetKelas] = await this.db
-        .select({
-          id: kelas.id,
-          nama: kelas.nama,
-          tingkat: kelas.tingkat,
-        })
-        .from(kelas)
-        .where(
-          and(
-            eq(kelas.tenantId, tenantId),
-            eq(kelas.tahunAjaranId, preparedTahunAjaran.id),
-            eq(kelas.tingkat, targetTingkat),
-          ),
-        )
+    if (!isHighestGrade) {
+      const targetTingkat = sourceKelas.tingkat + 1;
+
+      // Find tahun_ajaran 'disiapkan' for this tenant (next academic year)
+      const [preparedTahunAjaran] = await this.db
+        .select({ id: tahunAjaran.id, nama: tahunAjaran.nama })
+        .from(tahunAjaran)
+        .where(and(eq(tahunAjaran.tenantId, tenantId), eq(tahunAjaran.status, 'disiapkan')))
         .limit(1);
 
-      if (targetKelas) {
-        suggestedTarget = {
-          kelasId: targetKelas.id,
-          nama: targetKelas.nama,
-          tingkat: targetKelas.tingkat,
-        };
+      if (preparedTahunAjaran) {
+        // Find a class at tingkat+1 in the prepared tahun_ajaran
+        const [targetKelas] = await this.db
+          .select({
+            id: kelas.id,
+            nama: kelas.nama,
+            tingkat: kelas.tingkat,
+          })
+          .from(kelas)
+          .where(
+            and(
+              eq(kelas.tenantId, tenantId),
+              eq(kelas.tahunAjaranId, preparedTahunAjaran.id),
+              eq(kelas.tingkat, targetTingkat),
+            ),
+          )
+          .limit(1);
+
+        if (targetKelas) {
+          suggestedTarget = {
+            kelasId: targetKelas.id,
+            nama: targetKelas.nama,
+            tingkat: targetKelas.tingkat,
+          };
+        }
       }
     }
 
@@ -105,6 +111,7 @@ export class KenaikanKelasService {
         nisn: s.nisn,
       })),
       suggestedTarget,
+      is_highest_grade: isHighestGrade,
     };
   }
 
@@ -149,23 +156,33 @@ export class KenaikanKelasService {
         ),
       );
 
-    // Find target class at tingkat+1 in new tahun ajaran
-    const targetTingkat = sourceKelas.tingkat + 1;
-    const [targetKelas] = await this.db
-      .select({
-        id: kelas.id,
-        nama: kelas.nama,
-        tingkat: kelas.tingkat,
-      })
-      .from(kelas)
-      .where(
-        and(
-          eq(kelas.tenantId, tenantId),
-          eq(kelas.tahunAjaranId, tahunAjaranBaruId),
-          eq(kelas.tingkat, targetTingkat),
-        ),
-      )
-      .limit(1);
+    // Determine is_highest_grade using jumlah_tingkat
+    const jumlahTingkat = await this.tenantService.getJumlahTingkat(tenantId);
+    const isHighestGrade = sourceKelas.tingkat >= jumlahTingkat;
+
+    let targetKelas: { id: string; nama: string; tingkat: number } | null = null;
+
+    if (!isHighestGrade) {
+      // Find target class at tingkat+1 in new tahun ajaran
+      const targetTingkat = sourceKelas.tingkat + 1;
+      const [found] = await this.db
+        .select({
+          id: kelas.id,
+          nama: kelas.nama,
+          tingkat: kelas.tingkat,
+        })
+        .from(kelas)
+        .where(
+          and(
+            eq(kelas.tenantId, tenantId),
+            eq(kelas.tahunAjaranId, tahunAjaranBaruId),
+            eq(kelas.tingkat, targetTingkat),
+          ),
+        )
+        .limit(1);
+
+      targetKelas = found || null;
+    }
 
     return {
       students: students.map((s) => ({
@@ -181,7 +198,7 @@ export class KenaikanKelasService {
       target_kelas: targetKelas
         ? { id: targetKelas.id, nama: targetKelas.nama, tingkat: targetKelas.tingkat }
         : null,
-      is_highest_grade: !targetKelas,
+      is_highest_grade: isHighestGrade,
     };
   }
 

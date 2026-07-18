@@ -54,6 +54,17 @@ export class TenantController {
   }
 
   /**
+   * GET /tenants/profile
+   * Get tenant profile (id, nama, jumlah_tingkat) for the current user's tenant.
+   */
+  @Get('profile')
+  @Roles(Role.ADMIN, Role.KEPALA_SEKOLAH, Role.BENDAHARA, Role.GURU)
+  @HttpCode(HttpStatus.OK)
+  async getTenantProfile(@TenantId() tenantId: string) {
+    return this.tenantService.getTenantProfile(tenantId);
+  }
+
+  /**
    * POST /tenants
    * Create a new tenant (school) with a default admin user.
    * Sends credentials email to the admin.

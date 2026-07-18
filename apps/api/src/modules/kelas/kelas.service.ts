@@ -12,17 +12,24 @@ import { kelas } from '@/drizzle/schema/kelas';
 import { siswa } from '@/drizzle/schema/siswa';
 import { tahunAjaran } from '@/drizzle/schema/tahun-ajaran';
 import { user } from '@/drizzle/schema/user';
+import { TenantService } from '@/modules/tenant/tenant.service';
 import { CreateKelasDto, UpdateKelasDto, ListKelasQueryDto } from './dto';
 
 const DEFAULT_PAGE_SIZE = 20;
 
 @Injectable()
 export class KelasService {
-  constructor(@Inject(DRIZZLE) private readonly db: NodePgDatabase) {}
+  constructor(
+    @Inject(DRIZZLE) private readonly db: NodePgDatabase,
+    private readonly tenantService: TenantService,
+  ) {}
 
   // ─── Create Kelas ─────────────────────────────────────────────
 
   async createKelas(tenantId: string, dto: CreateKelasDto) {
+    // Validate tingkat does not exceed tenant's jumlah_tingkat
+    await this.validateTingkat(tenantId, dto.tingkat);
+
     // Validate tahun_ajaran exists and belongs to tenant
     await this.validateTahunAjaran(tenantId, dto.tahunAjaranId);
 
@@ -161,6 +168,11 @@ export class KelasService {
     // Verify kelas exists
     const existing = await this.getKelasById(tenantId, kelasId);
 
+    // Validate tingkat does not exceed tenant's jumlah_tingkat if being updated
+    if (dto.tingkat !== undefined) {
+      await this.validateTingkat(tenantId, dto.tingkat);
+    }
+
     // Validate wali_kelas uniqueness if being updated
     if (dto.waliKelasId !== undefined && dto.waliKelasId !== null) {
       await this.validateWaliKelasUniqueness(
@@ -266,6 +278,18 @@ export class KelasService {
   }
 
   // ─── Validation Helpers ───────────────────────────────────────
+
+  /**
+   * Validates that the provided tingkat does not exceed the tenant's jumlah_tingkat.
+   */
+  private async validateTingkat(tenantId: string, tingkat: number): Promise<void> {
+    const jumlahTingkat = await this.tenantService.getJumlahTingkat(tenantId);
+    if (tingkat > jumlahTingkat) {
+      throw new BadRequestException(
+        `Tingkat ${tingkat} melebihi batas maksimum (${jumlahTingkat}) untuk sekolah ini`,
+      );
+    }
+  }
 
   /**
    * Validates that the tahun_ajaran exists and belongs to the tenant.

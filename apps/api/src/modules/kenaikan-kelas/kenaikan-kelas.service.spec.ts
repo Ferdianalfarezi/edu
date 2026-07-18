@@ -1,6 +1,7 @@
 import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { KenaikanKelasService } from './kenaikan-kelas.service';
 import { RiwayatKelasHelper } from '../siswa/riwayat-kelas.helper';
+import { TenantService } from '../tenant/tenant.service';
 
 /**
  * Creates a mock DB that tracks query chains for sequential resolution.
@@ -49,32 +50,38 @@ describe('KenaikanKelasService', () => {
   const siswaId2 = 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb';
   const siswaId3 = 'cccccccc-cccc-cccc-cccc-cccccccccccc';
 
-  function buildService(queryResults: any[]): KenaikanKelasService {
+  function buildService(queryResults: any[], jumlahTingkat = 6): KenaikanKelasService {
     const db = createMockDb(queryResults);
     const riwayatKelasHelper = {
       record: jest.fn().mockResolvedValue(undefined),
       recordBatch: jest.fn().mockResolvedValue(undefined),
     } as unknown as RiwayatKelasHelper;
-    return new KenaikanKelasService(db, riwayatKelasHelper);
+    const tenantService = {
+      getJumlahTingkat: jest.fn().mockResolvedValue(jumlahTingkat),
+    } as unknown as TenantService;
+    return new KenaikanKelasService(db, riwayatKelasHelper, tenantService);
   }
 
   // ─── getStudentsForPromotion ──────────────────────────────────
 
   describe('getStudentsForPromotion', () => {
     it('should return students list and suggested target class', async () => {
-      const service = buildService([
-        // 1. source kelas found
-        [{ id: sourceKelasId, nama: '5A', tingkat: 5, tahunAjaranId: tahunAjaranLamaId }],
-        // 2. active students in source kelas
+      const service = buildService(
         [
-          { siswaId: siswaId1, nama: 'Budi', nisn: '001' },
-          { siswaId: siswaId2, nama: 'Ani', nisn: '002' },
+          // 1. source kelas found
+          [{ id: sourceKelasId, nama: '5A', tingkat: 5, tahunAjaranId: tahunAjaranLamaId }],
+          // 2. active students in source kelas
+          [
+            { siswaId: siswaId1, nama: 'Budi', nisn: '001' },
+            { siswaId: siswaId2, nama: 'Ani', nisn: '002' },
+          ],
+          // 3. prepared tahun ajaran (jumlahTingkat=6, tingkat=5 so not highest)
+          [{ id: tahunAjaranBaruId, nama: '2025/2026' }],
+          // 4. target kelas at tingkat+1 in prepared tahun ajaran
+          [{ id: targetKelasId, nama: '6A', tingkat: 6 }],
         ],
-        // 3. prepared tahun ajaran
-        [{ id: tahunAjaranBaruId, nama: '2025/2026' }],
-        // 4. target kelas at tingkat+1 in prepared tahun ajaran
-        [{ id: targetKelasId, nama: '6A', tingkat: 6 }],
-      ]);
+        6,
+      );
 
       const result = await service.getStudentsForPromotion(tenantId, sourceKelasId);
 
@@ -85,21 +92,26 @@ describe('KenaikanKelasService', () => {
       expect(result.suggestedTarget).not.toBeNull();
       expect(result.suggestedTarget!.kelasId).toBe(targetKelasId);
       expect(result.suggestedTarget!.tingkat).toBe(6);
+      expect(result.is_highest_grade).toBe(false);
     });
 
     it('should return null suggestedTarget when no prepared tahun_ajaran exists', async () => {
-      const service = buildService([
-        // 1. source kelas found
-        [{ id: sourceKelasId, nama: '5A', tingkat: 5, tahunAjaranId: tahunAjaranLamaId }],
-        // 2. active students
-        [{ siswaId: siswaId1, nama: 'Budi', nisn: '001' }],
-        // 3. no prepared tahun ajaran
-        [],
-      ]);
+      const service = buildService(
+        [
+          // 1. source kelas found
+          [{ id: sourceKelasId, nama: '5A', tingkat: 5, tahunAjaranId: tahunAjaranLamaId }],
+          // 2. active students
+          [{ siswaId: siswaId1, nama: 'Budi', nisn: '001' }],
+          // 3. no prepared tahun ajaran
+          [],
+        ],
+        6,
+      );
 
       const result = await service.getStudentsForPromotion(tenantId, sourceKelasId);
 
       expect(result.suggestedTarget).toBeNull();
+      expect(result.is_highest_grade).toBe(false);
     });
 
     it('should throw NotFoundException when source kelas not found', async () => {
@@ -114,37 +126,63 @@ describe('KenaikanKelasService', () => {
     });
 
     it('should return empty students list when no active students in class', async () => {
-      const service = buildService([
-        // 1. source kelas found
-        [{ id: sourceKelasId, nama: '5A', tingkat: 5, tahunAjaranId: tahunAjaranLamaId }],
-        // 2. no active students
-        [],
-        // 3. prepared tahun ajaran
-        [{ id: tahunAjaranBaruId, nama: '2025/2026' }],
-        // 4. target class exists
-        [{ id: targetKelasId, nama: '6A', tingkat: 6 }],
-      ]);
+      const service = buildService(
+        [
+          // 1. source kelas found
+          [{ id: sourceKelasId, nama: '5A', tingkat: 5, tahunAjaranId: tahunAjaranLamaId }],
+          // 2. no active students
+          [],
+          // 3. prepared tahun ajaran
+          [{ id: tahunAjaranBaruId, nama: '2025/2026' }],
+          // 4. target class exists
+          [{ id: targetKelasId, nama: '6A', tingkat: 6 }],
+        ],
+        6,
+      );
 
       const result = await service.getStudentsForPromotion(tenantId, sourceKelasId);
 
       expect(result.students).toHaveLength(0);
       expect(result.suggestedTarget).not.toBeNull();
+      expect(result.is_highest_grade).toBe(false);
     });
 
-    it('should return null suggestedTarget when target tingkat class does not exist', async () => {
-      const service = buildService([
-        // 1. source kelas found
-        [{ id: sourceKelasId, nama: '6A', tingkat: 6, tahunAjaranId: tahunAjaranLamaId }],
-        // 2. active students
-        [{ siswaId: siswaId1, nama: 'Budi', nisn: '001' }],
-        // 3. prepared tahun ajaran exists
-        [{ id: tahunAjaranBaruId, nama: '2025/2026' }],
-        // 4. no class at tingkat 7
-        [],
-      ]);
+    it('should return is_highest_grade true and null suggestedTarget when tingkat >= jumlahTingkat', async () => {
+      const service = buildService(
+        [
+          // 1. source kelas found at tingkat 6 (= jumlahTingkat)
+          [{ id: sourceKelasId, nama: '6A', tingkat: 6, tahunAjaranId: tahunAjaranLamaId }],
+          // 2. active students
+          [{ siswaId: siswaId1, nama: 'Budi', nisn: '001' }],
+          // No further DB queries needed — isHighestGrade is true, skip target search
+        ],
+        6,
+      );
 
       const result = await service.getStudentsForPromotion(tenantId, sourceKelasId);
 
+      expect(result.is_highest_grade).toBe(true);
+      expect(result.suggestedTarget).toBeNull();
+    });
+
+    it('should return null suggestedTarget when target tingkat class does not exist but is not highest grade', async () => {
+      const service = buildService(
+        [
+          // 1. source kelas found at tingkat 2 (jumlahTingkat=3, not highest)
+          [{ id: sourceKelasId, nama: '2A', tingkat: 2, tahunAjaranId: tahunAjaranLamaId }],
+          // 2. active students
+          [{ siswaId: siswaId1, nama: 'Budi', nisn: '001' }],
+          // 3. prepared tahun ajaran exists
+          [{ id: tahunAjaranBaruId, nama: '2025/2026' }],
+          // 4. no class at tingkat 3
+          [],
+        ],
+        3,
+      );
+
+      const result = await service.getStudentsForPromotion(tenantId, sourceKelasId);
+
+      expect(result.is_highest_grade).toBe(false);
       expect(result.suggestedTarget).toBeNull();
     });
   });
