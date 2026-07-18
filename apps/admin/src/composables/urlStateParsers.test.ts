@@ -112,7 +112,7 @@ describe('parseStringFilter', () => {
 });
 
 describe('parseEnumFilter', () => {
-  const enumValues = ['aktif', 'pindah_sekolah', 'keluar', 'alumni'];
+  const enumValues = ['aktif', 'pindah_sekolah', 'keluar', 'lulus'];
 
   it('returns undefined for undefined', () => {
     expect(parseEnumFilter(undefined, enumValues)).toBeUndefined();
@@ -128,7 +128,7 @@ describe('parseEnumFilter', () => {
 
   it('returns the value when it matches an enum value', () => {
     expect(parseEnumFilter('aktif', enumValues)).toBe('aktif');
-    expect(parseEnumFilter('alumni', enumValues)).toBe('alumni');
+    expect(parseEnumFilter('lulus', enumValues)).toBe('lulus');
   });
 
   it('uses first element when value is an array', () => {

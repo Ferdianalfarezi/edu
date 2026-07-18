@@ -87,7 +87,7 @@ describe('Property 8: Unknown Query Parameters Are Preserved', () => {
         fc.constantFrom(10, 15, 25, 50),
         fc.string(),
         fc.option(fc.string({ minLength: 1 }), { nil: undefined }),
-        fc.option(fc.constantFrom('aktif', 'pindah_sekolah', 'keluar', 'alumni'), {
+        fc.option(fc.constantFrom('aktif', 'pindah_sekolah', 'keluar', 'lulus'), {
           nil: undefined,
         }),
         (unknownParams, page, pageSize, search, kelasFilter, statusFilter) => {
@@ -99,7 +99,7 @@ describe('Property 8: Unknown Query Parameters Are Preserved', () => {
               {
                 key: 'status',
                 type: 'enum',
-                enumValues: ['aktif', 'pindah_sekolah', 'keluar', 'alumni'],
+                enumValues: ['aktif', 'pindah_sekolah', 'keluar', 'lulus'],
               },
               { key: 'tahun_ajaran_id', type: 'string' },
             ],

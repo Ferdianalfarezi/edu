@@ -36,7 +36,7 @@ describe('Property 3: Filter Change Resets Page to 1', () => {
     defaultPageSize: 15,
     filters: [
       { key: 'kelas_id', type: 'string' },
-      { key: 'status', type: 'enum', enumValues: ['aktif', 'pindah_sekolah', 'keluar', 'alumni'] },
+      { key: 'status', type: 'enum', enumValues: ['aktif', 'pindah_sekolah', 'keluar', 'lulus'] },
       { key: 'tahun_ajaran_id', type: 'string' },
     ],
   };
@@ -83,7 +83,7 @@ describe('Property 3: Filter Change Resets Page to 1', () => {
   });
 
   it('enum filter change resets page to 1', async () => {
-    const enumValues = ['aktif', 'pindah_sekolah', 'keluar', 'alumni'];
+    const enumValues = ['aktif', 'pindah_sekolah', 'keluar', 'lulus'];
 
     await fc.assert(
       fc.asyncProperty(

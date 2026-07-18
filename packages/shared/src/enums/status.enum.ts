@@ -28,7 +28,7 @@ export enum StatusSiswa {
   AKTIF = 'aktif',
   PINDAH_SEKOLAH = 'pindah_sekolah',
   KELUAR = 'keluar',
-  ALUMNI = 'alumni',
+  LULUS = 'lulus',
 }
 
 /**

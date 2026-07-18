@@ -26,7 +26,7 @@ describe('SiswaManagementView URL state integration', () => {
     defaultPageSize: 15,
     filters: [
       { key: 'kelas_id', type: 'string' },
-      { key: 'status', type: 'enum', enumValues: ['aktif', 'pindah_sekolah', 'keluar', 'alumni'] },
+      { key: 'status', type: 'enum', enumValues: ['aktif', 'pindah_sekolah', 'keluar', 'lulus'] },
       { key: 'tahun_ajaran_id', type: 'string' },
     ],
   };
@@ -69,7 +69,7 @@ describe('SiswaManagementView URL state integration', () => {
         page_size: '25',
         search: 'Ahmad',
         kelas_id: 'cls-5',
-        status: 'alumni',
+        status: 'lulus',
         tahun_ajaran_id: 'ta-2024',
       };
 
@@ -79,7 +79,7 @@ describe('SiswaManagementView URL state integration', () => {
       expect(pageSize.value).toBe(25);
       expect(search.value).toBe('Ahmad');
       expect(filters['kelas_id'].value).toBe('cls-5');
-      expect(filters['status'].value).toBe('alumni');
+      expect(filters['status'].value).toBe('lulus');
       expect(filters['tahun_ajaran_id'].value).toBe('ta-2024');
 
       expect(queryParams.value).toEqual({
@@ -87,7 +87,7 @@ describe('SiswaManagementView URL state integration', () => {
         page_size: 25,
         search: 'Ahmad',
         kelas_id: 'cls-5',
-        status: 'alumni',
+        status: 'lulus',
         tahun_ajaran_id: 'ta-2024',
       });
     });

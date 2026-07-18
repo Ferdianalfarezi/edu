@@ -26,7 +26,7 @@ describe('Property 1: State-to-URL Round Trip', () => {
   const nonEmptySearchArb = fc.string({ minLength: 1 }).filter((s) => s !== '');
 
   // Enum values used for filter testing
-  const sampleEnumValues = ['aktif', 'pindah_sekolah', 'keluar', 'alumni'];
+  const sampleEnumValues = ['aktif', 'pindah_sekolah', 'keluar', 'lulus'];
 
   it('round-trips page, pageSize, and non-empty search correctly', () => {
     fc.assert(
