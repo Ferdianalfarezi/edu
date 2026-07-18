@@ -67,7 +67,7 @@ describe('Property 4: Invalid Page Values Fall Back to 1', () => {
  * **Validates: Requirements 3.5, 4.5, 6.5**
  */
 describe('Property 6: Invalid Enum Values Fall Back to Undefined', () => {
-  const enumValues = ['aktif', 'pindah_sekolah', 'keluar', 'alumni'];
+  const enumValues = ['aktif', 'pindah_sekolah', 'keluar', 'lulus'];
 
   it('returns undefined for any string NOT in the enumValues array', () => {
     fc.assert(

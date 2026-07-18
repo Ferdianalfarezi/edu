@@ -29,7 +29,7 @@ describe('useTableUrlState', () => {
     defaultPageSize: 15,
     filters: [
       { key: 'kelas_id', type: 'string' },
-      { key: 'status', type: 'enum', enumValues: ['aktif', 'pindah_sekolah', 'keluar', 'alumni'] },
+      { key: 'status', type: 'enum', enumValues: ['aktif', 'pindah_sekolah', 'keluar', 'lulus'] },
     ],
   };
 
@@ -171,7 +171,7 @@ describe('useTableUrlState', () => {
         page_size: '50',
         search: 'world',
         kelas_id: 'cls-2',
-        status: 'alumni',
+        status: 'lulus',
       };
 
       const { page, pageSize, search, filters, resetAll } = useTableUrlState(defaultConfig);

@@ -26,7 +26,7 @@ describe('Property 7: Batching — Multiple Changes Produce Single URL Update', 
     defaultPageSize: 15,
     filters: [
       { key: 'kelas_id', type: 'string' },
-      { key: 'status', type: 'enum', enumValues: ['aktif', 'pindah_sekolah', 'keluar', 'alumni'] },
+      { key: 'status', type: 'enum', enumValues: ['aktif', 'pindah_sekolah', 'keluar', 'lulus'] },
       { key: 'tahun_ajaran_id', type: 'string' },
     ],
   };
@@ -85,7 +85,7 @@ describe('Property 7: Batching — Multiple Changes Produce Single URL Update', 
               filters['kelas_id'].value = `kelas-${Math.random().toString(36).slice(2, 8)}`;
               break;
             case 'filter_status':
-              filters['status'].value = ['aktif', 'pindah_sekolah', 'keluar', 'alumni'][
+              filters['status'].value = ['aktif', 'pindah_sekolah', 'keluar', 'lulus'][
                 Math.floor(Math.random() * 4)
               ];
               break;
@@ -128,7 +128,7 @@ describe('Property 7: Batching — Multiple Changes Produce Single URL Update', 
     await fc.assert(
       fc.asyncProperty(
         fc.integer({ min: 2, max: 5 }),
-        fc.constantFrom('aktif', 'pindah_sekolah', 'keluar', 'alumni'),
+        fc.constantFrom('aktif', 'pindah_sekolah', 'keluar', 'lulus'),
         fc.string({ minLength: 1, maxLength: 10 }),
         fc.string({ minLength: 1, maxLength: 10 }),
         async (_newPage, newStatus, newKelas, newTahun) => {

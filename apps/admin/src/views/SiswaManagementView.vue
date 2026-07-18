@@ -77,7 +77,7 @@ const { page, pageSize, search, filters, queryParams } = useTableUrlState({
   defaultPageSize: 15,
   filters: [
     { key: 'kelas_id', type: 'string' },
-    { key: 'status', type: 'enum', enumValues: ['aktif', 'pindah_sekolah', 'keluar', 'alumni'] },
+    { key: 'status', type: 'enum', enumValues: ['aktif', 'pindah_sekolah', 'keluar', 'lulus'] },
     { key: 'tahun_ajaran_id', type: 'string' },
   ],
 });
@@ -121,7 +121,7 @@ const statusOptions: SelectOption[] = [
   { value: StatusSiswa.AKTIF, label: 'Aktif' },
   { value: StatusSiswa.PINDAH_SEKOLAH, label: 'Pindah Sekolah' },
   { value: StatusSiswa.KELUAR, label: 'Keluar' },
-  { value: StatusSiswa.ALUMNI, label: 'Alumni/Lulus' },
+  { value: StatusSiswa.LULUS, label: 'Alumni/Lulus' },
 ];
 
 const deleteStatusOptions: SelectOption[] = [
@@ -516,7 +516,7 @@ onMounted(() => {
                     siswa.status === 'pindah_sekolah' || siswa.status === 'keluar'
                       ? 'bg-danger-50 text-danger-700'
                       : '',
-                    siswa.status === 'alumni' ? 'bg-primary-50 text-primary-700' : '',
+                    siswa.status === 'lulus' ? 'bg-primary-50 text-primary-700' : '',
                   ]"
                 >
                   {{ getStatusLabel(siswa.status) }}
