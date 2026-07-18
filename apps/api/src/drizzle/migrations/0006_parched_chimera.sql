@@ -1,5 +1,8 @@
-ALTER TABLE "tenant" ADD COLUMN "jumlah_tingkat" integer DEFAULT 6 NOT NULL;
-ALTER TABLE "tenant" ADD CONSTRAINT "chk_jumlah_tingkat" CHECK ("tenant"."jumlah_tingkat" BETWEEN 1 AND 13);
+ALTER TABLE "tenant" ADD COLUMN IF NOT EXISTS "jumlah_tingkat" integer DEFAULT 6 NOT NULL;
+DO $$ BEGIN
+  ALTER TABLE "tenant" ADD CONSTRAINT "chk_jumlah_tingkat" CHECK ("tenant"."jumlah_tingkat" BETWEEN 1 AND 13);
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
 
 -- Adjust existing tenants whose kelas already exceed the default (6)
 UPDATE tenant t

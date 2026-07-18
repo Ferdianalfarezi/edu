@@ -20,6 +20,9 @@ CREATE TABLE IF NOT EXISTS "rapor_nilai_audit" (
 	"changed_at" timestamp with time zone DEFAULT now()
 );
 --> statement-breakpoint
-ALTER TABLE "komponen_penilaian" ADD COLUMN "bobot_huruf" jsonb;--> statement-breakpoint
-ALTER TABLE "rapor" ADD COLUMN "deadline" timestamp with time zone;--> statement-breakpoint
-ALTER TABLE "rapor_nilai" ADD CONSTRAINT "rapor_nilai_upsert_unique" UNIQUE("rapor_id","siswa_id","mata_pelajaran_id","tenant_id");
+ALTER TABLE "komponen_penilaian" ADD COLUMN IF NOT EXISTS "bobot_huruf" jsonb;--> statement-breakpoint
+ALTER TABLE "rapor" ADD COLUMN IF NOT EXISTS "deadline" timestamp with time zone;--> statement-breakpoint
+DO $$ BEGIN
+  ALTER TABLE "rapor_nilai" ADD CONSTRAINT "rapor_nilai_upsert_unique" UNIQUE("rapor_id","siswa_id","mata_pelajaran_id","tenant_id");
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
