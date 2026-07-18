@@ -276,11 +276,11 @@ describe('TenantService', () => {
 
       expect(result).toHaveLength(2);
       expect(result[0].nama).toBe('SD Maju');
-      expect(result[0].userCount).toBe(5);
-      expect(result[0].isActive).toBe(true);
+      expect(result[0].user_count).toBe(5);
+      expect(result[0].is_active).toBe(true);
       expect(result[1].nama).toBe('SMP Bersama');
-      expect(result[1].userCount).toBe(0);
-      expect(result[1].isActive).toBe(false);
+      expect(result[1].user_count).toBe(0);
+      expect(result[1].is_active).toBe(false);
     });
 
     it('should return empty array when no tenants exist', async () => {

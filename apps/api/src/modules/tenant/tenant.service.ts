@@ -26,12 +26,12 @@ export interface TenantWithStats {
   alamat: string | null;
   telepon: string | null;
   email: string | null;
-  logoUrl: string | null;
-  jumlahTingkat: number;
-  isActive: boolean | null;
-  createdAt: Date | null;
-  updatedAt: Date | null;
-  userCount: number;
+  logo_url: string | null;
+  jumlah_tingkat: number;
+  is_active: boolean | null;
+  created_at: Date | null;
+  updated_at: Date | null;
+  user_count: number;
 }
 
 export interface CreateTenantResult {
@@ -283,8 +283,17 @@ export class TenantService {
       .orderBy(tenant.createdAt);
 
     return results.map((r) => ({
-      ...r,
-      userCount: Number(r.userCount),
+      id: r.id,
+      nama: r.nama,
+      alamat: r.alamat,
+      telepon: r.telepon,
+      email: r.email,
+      logo_url: r.logoUrl,
+      jumlah_tingkat: r.jumlahTingkat,
+      is_active: r.isActive,
+      user_count: Number(r.userCount),
+      created_at: r.createdAt,
+      updated_at: r.updatedAt,
     }));
   }
 
@@ -323,8 +332,17 @@ export class TenantService {
       .offset(offset);
 
     const mappedResults = results.map((r) => ({
-      ...r,
-      userCount: Number(r.userCount),
+      id: r.id,
+      nama: r.nama,
+      alamat: r.alamat,
+      telepon: r.telepon,
+      email: r.email,
+      logo_url: r.logoUrl,
+      jumlah_tingkat: r.jumlahTingkat,
+      is_active: r.isActive,
+      user_count: Number(r.userCount),
+      created_at: r.createdAt,
+      updated_at: r.updatedAt,
     }));
 
     return paginate(mappedResults, totalCount, page, pageSize);
