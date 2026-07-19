@@ -133,6 +133,21 @@ const guruSelectOptions = computed<SelectOption[]>(() =>
   guruList.value.map((g) => ({ value: g.id, label: g.nama })),
 );
 
+// Computed: build a dynamic time→jamKe map from the actual jadwal data
+const timeSlotMap = computed(() => {
+  const uniqueTimes = new Set<string>();
+  for (const entry of jadwalEntries.value) {
+    const normalized = entry.jam_mulai?.substring(0, 5) || '';
+    if (normalized) uniqueTimes.add(normalized);
+  }
+  const sorted = [...uniqueTimes].sort();
+  const map: Record<string, number> = {};
+  sorted.forEach((time, idx) => {
+    map[time] = idx + 1;
+  });
+  return map;
+});
+
 // Computed: grid data structure mapping jam_ke + hari to jadwal entry
 const gridData = computed(() => {
   const grid: Record<number, Record<string, JadwalEntry | null>> = {};
@@ -154,21 +169,9 @@ const gridData = computed(() => {
 });
 
 function deriveJamKe(jamMulai: string): number {
-  const timeMap: Record<string, number> = {
-    '07:00': 1,
-    '07:40': 2,
-    '08:20': 3,
-    '09:00': 4,
-    '09:40': 5,
-    '10:20': 6,
-    '11:00': 7,
-    '11:40': 8,
-    '12:20': 9,
-    '13:00': 10,
-  };
   // Handle both HH:mm and HH:mm:ss formats from the database
   const normalized = jamMulai?.substring(0, 5) || '';
-  return timeMap[normalized] || 0;
+  return timeSlotMap.value[normalized] || 0;
 }
 
 // Data fetching
