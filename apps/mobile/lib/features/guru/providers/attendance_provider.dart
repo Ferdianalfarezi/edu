@@ -7,6 +7,7 @@ import '../../../core/database/app_database.dart';
 import '../../../core/di/providers.dart';
 import '../../../core/network/api_client.dart';
 import '../../../core/network/connectivity_service.dart';
+import '../../../core/providers/hari_kerja_provider.dart';
 import '../models/jadwal_item.dart';
 import '../models/student_attendance.dart';
 import '../services/attendance_sync_service.dart';
@@ -251,6 +252,7 @@ class AttendanceInputNotifier extends StateNotifier<AttendanceInputState> {
     required this.database,
     required this.connectivityService,
     required this.syncService,
+    required this.hariKerja,
   }) : super(const AttendanceInputState());
 
   final String kelasId;
@@ -258,6 +260,7 @@ class AttendanceInputNotifier extends StateNotifier<AttendanceInputState> {
   final AppDatabase database;
   final ConnectivityService connectivityService;
   final AttendanceSyncService syncService;
+  final HariKerja hariKerja;
 
   /// Initialize students list.
   void setStudents(List<StudentAttendance> students) {
@@ -300,6 +303,15 @@ class AttendanceInputNotifier extends StateNotifier<AttendanceInputState> {
   /// If online → POST to API.
   /// If offline → save to Drift with event_timestamp per ADR-003.
   Future<void> submit() async {
+    // Reject Saturday submissions for 5_hari tenants (client-side guard)
+    final now = DateTime.now();
+    if (now.weekday == 6 && !hariKerja.includeSaturday) {
+      state = state.copyWith(
+        error: 'Hari Sabtu bukan hari aktif untuk sekolah ini',
+      );
+      return;
+    }
+
     // Validate all students have status
     final unset = state.students.where((s) => s.status == null).toList();
     if (unset.isNotEmpty) {
@@ -378,6 +390,8 @@ final attendanceInputProvider = StateNotifierProvider.autoDispose
   final database = ref.watch(appDatabaseProvider);
   final connectivity = ref.watch(connectivityServiceProvider);
   final syncService = ref.read(attendanceSyncServiceProvider.notifier);
+  final hariKerjaAsync = ref.watch(hariKerjaProvider);
+  final hariKerja = hariKerjaAsync.valueOrNull ?? HariKerja.enam;
 
   return AttendanceInputNotifier(
     kelasId: kelasId,
@@ -385,5 +399,6 @@ final attendanceInputProvider = StateNotifierProvider.autoDispose
     database: database,
     connectivityService: connectivity,
     syncService: syncService,
+    hariKerja: hariKerja,
   );
 });
