@@ -363,7 +363,13 @@ function getStatusLabel(status: StatusTagihan): string {
 // ===== API Calls =====
 async function fetchKelas() {
   try {
-    const { data } = await api.get<{ data: Kelas[] }>('/kelas');
+    // Only fetch kelas from the active tahun ajaran
+    const activeTa = tahunAjaranList.value.find((ta) => ta.status === 'aktif');
+    const params: Record<string, string> = {};
+    if (activeTa) {
+      params.tahun_ajaran_id = activeTa.id;
+    }
+    const { data } = await api.get<{ data: Kelas[] }>('/kelas', { params });
     kelasList.value = data.data;
   } catch (error) {
     console.error('Failed to fetch kelas:', error);
@@ -684,9 +690,9 @@ watch(
 );
 
 // ===== Init =====
-onMounted(() => {
+onMounted(async () => {
+  await fetchTahunAjaran();
   fetchKelas();
-  fetchTahunAjaran();
   fetchTagihanList();
 });
 </script>
