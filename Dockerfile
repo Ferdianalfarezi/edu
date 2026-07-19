@@ -31,9 +31,14 @@ COPY pnpm-lock.yaml pnpm-workspace.yaml package.json ./
 COPY apps/api/package.json ./apps/api/
 COPY packages/shared/package.json ./packages/shared/
 RUN pnpm install --frozen-lockfile --prod
+# Install drizzle-kit for pre-deploy migrations
+RUN pnpm add -w drizzle-kit
 
 COPY --from=build /app/apps/api/dist ./apps/api/dist
 COPY --from=build /app/packages/shared/dist ./packages/shared/dist
+# Migration files + config for pre-deploy command
+COPY apps/api/src/drizzle/migrations ./apps/api/src/drizzle/migrations
+COPY apps/api/drizzle.config.ts ./apps/api/drizzle.config.ts
 
 # Railway injects PORT env var
 EXPOSE 3000
