@@ -38,7 +38,7 @@ COPY --from=build /app/apps/api/dist ./apps/api/dist
 COPY --from=build /app/packages/shared/dist ./packages/shared/dist
 # Migration files + config for pre-deploy command
 COPY apps/api/src/drizzle/migrations ./apps/api/src/drizzle/migrations
-COPY apps/api/drizzle.config.ts ./apps/api/drizzle.config.ts
+COPY apps/api/drizzle-migrate.config.mjs ./apps/api/drizzle-migrate.config.mjs
 
 # Railway injects PORT env var
 EXPOSE 3000
