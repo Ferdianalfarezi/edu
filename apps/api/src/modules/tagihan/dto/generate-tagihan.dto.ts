@@ -25,4 +25,8 @@ export class GenerateTagihanDto {
   @IsOptional()
   @IsUUID()
   tahun_ajaran_id?: string;
+
+  @IsOptional()
+  @IsUUID()
+  kelas_id?: string;
 }

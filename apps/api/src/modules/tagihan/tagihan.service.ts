@@ -133,7 +133,7 @@ export class TagihanService {
     }
 
     try {
-      return await this.processGeneration(tenantId, tahunAjaranId, months);
+      return await this.processGeneration(tenantId, tahunAjaranId, months, dto.kelas_id);
     } finally {
       await this.redisService.releaseLock(lockKey);
     }
@@ -901,10 +901,21 @@ export class TagihanService {
     tenantId: string,
     tahunAjaranId: string,
     months: { bulan: number; tahun: number }[],
+    kelasId?: string,
   ): Promise<GenerateTagihanResult> {
     const db = this.drizzleService.db;
 
     // Get all active students with their kelas for this tenant + tahun_ajaran
+    const conditions = [
+      eq(siswa.tenantId, tenantId),
+      eq(siswa.status, 'aktif'),
+      eq(kelas.tahunAjaranId, tahunAjaranId),
+    ];
+
+    if (kelasId) {
+      conditions.push(eq(siswa.kelasId, kelasId));
+    }
+
     const activeStudents = await db
       .select({
         id: siswa.id,
@@ -915,13 +926,7 @@ export class TagihanService {
       })
       .from(siswa)
       .innerJoin(kelas, eq(siswa.kelasId, kelas.id))
-      .where(
-        and(
-          eq(siswa.tenantId, tenantId),
-          eq(siswa.status, 'aktif'),
-          eq(kelas.tahunAjaranId, tahunAjaranId),
-        ),
-      );
+      .where(and(...conditions));
 
     if (activeStudents.length === 0) {
       return { created: 0, skipped: 0, total_nominal: 0, months_processed: months.length };
