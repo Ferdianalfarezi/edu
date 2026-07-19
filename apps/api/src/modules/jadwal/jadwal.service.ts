@@ -1,11 +1,12 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
-import { eq, and, gte, lte, SQL } from 'drizzle-orm';
+import { eq, and, gte, lte, sql, SQL } from 'drizzle-orm';
 import { DrizzleService } from '@/drizzle/drizzle.service';
 import { jadwalPelajaran, guruPengganti } from '@/drizzle/schema/jadwal';
 import { kelas } from '@/drizzle/schema/kelas';
 import { mataPelajaran } from '@/drizzle/schema/mata-pelajaran';
 import { user } from '@/drizzle/schema/user';
 import { tahunAjaran } from '@/drizzle/schema/tahun-ajaran';
+import { TenantService } from '@/modules/tenant/tenant.service';
 import {
   CreateJadwalDto,
   UpdateJadwalDto,
@@ -17,7 +18,10 @@ import {
 
 @Injectable()
 export class JadwalService {
-  constructor(private readonly drizzleService: DrizzleService) {}
+  constructor(
+    private readonly drizzleService: DrizzleService,
+    private readonly tenantService: TenantService,
+  ) {}
 
   /**
    * Create a new jadwal pelajaran entry.
@@ -28,6 +32,9 @@ export class JadwalService {
    */
   async create(tenantId: string, adminId: string, dto: CreateJadwalDto) {
     const db = this.drizzleService.db;
+
+    // Validate day is within tenant's allowed hari kerja
+    await this.validateHariKerja(tenantId, dto.hari);
 
     // Validate referenced entities only for non-istirahat entries
     if (!dto.isIstirahat) {
@@ -96,6 +103,12 @@ export class JadwalService {
     }
     if (filters.hari) {
       conditions.push(eq(jadwalPelajaran.hari, filters.hari));
+    }
+
+    // Filter Saturday jadwal when tenant uses 5-day work week
+    const hariKerja = await this.tenantService.getHariKerja(tenantId);
+    if (hariKerja === '5_hari') {
+      conditions.push(sql`${jadwalPelajaran.hari} != 'sabtu'`);
     }
 
     const results = await db
@@ -255,6 +268,11 @@ export class JadwalService {
    */
   async update(tenantId: string, id: string, adminId: string, dto: UpdateJadwalDto) {
     const db = this.drizzleService.db;
+
+    // Validate day is within tenant's allowed hari kerja (if hari is being updated)
+    if (dto.hari !== undefined) {
+      await this.validateHariKerja(tenantId, dto.hari);
+    }
 
     // Verify the jadwal exists in this tenant
     const existing = await this.findOneRaw(tenantId, id);
@@ -708,6 +726,25 @@ export class JadwalService {
 
     if (!result) {
       throw new BadRequestException('Tahun ajaran tidak ditemukan dalam tenant ini');
+    }
+  }
+
+  /**
+   * Validate that the given day is within the tenant's allowed hari kerja.
+   * Throws BadRequestException if the day is not an active school day.
+   *
+   * Requirements: 4.1, 4.2, 4.3
+   */
+  private async validateHariKerja(tenantId: string, hari: string): Promise<void> {
+    const hariKerja = await this.tenantService.getHariKerja(tenantId);
+    const allowedDays =
+      hariKerja === '5_hari'
+        ? ['senin', 'selasa', 'rabu', 'kamis', 'jumat']
+        : ['senin', 'selasa', 'rabu', 'kamis', 'jumat', 'sabtu'];
+
+    if (!allowedDays.includes(hari)) {
+      const namaHari = hari.charAt(0).toUpperCase() + hari.slice(1);
+      throw new BadRequestException(`Hari ${namaHari} bukan hari aktif untuk sekolah ini`);
     }
   }
 }

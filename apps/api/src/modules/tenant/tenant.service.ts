@@ -28,6 +28,7 @@ export interface TenantWithStats {
   email: string | null;
   logo_url: string | null;
   jumlah_tingkat: number;
+  hari_kerja: '5_hari' | '6_hari';
   is_active: boolean | null;
   created_at: Date | null;
   updated_at: Date | null;
@@ -133,6 +134,7 @@ export class TenantService {
         telepon: dto.telepon ?? null,
         email: dto.email,
         jumlahTingkat: dto.jumlah_tingkat,
+        hariKerja: dto.hari_kerja ?? '6_hari',
         isActive: true,
       })
       .returning();
@@ -272,6 +274,7 @@ export class TenantService {
         email: tenant.email,
         logoUrl: tenant.logoUrl,
         jumlahTingkat: tenant.jumlahTingkat,
+        hariKerja: tenant.hariKerja,
         isActive: tenant.isActive,
         createdAt: tenant.createdAt,
         updatedAt: tenant.updatedAt,
@@ -290,6 +293,7 @@ export class TenantService {
       email: r.email,
       logo_url: r.logoUrl,
       jumlah_tingkat: r.jumlahTingkat,
+      hari_kerja: r.hariKerja as '5_hari' | '6_hari',
       is_active: r.isActive,
       user_count: Number(r.userCount),
       created_at: r.createdAt,
@@ -319,6 +323,7 @@ export class TenantService {
         email: tenant.email,
         logoUrl: tenant.logoUrl,
         jumlahTingkat: tenant.jumlahTingkat,
+        hariKerja: tenant.hariKerja,
         isActive: tenant.isActive,
         createdAt: tenant.createdAt,
         updatedAt: tenant.updatedAt,
@@ -339,6 +344,7 @@ export class TenantService {
       email: r.email,
       logo_url: r.logoUrl,
       jumlah_tingkat: r.jumlahTingkat,
+      hari_kerja: r.hariKerja as '5_hari' | '6_hari',
       is_active: r.isActive,
       user_count: Number(r.userCount),
       created_at: r.createdAt,
@@ -381,17 +387,61 @@ export class TenantService {
   }
 
   /**
+   * Returns the hari_kerja setting for a given tenant.
+   * Used by JadwalService, AbsensiService, and KonfigurasiService.
+   */
+  async getHariKerja(tenantId: string): Promise<'5_hari' | '6_hari'> {
+    const result = await this.db
+      .select({ hariKerja: tenant.hariKerja })
+      .from(tenant)
+      .where(eq(tenant.id, tenantId))
+      .limit(1);
+
+    if (result.length === 0) {
+      throw new NotFoundException(`Tenant dengan id ${tenantId} tidak ditemukan`);
+    }
+
+    return result[0].hariKerja as '5_hari' | '6_hari';
+  }
+
+  /**
+   * Update the hari_kerja setting for a tenant.
+   * Used by the PATCH /tenants/hari-kerja endpoint.
+   */
+  async updateHariKerja(
+    tenantId: string,
+    hariKerja: '5_hari' | '6_hari',
+  ): Promise<{ message: string }> {
+    const tenants = await this.db.select().from(tenant).where(eq(tenant.id, tenantId)).limit(1);
+
+    if (tenants.length === 0) {
+      throw new NotFoundException(`Tenant dengan id ${tenantId} tidak ditemukan`);
+    }
+
+    await this.db
+      .update(tenant)
+      .set({ hariKerja, updatedAt: new Date() })
+      .where(eq(tenant.id, tenantId));
+
+    return { message: 'Hari kerja berhasil diperbarui' };
+  }
+
+  /**
    * Returns tenant profile including jumlah_tingkat for non-super-admin roles.
    * Used by admin panel to know school's structure.
    */
-  async getTenantProfile(
-    tenantId: string,
-  ): Promise<{ id: string; nama: string; jumlah_tingkat: number }> {
+  async getTenantProfile(tenantId: string): Promise<{
+    id: string;
+    nama: string;
+    jumlah_tingkat: number;
+    hari_kerja: '5_hari' | '6_hari';
+  }> {
     const result = await this.db
       .select({
         id: tenant.id,
         nama: tenant.nama,
         jumlahTingkat: tenant.jumlahTingkat,
+        hariKerja: tenant.hariKerja,
       })
       .from(tenant)
       .where(eq(tenant.id, tenantId))
@@ -405,6 +455,7 @@ export class TenantService {
       id: result[0].id,
       nama: result[0].nama,
       jumlah_tingkat: result[0].jumlahTingkat,
+      hari_kerja: result[0].hariKerja as '5_hari' | '6_hari',
     };
   }
 

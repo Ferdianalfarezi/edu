@@ -2,6 +2,7 @@
 import { ref, onMounted } from 'vue';
 import { api } from '@/api/client';
 import { PageHeader, ActionButton } from '@/components/ui';
+import { useToast } from '@/composables/useToast';
 
 interface KonfigurasiData {
   batas_ketidakhadiran_notifikasi: number;
@@ -19,11 +20,18 @@ interface TenantProfile {
   id: string;
   nama: string;
   jumlah_tingkat: number;
+  hari_kerja?: '5_hari' | '6_hari';
 }
+
+const toast = useToast();
 
 const loading = ref(false);
 const saving = ref(false);
 const saveSuccess = ref(false);
+
+// Hari Kerja from tenant profile
+const hariKerja = ref<'5_hari' | '6_hari'>('6_hari');
+const savingHariKerja = ref(false);
 
 // Jumlah tingkat from tenant profile
 const jumlahTingkat = ref(0);
@@ -63,6 +71,7 @@ async function fetchKonfigurasi() {
   try {
     const { data } = await api.get<TenantProfile>('/tenants/profile');
     jumlahTingkat.value = data.jumlah_tingkat;
+    hariKerja.value = data.hari_kerja ?? '6_hari';
   } catch (error) {
     console.error('Failed to fetch tenant profile:', error);
   }
@@ -156,6 +165,24 @@ function formatCurrency(value: number): string {
   }).format(value);
 }
 
+async function updateHariKerja() {
+  const confirmed = confirm(
+    'Perubahan ini akan mempengaruhi jadwal dan perhitungan absensi. Lanjutkan?',
+  );
+  if (!confirmed) return;
+
+  savingHariKerja.value = true;
+  try {
+    await api.patch('/tenants/hari-kerja', { hari_kerja: hariKerja.value });
+    toast.success('Hari kerja berhasil diperbarui');
+  } catch (error) {
+    console.error('Failed to update hari kerja:', error);
+    toast.error('Gagal memperbarui hari kerja');
+  } finally {
+    savingHariKerja.value = false;
+  }
+}
+
 onMounted(fetchKonfigurasi);
 </script>
 
@@ -188,6 +215,31 @@ onMounted(fetchKonfigurasi);
     </div>
 
     <div v-else class="space-y-4 max-w-3xl">
+      <!-- Hari Kerja Sekolah -->
+      <section class="bg-white border border-border rounded-xl p-5 mb-4">
+        <h2 class="text-base font-semibold text-text-primary mb-4">Hari Kerja Sekolah</h2>
+        <div class="flex items-center gap-4">
+          <label class="flex items-center gap-2 cursor-pointer">
+            <input type="radio" v-model="hariKerja" value="5_hari" class="accent-primary-600" />
+            <span class="text-sm">5 Hari (Senin-Jumat)</span>
+          </label>
+          <label class="flex items-center gap-2 cursor-pointer">
+            <input type="radio" v-model="hariKerja" value="6_hari" class="accent-primary-600" />
+            <span class="text-sm">6 Hari (Senin-Sabtu)</span>
+          </label>
+        </div>
+        <p class="text-xs text-text-tertiary mt-2">
+          Perubahan ini akan mempengaruhi jadwal dan perhitungan absensi.
+        </p>
+        <button
+          @click="updateHariKerja"
+          :disabled="savingHariKerja"
+          class="mt-3 px-3 py-2 text-sm font-medium text-white bg-primary-600 rounded-lg hover:bg-primary-700 transition-colors disabled:opacity-50"
+        >
+          {{ savingHariKerja ? 'Menyimpan...' : 'Simpan Hari Kerja' }}
+        </button>
+      </section>
+
       <!-- Threshold & General Settings -->
       <section class="bg-white border border-border rounded-xl p-5 mb-4">
         <h2 class="text-base font-semibold text-text-primary mb-4">Pengaturan Umum</h2>

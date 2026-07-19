@@ -21,7 +21,7 @@ import { PaginationQueryDto } from '@/common/dto/pagination.dto';
 import { Role } from '@edu/shared';
 import { Auditable, AuditInterceptor } from '@/modules/audit-log';
 import { TenantService, CreateTenantResult, TenantStats } from './tenant.service';
-import { CreateTenantDto, UpdateTenantDto } from './dto';
+import { CreateTenantDto, UpdateHariKerjaDto, UpdateTenantDto } from './dto';
 
 @Controller('tenants')
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -80,6 +80,20 @@ export class TenantController {
   })
   async createTenant(@Body() dto: CreateTenantDto): Promise<CreateTenantResult> {
     return this.tenantService.createTenant(dto);
+  }
+
+  /**
+   * PATCH /tenants/hari-kerja
+   * Update the hari_kerja setting for the current user's tenant.
+   */
+  @Patch('hari-kerja')
+  @Roles(Role.ADMIN, Role.SUPER_ADMIN)
+  @HttpCode(HttpStatus.OK)
+  async updateHariKerja(
+    @TenantId() tenantId: string,
+    @Body() dto: UpdateHariKerjaDto,
+  ): Promise<{ message: string }> {
+    return this.tenantService.updateHariKerja(tenantId, dto.hari_kerja);
   }
 
   /**

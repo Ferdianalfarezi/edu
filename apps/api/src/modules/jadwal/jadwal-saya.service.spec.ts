@@ -1,6 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { JadwalService } from './jadwal.service';
 import { DrizzleService } from '@/drizzle/drizzle.service';
+import { TenantService } from '@/modules/tenant/tenant.service';
 
 describe('JadwalService - getJadwalSaya', () => {
   let service: JadwalService;
@@ -17,6 +18,9 @@ describe('JadwalService - getJadwalSaya', () => {
     chain.from = jest.fn().mockReturnValue(chain);
     chain.where = jest.fn().mockReturnValue(chain);
     chain.innerJoin = jest.fn().mockReturnValue(chain);
+    chain.leftJoin = jest.fn().mockReturnValue(chain);
+    chain.orderBy = jest.fn().mockReturnValue(chain);
+    chain.limit = jest.fn().mockReturnValue(chain);
     chain.values = jest.fn().mockReturnValue(chain);
     chain.set = jest.fn().mockReturnValue(chain);
     chain.returning = jest
@@ -52,6 +56,12 @@ describe('JadwalService - getJadwalSaya', () => {
           provide: DrizzleService,
           useValue: {
             db: mockDb,
+          },
+        },
+        {
+          provide: TenantService,
+          useValue: {
+            getHariKerja: jest.fn().mockResolvedValue('6_hari'),
           },
         },
       ],
@@ -102,8 +112,8 @@ describe('JadwalService - getJadwalSaya', () => {
         id: 'jadwal-1',
         kelasNama: '6A',
         mataPelajaranNama: 'Matematika',
-        jamMulai: '08:00:00',
-        jamSelesai: '09:30:00',
+        jamMulai: '08:00',
+        jamSelesai: '09:30',
         hasGuruPengganti: false,
         guruPenggantiNama: undefined,
       });
@@ -111,8 +121,8 @@ describe('JadwalService - getJadwalSaya', () => {
         id: 'jadwal-2',
         kelasNama: '6B',
         mataPelajaranNama: 'IPA',
-        jamMulai: '10:00:00',
-        jamSelesai: '11:30:00',
+        jamMulai: '10:00',
+        jamSelesai: '11:30',
         hasGuruPengganti: false,
         guruPenggantiNama: undefined,
       });

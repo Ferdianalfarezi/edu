@@ -2,6 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { JadwalService } from './jadwal.service';
 import { DrizzleService } from '@/drizzle/drizzle.service';
+import { TenantService } from '@/modules/tenant/tenant.service';
 import { CreateJadwalDto } from './dto';
 
 describe('JadwalService', () => {
@@ -51,6 +52,7 @@ describe('JadwalService', () => {
     jam_mulai: '08:00',
     jam_selesai: '09:30',
     is_vacant: false,
+    is_istirahat: false,
     mata_pelajaran: { id: mapelId, nama: 'Matematika', kode: 'MTK' },
     guru: { id: guruId, nama: 'Pak Budi' },
   };
@@ -74,6 +76,9 @@ describe('JadwalService', () => {
     chain.from = jest.fn().mockReturnValue(chain);
     chain.where = jest.fn().mockReturnValue(chain);
     chain.innerJoin = jest.fn().mockReturnValue(chain);
+    chain.leftJoin = jest.fn().mockReturnValue(chain);
+    chain.orderBy = jest.fn().mockReturnValue(chain);
+    chain.limit = jest.fn().mockReturnValue(chain);
     chain.values = jest.fn().mockReturnValue(chain);
     chain.set = jest.fn().mockReturnValue(chain);
     chain.returning = jest
@@ -109,6 +114,12 @@ describe('JadwalService', () => {
           provide: DrizzleService,
           useValue: {
             db: mockDb,
+          },
+        },
+        {
+          provide: TenantService,
+          useValue: {
+            getHariKerja: jest.fn().mockResolvedValue('6_hari'),
           },
         },
       ],

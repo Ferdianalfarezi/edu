@@ -2,6 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { JadwalService } from './jadwal.service';
 import { DrizzleService } from '@/drizzle/drizzle.service';
+import { TenantService } from '@/modules/tenant/tenant.service';
 import { CreateGuruPenggantiDto } from './dto';
 
 describe('JadwalService - Guru Pengganti', () => {
@@ -50,6 +51,9 @@ describe('JadwalService - Guru Pengganti', () => {
     chain.from = jest.fn().mockReturnValue(chain);
     chain.where = jest.fn().mockReturnValue(chain);
     chain.innerJoin = jest.fn().mockReturnValue(chain);
+    chain.leftJoin = jest.fn().mockReturnValue(chain);
+    chain.orderBy = jest.fn().mockReturnValue(chain);
+    chain.limit = jest.fn().mockReturnValue(chain);
     chain.values = jest.fn().mockReturnValue(chain);
     chain.set = jest.fn().mockReturnValue(chain);
     chain.returning = jest
@@ -85,6 +89,12 @@ describe('JadwalService - Guru Pengganti', () => {
           provide: DrizzleService,
           useValue: {
             db: mockDb,
+          },
+        },
+        {
+          provide: TenantService,
+          useValue: {
+            getHariKerja: jest.fn().mockResolvedValue('6_hari'),
           },
         },
       ],

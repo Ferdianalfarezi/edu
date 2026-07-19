@@ -5,6 +5,7 @@ import { AbsensiService } from './absensi.service';
 import { DrizzleService } from '@/drizzle/drizzle.service';
 import { KonfigurasiService } from '@/modules/konfigurasi/konfigurasi.service';
 import { JadwalService } from '@/modules/jadwal/jadwal.service';
+import { TenantService } from '@/modules/tenant/tenant.service';
 import { QUEUE_NAMES } from '@/modules/queue/queue.constants';
 
 describe('AbsensiService — getAbsensiAnak (Task 8.11)', () => {
@@ -55,6 +56,10 @@ describe('AbsensiService — getAbsensiAnak (Task 8.11)', () => {
       isGuruPenggantiForClassOnDate: jest.fn(),
     };
 
+    const mockTenantService = {
+      getHariKerja: jest.fn().mockResolvedValue('6_hari'),
+    };
+
     const mockNotificationQueue = {
       add: jest.fn(),
     };
@@ -73,6 +78,10 @@ describe('AbsensiService — getAbsensiAnak (Task 8.11)', () => {
         {
           provide: JadwalService,
           useValue: mockJadwalService,
+        },
+        {
+          provide: TenantService,
+          useValue: mockTenantService,
         },
         {
           provide: getQueueToken(QUEUE_NAMES.NOTIFICATION),
@@ -101,7 +110,9 @@ describe('AbsensiService — getAbsensiAnak (Task 8.11)', () => {
     it('should throw ForbiddenException when siswa belongs to another parent', async () => {
       // Query 1: find siswa → belongs to otherParentId
       mockDb.select.mockReturnValueOnce(
-        createChainableMock([{ id: siswaId, nama: 'Andi', orangTuaId: otherParentId }]),
+        createChainableMock([
+          { id: siswaId, nama: 'Andi', orangTuaId: otherParentId, tenantId: 'tenant-1' },
+        ]),
       );
 
       await expect(service.getAbsensiAnak(parentUserId, siswaId, 10, 2024)).rejects.toThrow(
@@ -112,7 +123,9 @@ describe('AbsensiService — getAbsensiAnak (Task 8.11)', () => {
     it('should return attendance calendar view with summary for the requested month', async () => {
       // Query 1: find siswa → belongs to parentUserId
       mockDb.select.mockReturnValueOnce(
-        createChainableMock([{ id: siswaId, nama: 'Andi', orangTuaId: parentUserId }]),
+        createChainableMock([
+          { id: siswaId, nama: 'Andi', orangTuaId: parentUserId, tenantId: 'tenant-1' },
+        ]),
       );
 
       // Query 2: get attendance records for October 2024
@@ -151,7 +164,9 @@ describe('AbsensiService — getAbsensiAnak (Task 8.11)', () => {
 
       // Query 1: find siswa
       mockDb.select.mockReturnValueOnce(
-        createChainableMock([{ id: siswaId, nama: 'Budi', orangTuaId: parentUserId }]),
+        createChainableMock([
+          { id: siswaId, nama: 'Budi', orangTuaId: parentUserId, tenantId: 'tenant-1' },
+        ]),
       );
 
       // Query 2: get attendance records → empty (no records this month)
@@ -168,7 +183,9 @@ describe('AbsensiService — getAbsensiAnak (Task 8.11)', () => {
     it('should return empty hari and zero totals when no attendance data exists', async () => {
       // Query 1: find siswa
       mockDb.select.mockReturnValueOnce(
-        createChainableMock([{ id: siswaId, nama: 'Citra', orangTuaId: parentUserId }]),
+        createChainableMock([
+          { id: siswaId, nama: 'Citra', orangTuaId: parentUserId, tenantId: 'tenant-1' },
+        ]),
       );
 
       // Query 2: no records for April 2024

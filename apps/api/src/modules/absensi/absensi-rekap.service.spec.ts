@@ -5,6 +5,7 @@ import { AbsensiService } from './absensi.service';
 import { DrizzleService } from '@/drizzle/drizzle.service';
 import { KonfigurasiService } from '@/modules/konfigurasi/konfigurasi.service';
 import { JadwalService } from '@/modules/jadwal/jadwal.service';
+import { TenantService } from '@/modules/tenant/tenant.service';
 import { QUEUE_NAMES } from '@/modules/queue/queue.constants';
 
 describe('AbsensiService — Rekap Absensi (Task 8.8)', () => {
@@ -87,6 +88,10 @@ describe('AbsensiService — Rekap Absensi (Task 8.8)', () => {
         {
           provide: JadwalService,
           useValue: mockJadwalService,
+        },
+        {
+          provide: TenantService,
+          useValue: { getHariKerja: jest.fn().mockResolvedValue('6_hari') },
         },
         {
           provide: getQueueToken(QUEUE_NAMES.NOTIFICATION),

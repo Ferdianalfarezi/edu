@@ -4,6 +4,7 @@ import {
   IsOptional,
   IsEmail,
   IsInt,
+  IsIn,
   MaxLength,
   Min,
   Max,
@@ -35,6 +36,13 @@ export class CreateTenantDto {
   @Min(1)
   @Max(13)
   jumlah_tingkat: number;
+
+  /** Hari kerja sekolah: 5 hari (Senin-Jumat) atau 6 hari (Senin-Sabtu) */
+  @IsOptional()
+  @IsIn(['5_hari', '6_hari'], {
+    message: 'hari_kerja harus bernilai 5_hari atau 6_hari',
+  })
+  hari_kerja?: '5_hari' | '6_hari';
 
   /** Name of the default admin user for this tenant */
   @IsString()
