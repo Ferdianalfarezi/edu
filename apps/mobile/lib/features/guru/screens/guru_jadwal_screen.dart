@@ -178,24 +178,17 @@ class _JadwalCard extends StatelessWidget {
                   child: Column(
                     children: [
                       Text(
-                        entry.jamMulai,
+                        'Jam',
                         style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w600,
+                          fontSize: 11,
                           color: theme.colorScheme.onPrimaryContainer,
                         ),
                       ),
                       Text(
-                        '–',
+                        '${entry.jamKe}',
                         style: TextStyle(
-                          color: theme.colorScheme.onPrimaryContainer,
-                        ),
-                      ),
-                      Text(
-                        entry.jamSelesai,
-                        style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w600,
+                          fontSize: 18,
+                          fontWeight: FontWeight.w700,
                           color: theme.colorScheme.onPrimaryContainer,
                         ),
                       ),

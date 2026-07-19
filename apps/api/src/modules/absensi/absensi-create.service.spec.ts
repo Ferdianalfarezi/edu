@@ -407,9 +407,7 @@ describe('AbsensiService - createAbsensi & getKelasHariIni', () => {
      * Requirement 1.1: Returns scheduled classes with details.
      */
     it('should return scheduled classes when guru has jadwal today', async () => {
-      const scheduledClasses = [
-        { kelasId: kelasId, kelasNama: '6A', jamMulai: '08:00', jamSelesai: '09:30' },
-      ];
+      const scheduledClasses = [{ kelasId: kelasId, kelasNama: '6A' }];
 
       selectResults = [
         scheduledClasses, // jadwal
@@ -433,7 +431,7 @@ describe('AbsensiService - createAbsensi & getKelasHariIni', () => {
     it('should include pengganti classes in the result', async () => {
       const kelasId2 = 'eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee';
       selectResults = [
-        [{ kelasId: kelasId, kelasNama: '6A', jamMulai: '08:00', jamSelesai: '09:30' }],
+        [{ kelasId: kelasId, kelasNama: '6A' }],
         [{ kelasId: kelasId2, kelasNama: '5B' }], // pengganti class
       ];
 

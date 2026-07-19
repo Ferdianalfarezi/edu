@@ -694,7 +694,7 @@ async function seed() {
     ];
 
     await db.insert(jadwalPelajaran).values(
-      jadwalData.map((j) => ({
+      jadwalData.map((j, idx) => ({
         tenantId: IDS.tenant,
         kelasId: IDS.kelas1A,
         mataPelajaranId: j.mapelId,
@@ -702,8 +702,7 @@ async function seed() {
         tahunAjaranId: IDS.tahunAjaran,
         semester: 1,
         hari: j.hari,
-        jamMulai: j.jamMulai,
-        jamSelesai: j.jamSelesai,
+        jamKe: (idx % 6) + 1,
         tanggalMulaiBerlaku: '2024-07-15',
         tanggalSelesaiBerlaku: '2025-06-30',
       })),

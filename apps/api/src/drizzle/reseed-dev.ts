@@ -440,15 +440,7 @@ async function reseed() {
   // Create jadwal pelajaran for ALL kelas
   console.log('📅 Creating jadwal pelajaran...');
   const HARI = ['senin', 'selasa', 'rabu', 'kamis', 'jumat', 'sabtu'];
-  const SLOTS = [
-    { mulai: '07:30', selesai: '08:10' },
-    { mulai: '08:10', selesai: '08:50' },
-    { mulai: '08:50', selesai: '09:30' },
-    // istirahat 09:30-09:45
-    { mulai: '09:45', selesai: '10:25' },
-    { mulai: '10:25', selesai: '11:05' },
-    { mulai: '11:05', selesai: '11:45' },
-  ];
+  const SLOTS_PER_DAY = 6;
 
   // Each kelas gets a rotating schedule of mapel with different guru
   // guru assignment per mapel per kelas: rotate through all guru
@@ -458,10 +450,10 @@ async function reseed() {
     for (let hariIdx = 0; hariIdx < HARI.length; hariIdx++) {
       const hari = HARI[hariIdx];
 
-      for (let slotIdx = 0; slotIdx < SLOTS.length; slotIdx++) {
-        const slot = SLOTS[slotIdx];
+      for (let slotIdx = 0; slotIdx < SLOTS_PER_DAY; slotIdx++) {
+        const jamKe = slotIdx + 1;
         // Rotate mapel: different each day/slot combo
-        const mapelIdx = (hariIdx * SLOTS.length + slotIdx) % MAPEL.length;
+        const mapelIdx = (hariIdx * SLOTS_PER_DAY + slotIdx) % MAPEL.length;
         const mapel = MAPEL[mapelIdx];
         // Assign guru: rotate based on kelas and mapel to avoid conflicts
         // Each mapel gets a specific guru rotation
@@ -469,8 +461,8 @@ async function reseed() {
         const guruId = ALL_GURU_IDS[guruIdx];
 
         await client.query(
-          `INSERT INTO jadwal_pelajaran (id, tenant_id, kelas_id, mata_pelajaran_id, guru_id, tahun_ajaran_id, semester, hari, jam_mulai, jam_selesai, tanggal_mulai_berlaku, tanggal_selesai_berlaku)
-           VALUES ($1, $2, $3, $4, $5, $6, 1, $7, $8, $9, $10, $11)`,
+          `INSERT INTO jadwal_pelajaran (id, tenant_id, kelas_id, mata_pelajaran_id, guru_id, tahun_ajaran_id, semester, hari, jam_ke, tanggal_mulai_berlaku, tanggal_selesai_berlaku)
+           VALUES ($1, $2, $3, $4, $5, $6, 1, $7, $8, $9, $10)`,
           [
             randomUUID(),
             TENANT_ID,
@@ -479,8 +471,7 @@ async function reseed() {
             guruId,
             TAHUN_AJARAN_ID,
             hari,
-            slot.mulai,
-            slot.selesai,
+            jamKe,
             TA_MULAI,
             TA_SELESAI,
           ],
@@ -498,7 +489,7 @@ async function reseed() {
   console.log(`   Siswa: 150 (10 per kelas × 15 kelas)`);
   console.log(`   Riwayat Kelas: 150 entries`);
   console.log(
-    `   Jadwal: ${KELAS.length * HARI.length * SLOTS.length} entries (${KELAS.length} kelas × 6 hari × 6 slot)`,
+    `   Jadwal: ${KELAS.length * HARI.length * SLOTS_PER_DAY} entries (${KELAS.length} kelas × 6 hari × 6 slot)`,
   );
   console.log('');
   console.log('   Wali Kelas assignment:');

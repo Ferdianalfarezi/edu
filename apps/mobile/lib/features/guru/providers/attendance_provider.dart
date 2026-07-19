@@ -68,8 +68,7 @@ Future<void> _cacheSchedule(AppDatabase db, List<JadwalItem> items) async {
               mataPelajaranId: item.mataPelajaranId,
               mataPelajaranNama: item.mataPelajaranNama,
               hari: _todayHari(),
-              jamMulai: item.jamMulai,
-              jamSelesai: item.jamSelesai,
+              jamKe: item.jamKe,
               cachedAt: DateTime.now(),
             );
           }).toList(),
@@ -95,8 +94,7 @@ Future<List<JadwalItem>> _loadCachedSchedule(AppDatabase db) async {
       kelasNama: row.kelasNama,
       mataPelajaranId: row.mataPelajaranId,
       mataPelajaranNama: row.mataPelajaranNama,
-      jamMulai: row.jamMulai,
-      jamSelesai: row.jamSelesai,
+      jamKe: row.jamKe,
     );
   }).toList();
 }

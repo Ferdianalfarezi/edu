@@ -231,8 +231,6 @@ export class AbsensiService {
       .select({
         kelasId: jadwalPelajaran.kelasId,
         kelasNama: kelas.nama,
-        jamMulai: jadwalPelajaran.jamMulai,
-        jamSelesai: jadwalPelajaran.jamSelesai,
       })
       .from(jadwalPelajaran)
       .innerJoin(kelas, eq(jadwalPelajaran.kelasId, kelas.id))
@@ -263,18 +261,13 @@ export class AbsensiService {
       );
 
     // Deduplicate by kelasId
-    const kelasMap = new Map<
-      string,
-      { kelasId: string; kelasNama: string; jamMulai?: string; jamSelesai?: string }
-    >();
+    const kelasMap = new Map<string, { kelasId: string; kelasNama: string }>();
 
     for (const slot of scheduledClasses) {
       if (!kelasMap.has(slot.kelasId)) {
         kelasMap.set(slot.kelasId, {
           kelasId: slot.kelasId,
           kelasNama: slot.kelasNama,
-          jamMulai: slot.jamMulai?.substring(0, 5) ?? slot.jamMulai,
-          jamSelesai: slot.jamSelesai?.substring(0, 5) ?? slot.jamSelesai,
         });
       }
     }

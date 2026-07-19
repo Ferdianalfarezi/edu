@@ -29,9 +29,7 @@ interface JadwalEntry {
   mata_pelajaran_id: string | null;
   guru_id: string | null;
   hari: string;
-  jam_ke?: number;
-  jam_mulai: string;
-  jam_selesai: string;
+  jam_ke: number;
   is_vacant: boolean;
   is_istirahat: boolean;
   mata_pelajaran?: MataPelajaran | null;
@@ -49,8 +47,6 @@ interface GuruPenggantiInfo {
 interface JadwalForm {
   mata_pelajaran_id: string;
   guru_id: string;
-  jam_mulai: string;
-  jam_selesai: string;
   is_istirahat: boolean;
 }
 
@@ -92,8 +88,6 @@ const selectedJamKe = ref(0);
 const form = ref<JadwalForm>({
   mata_pelajaran_id: '',
   guru_id: '',
-  jam_mulai: '',
-  jam_selesai: '',
   is_istirahat: false,
 });
 const formError = ref('');
@@ -133,21 +127,6 @@ const guruSelectOptions = computed<SelectOption[]>(() =>
   guruList.value.map((g) => ({ value: g.id, label: g.nama })),
 );
 
-// Computed: build a dynamic time→jamKe map from the actual jadwal data
-const timeSlotMap = computed(() => {
-  const uniqueTimes = new Set<string>();
-  for (const entry of jadwalEntries.value) {
-    const normalized = entry.jam_mulai?.substring(0, 5) || '';
-    if (normalized) uniqueTimes.add(normalized);
-  }
-  const sorted = [...uniqueTimes].sort();
-  const map: Record<string, number> = {};
-  sorted.forEach((time, idx) => {
-    map[time] = idx + 1;
-  });
-  return map;
-});
-
 // Computed: grid data structure mapping jam_ke + hari to jadwal entry
 const gridData = computed(() => {
   const grid: Record<number, Record<string, JadwalEntry | null>> = {};
@@ -159,20 +138,13 @@ const gridData = computed(() => {
   }
 
   for (const entry of jadwalEntries.value) {
-    const jamKe = entry.jam_ke || deriveJamKe(entry.jam_mulai);
-    if (jamKe >= 1 && jamKe <= 10) {
-      grid[jamKe][entry.hari] = entry;
+    if (entry.jam_ke >= 1 && entry.jam_ke <= 10) {
+      grid[entry.jam_ke][entry.hari] = entry;
     }
   }
 
   return grid;
 });
-
-function deriveJamKe(jamMulai: string): number {
-  // Handle both HH:mm and HH:mm:ss formats from the database
-  const normalized = jamMulai?.substring(0, 5) || '';
-  return timeSlotMap.value[normalized] || 0;
-}
 
 // Data fetching
 async function fetchKelasList() {
@@ -298,8 +270,6 @@ function openCreateForm(hari: string, jamKe: number) {
   form.value = {
     mata_pelajaran_id: '',
     guru_id: '',
-    jam_mulai: getDefaultJamMulai(jamKe),
-    jam_selesai: getDefaultJamSelesai(jamKe),
     is_istirahat: false,
   };
   formError.value = '';
@@ -313,30 +283,10 @@ function openEditForm(entry: JadwalEntry, hari: string, jamKe: number) {
   form.value = {
     mata_pelajaran_id: entry.mata_pelajaran_id || '',
     guru_id: entry.guru_id || '',
-    jam_mulai: entry.jam_mulai,
-    jam_selesai: entry.jam_selesai,
     is_istirahat: entry.is_istirahat || false,
   };
   formError.value = '';
   showFormModal.value = true;
-}
-
-function getDefaultJamMulai(jamKe: number): string {
-  const startHour = 7;
-  const minutesPerSlot = 40;
-  const totalMinutes = (jamKe - 1) * minutesPerSlot;
-  const hour = startHour + Math.floor(totalMinutes / 60);
-  const minute = totalMinutes % 60;
-  return `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`;
-}
-
-function getDefaultJamSelesai(jamKe: number): string {
-  const startHour = 7;
-  const minutesPerSlot = 40;
-  const totalMinutes = jamKe * minutesPerSlot;
-  const hour = startHour + Math.floor(totalMinutes / 60);
-  const minute = totalMinutes % 60;
-  return `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`;
 }
 
 async function saveJadwal() {
@@ -357,7 +307,6 @@ async function saveJadwal() {
   const currentMonth = new Date().getMonth() + 1;
   const semester = currentMonth >= 7 ? 1 : 2;
 
-  // Use selected tahun ajaran from the filter
   const tahunAjaranId = selectedTahunAjaranId.value;
 
   const payload: Record<string, unknown> = {
@@ -365,10 +314,9 @@ async function saveJadwal() {
     tahunAjaranId,
     semester,
     hari: selectedHari.value,
-    jamMulai: form.value.jam_mulai,
-    jamSelesai: form.value.jam_selesai,
-    tanggalMulaiBerlaku: '2024-07-15',
-    tanggalSelesaiBerlaku: '2025-06-30',
+    jamKe: selectedJamKe.value,
+    tanggalMulaiBerlaku: '2026-07-01',
+    tanggalSelesaiBerlaku: '2027-06-30',
     isIstirahat: form.value.is_istirahat,
   };
 
@@ -642,26 +590,6 @@ onMounted(async () => {
           </div>
         </template>
 
-        <div class="flex gap-4">
-          <div class="flex-1 mb-4">
-            <label class="block text-sm font-medium text-text-primary mb-1.5">Jam Mulai</label>
-            <input
-              v-model="form.jam_mulai"
-              type="time"
-              class="w-full px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
-              required
-            />
-          </div>
-          <div class="flex-1 mb-4">
-            <label class="block text-sm font-medium text-text-primary mb-1.5">Jam Selesai</label>
-            <input
-              v-model="form.jam_selesai"
-              type="time"
-              class="w-full px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
-              required
-            />
-          </div>
-        </div>
         <p v-if="formError" class="text-xs text-danger-500 mt-1">{{ formError }}</p>
       </form>
       <template #footer>

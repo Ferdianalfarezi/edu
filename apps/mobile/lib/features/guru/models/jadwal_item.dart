@@ -6,8 +6,7 @@ class JadwalItem {
     required this.kelasNama,
     required this.mataPelajaranId,
     required this.mataPelajaranNama,
-    required this.jamMulai,
-    required this.jamSelesai,
+    required this.jamKe,
   });
 
   factory JadwalItem.fromJson(Map<String, dynamic> json) {
@@ -21,10 +20,7 @@ class JadwalItem {
       mataPelajaranNama: json['mataPelajaranNama'] as String? ??
           json['mata_pelajaran_nama'] as String? ??
           '',
-      jamMulai:
-          json['jamMulai'] as String? ?? json['jam_mulai'] as String? ?? '',
-      jamSelesai:
-          json['jamSelesai'] as String? ?? json['jam_selesai'] as String? ?? '',
+      jamKe: json['jamKe'] as int? ?? json['jam_ke'] as int? ?? 0,
     );
   }
 
@@ -33,8 +29,7 @@ class JadwalItem {
   final String kelasNama;
   final String mataPelajaranId;
   final String mataPelajaranNama;
-  final String jamMulai;
-  final String jamSelesai;
+  final int jamKe;
 
   Map<String, dynamic> toJson() {
     return {
@@ -43,8 +38,7 @@ class JadwalItem {
       'kelas_nama': kelasNama,
       'mata_pelajaran_id': mataPelajaranId,
       'mata_pelajaran_nama': mataPelajaranNama,
-      'jam_mulai': jamMulai,
-      'jam_selesai': jamSelesai,
+      'jam_ke': jamKe,
     };
   }
 }

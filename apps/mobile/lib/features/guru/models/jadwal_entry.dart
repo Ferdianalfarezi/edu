@@ -4,8 +4,7 @@ class JadwalEntry {
     required this.id,
     required this.kelasNama,
     required this.mataPelajaranNama,
-    required this.jamMulai,
-    required this.jamSelesai,
+    required this.jamKe,
     required this.hasGuruPengganti,
     this.guruPenggantiNama,
   });
@@ -15,8 +14,7 @@ class JadwalEntry {
       id: json['id'] as String,
       kelasNama: json['kelasNama'] as String,
       mataPelajaranNama: json['mataPelajaranNama'] as String,
-      jamMulai: json['jamMulai'] as String,
-      jamSelesai: json['jamSelesai'] as String,
+      jamKe: json['jamKe'] as int? ?? 0,
       hasGuruPengganti: json['hasGuruPengganti'] as bool? ?? false,
       guruPenggantiNama: json['guruPenggantiNama'] as String?,
     );
@@ -25,8 +23,7 @@ class JadwalEntry {
   final String id;
   final String kelasNama;
   final String mataPelajaranNama;
-  final String jamMulai;
-  final String jamSelesai;
+  final int jamKe;
   final bool hasGuruPengganti;
   final String? guruPenggantiNama;
 }

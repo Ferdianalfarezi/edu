@@ -42,8 +42,7 @@ export interface VacantJadwalSlot {
   kelasId: string;
   mataPelajaranId: string | null;
   hari: string;
-  jamMulai: string;
-  jamSelesai: string;
+  jamKe: number;
   semester: number;
   tahunAjaranId: string;
 }
@@ -484,8 +483,7 @@ export class UserService {
           kelasId: j.kelasId,
           mataPelajaranId: j.mataPelajaranId,
           hari: j.hari,
-          jamMulai: j.jamMulai,
-          jamSelesai: j.jamSelesai,
+          jamKe: j.jamKe,
           semester: j.semester,
           tahunAjaranId: j.tahunAjaranId,
         })),
@@ -543,8 +541,7 @@ export class UserService {
         kelasId: jadwalPelajaran.kelasId,
         mataPelajaranId: jadwalPelajaran.mataPelajaranId,
         hari: jadwalPelajaran.hari,
-        jamMulai: jadwalPelajaran.jamMulai,
-        jamSelesai: jadwalPelajaran.jamSelesai,
+        jamKe: jadwalPelajaran.jamKe,
         semester: jadwalPelajaran.semester,
         tahunAjaranId: jadwalPelajaran.tahunAjaranId,
       })

@@ -431,7 +431,7 @@ class _JadwalCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.end,
           children: [
             Text(
-              '${item.jamMulai} - ${item.jamSelesai}',
+              'Jam ke-${item.jamKe}',
               style: TextStyle(
                 fontSize: 13,
                 color: Colors.grey.shade600,

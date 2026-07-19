@@ -24,11 +24,8 @@ class CachedSchedules extends Table {
   /// Day of the week: senin, selasa, rabu, kamis, jumat, sabtu.
   TextColumn get hari => text()();
 
-  /// Lesson start time (HH:mm format).
-  TextColumn get jamMulai => text()();
-
-  /// Lesson end time (HH:mm format).
-  TextColumn get jamSelesai => text()();
+  /// Lesson slot number (1-10).
+  IntColumn get jamKe => integer()();
 
   /// When this cache entry was last updated from the server.
   DateTimeColumn get cachedAt => dateTime()();
