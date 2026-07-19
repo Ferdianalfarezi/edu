@@ -89,15 +89,20 @@ export class PengumumanService {
       await this.db.insert(pengumumanPenerima).values(penerimaValues);
     }
 
-    // Enqueue notification job
+    // Enqueue notification job (fire-and-forget — don't block response if queue fails)
     if (recipientUserIds.length > 0) {
-      await this.notificationQueue.add('send-pengumuman-notification', {
-        pengumuman_id: created.id,
-        tenant_id: tenantId,
-        judul,
-        deskripsi,
-        penerima_user_ids: recipientUserIds,
-      });
+      this.notificationQueue
+        .add('send-pengumuman-notification', {
+          pengumuman_id: created.id,
+          tenant_id: tenantId,
+          judul,
+          deskripsi,
+          penerima_user_ids: recipientUserIds,
+        })
+        .catch((err) => {
+          // Log but don't throw — pengumuman is already created
+          console.error('[PengumumanService] Failed to enqueue notification:', err.message);
+        });
     }
 
     // Update jumlah_penerima on the pengumuman record
