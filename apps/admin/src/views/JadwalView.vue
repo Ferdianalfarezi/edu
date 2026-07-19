@@ -174,7 +174,12 @@ function deriveJamKe(jamMulai: string): number {
 // Data fetching
 async function fetchKelasList() {
   try {
-    const { data } = await api.get<{ data: Kelas[] }>('/kelas');
+    // Filter kelas by selected/active tahun ajaran
+    const params: Record<string, string> = {};
+    if (selectedTahunAjaranId.value) {
+      params.tahunAjaranId = selectedTahunAjaranId.value;
+    }
+    const { data } = await api.get<{ data: Kelas[] }>('/kelas', { params });
     kelasList.value = data.data;
     if (kelasList.value.length > 0 && !selectedKelasId.value) {
       selectedKelasId.value = kelasList.value[0].id;
@@ -229,7 +234,8 @@ watch(selectedKelasId, () => {
 });
 
 watch(selectedTahunAjaranId, () => {
-  fetchJadwal();
+  selectedKelasId.value = '';
+  fetchKelasList();
 });
 
 // Cell click handler
@@ -464,7 +470,8 @@ function handleRemovePengganti() {
 
 // Init
 onMounted(async () => {
-  await Promise.all([fetchKelasList(), fetchDropdowns()]);
+  await fetchDropdowns();
+  await fetchKelasList();
 });
 </script>
 
