@@ -105,11 +105,12 @@ export class PengumumanService {
         });
     }
 
-    // Update jumlah_penerima on the pengumuman record
+    // Update jumlah_penerima and status on the pengumuman record
     const jumlahPenerima = recipientUserIds.length;
+    const finalStatus = jumlahPenerima > 0 ? 'terkirim' : 'draft';
     await this.db
       .update(pengumuman)
-      .set({ jumlahPenerima, updatedAt: new Date() })
+      .set({ jumlahPenerima, status: finalStatus, updatedAt: new Date() })
       .where(eq(pengumuman.id, created.id));
 
     return {
@@ -117,7 +118,7 @@ export class PengumumanService {
       judul,
       mode: dto.mode,
       jumlah_penerima: jumlahPenerima,
-      status: created.status,
+      status: finalStatus,
       created_at: created.createdAt,
     };
   }
