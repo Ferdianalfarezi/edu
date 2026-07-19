@@ -44,7 +44,7 @@ export class PengumumanController {
   @Get()
   @Roles(Role.ADMIN, Role.KEPALA_SEKOLAH)
   async listPengumuman(@Query() query: ListPengumumanQueryDto, @CurrentUser() user: RequestUser) {
-    return this.pengumumanService.list(query, user.tenant_id);
+    return this.pengumumanService.list(query, user.tenant_id!);
   }
 
   /**
@@ -59,6 +59,6 @@ export class PengumumanController {
     @Param('id', ParseUUIDPipe) id: string,
     @CurrentUser() user: RequestUser,
   ) {
-    return this.pengumumanService.getDetail(id, user.id);
+    return this.pengumumanService.getDetail(id, user);
   }
 }
