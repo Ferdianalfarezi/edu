@@ -1,8 +1,10 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../database/app_database.dart';
 import '../models/auth_state.dart';
 import '../network/api_client.dart';
+import '../router/app_router.dart';
 import '../services/auth_service.dart';
 import '../services/notification_service.dart';
 import '../services/token_storage.dart';
@@ -98,8 +100,35 @@ final appDatabaseProvider = Provider<AppDatabase>((ref) {
 
 /// Notification service provider.
 final notificationServiceProvider = Provider<NotificationService>((ref) {
-  return NotificationService();
+  final router = ref.read(appRouterProvider);
+
+  return NotificationService(
+    onNotificationTap: (data) {
+      handleNotificationNavigation(data, router);
+    },
+  );
 });
+
+/// Handle navigation from notification data payload.
+///
+/// Checks `tipe` field and navigates to the appropriate screen.
+/// Requirements 6.1, 6.2: Navigate to pengumuman detail on tap.
+void handleNotificationNavigation(
+  Map<String, dynamic> data,
+  GoRouter router,
+) {
+  final tipe = data['tipe'] as String?;
+
+  if (tipe == 'pengumuman') {
+    final pengumumanId = data['pengumuman_id'] as String?;
+    if (pengumumanId != null && pengumumanId.isNotEmpty) {
+      router.go(
+        AppRoutes.orangTuaPengumumanDetail
+            .replaceFirst(':pengumumanId', pengumumanId),
+      );
+    }
+  }
+}
 
 // Connectivity providers are accessible directly from:
 // import '../network/connectivity_service.dart';

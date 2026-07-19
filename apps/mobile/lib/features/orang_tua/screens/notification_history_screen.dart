@@ -143,8 +143,23 @@ class _NotificationHistoryScreenState
     );
   }
 
-  /// Show full notification content in a bottom sheet dialog.
+  /// Show full notification content or navigate to detail screen.
+  ///
+  /// For pengumuman notifications, navigates to the pengumuman detail screen.
+  /// For other types, shows a bottom sheet with the notification content.
+  /// Requirements 6.1, 6.2: Navigate to pengumuman detail on tap.
   void _showNotificationDetail(BuildContext context, NotificationItem item) {
+    if (item.tipe == 'pengumuman') {
+      final pengumumanId = item.data?['pengumuman_id'] as String?;
+      if (pengumumanId != null && pengumumanId.isNotEmpty) {
+        context.go(
+          AppRoutes.orangTuaPengumumanDetail
+              .replaceFirst(':pengumumanId', pengumumanId),
+        );
+        return;
+      }
+    }
+
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,

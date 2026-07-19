@@ -20,6 +20,7 @@ import { SiswaModule } from './modules/siswa/siswa.module';
 import { JadwalModule } from './modules/jadwal/jadwal.module';
 import { AbsensiModule } from './modules/absensi/absensi.module';
 import { NotifikasiModule } from './modules/notifikasi/notifikasi.module';
+import { PengumumanModule } from './modules/pengumuman/pengumuman.module';
 import { TagihanModule } from './modules/tagihan/tagihan.module';
 import { RaporModule } from './modules/rapor/rapor.module';
 import { RppModule } from './modules/rpp/rpp.module';
@@ -139,6 +140,9 @@ import { MONITORING_CONFIG } from './common/monitoring/monitoring.config';
 
     // Notifikasi (push notifications, device tokens)
     NotifikasiModule,
+
+    // Pengumuman (announcements broadcast/targeted)
+    PengumumanModule,
 
     // Tagihan (billing generation, payments)
     TagihanModule,

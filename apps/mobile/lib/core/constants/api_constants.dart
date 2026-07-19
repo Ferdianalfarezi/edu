@@ -42,6 +42,10 @@ class ApiConstants {
   static String tagihanBuktiBayar(String tagihanId) =>
       '/tagihan/$tagihanId/bukti-bayar';
 
+  // Pengumuman endpoints
+  static String pengumumanDetail(String pengumumanId) =>
+      '/pengumuman/$pengumumanId';
+
   // Notifikasi endpoints
   static const String notifikasiRiwayat = '/notifikasi/riwayat';
   static const String notifikasiPreferensi = '/notifikasi/preferensi';

@@ -6,8 +6,8 @@ Implement the announcement feature end-to-end: Drizzle schema + migration → Ne
 
 ## Tasks
 
-- [ ] 1. Database Schema and Migration
-  - [ ] 1.1 Create Drizzle schema file `apps/api/src/drizzle/schema/pengumuman.ts`
+- [x] 1. Database Schema and Migration
+  - [x] 1.1 Create Drizzle schema file `apps/api/src/drizzle/schema/pengumuman.ts`
     - Define `pengumumanModeEnum` pgEnum with values `['broadcast', 'targeted']`
     - Define `pengumumanStatusEnum` pgEnum with values `['draft', 'terkirim', 'gagal']`
     - Define `pengumuman` table with columns: id (uuid PK), tenantId, createdBy, judul (varchar 255), deskripsi (text), mode, jumlahPenerima (integer default 0), status (default 'draft'), createdAt, updatedAt
@@ -18,27 +18,27 @@ Implement the announcement feature end-to-end: Drizzle schema + migration → Ne
     - Reference `tenant.id` and `user.id` for foreign keys
     - _Requirements: 2.2, 3.3, 5.1, 7.4_
 
-  - [ ] 1.2 Export schema from `apps/api/src/drizzle/schema/index.ts`
+  - [x] 1.2 Export schema from `apps/api/src/drizzle/schema/index.ts`
     - Add `export * from './pengumuman';` in the "Notifikasi" section
     - _Requirements: 2.2_
 
-  - [ ] 1.3 Generate database migration
+  - [x] 1.3 Generate database migration
     - Run `pnpm --filter @edu/api db:generate` to create the migration SQL
     - Verify the generated migration contains CREATE TABLE and CREATE INDEX statements
     - _Requirements: 2.2, 3.3_
 
-- [ ] 2. Checkpoint — Verify migration generates cleanly
+- [x] 2. Checkpoint — Verify migration generates cleanly
   - Ensure all tests pass, ask the user if questions arise.
 
-- [ ] 3. Backend — DTOs
-  - [ ] 3.1 Create `apps/api/src/modules/pengumuman/pengumuman.dto.ts`
+- [x] 3. Backend — DTOs
+  - [x] 3.1 Create `apps/api/src/modules/pengumuman/pengumuman.dto.ts`
     - `CreatePengumumanDto`: judul (@IsString, @MinLength(1), @MaxLength(255)), deskripsi (@IsString, @MinLength(1), @MaxLength(5000)), mode (@IsEnum(['broadcast', 'targeted'])), siswa_ids (@IsOptional, @IsArray, @ArrayMinSize(1), @ArrayMaxSize(100), @IsUUID('4', {each:true}))
     - Add custom validation: if mode is 'targeted', siswa_ids must be provided
     - `ListPengumumanQueryDto`: extend common pagination DTO with default page_size=15, allowed sizes [10, 15, 25, 50]
     - _Requirements: 1.1, 1.3, 1.4, 1.5, 3.1, 3.4, 5.3_
 
-- [ ] 4. Backend — PengumumanService
-  - [ ] 4.1 Create `apps/api/src/modules/pengumuman/pengumuman.service.ts`
+- [x] 4. Backend — PengumumanService
+  - [x] 4.1 Create `apps/api/src/modules/pengumuman/pengumuman.service.ts`
     - Inject `DRIZZLE` database instance, `FcmService`, and Bull queue (QUEUE_NAMES.NOTIFICATION)
     - Implement `create(dto, user)`:
       - Trim judul/deskripsi, validate lengths
@@ -59,28 +59,28 @@ Implement the announcement feature end-to-end: Drizzle schema + migration → Ne
       - Return judul, deskripsi, nama_sekolah (from tenant), created_at
     - _Requirements: 1.2, 1.3, 1.4, 1.5, 2.1, 2.2, 2.3, 2.4, 2.5, 2.6, 3.2, 3.3, 3.4, 3.5, 3.6, 5.2, 5.3, 5.4, 6.6, 7.2, 7.4, 7.5, 7.6_
 
-  - [ ] 4.2 Create `apps/api/src/modules/pengumuman/pengumuman.controller.ts`
+  - [x] 4.2 Create `apps/api/src/modules/pengumuman/pengumuman.controller.ts`
     - `POST /pengumuman` with `@Roles(Role.ADMIN, Role.KEPALA_SEKOLAH)` — calls `service.create()`
     - `GET /pengumuman` with `@Roles(Role.ADMIN, Role.KEPALA_SEKOLAH)` — calls `service.list()`
     - `GET /pengumuman/:id` with `@Roles(Role.ORANG_TUA)` — calls `service.getDetail()`
     - Use `@CurrentUser()` decorator for user context, extract tenantId from JWT
     - _Requirements: 7.1, 7.3, 6.6_
 
-  - [ ] 4.3 Create `apps/api/src/modules/pengumuman/pengumuman.module.ts`
+  - [x] 4.3 Create `apps/api/src/modules/pengumuman/pengumuman.module.ts`
     - Import `BullModule.registerQueue({ name: QUEUE_NAMES.NOTIFICATION })`
     - Import `NotifikasiModule` for FcmService access
     - Register controller, service
     - _Requirements: 2.4_
 
-  - [ ] 4.4 Register `PengumumanModule` in `apps/api/src/app.module.ts`
+  - [x] 4.4 Register `PengumumanModule` in `apps/api/src/app.module.ts`
     - Add PengumumanModule to imports array
     - _Requirements: 2.4_
 
-- [ ] 5. Checkpoint — Verify backend compiles
+- [x] 5. Checkpoint — Verify backend compiles
   - Ensure all tests pass, ask the user if questions arise.
 
-- [ ] 6. Backend — Queue Job Processor
-  - [ ] 6.1 Create `apps/api/src/jobs/pengumuman-notification.processor.ts`
+- [x] 6. Backend — Queue Job Processor
+  - [x] 6.1 Create `apps/api/src/jobs/pengumuman-notification.processor.ts`
     - Extend `BaseProcessor` with processorName 'PengumumanNotificationProcessor', concurrency 10, maxAttempts 3
     - Decorate with `@Processor(QUEUE_NAMES.NOTIFICATION)`
     - Implement `@Process('send-pengumuman-notification')` handler:
@@ -94,15 +94,15 @@ Implement the announcement feature end-to-end: Drizzle schema + migration → Ne
     - Override `handleDeadLetter`: update `pengumuman.status` to 'gagal'
     - _Requirements: 4.1, 4.2, 4.3, 4.4, 4.5, 4.6_
 
-  - [ ] 6.2 Register processor in `NotifikasiModule` providers
+  - [x] 6.2 Register processor in `NotifikasiModule` providers
     - Add `PengumumanNotificationProcessor` to providers array in `apps/api/src/modules/notifikasi/notifikasi.module.ts`
     - _Requirements: 4.1_
 
-- [ ] 7. Checkpoint — Verify queue processor compiles and integrates
+- [x] 7. Checkpoint — Verify queue processor compiles and integrates
   - Ensure all tests pass, ask the user if questions arise.
 
-- [ ] 8. Admin Panel — PengumumanView
-  - [ ] 8.1 Create `apps/admin/src/views/PengumumanView.vue`
+- [x] 8. Admin Panel — PengumumanView
+  - [x] 8.1 Create `apps/admin/src/views/PengumumanView.vue`
     - List section: table with columns judul, mode (broadcast/targeted badge), jumlah_penerima, created_at (formatted), status (draft/terkirim/gagal with color coding)
     - Sorted by created_at DESC (from API)
     - Pagination using `TablePagination` component, default 15 items, options [10, 15, 25, 50]
@@ -115,33 +115,33 @@ Implement the announcement feature end-to-end: Drizzle schema + migration → Ne
     - Use `useTableUrlState` composable for pagination state if applicable
     - _Requirements: 1.1, 1.5, 3.1, 5.1, 5.2, 5.3, 5.4, 5.5, 5.6_
 
-  - [ ] 8.2 Add route for PengumumanView in `apps/admin/src/router/index.ts`
+  - [x] 8.2 Add route for PengumumanView in `apps/admin/src/router/index.ts`
     - Path: `/pengumuman`, name: 'pengumuman'
     - Meta: `{ roles: [Role.ADMIN, Role.KEPALA_SEKOLAH] }`
     - Lazy-load component
     - _Requirements: 7.1_
 
-  - [ ] 8.3 Add navigation menu item for Pengumuman in `AppLayout.vue`
+  - [x] 8.3 Add navigation menu item for Pengumuman in `AppLayout.vue`
     - Add menu item with appropriate icon in the sidebar navigation
     - Visible for roles admin and kepala_sekolah
     - _Requirements: 5.1_
 
-- [ ] 9. Checkpoint — Verify admin panel compiles
+- [x] 9. Checkpoint — Verify admin panel compiles
   - Ensure all tests pass, ask the user if questions arise.
 
-- [ ] 10. Mobile — Pengumuman Detail Screen
-  - [ ] 10.1 Create model `apps/mobile/lib/features/orang_tua/models/pengumuman_models.dart`
+- [x] 10. Mobile — Pengumuman Detail Screen
+  - [x] 10.1 Create model `apps/mobile/lib/features/orang_tua/models/pengumuman_models.dart`
     - `PengumumanDetail` class with fields: id, judul, deskripsi, namaSekolah, createdAt (DateTime)
     - `fromJson` factory constructor
     - _Requirements: 6.3_
 
-  - [ ] 10.2 Create provider `apps/mobile/lib/features/orang_tua/providers/pengumuman_provider.dart`
+  - [x] 10.2 Create provider `apps/mobile/lib/features/orang_tua/providers/pengumuman_provider.dart`
     - `pengumumanDetailProvider(String pengumumanId)` — FutureProvider that fetches GET /pengumuman/:id
     - Use `apiClientProvider` for Dio instance
     - Parse response into `PengumumanDetail` model
     - _Requirements: 6.3, 6.4, 6.5_
 
-  - [ ] 10.3 Create screen `apps/mobile/lib/features/orang_tua/screens/pengumuman_detail_screen.dart`
+  - [x] 10.3 Create screen `apps/mobile/lib/features/orang_tua/screens/pengumuman_detail_screen.dart`
     - Accept `pengumumanId` parameter
     - Show loading indicator while fetching
     - Success state: display judul, deskripsi (full text), nama sekolah, created_at formatted as "dd MMM yyyy, HH:mm"
@@ -149,79 +149,79 @@ Implement the announcement feature end-to-end: Drizzle schema + migration → Ne
     - Network error state: "Gagal memuat pengumuman" + "Coba Lagi" retry button
     - _Requirements: 6.1, 6.2, 6.3, 6.4, 6.5_
 
-  - [ ] 10.4 Add route in `apps/mobile/lib/core/router/app_router.dart`
+  - [x] 10.4 Add route in `apps/mobile/lib/core/router/app_router.dart`
     - Add `orangTuaPengumumanDetail` path constant: `/orang-tua/pengumuman/:pengumumanId`
     - Add GoRoute entry under orang_tua routes with `pengumumanId` path parameter
     - Import PengumumanDetailScreen
     - _Requirements: 6.1, 6.2_
 
-  - [ ] 10.5 Add deep link navigation from push notification tap
+  - [x] 10.5 Add deep link navigation from push notification tap
     - In the notification tap handler (Firebase messaging onMessageOpenedApp / getInitialMessage), check if `data['tipe'] == 'pengumuman'` and extract `pengumuman_id`
     - Navigate to `/orang-tua/pengumuman/:pengumumanId`
     - Also handle tap from notification history screen: when item tipe is 'pengumuman', extract pengumuman_id from data field and navigate
     - _Requirements: 6.1, 6.2_
 
-- [ ] 11. Checkpoint — Verify mobile compiles
+- [x] 11. Checkpoint — Verify mobile compiles
   - Ensure all tests pass, ask the user if questions arise.
 
-- [ ] 12. Property-Based Tests
-  - [ ]* 12.1 Write property test for input validation
+- [x] 12. Property-Based Tests
+  - [x] 12.1 Write property test for input validation
     - **Property 1: Input Validation Rejects Invalid, Accepts Valid**
     - **Validates: Requirements 1.3, 1.4, 1.5**
     - File: `apps/api/src/modules/pengumuman/__tests__/inputValidation.property.test.ts`
     - Use fast-check to generate random strings (empty, whitespace-only, valid 1–255/5000 chars, overlength)
     - Verify: empty/whitespace-only → rejected, 1–max length → accepted, >max → rejected
 
-  - [ ]* 12.2 Write property test for recipient deduplication
+  - [x] 12.2 Write property test for recipient deduplication
     - **Property 2: Recipient Resolution Deduplicates Parents**
     - **Validates: Requirements 2.1, 2.2, 3.2, 3.3**
     - File: `apps/api/src/modules/pengumuman/__tests__/recipientDeduplication.property.test.ts`
     - Use fast-check to generate parent-student relationship graphs (parents with multiple children)
     - Verify: output has exactly one entry per unique orang_tua_id, count matches distinct parents
 
-  - [ ]* 12.3 Write property test for notification body truncation
+  - [x] 12.3 Write property test for notification body truncation
     - **Property 3: Notification Body Truncation**
     - **Validates: Requirements 4.1**
     - File: `apps/api/src/modules/pengumuman/__tests__/bodyTruncation.property.test.ts`
     - Use fast-check to generate random strings of varying lengths (0–5000)
     - Verify: length > 200 → body is `substring(0,200) + "..."`, length ≤ 200 → body unchanged
 
-  - [ ]* 12.4 Write property test for delivery status determination
+  - [x] 12.4 Write property test for delivery status determination
     - **Property 4: Delivery Status Determination**
     - **Validates: Requirements 4.3, 4.4**
     - File: `apps/api/src/modules/pengumuman/__tests__/deliveryStatus.property.test.ts`
     - Use fast-check to generate arrays of FCM results (success/failure per token)
     - Verify: at least one success → 'terkirim', all failed after retries → 'gagal'
 
-  - [ ]* 12.5 Write property test for tenant isolation
+  - [x] 12.5 Write property test for tenant isolation
     - **Property 5: Tenant Isolation**
     - **Validates: Requirements 5.4, 7.2, 7.4**
     - File: `apps/api/src/modules/pengumuman/__tests__/tenantIsolation.property.test.ts`
     - Use fast-check to generate multi-tenant pengumuman data
     - Verify: list query with tenant_id=T returns only records with matching tenant_id, recipient resolution only includes users in same tenant
 
-  - [ ]* 12.6 Write property test for recipient-only access control
+  - [x] 12.6 Write property test for recipient-only access control
     - **Property 6: Recipient-Only Access Control**
     - **Validates: Requirements 6.6, 7.5, 7.6**
     - File: `apps/api/src/modules/pengumuman/__tests__/accessControl.property.test.ts`
     - Use fast-check to generate user/pengumuman/penerima combinations
     - Verify: user in penerima AND tenant matches → access granted, otherwise → 403
 
-  - [ ]* 12.7 Write property test for list ordering invariant
+  - [x] 12.7 Write property test for list ordering invariant
     - **Property 7: List Ordering Invariant**
     - **Validates: Requirements 5.2**
     - File: `apps/api/src/modules/pengumuman/__tests__/listOrdering.property.test.ts`
     - Use fast-check to generate random timestamps for pengumuman records
     - Verify: all consecutive pairs satisfy `item[i].created_at >= item[i+1].created_at`
 
-  - [ ]* 12.8 Write property test for graceful degradation with invalid students
+  - [x] 12.8 Write property test for graceful degradation with invalid students
     - **Property 8: Graceful Degradation for Invalid Students**
     - **Validates: Requirements 3.5, 3.6, 2.5**
     - File: `apps/api/src/modules/pengumuman/__tests__/gracefulDegradation.property.test.ts`
     - Use fast-check to generate mixed valid/invalid student ID lists
     - Verify: invalid entries skipped, valid ones processed, jumlah_penerima = distinct valid parents
 
-- [ ] 13. Final Checkpoint — Ensure all tests pass
+- [x] 13. Final Checkpoint — Ensure all tests pass
   - Ensure all tests pass, ask the user if questions arise.
 
 ## Notes

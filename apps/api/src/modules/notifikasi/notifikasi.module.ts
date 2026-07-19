@@ -6,6 +6,7 @@ import { DeviceTokenController } from './device-token.controller';
 import { DeviceTokenService } from './device-token.service';
 import { FcmService } from './fcm.service';
 import { BatchAttendanceNotificationProcessor } from '@/jobs/notification.processor';
+import { PengumumanNotificationProcessor } from '@/jobs/pengumuman-notification.processor';
 import { QUEUE_NAMES } from '@/modules/queue/queue.constants';
 
 @Module({
@@ -16,6 +17,7 @@ import { QUEUE_NAMES } from '@/modules/queue/queue.constants';
     DeviceTokenService,
     FcmService,
     BatchAttendanceNotificationProcessor,
+    PengumumanNotificationProcessor,
   ],
   exports: [NotifikasiService, DeviceTokenService, FcmService],
 })

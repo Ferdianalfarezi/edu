@@ -111,6 +111,17 @@ const navigation = computed<NavGroup[]>(() => {
       ],
     },
     {
+      label: 'Komunikasi',
+      items: [
+        {
+          name: 'Pengumuman',
+          path: '/pengumuman',
+          icon: 'megaphone',
+          roles: [Role.ADMIN, Role.KEPALA_SEKOLAH],
+        },
+      ],
+    },
+    {
       label: 'Pengaturan',
       items: [
         { name: 'Tahun Ajaran', path: '/tahun-ajaran', icon: 'clock', roles: [Role.ADMIN] },
@@ -376,6 +387,13 @@ function toggleSidebar() {
                       stroke-linecap="round"
                       stroke-linejoin="round"
                       d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9"
+                    />
+                  </template>
+                  <template v-else-if="item.icon === 'megaphone'">
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z"
                     />
                   </template>
                   <template v-else>

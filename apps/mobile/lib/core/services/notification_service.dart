@@ -10,12 +10,14 @@ import 'in_app_notification_service.dart';
 /// - Obtain and refresh FCM device token
 /// - Handle foreground/background message callbacks
 /// - Show in-app banners for foreground notifications
+/// - Navigate to relevant screens when notification is tapped
 /// - Provide token to be registered with the backend
 class NotificationService {
   NotificationService({
     FirebaseMessaging? messaging,
     this.onTokenRefresh,
     this.onMessageReceived,
+    this.onNotificationTap,
     InAppNotificationService? inAppNotificationService,
   })  : _messaging = messaging ?? FirebaseMessaging.instance,
         _inAppNotificationService =
@@ -30,6 +32,10 @@ class NotificationService {
 
   /// Called when a message is received in the foreground.
   final void Function(RemoteMessage message)? onMessageReceived;
+
+  /// Called when a notification is tapped (background or terminated).
+  /// The data map contains the FCM data payload for navigation.
+  final void Function(Map<String, dynamic> data)? onNotificationTap;
 
   String? _currentToken;
 
@@ -77,8 +83,22 @@ class NotificationService {
     // Handle message opened app (background tap)
     FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
       _logger.d('Message opened app: ${message.data}');
-      // Navigation handling will be done by the feature layer
+      _handleNotificationTap(message.data);
     });
+
+    // Handle app opened from terminated state via notification tap
+    final initialMessage = await _messaging.getInitialMessage();
+    if (initialMessage != null) {
+      _logger.d('App opened from terminated: ${initialMessage.data}');
+      _handleNotificationTap(initialMessage.data);
+    }
+  }
+
+  /// Process notification tap data and invoke the navigation callback.
+  void _handleNotificationTap(Map<String, dynamic> data) {
+    if (data.isNotEmpty) {
+      onNotificationTap?.call(data);
+    }
   }
 
   /// Get the current FCM token for backend registration.
