@@ -58,8 +58,9 @@ export class KelasService {
   async listKelas(tenantId: string, query: ListKelasQueryDto) {
     const conditions = [eq(kelas.tenantId, tenantId)];
 
-    if (query.tahunAjaranId) {
-      conditions.push(eq(kelas.tahunAjaranId, query.tahunAjaranId));
+    const tahunAjaranId = query.resolvedTahunAjaranId;
+    if (tahunAjaranId) {
+      conditions.push(eq(kelas.tahunAjaranId, tahunAjaranId));
     }
 
     if (query.cursor) {
