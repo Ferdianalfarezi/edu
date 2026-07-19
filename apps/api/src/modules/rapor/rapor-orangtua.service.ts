@@ -185,6 +185,15 @@ export class RaporOrangTuaService {
       });
     }
 
+    // Sort: terbaru di atas (semester_2 → uts_semester_2 → semester_1 → uts_semester_1)
+    const periodeOrder: Record<string, number> = {
+      semester_2: 0,
+      uts_semester_2: 1,
+      semester_1: 2,
+      uts_semester_1: 3,
+    };
+    results.sort((a, b) => (periodeOrder[a.periode] ?? 99) - (periodeOrder[b.periode] ?? 99));
+
     return results;
   }
 }
