@@ -330,8 +330,9 @@ export class TenantInterceptor implements NestInterceptor {
     // Strip query params for cleaner matching
     const path = url.split('?')[0];
 
-    // Exempt known route prefixes
-    if (path.startsWith('/tenants') || path.startsWith('/auth')) {
+    // Exempt known route prefixes (with or without /api/v1 prefix)
+    const normalizedPath = path.replace(/^\/api\/v\d+/, '');
+    if (normalizedPath.startsWith('/tenants') || normalizedPath.startsWith('/auth')) {
       return true;
     }
 
