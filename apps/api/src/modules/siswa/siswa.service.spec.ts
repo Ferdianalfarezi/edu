@@ -2,15 +2,19 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { ConflictException, NotFoundException, BadRequestException } from '@nestjs/common';
 import { SiswaService } from './siswa.service';
 import { DRIZZLE } from '@/drizzle/drizzle.module';
+import { RiwayatKelasHelper } from './riwayat-kelas.helper';
 
 // Mock database helper — chainable mock
 const createMockDb = () => ({
   select: jest.fn().mockReturnThis(),
   from: jest.fn().mockReturnThis(),
   leftJoin: jest.fn().mockReturnThis(),
+  innerJoin: jest.fn().mockReturnThis(),
   where: jest.fn().mockReturnThis(),
   limit: jest.fn().mockReturnThis(),
+  offset: jest.fn().mockReturnThis(),
   orderBy: jest.fn().mockReturnThis(),
+  groupBy: jest.fn().mockReturnThis(),
   insert: jest.fn().mockReturnThis(),
   values: jest.fn().mockReturnThis(),
   returning: jest.fn(),
@@ -18,18 +22,29 @@ const createMockDb = () => ({
   set: jest.fn().mockReturnThis(),
 });
 
+const createMockRiwayatKelasHelper = () => ({
+  record: jest.fn().mockResolvedValue(undefined),
+  recordBatch: jest.fn().mockResolvedValue(undefined),
+});
+
 describe('SiswaService', () => {
   let service: SiswaService;
   let mockDb: ReturnType<typeof createMockDb>;
+  let mockRiwayatHelper: ReturnType<typeof createMockRiwayatKelasHelper>;
 
   const tenantId = '11111111-1111-1111-1111-111111111111';
   const adminUserId = '22222222-2222-2222-2222-222222222222';
 
   beforeEach(async () => {
     mockDb = createMockDb();
+    mockRiwayatHelper = createMockRiwayatKelasHelper();
 
     const module: TestingModule = await Test.createTestingModule({
-      providers: [SiswaService, { provide: DRIZZLE, useValue: mockDb }],
+      providers: [
+        SiswaService,
+        { provide: DRIZZLE, useValue: mockDb },
+        { provide: RiwayatKelasHelper, useValue: mockRiwayatHelper },
+      ],
     }).compile();
 
     service = module.get<SiswaService>(SiswaService);
@@ -67,6 +82,9 @@ describe('SiswaService', () => {
         },
       ]);
 
+      // Kelas lookup for riwayat recording (kelasId is non-null)
+      mockDb.limit.mockResolvedValueOnce([{ tahunAjaranId: 'ta-1' }]);
+
       const result = await service.createSiswa(tenantId, baseDto, adminUserId);
 
       expect(result.id).toBe('new-siswa-id');
@@ -74,6 +92,12 @@ describe('SiswaService', () => {
       expect(result.nisn).toBe('1234567890');
       expect(result.orangTuaId).toBeNull();
       expect(result.status).toBe('aktif');
+      expect(mockRiwayatHelper.record).toHaveBeenCalledWith({
+        tenantId,
+        siswaId: 'new-siswa-id',
+        kelasId: baseDto.kelasId,
+        tahunAjaranId: 'ta-1',
+      });
     });
 
     it('should create siswa and link to existing parent when phone exists', async () => {
@@ -106,9 +130,13 @@ describe('SiswaService', () => {
         },
       ]);
 
+      // Kelas lookup for riwayat recording (kelasId is non-null)
+      mockDb.limit.mockResolvedValueOnce([{ tahunAjaranId: 'ta-1' }]);
+
       const result = await service.createSiswa(tenantId, dto, adminUserId);
 
       expect(result.orangTuaId).toBe('existing-parent-id');
+      expect(mockRiwayatHelper.record).toHaveBeenCalled();
     });
 
     it('should create siswa and create new parent when phone does not exist', async () => {
@@ -144,9 +172,13 @@ describe('SiswaService', () => {
         },
       ]);
 
+      // Kelas lookup for riwayat recording (kelasId is non-null)
+      mockDb.limit.mockResolvedValueOnce([{ tahunAjaranId: 'ta-1' }]);
+
       const result = await service.createSiswa(tenantId, dto, adminUserId);
 
       expect(result.orangTuaId).toBe('new-parent-id');
+      expect(mockRiwayatHelper.record).toHaveBeenCalled();
     });
 
     it('should throw ConflictException when NISN is duplicate in same tenant', async () => {
@@ -407,8 +439,8 @@ describe('SiswaService', () => {
   // ─── LIST / SEARCH / FILTER ───────────────────────────────────
 
   describe('listSiswa', () => {
-    it('should return paginated list with meta.cursor', async () => {
-      const students = Array.from({ length: 21 }, (_, i) => ({
+    it('should return paginated list with offset-based meta', async () => {
+      const students = Array.from({ length: 15 }, (_, i) => ({
         id: `siswa-${String(i).padStart(2, '0')}`,
         kelas_id: 'kelas-1',
         kelas_nama: '1A',
@@ -425,44 +457,36 @@ describe('SiswaService', () => {
         created_at: new Date(),
       }));
 
-      mockDb.limit.mockResolvedValueOnce(students);
+      // COUNT query resolves from where (via Promise.all)
+      mockDb.where.mockResolvedValueOnce([{ count: 30 }]);
+      // DATA query resolves from offset
+      mockDb.offset.mockResolvedValueOnce(students);
 
       const result = await service.listSiswa(tenantId, {});
 
-      expect(result.data).toHaveLength(20);
-      expect(result.meta.cursor).toBe('siswa-19');
-      expect(result.meta.has_next).toBe(true);
+      expect(result.data).toHaveLength(15);
+      expect(result.meta.page).toBe(1);
+      expect(result.meta.page_size).toBe(15);
+      expect(result.meta.total_count).toBe(30);
+      expect(result.meta.total_pages).toBe(2);
     });
 
-    it('should return null cursor when no more data', async () => {
-      mockDb.limit.mockResolvedValueOnce([
-        {
-          id: 'siswa-1',
-          kelas_id: 'kelas-1',
-          kelas_nama: '1A',
-          tahun_ajaran_id: 'ta-1',
-          tahun_ajaran_nama: '2024/2025',
-          nama: 'Student 1',
-          nisn: '0000000001',
-          jenis_kelamin: 'L',
-          tanggal_lahir: '2015-01-01',
-          alamat: null,
-          orang_tua_nama: null,
-          orang_tua_phone: null,
-          status: 'aktif',
-          created_at: new Date(),
-        },
-      ]);
+    it('should return empty data for out-of-range page', async () => {
+      // COUNT query
+      mockDb.where.mockResolvedValueOnce([{ count: 5 }]);
+      // DATA query (page 2 with only 5 total items at page_size=15 → empty)
+      mockDb.offset.mockResolvedValueOnce([]);
 
-      const result = await service.listSiswa(tenantId, {});
+      const result = await service.listSiswa(tenantId, { page: 2 });
 
-      expect(result.data).toHaveLength(1);
-      expect(result.meta.cursor).toBeNull();
-      expect(result.meta.has_next).toBe(false);
+      expect(result.data).toHaveLength(0);
+      expect(result.meta.total_count).toBe(5);
+      expect(result.meta.total_pages).toBe(1);
     });
 
     it('should support search by name (ILIKE)', async () => {
-      mockDb.limit.mockResolvedValueOnce([
+      mockDb.where.mockResolvedValueOnce([{ count: 1 }]);
+      mockDb.offset.mockResolvedValueOnce([
         {
           id: 'siswa-1',
           kelas_id: 'kelas-1',
@@ -488,7 +512,8 @@ describe('SiswaService', () => {
     });
 
     it('should support exact NISN filter', async () => {
-      mockDb.limit.mockResolvedValueOnce([
+      mockDb.where.mockResolvedValueOnce([{ count: 1 }]);
+      mockDb.offset.mockResolvedValueOnce([
         {
           id: 'siswa-1',
           kelas_id: 'kelas-1',

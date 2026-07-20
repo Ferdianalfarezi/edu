@@ -1,10 +1,16 @@
 <script setup lang="ts">
 import { ref, reactive, onMounted, watch, computed } from 'vue';
 import { StatusSiswa } from '@edu/shared';
-import type { PaginatedResponse } from '@edu/shared';
 import { api } from '@/api/client';
-import { PageHeader, BaseModal, SearchSelect, ActionButton } from '@/components/ui';
+import {
+  PageHeader,
+  BaseModal,
+  SearchSelect,
+  ActionButton,
+  TablePagination,
+} from '@/components/ui';
 import type { SelectOption } from '@/components/ui';
+import { useTableUrlState } from '@/composables/useTableUrlState';
 
 interface Siswa {
   id: string;
@@ -64,14 +70,22 @@ const kelasList = ref<Kelas[]>([]);
 const tahunAjaranList = ref<TahunAjaran[]>([]);
 const loading = ref(false);
 const totalCount = ref(0);
-const cursor = ref<string | null>(null);
-const hasNext = ref(false);
-const pageSize = 20;
+const totalPages = ref(0);
 
-const search = ref('');
-const filterKelas = ref('');
-const filterStatus = ref<StatusSiswa | ''>('');
-const filterTahunAjaran = ref('');
+const { page, pageSize, search, filters, queryParams } = useTableUrlState({
+  searchKey: 'search',
+  defaultPageSize: 15,
+  filters: [
+    { key: 'kelas_id', type: 'string' },
+    { key: 'status', type: 'enum', enumValues: ['aktif', 'pindah_sekolah', 'keluar', 'lulus'] },
+    { key: 'tahun_ajaran_id', type: 'string' },
+  ],
+});
+
+// Shorthand refs for template v-model bindings
+const filterKelas = filters['kelas_id'];
+const filterStatus = filters['status'];
+const filterTahunAjaran = filters['tahun_ajaran_id'];
 
 const showFormModal = ref(false);
 const showDeleteModal = ref(false);
@@ -107,7 +121,7 @@ const statusOptions: SelectOption[] = [
   { value: StatusSiswa.AKTIF, label: 'Aktif' },
   { value: StatusSiswa.PINDAH_SEKOLAH, label: 'Pindah Sekolah' },
   { value: StatusSiswa.KELUAR, label: 'Keluar' },
-  { value: StatusSiswa.ALUMNI, label: 'Alumni/Lulus' },
+  { value: StatusSiswa.LULUS, label: 'Alumni/Lulus' },
 ];
 
 const deleteStatusOptions: SelectOption[] = [
@@ -128,21 +142,17 @@ const tahunAjaranSelectOptions = computed<SelectOption[]>(() =>
   tahunAjaranList.value.map((ta) => ({ value: ta.id, label: ta.nama })),
 );
 
-async function fetchSiswa(resetCursor = true) {
+async function fetchSiswa() {
   loading.value = true;
-  if (resetCursor) cursor.value = null;
   try {
-    const params: Record<string, string | number> = { limit: pageSize };
-    if (cursor.value) params.cursor = cursor.value;
-    if (search.value) params.search = search.value;
-    if (filterKelas.value) params.kelas_id = filterKelas.value;
-    if (filterStatus.value) params.status = filterStatus.value;
-    if (filterTahunAjaran.value) params.tahun_ajaran_id = filterTahunAjaran.value;
-    const { data } = await api.get<PaginatedResponse<Siswa>>('/siswa', { params });
-    siswaList.value = resetCursor ? data.data : [...siswaList.value, ...data.data];
-    hasNext.value = data.meta.has_next;
-    cursor.value = data.meta.cursor;
-    if (data.meta.total !== undefined) totalCount.value = data.meta.total;
+    const params = { ...queryParams.value };
+    const { data } = await api.get<{
+      data: Siswa[];
+      meta: { page: number; page_size: number; total_count: number; total_pages: number };
+    }>('/siswa', { params });
+    siswaList.value = data.data;
+    totalCount.value = data.meta.total_count;
+    totalPages.value = data.meta.total_pages;
   } catch (error) {
     console.error('Failed to fetch siswa:', error);
   } finally {
@@ -168,16 +178,8 @@ async function fetchTahunAjaran() {
   }
 }
 
-function loadMore() {
-  if (hasNext.value && !loading.value) fetchSiswa(false);
-}
-
-let searchTimeout: ReturnType<typeof setTimeout> | null = null;
-watch(search, () => {
-  if (searchTimeout) clearTimeout(searchTimeout);
-  searchTimeout = setTimeout(() => fetchSiswa(), 300);
-});
-watch([filterKelas, filterStatus, filterTahunAjaran], () => fetchSiswa());
+// Watch composable state changes to trigger fetch
+watch([page, pageSize, search, filterKelas, filterStatus, filterTahunAjaran], fetchSiswa);
 
 function validateForm(): boolean {
   formErrors.value = {};
@@ -493,7 +495,11 @@ onMounted(() => {
               :key="siswa.id"
               class="hover:bg-surface-50 transition-colors"
             >
-              <td class="px-4 py-3 font-medium text-text-primary">{{ siswa.nama }}</td>
+              <td class="px-4 py-3 font-medium text-text-primary">
+                <router-link :to="'/siswa/' + siswa.id" class="text-primary-600 hover:underline">{{
+                  siswa.nama
+                }}</router-link>
+              </td>
               <td class="px-4 py-3 text-text-secondary font-mono text-xs">{{ siswa.nisn }}</td>
               <td class="px-4 py-3 text-text-secondary">{{ siswa.kelas_nama || '-' }}</td>
               <td class="px-4 py-3 text-text-secondary">
@@ -510,7 +516,7 @@ onMounted(() => {
                     siswa.status === 'pindah_sekolah' || siswa.status === 'keluar'
                       ? 'bg-danger-50 text-danger-700'
                       : '',
-                    siswa.status === 'alumni' ? 'bg-primary-50 text-primary-700' : '',
+                    siswa.status === 'lulus' ? 'bg-primary-50 text-primary-700' : '',
                   ]"
                 >
                   {{ getStatusLabel(siswa.status) }}
@@ -576,17 +582,18 @@ onMounted(() => {
           <p class="text-sm text-text-tertiary">Tidak ada siswa ditemukan.</p>
         </div>
       </div>
-
-      <!-- Load more -->
-      <div v-if="hasNext && !loading" class="px-4 py-3 border-t border-border text-center">
-        <button
-          class="text-sm font-medium text-primary-600 hover:text-primary-700 transition-colors"
-          @click="loadMore"
-        >
-          Muat lebih banyak
-        </button>
-      </div>
     </div>
+
+    <!-- Pagination -->
+    <TablePagination
+      :current-page="page"
+      :total-pages="totalPages"
+      :total-count="totalCount"
+      :page-size="pageSize"
+      :loading="loading"
+      @page-change="page = $event"
+      @page-size-change="pageSize = $event"
+    />
 
     <!-- Create/Edit Modal -->
     <BaseModal

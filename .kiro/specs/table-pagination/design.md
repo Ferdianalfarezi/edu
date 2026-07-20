@@ -160,14 +160,22 @@ interface Emits {
 }
 ```
 
-**Template structure:**
+**Design Style: Circular Pagination (referensi gambar user)**
+
+Template structure — layout horizontal dengan pill-shaped Previous/Next buttons dan circular page numbers:
 ```
-┌─────────────────────────────────────────────────────────────────┐
-│ [Page size: 15 ▼]   Menampilkan X dari Y (Halaman N dari M)    │
-│                                                                 │
-│              [««] [«] [1] [2] [3] ... [10] [»] [»»]           │
-└─────────────────────────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────────────────────────────┐
+│ [← Previous]   [1] [2] [3] [4] ... [17]   [Next →]   [15 Items ▼]          │
+└──────────────────────────────────────────────────────────────────────────────┘
+│ Menampilkan X dari Y entri                                                    │
 ```
+
+**Styling specifications (disesuaikan dengan tema biru admin):**
+- **Previous/Next buttons**: Pill-shaped (`rounded-full`), `bg-primary-600 text-white` saat enabled, `border border-border text-text-tertiary` saat disabled, padding `px-4 py-2`, dengan arrow icon (← / →)
+- **Page number buttons**: Circular (`rounded-full w-9 h-9`), `bg-primary-600 text-white` untuk active page, `bg-surface-50 text-text-primary hover:bg-primary-50` untuk inactive pages
+- **Ellipsis**: `text-text-tertiary` tanpa background
+- **Items dropdown**: Pill-shaped (`rounded-full`), `border border-border bg-white`, menampilkan "{n} Items ▼"
+- **Info text**: Di bawah pagination row, `text-sm text-text-secondary`
 
 **Visible pages algorithm (same as AuditLogView):**
 ```typescript

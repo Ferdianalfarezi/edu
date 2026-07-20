@@ -108,6 +108,19 @@ export class AuthService {
       throw new UnauthorizedException(ACCOUNT_LOCKED_MSG);
     }
 
+    // Check if the user's tenant is active (skip for super_admin who has no tenant)
+    if (foundUser.tenantId && foundUser.role !== Role.SUPER_ADMIN) {
+      const tenants = await this.db
+        .select({ isActive: tenant.isActive })
+        .from(tenant)
+        .where(eq(tenant.id, foundUser.tenantId))
+        .limit(1);
+
+      if (tenants.length === 0 || !tenants[0].isActive) {
+        throw new UnauthorizedException('Sekolah Anda sedang nonaktif. Hubungi administrator.');
+      }
+    }
+
     // Validate password
     if (!foundUser.passwordHash) {
       throw new UnauthorizedException(INVALID_CREDENTIALS_MSG);

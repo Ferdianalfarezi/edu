@@ -1,4 +1,4 @@
-import { IsOptional, IsUUID, IsIn, IsDateString, Matches } from 'class-validator';
+import { IsOptional, IsUUID, IsIn, IsDateString, IsInt, Min, Max } from 'class-validator';
 
 export class UpdateJadwalDto {
   @IsOptional()
@@ -10,16 +10,10 @@ export class UpdateJadwalDto {
   mataPelajaranId?: string;
 
   @IsOptional()
-  @Matches(/^([01]\d|2[0-3]):([0-5]\d)$/, {
-    message: 'jamMulai must be in HH:mm format',
-  })
-  jamMulai?: string;
-
-  @IsOptional()
-  @Matches(/^([01]\d|2[0-3]):([0-5]\d)$/, {
-    message: 'jamSelesai must be in HH:mm format',
-  })
-  jamSelesai?: string;
+  @IsInt()
+  @Min(1)
+  @Max(10)
+  jamKe?: number;
 
   @IsOptional()
   @IsDateString()

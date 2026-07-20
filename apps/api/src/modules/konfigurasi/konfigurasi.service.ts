@@ -1,9 +1,16 @@
-import { ConflictException, Inject, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  Inject,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import { eq, and, between } from 'drizzle-orm';
 import { DRIZZLE } from '@/drizzle/drizzle.module';
 import { konfigurasiSekolah } from '@/drizzle/schema/konfigurasi';
 import { hariLibur } from '@/drizzle/schema/konfigurasi';
+import { TenantService } from '@/modules/tenant/tenant.service';
 import { CreateHariLiburDto } from './dto';
 
 /**
@@ -32,7 +39,10 @@ export interface KonfigurasiItem {
 
 @Injectable()
 export class KonfigurasiService {
-  constructor(@Inject(DRIZZLE) private readonly db: NodePgDatabase) {}
+  constructor(
+    @Inject(DRIZZLE) private readonly db: NodePgDatabase,
+    private readonly tenantService: TenantService,
+  ) {}
 
   /**
    * Get all config keys for a tenant with defaults applied for missing keys.
@@ -115,12 +125,45 @@ export class KonfigurasiService {
 
   /**
    * Bulk upsert multiple config keys at once.
-   * Requirements: 22.3
+   * Requirements: 22.3, 6.4, 6.5
    */
   async bulkUpsertConfig(
     tenantId: string,
     items: { key: string; value: any }[],
   ): Promise<KonfigurasiItem[]> {
+    // Validate nominal_spp against jumlah_tingkat
+    const sppItem = items.find((item) => item.key === 'nominal_spp');
+    if (sppItem && sppItem.value) {
+      const jumlahTingkat = await this.tenantService.getJumlahTingkat(tenantId);
+      const expectedKeys = Array.from({ length: jumlahTingkat }, (_, i) => `tingkat_${i + 1}`);
+      const submittedKeys = Object.keys(sppItem.value);
+
+      // Check for extra keys
+      const extraKeys = submittedKeys.filter((k) => !expectedKeys.includes(k));
+      if (extraKeys.length > 0) {
+        throw new BadRequestException(
+          `Tingkat SPP melebihi batas (maks ${jumlahTingkat}): ${extraKeys.join(', ')}`,
+        );
+      }
+
+      // Check for missing keys
+      for (const key of expectedKeys) {
+        if (!(key in sppItem.value)) {
+          const tingkatNum = key.split('_')[1];
+          throw new BadRequestException(`Nominal SPP untuk tingkat ${tingkatNum} wajib diisi`);
+        }
+      }
+
+      // Validate values are non-negative integers
+      for (const [key, value] of Object.entries(sppItem.value)) {
+        if (!Number.isInteger(value) || (value as number) < 0) {
+          throw new BadRequestException(
+            `Nominal SPP untuk ${key} harus berupa bilangan bulat non-negatif`,
+          );
+        }
+      }
+    }
+
     const results: KonfigurasiItem[] = [];
     for (const item of items) {
       const result = await this.upsertConfig(tenantId, item.key, item.value);

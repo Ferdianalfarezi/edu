@@ -34,6 +34,9 @@ RUN pnpm install --frozen-lockfile --prod
 
 COPY --from=build /app/apps/api/dist ./apps/api/dist
 COPY --from=build /app/packages/shared/dist ./packages/shared/dist
+# Migration files + runner for pre-deploy command
+COPY apps/api/src/drizzle/migrations ./apps/api/src/drizzle/migrations
+COPY apps/api/migrate.mjs ./apps/api/migrate.mjs
 
 # Railway injects PORT env var
 EXPOSE 3000

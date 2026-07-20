@@ -580,18 +580,11 @@ class $CachedSchedulesTable extends CachedSchedules
   late final GeneratedColumn<String> hari = GeneratedColumn<String>(
       'hari', aliasedName, false,
       type: DriftSqlType.string, requiredDuringInsert: true);
-  static const VerificationMeta _jamMulaiMeta =
-      const VerificationMeta('jamMulai');
+  static const VerificationMeta _jamKeMeta = const VerificationMeta('jamKe');
   @override
-  late final GeneratedColumn<String> jamMulai = GeneratedColumn<String>(
-      'jam_mulai', aliasedName, false,
-      type: DriftSqlType.string, requiredDuringInsert: true);
-  static const VerificationMeta _jamSelesaiMeta =
-      const VerificationMeta('jamSelesai');
-  @override
-  late final GeneratedColumn<String> jamSelesai = GeneratedColumn<String>(
-      'jam_selesai', aliasedName, false,
-      type: DriftSqlType.string, requiredDuringInsert: true);
+  late final GeneratedColumn<int> jamKe = GeneratedColumn<int>(
+      'jam_ke', aliasedName, false,
+      type: DriftSqlType.int, requiredDuringInsert: true);
   static const VerificationMeta _cachedAtMeta =
       const VerificationMeta('cachedAt');
   @override
@@ -606,8 +599,7 @@ class $CachedSchedulesTable extends CachedSchedules
         mataPelajaranId,
         mataPelajaranNama,
         hari,
-        jamMulai,
-        jamSelesai,
+        jamKe,
         cachedAt
       ];
   @override
@@ -660,19 +652,11 @@ class $CachedSchedulesTable extends CachedSchedules
     } else if (isInserting) {
       context.missing(_hariMeta);
     }
-    if (data.containsKey('jam_mulai')) {
-      context.handle(_jamMulaiMeta,
-          jamMulai.isAcceptableOrUnknown(data['jam_mulai']!, _jamMulaiMeta));
-    } else if (isInserting) {
-      context.missing(_jamMulaiMeta);
-    }
-    if (data.containsKey('jam_selesai')) {
+    if (data.containsKey('jam_ke')) {
       context.handle(
-          _jamSelesaiMeta,
-          jamSelesai.isAcceptableOrUnknown(
-              data['jam_selesai']!, _jamSelesaiMeta));
+          _jamKeMeta, jamKe.isAcceptableOrUnknown(data['jam_ke']!, _jamKeMeta));
     } else if (isInserting) {
-      context.missing(_jamSelesaiMeta);
+      context.missing(_jamKeMeta);
     }
     if (data.containsKey('cached_at')) {
       context.handle(_cachedAtMeta,
@@ -701,10 +685,8 @@ class $CachedSchedulesTable extends CachedSchedules
           DriftSqlType.string, data['${effectivePrefix}mata_pelajaran_nama'])!,
       hari: attachedDatabase.typeMapping
           .read(DriftSqlType.string, data['${effectivePrefix}hari'])!,
-      jamMulai: attachedDatabase.typeMapping
-          .read(DriftSqlType.string, data['${effectivePrefix}jam_mulai'])!,
-      jamSelesai: attachedDatabase.typeMapping
-          .read(DriftSqlType.string, data['${effectivePrefix}jam_selesai'])!,
+      jamKe: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}jam_ke'])!,
       cachedAt: attachedDatabase.typeMapping
           .read(DriftSqlType.dateTime, data['${effectivePrefix}cached_at'])!,
     );
@@ -735,11 +717,8 @@ class CachedSchedule extends DataClass implements Insertable<CachedSchedule> {
   /// Day of the week: senin, selasa, rabu, kamis, jumat, sabtu.
   final String hari;
 
-  /// Lesson start time (HH:mm format).
-  final String jamMulai;
-
-  /// Lesson end time (HH:mm format).
-  final String jamSelesai;
+  /// Lesson slot number (1-10).
+  final int jamKe;
 
   /// When this cache entry was last updated from the server.
   final DateTime cachedAt;
@@ -750,8 +729,7 @@ class CachedSchedule extends DataClass implements Insertable<CachedSchedule> {
       required this.mataPelajaranId,
       required this.mataPelajaranNama,
       required this.hari,
-      required this.jamMulai,
-      required this.jamSelesai,
+      required this.jamKe,
       required this.cachedAt});
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -762,8 +740,7 @@ class CachedSchedule extends DataClass implements Insertable<CachedSchedule> {
     map['mata_pelajaran_id'] = Variable<String>(mataPelajaranId);
     map['mata_pelajaran_nama'] = Variable<String>(mataPelajaranNama);
     map['hari'] = Variable<String>(hari);
-    map['jam_mulai'] = Variable<String>(jamMulai);
-    map['jam_selesai'] = Variable<String>(jamSelesai);
+    map['jam_ke'] = Variable<int>(jamKe);
     map['cached_at'] = Variable<DateTime>(cachedAt);
     return map;
   }
@@ -776,8 +753,7 @@ class CachedSchedule extends DataClass implements Insertable<CachedSchedule> {
       mataPelajaranId: Value(mataPelajaranId),
       mataPelajaranNama: Value(mataPelajaranNama),
       hari: Value(hari),
-      jamMulai: Value(jamMulai),
-      jamSelesai: Value(jamSelesai),
+      jamKe: Value(jamKe),
       cachedAt: Value(cachedAt),
     );
   }
@@ -792,8 +768,7 @@ class CachedSchedule extends DataClass implements Insertable<CachedSchedule> {
       mataPelajaranId: serializer.fromJson<String>(json['mataPelajaranId']),
       mataPelajaranNama: serializer.fromJson<String>(json['mataPelajaranNama']),
       hari: serializer.fromJson<String>(json['hari']),
-      jamMulai: serializer.fromJson<String>(json['jamMulai']),
-      jamSelesai: serializer.fromJson<String>(json['jamSelesai']),
+      jamKe: serializer.fromJson<int>(json['jamKe']),
       cachedAt: serializer.fromJson<DateTime>(json['cachedAt']),
     );
   }
@@ -807,8 +782,7 @@ class CachedSchedule extends DataClass implements Insertable<CachedSchedule> {
       'mataPelajaranId': serializer.toJson<String>(mataPelajaranId),
       'mataPelajaranNama': serializer.toJson<String>(mataPelajaranNama),
       'hari': serializer.toJson<String>(hari),
-      'jamMulai': serializer.toJson<String>(jamMulai),
-      'jamSelesai': serializer.toJson<String>(jamSelesai),
+      'jamKe': serializer.toJson<int>(jamKe),
       'cachedAt': serializer.toJson<DateTime>(cachedAt),
     };
   }
@@ -820,8 +794,7 @@ class CachedSchedule extends DataClass implements Insertable<CachedSchedule> {
           String? mataPelajaranId,
           String? mataPelajaranNama,
           String? hari,
-          String? jamMulai,
-          String? jamSelesai,
+          int? jamKe,
           DateTime? cachedAt}) =>
       CachedSchedule(
         serverId: serverId ?? this.serverId,
@@ -830,8 +803,7 @@ class CachedSchedule extends DataClass implements Insertable<CachedSchedule> {
         mataPelajaranId: mataPelajaranId ?? this.mataPelajaranId,
         mataPelajaranNama: mataPelajaranNama ?? this.mataPelajaranNama,
         hari: hari ?? this.hari,
-        jamMulai: jamMulai ?? this.jamMulai,
-        jamSelesai: jamSelesai ?? this.jamSelesai,
+        jamKe: jamKe ?? this.jamKe,
         cachedAt: cachedAt ?? this.cachedAt,
       );
   CachedSchedule copyWithCompanion(CachedSchedulesCompanion data) {
@@ -846,9 +818,7 @@ class CachedSchedule extends DataClass implements Insertable<CachedSchedule> {
           ? data.mataPelajaranNama.value
           : this.mataPelajaranNama,
       hari: data.hari.present ? data.hari.value : this.hari,
-      jamMulai: data.jamMulai.present ? data.jamMulai.value : this.jamMulai,
-      jamSelesai:
-          data.jamSelesai.present ? data.jamSelesai.value : this.jamSelesai,
+      jamKe: data.jamKe.present ? data.jamKe.value : this.jamKe,
       cachedAt: data.cachedAt.present ? data.cachedAt.value : this.cachedAt,
     );
   }
@@ -862,8 +832,7 @@ class CachedSchedule extends DataClass implements Insertable<CachedSchedule> {
           ..write('mataPelajaranId: $mataPelajaranId, ')
           ..write('mataPelajaranNama: $mataPelajaranNama, ')
           ..write('hari: $hari, ')
-          ..write('jamMulai: $jamMulai, ')
-          ..write('jamSelesai: $jamSelesai, ')
+          ..write('jamKe: $jamKe, ')
           ..write('cachedAt: $cachedAt')
           ..write(')'))
         .toString();
@@ -871,7 +840,7 @@ class CachedSchedule extends DataClass implements Insertable<CachedSchedule> {
 
   @override
   int get hashCode => Object.hash(serverId, kelasId, kelasNama, mataPelajaranId,
-      mataPelajaranNama, hari, jamMulai, jamSelesai, cachedAt);
+      mataPelajaranNama, hari, jamKe, cachedAt);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -882,8 +851,7 @@ class CachedSchedule extends DataClass implements Insertable<CachedSchedule> {
           other.mataPelajaranId == this.mataPelajaranId &&
           other.mataPelajaranNama == this.mataPelajaranNama &&
           other.hari == this.hari &&
-          other.jamMulai == this.jamMulai &&
-          other.jamSelesai == this.jamSelesai &&
+          other.jamKe == this.jamKe &&
           other.cachedAt == this.cachedAt);
 }
 
@@ -894,8 +862,7 @@ class CachedSchedulesCompanion extends UpdateCompanion<CachedSchedule> {
   final Value<String> mataPelajaranId;
   final Value<String> mataPelajaranNama;
   final Value<String> hari;
-  final Value<String> jamMulai;
-  final Value<String> jamSelesai;
+  final Value<int> jamKe;
   final Value<DateTime> cachedAt;
   final Value<int> rowid;
   const CachedSchedulesCompanion({
@@ -905,8 +872,7 @@ class CachedSchedulesCompanion extends UpdateCompanion<CachedSchedule> {
     this.mataPelajaranId = const Value.absent(),
     this.mataPelajaranNama = const Value.absent(),
     this.hari = const Value.absent(),
-    this.jamMulai = const Value.absent(),
-    this.jamSelesai = const Value.absent(),
+    this.jamKe = const Value.absent(),
     this.cachedAt = const Value.absent(),
     this.rowid = const Value.absent(),
   });
@@ -917,8 +883,7 @@ class CachedSchedulesCompanion extends UpdateCompanion<CachedSchedule> {
     required String mataPelajaranId,
     required String mataPelajaranNama,
     required String hari,
-    required String jamMulai,
-    required String jamSelesai,
+    required int jamKe,
     required DateTime cachedAt,
     this.rowid = const Value.absent(),
   })  : serverId = Value(serverId),
@@ -927,8 +892,7 @@ class CachedSchedulesCompanion extends UpdateCompanion<CachedSchedule> {
         mataPelajaranId = Value(mataPelajaranId),
         mataPelajaranNama = Value(mataPelajaranNama),
         hari = Value(hari),
-        jamMulai = Value(jamMulai),
-        jamSelesai = Value(jamSelesai),
+        jamKe = Value(jamKe),
         cachedAt = Value(cachedAt);
   static Insertable<CachedSchedule> custom({
     Expression<String>? serverId,
@@ -937,8 +901,7 @@ class CachedSchedulesCompanion extends UpdateCompanion<CachedSchedule> {
     Expression<String>? mataPelajaranId,
     Expression<String>? mataPelajaranNama,
     Expression<String>? hari,
-    Expression<String>? jamMulai,
-    Expression<String>? jamSelesai,
+    Expression<int>? jamKe,
     Expression<DateTime>? cachedAt,
     Expression<int>? rowid,
   }) {
@@ -949,8 +912,7 @@ class CachedSchedulesCompanion extends UpdateCompanion<CachedSchedule> {
       if (mataPelajaranId != null) 'mata_pelajaran_id': mataPelajaranId,
       if (mataPelajaranNama != null) 'mata_pelajaran_nama': mataPelajaranNama,
       if (hari != null) 'hari': hari,
-      if (jamMulai != null) 'jam_mulai': jamMulai,
-      if (jamSelesai != null) 'jam_selesai': jamSelesai,
+      if (jamKe != null) 'jam_ke': jamKe,
       if (cachedAt != null) 'cached_at': cachedAt,
       if (rowid != null) 'rowid': rowid,
     });
@@ -963,8 +925,7 @@ class CachedSchedulesCompanion extends UpdateCompanion<CachedSchedule> {
       Value<String>? mataPelajaranId,
       Value<String>? mataPelajaranNama,
       Value<String>? hari,
-      Value<String>? jamMulai,
-      Value<String>? jamSelesai,
+      Value<int>? jamKe,
       Value<DateTime>? cachedAt,
       Value<int>? rowid}) {
     return CachedSchedulesCompanion(
@@ -974,8 +935,7 @@ class CachedSchedulesCompanion extends UpdateCompanion<CachedSchedule> {
       mataPelajaranId: mataPelajaranId ?? this.mataPelajaranId,
       mataPelajaranNama: mataPelajaranNama ?? this.mataPelajaranNama,
       hari: hari ?? this.hari,
-      jamMulai: jamMulai ?? this.jamMulai,
-      jamSelesai: jamSelesai ?? this.jamSelesai,
+      jamKe: jamKe ?? this.jamKe,
       cachedAt: cachedAt ?? this.cachedAt,
       rowid: rowid ?? this.rowid,
     );
@@ -1002,11 +962,8 @@ class CachedSchedulesCompanion extends UpdateCompanion<CachedSchedule> {
     if (hari.present) {
       map['hari'] = Variable<String>(hari.value);
     }
-    if (jamMulai.present) {
-      map['jam_mulai'] = Variable<String>(jamMulai.value);
-    }
-    if (jamSelesai.present) {
-      map['jam_selesai'] = Variable<String>(jamSelesai.value);
+    if (jamKe.present) {
+      map['jam_ke'] = Variable<int>(jamKe.value);
     }
     if (cachedAt.present) {
       map['cached_at'] = Variable<DateTime>(cachedAt.value);
@@ -1026,8 +983,7 @@ class CachedSchedulesCompanion extends UpdateCompanion<CachedSchedule> {
           ..write('mataPelajaranId: $mataPelajaranId, ')
           ..write('mataPelajaranNama: $mataPelajaranNama, ')
           ..write('hari: $hari, ')
-          ..write('jamMulai: $jamMulai, ')
-          ..write('jamSelesai: $jamSelesai, ')
+          ..write('jamKe: $jamKe, ')
           ..write('cachedAt: $cachedAt, ')
           ..write('rowid: $rowid')
           ..write(')'))
@@ -1628,8 +1584,7 @@ typedef $$CachedSchedulesTableCreateCompanionBuilder = CachedSchedulesCompanion
   required String mataPelajaranId,
   required String mataPelajaranNama,
   required String hari,
-  required String jamMulai,
-  required String jamSelesai,
+  required int jamKe,
   required DateTime cachedAt,
   Value<int> rowid,
 });
@@ -1641,8 +1596,7 @@ typedef $$CachedSchedulesTableUpdateCompanionBuilder = CachedSchedulesCompanion
   Value<String> mataPelajaranId,
   Value<String> mataPelajaranNama,
   Value<String> hari,
-  Value<String> jamMulai,
-  Value<String> jamSelesai,
+  Value<int> jamKe,
   Value<DateTime> cachedAt,
   Value<int> rowid,
 });
@@ -1676,11 +1630,8 @@ class $$CachedSchedulesTableFilterComposer
   ColumnFilters<String> get hari => $composableBuilder(
       column: $table.hari, builder: (column) => ColumnFilters(column));
 
-  ColumnFilters<String> get jamMulai => $composableBuilder(
-      column: $table.jamMulai, builder: (column) => ColumnFilters(column));
-
-  ColumnFilters<String> get jamSelesai => $composableBuilder(
-      column: $table.jamSelesai, builder: (column) => ColumnFilters(column));
+  ColumnFilters<int> get jamKe => $composableBuilder(
+      column: $table.jamKe, builder: (column) => ColumnFilters(column));
 
   ColumnFilters<DateTime> get cachedAt => $composableBuilder(
       column: $table.cachedAt, builder: (column) => ColumnFilters(column));
@@ -1715,11 +1666,8 @@ class $$CachedSchedulesTableOrderingComposer
   ColumnOrderings<String> get hari => $composableBuilder(
       column: $table.hari, builder: (column) => ColumnOrderings(column));
 
-  ColumnOrderings<String> get jamMulai => $composableBuilder(
-      column: $table.jamMulai, builder: (column) => ColumnOrderings(column));
-
-  ColumnOrderings<String> get jamSelesai => $composableBuilder(
-      column: $table.jamSelesai, builder: (column) => ColumnOrderings(column));
+  ColumnOrderings<int> get jamKe => $composableBuilder(
+      column: $table.jamKe, builder: (column) => ColumnOrderings(column));
 
   ColumnOrderings<DateTime> get cachedAt => $composableBuilder(
       column: $table.cachedAt, builder: (column) => ColumnOrderings(column));
@@ -1752,11 +1700,8 @@ class $$CachedSchedulesTableAnnotationComposer
   GeneratedColumn<String> get hari =>
       $composableBuilder(column: $table.hari, builder: (column) => column);
 
-  GeneratedColumn<String> get jamMulai =>
-      $composableBuilder(column: $table.jamMulai, builder: (column) => column);
-
-  GeneratedColumn<String> get jamSelesai => $composableBuilder(
-      column: $table.jamSelesai, builder: (column) => column);
+  GeneratedColumn<int> get jamKe =>
+      $composableBuilder(column: $table.jamKe, builder: (column) => column);
 
   GeneratedColumn<DateTime> get cachedAt =>
       $composableBuilder(column: $table.cachedAt, builder: (column) => column);
@@ -1795,8 +1740,7 @@ class $$CachedSchedulesTableTableManager extends RootTableManager<
             Value<String> mataPelajaranId = const Value.absent(),
             Value<String> mataPelajaranNama = const Value.absent(),
             Value<String> hari = const Value.absent(),
-            Value<String> jamMulai = const Value.absent(),
-            Value<String> jamSelesai = const Value.absent(),
+            Value<int> jamKe = const Value.absent(),
             Value<DateTime> cachedAt = const Value.absent(),
             Value<int> rowid = const Value.absent(),
           }) =>
@@ -1807,8 +1751,7 @@ class $$CachedSchedulesTableTableManager extends RootTableManager<
             mataPelajaranId: mataPelajaranId,
             mataPelajaranNama: mataPelajaranNama,
             hari: hari,
-            jamMulai: jamMulai,
-            jamSelesai: jamSelesai,
+            jamKe: jamKe,
             cachedAt: cachedAt,
             rowid: rowid,
           ),
@@ -1819,8 +1762,7 @@ class $$CachedSchedulesTableTableManager extends RootTableManager<
             required String mataPelajaranId,
             required String mataPelajaranNama,
             required String hari,
-            required String jamMulai,
-            required String jamSelesai,
+            required int jamKe,
             required DateTime cachedAt,
             Value<int> rowid = const Value.absent(),
           }) =>
@@ -1831,8 +1773,7 @@ class $$CachedSchedulesTableTableManager extends RootTableManager<
             mataPelajaranId: mataPelajaranId,
             mataPelajaranNama: mataPelajaranNama,
             hari: hari,
-            jamMulai: jamMulai,
-            jamSelesai: jamSelesai,
+            jamKe: jamKe,
             cachedAt: cachedAt,
             rowid: rowid,
           ),

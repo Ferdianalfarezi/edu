@@ -2,11 +2,12 @@ import { Inject, Injectable } from '@nestjs/common';
 import { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import { eq, and, sql, count } from 'drizzle-orm';
 import { DRIZZLE } from '@/drizzle/drizzle.module';
-import { rapor } from '@/drizzle/schema/rapor';
+import { rapor, komponenPenilaian } from '@/drizzle/schema/rapor';
 import { kelas } from '@/drizzle/schema/kelas';
 import { tahunAjaran } from '@/drizzle/schema/tahun-ajaran';
 import { user } from '@/drizzle/schema/user';
 import { siswa } from '@/drizzle/schema/siswa';
+import { mataPelajaran } from '@/drizzle/schema/mata-pelajaran';
 import { raporNilai } from '@/drizzle/schema/rapor';
 import { GetRaporOverviewQueryDto } from './dto';
 
@@ -215,12 +216,14 @@ export class RaporOverviewService {
       submitted_count: submittedCount,
     };
 
-    // Get per-siswa grades
+    // Get per-siswa grades with mata_pelajaran names
     const nilaiRows = await this.db
       .select({
         siswaId: raporNilai.siswaId,
         siswaNama: siswa.nama,
+        siswaNisn: siswa.nisn,
         mataPelajaranId: raporNilai.mataPelajaranId,
+        mataPelajaranNama: mataPelajaran.nama,
         komponenNilai: raporNilai.komponenNilai,
         capaianPembelajaran: raporNilai.capaianPembelajaran,
         status: raporNilai.status,
@@ -231,20 +234,37 @@ export class RaporOverviewService {
       })
       .from(raporNilai)
       .innerJoin(siswa, eq(raporNilai.siswaId, siswa.id))
+      .innerJoin(mataPelajaran, eq(raporNilai.mataPelajaranId, mataPelajaran.id))
       .where(eq(raporNilai.raporId, raporRecord.raporId))
       .orderBy(siswa.nama);
 
-    // Group by student
+    // Get all komponen penilaian for this tenant to resolve komponen names
+    const komponenList = await this.db
+      .select({
+        id: komponenPenilaian.id,
+        nama: komponenPenilaian.nama,
+      })
+      .from(komponenPenilaian)
+      .where(eq(komponenPenilaian.tenantId, tenantId));
+
+    const komponenMap = new Map(komponenList.map((k) => [k.id, k.nama]));
+
+    // Group by student — matching frontend SiswaRaporView interface
     const siswaMap = new Map<
       string,
       {
         siswa_id: string;
         siswa_nama: string;
+        nisn: string | null;
+        rata_rata: number | null;
         peringkat: number | null;
-        rata_rata: string | null;
         catatan_wali_kelas: string | null;
         p5_deskripsi: any;
-        nilai: any[];
+        nilai_per_mapel: {
+          mata_pelajaran_nama: string;
+          komponen_nilai: { komponen_nama: string; nilai: string | number }[];
+          capaian_pembelajaran: string | null;
+        }[];
       }
     >();
 
@@ -253,19 +273,48 @@ export class RaporOverviewService {
         siswaMap.set(row.siswaId, {
           siswa_id: row.siswaId,
           siswa_nama: row.siswaNama,
+          nisn: row.siswaNisn ?? null,
+          rata_rata: row.rataRata ? Number(row.rataRata) : null,
           peringkat: row.peringkat,
-          rata_rata: row.rataRata,
           catatan_wali_kelas: row.catatanWaliKelas,
           p5_deskripsi: row.p5Deskripsi,
-          nilai: [],
+          nilai_per_mapel: [],
         });
       }
-      siswaMap.get(row.siswaId)!.nilai.push({
-        mata_pelajaran_id: row.mataPelajaranId,
-        komponen_nilai: row.komponenNilai,
+
+      // Resolve komponen_nilai from JSON [{komponen_id, nilai}] to [{komponen_nama, nilai}]
+      const rawKomponen = (row.komponenNilai as any[]) || [];
+      const resolvedKomponen = rawKomponen.map(
+        (k: { komponen_id: string; nilai: string | number }) => ({
+          komponen_nama: komponenMap.get(k.komponen_id) || k.komponen_id,
+          nilai: k.nilai,
+        }),
+      );
+
+      siswaMap.get(row.siswaId)!.nilai_per_mapel.push({
+        mata_pelajaran_nama: row.mataPelajaranNama,
+        komponen_nilai: resolvedKomponen,
         capaian_pembelajaran: row.capaianPembelajaran,
-        status: row.status,
       });
+
+      // Update rata_rata to the max across all entries (take the first non-null value found)
+      // The rata_rata is usually stored per-student-per-mapel but displayed as overall
+      const entry = siswaMap.get(row.siswaId)!;
+      if (row.rataRata && entry.rata_rata === null) {
+        entry.rata_rata = Number(row.rataRata);
+      }
+    }
+
+    // Calculate overall rata_rata per student (average of all mapel rata_rata values)
+    for (const entry of siswaMap.values()) {
+      const mapelRataRata = nilaiRows
+        .filter((r) => r.siswaId === entry.siswa_id && r.rataRata !== null)
+        .map((r) => Number(r.rataRata));
+
+      if (mapelRataRata.length > 0) {
+        entry.rata_rata =
+          Math.round((mapelRataRata.reduce((a, b) => a + b, 0) / mapelRataRata.length) * 100) / 100;
+      }
     }
 
     return {

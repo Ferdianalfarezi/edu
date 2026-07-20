@@ -20,7 +20,8 @@ import { REDIS_CLIENT } from './redis.constants';
               if (times > 10) return null;
               return Math.min(times * 200, 5000);
             },
-            lazyConnect: false,
+            lazyConnect: true,
+            enableReadyCheck: false,
           });
         }
 
@@ -33,7 +34,8 @@ import { REDIS_CLIENT } from './redis.constants';
             if (times > 10) return null; // stop retrying after 10 attempts
             return Math.min(times * 200, 5000);
           },
-          lazyConnect: false,
+          lazyConnect: true,
+          enableReadyCheck: false,
         });
       },
       inject: [ConfigService],

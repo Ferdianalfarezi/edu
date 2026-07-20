@@ -95,9 +95,7 @@ class OrangTuaHomeScreen extends ConsumerWidget {
                     label: 'Rapor',
                     description: 'Nilai akademik',
                     color: AppTheme.warning,
-                    onTap: () {
-                      // TODO: Navigate to rapor
-                    },
+                    onTap: () => context.push(AppRoutes.orangTuaRapor),
                   ),
                   _FeatureCard(
                     icon: Icons.notifications_active_rounded,

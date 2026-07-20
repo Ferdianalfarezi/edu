@@ -1,6 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { BadRequestException, ConflictException, NotFoundException } from '@nestjs/common';
 import { KelasService } from './kelas.service';
+import { TenantService } from '@/modules/tenant/tenant.service';
 import { DRIZZLE } from '@/drizzle/drizzle.module';
 
 /**
@@ -58,9 +59,13 @@ describe('KelasService', () => {
   const kelasId = '33333333-3333-3333-3333-333333333333';
   const guruId = '44444444-4444-4444-4444-444444444444';
 
+  const mockTenantService = {
+    getJumlahTingkat: jest.fn().mockResolvedValue(6),
+  } as unknown as TenantService;
+
   function buildService(queryResults: any[]): KelasService {
     const db = createMockDb(queryResults);
-    const service = new KelasService(db);
+    const service = new KelasService(db, mockTenantService);
     return service;
   }
 

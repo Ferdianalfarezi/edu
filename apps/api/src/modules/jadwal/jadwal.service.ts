@@ -1,11 +1,12 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
-import { eq, and, gte, lte, SQL } from 'drizzle-orm';
+import { eq, and, gte, lte, sql, SQL } from 'drizzle-orm';
 import { DrizzleService } from '@/drizzle/drizzle.service';
 import { jadwalPelajaran, guruPengganti } from '@/drizzle/schema/jadwal';
 import { kelas } from '@/drizzle/schema/kelas';
 import { mataPelajaran } from '@/drizzle/schema/mata-pelajaran';
 import { user } from '@/drizzle/schema/user';
 import { tahunAjaran } from '@/drizzle/schema/tahun-ajaran';
+import { TenantService } from '@/modules/tenant/tenant.service';
 import {
   CreateJadwalDto,
   UpdateJadwalDto,
@@ -17,30 +18,27 @@ import {
 
 @Injectable()
 export class JadwalService {
-  constructor(private readonly drizzleService: DrizzleService) {}
+  constructor(
+    private readonly drizzleService: DrizzleService,
+    private readonly tenantService: TenantService,
+  ) {}
 
   /**
    * Create a new jadwal pelajaran entry.
-   * Validates that kelas, mataPelajaran, guru, and tahunAjaran
-   * all exist within the same tenant.
-   *
    * Requirements: 27.1, 27.2
    */
   async create(tenantId: string, adminId: string, dto: CreateJadwalDto) {
     const db = this.drizzleService.db;
 
+    // Validate day is within tenant's allowed hari kerja
+    await this.validateHariKerja(tenantId, dto.hari);
+
     // Validate referenced entities only for non-istirahat entries
     if (!dto.isIstirahat) {
       await this.validateReferences(tenantId, dto);
     } else {
-      // For istirahat, only validate kelas and tahun ajaran
       await this.validateKelas(tenantId, dto.kelasId);
       await this.validateTahunAjaran(tenantId, dto.tahunAjaranId);
-    }
-
-    // Validate jamSelesai > jamMulai
-    if (dto.jamSelesai <= dto.jamMulai) {
-      throw new BadRequestException('jamSelesai harus lebih besar dari jamMulai');
     }
 
     // Validate tanggalSelesaiBerlaku > tanggalMulaiBerlaku
@@ -60,8 +58,7 @@ export class JadwalService {
         tahunAjaranId: dto.tahunAjaranId,
         semester: dto.semester,
         hari: dto.hari,
-        jamMulai: dto.jamMulai,
-        jamSelesai: dto.jamSelesai,
+        jamKe: dto.jamKe,
         tanggalMulaiBerlaku: dto.tanggalMulaiBerlaku,
         tanggalSelesaiBerlaku: dto.tanggalSelesaiBerlaku,
         isIstirahat: dto.isIstirahat || false,
@@ -73,8 +70,6 @@ export class JadwalService {
 
   /**
    * List jadwal pelajaran with optional filters.
-   * Filters: kelasId, guruId, tahunAjaranId, semester, hari
-   *
    * Requirements: 27.4, 27.10
    */
   async findAll(tenantId: string, filters: FilterJadwalDto) {
@@ -98,6 +93,12 @@ export class JadwalService {
       conditions.push(eq(jadwalPelajaran.hari, filters.hari));
     }
 
+    // Filter Saturday jadwal when tenant uses 5-day work week
+    const hariKerja = await this.tenantService.getHariKerja(tenantId);
+    if (hariKerja === '5_hari') {
+      conditions.push(sql`${jadwalPelajaran.hari} != 'sabtu'`);
+    }
+
     const results = await db
       .select({
         id: jadwalPelajaran.id,
@@ -105,8 +106,7 @@ export class JadwalService {
         mataPelajaranId: jadwalPelajaran.mataPelajaranId,
         guruId: jadwalPelajaran.guruId,
         hari: jadwalPelajaran.hari,
-        jamMulai: jadwalPelajaran.jamMulai,
-        jamSelesai: jadwalPelajaran.jamSelesai,
+        jamKe: jadwalPelajaran.jamKe,
         isVacant: jadwalPelajaran.isVacant,
         isIstirahat: jadwalPelajaran.isIstirahat,
         tanggalMulaiBerlaku: jadwalPelajaran.tanggalMulaiBerlaku,
@@ -133,7 +133,6 @@ export class JadwalService {
           tanggal: string;
         } | null = null;
 
-        // Skip pengganti check for istirahat entries
         if (row.mataPelajaranId && row.guruId) {
           const [penggantiRecord] = await db
             .select({
@@ -169,8 +168,7 @@ export class JadwalService {
           mata_pelajaran_id: row.mataPelajaranId,
           guru_id: row.guruId,
           hari: row.hari,
-          jam_mulai: row.jamMulai?.substring(0, 5) ?? row.jamMulai,
-          jam_selesai: row.jamSelesai?.substring(0, 5) ?? row.jamSelesai,
+          jam_ke: row.jamKe,
           is_vacant: row.isVacant,
           is_istirahat: row.isIstirahat ?? false,
           mata_pelajaran: row.mataPelajaranId
@@ -204,8 +202,7 @@ export class JadwalService {
         tahunAjaranId: jadwalPelajaran.tahunAjaranId,
         semester: jadwalPelajaran.semester,
         hari: jadwalPelajaran.hari,
-        jamMulai: jadwalPelajaran.jamMulai,
-        jamSelesai: jadwalPelajaran.jamSelesai,
+        jamKe: jadwalPelajaran.jamKe,
         tanggalMulaiBerlaku: jadwalPelajaran.tanggalMulaiBerlaku,
         tanggalSelesaiBerlaku: jadwalPelajaran.tanggalSelesaiBerlaku,
         isVacant: jadwalPelajaran.isVacant,
@@ -231,8 +228,7 @@ export class JadwalService {
       mata_pelajaran_id: result.mataPelajaranId,
       guru_id: result.guruId,
       hari: result.hari,
-      jam_mulai: result.jamMulai?.substring(0, 5) ?? result.jamMulai,
-      jam_selesai: result.jamSelesai?.substring(0, 5) ?? result.jamSelesai,
+      jam_ke: result.jamKe,
       is_vacant: result.isVacant,
       is_istirahat: result.isIstirahat ?? false,
       mata_pelajaran: result.mataPelajaranId
@@ -248,21 +244,20 @@ export class JadwalService {
 
   /**
    * Update a jadwal pelajaran entry.
-   * Only allows updating: guru, mataPelajaran, times, validity dates, hari.
-   * Tracks change with updatedAt timestamp.
-   *
    * Requirements: 27.7, 27.8
    */
   async update(tenantId: string, id: string, adminId: string, dto: UpdateJadwalDto) {
     const db = this.drizzleService.db;
 
-    // Verify the jadwal exists in this tenant
+    if (dto.hari !== undefined) {
+      await this.validateHariKerja(tenantId, dto.hari);
+    }
+
     const existing = await this.findOneRaw(tenantId, id);
     if (!existing) {
       throw new NotFoundException('Jadwal pelajaran tidak ditemukan');
     }
 
-    // Build update payload
     const updateData: Record<string, unknown> = {};
 
     if (dto.guruId !== undefined) {
@@ -275,8 +270,7 @@ export class JadwalService {
       updateData.mataPelajaranId = dto.mataPelajaranId;
     }
 
-    if (dto.jamMulai !== undefined) updateData.jamMulai = dto.jamMulai;
-    if (dto.jamSelesai !== undefined) updateData.jamSelesai = dto.jamSelesai;
+    if (dto.jamKe !== undefined) updateData.jamKe = dto.jamKe;
     if (dto.tanggalMulaiBerlaku !== undefined)
       updateData.tanggalMulaiBerlaku = dto.tanggalMulaiBerlaku;
     if (dto.tanggalSelesaiBerlaku !== undefined)
@@ -285,13 +279,6 @@ export class JadwalService {
 
     if (Object.keys(updateData).length === 0) {
       return this.findOne(tenantId, id);
-    }
-
-    // Validate time consistency after merge
-    const finalJamMulai = (updateData.jamMulai as string) ?? existing.jamMulai;
-    const finalJamSelesai = (updateData.jamSelesai as string) ?? existing.jamSelesai;
-    if (finalJamSelesai <= finalJamMulai) {
-      throw new BadRequestException('jamSelesai harus lebih besar dari jamMulai');
     }
 
     // Validate date consistency after merge
@@ -304,7 +291,6 @@ export class JadwalService {
       );
     }
 
-    // Track change timestamp
     updateData.updatedAt = new Date();
 
     await db
@@ -317,9 +303,6 @@ export class JadwalService {
 
   /**
    * Delete a jadwal pelajaran entry.
-   * Historical jadwal preservation is handled by only deleting
-   * when explicitly requested — old entries stay for reference.
-   *
    * Requirements: 27.7, 27.10
    */
   async remove(tenantId: string, id: string) {
@@ -354,26 +337,17 @@ export class JadwalService {
   // ─── Guru Pengganti (Substitute Teacher) ────────────────────────────────
 
   /**
-   * Assign a substitute teacher for a specific class + subject on a given date.
-   * Validates: guru exists and is active, kelas exists, mataPelajaran exists,
-   * date is not in the past.
-   *
-   * Access logic: the guru_pengganti record grants attendance input access for
-   * that specific class+date ONLY. Auto-revocation is date-based (if current
-   * date > tanggal, the record no longer grants access).
-   *
+   * Assign a substitute teacher.
    * Requirements: 28.1, 28.2, 28.4
    */
   async createGuruPengganti(tenantId: string, assignedBy: string, dto: CreateGuruPenggantiDto) {
     const db = this.drizzleService.db;
 
-    // Validate date is not in the past (compare date strings to avoid timezone issues)
-    const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD local-ish
+    const today = new Date().toISOString().split('T')[0];
     if (dto.tanggal < today) {
       throw new BadRequestException('Tanggal penugasan tidak boleh di masa lalu');
     }
 
-    // Validate referenced entities
     await this.validateGuruPenggantiReferences(tenantId, dto);
 
     const [result] = await db
@@ -392,9 +366,7 @@ export class JadwalService {
   }
 
   /**
-   * List guru pengganti assignments filtered by kelasId and/or tanggal.
-   * Only returns active assignments (tanggal >= today) by default.
-   *
+   * List guru pengganti assignments.
    * Requirements: 28.2
    */
   async findAllGuruPengganti(tenantId: string, filters: FilterGuruPenggantiDto) {
@@ -409,7 +381,6 @@ export class JadwalService {
     if (filters.tanggal) {
       conditions.push(eq(guruPengganti.tanggal, filters.tanggal));
     } else {
-      // By default, only show active (current and future) assignments
       const today = new Date().toISOString().split('T')[0];
       conditions.push(gte(guruPengganti.tanggal, today));
     }
@@ -437,7 +408,6 @@ export class JadwalService {
 
   /**
    * Remove a guru pengganti assignment.
-   * Only admin can remove assignments.
    */
   async removeGuruPengganti(tenantId: string, id: string) {
     const db = this.drizzleService.db;
@@ -460,12 +430,6 @@ export class JadwalService {
 
   /**
    * Check if a guru has active substitute access for a specific class and date.
-   * Used by the absensi module to verify attendance input authorization.
-   *
-   * Returns true if:
-   * - A guru_pengganti record exists for the guru, class, and date
-   * - The date is today (not in the past — auto-revocation)
-   *
    * Requirements: 28.2, 28.3, 28.4
    */
   async isGuruPenggantiForClassOnDate(
@@ -476,7 +440,6 @@ export class JadwalService {
   ): Promise<boolean> {
     const db = this.drizzleService.db;
 
-    // Date-based auto-revocation: only grant access if tanggal matches today
     const today = new Date().toISOString().split('T')[0];
     if (tanggal !== today) {
       return false;
@@ -499,9 +462,6 @@ export class JadwalService {
 
   // ─── Jadwal Saya (Guru's Teaching Schedule) ────────────────────────────
 
-  /**
-   * Indonesian day names mapped from JS Date.getDay() (0=Sunday..6=Saturday).
-   */
   private static readonly DAY_MAP: Record<number, string> = {
     1: 'senin',
     2: 'selasa',
@@ -513,15 +473,11 @@ export class JadwalService {
 
   /**
    * Get the authenticated guru's teaching schedule for a specific day.
-   * Defaults to today's day. Also checks for active guru_pengganti
-   * assignments on the given date.
-   *
    * Requirements: 33.1, 33.2, 33.3, 33.4
    */
   async getJadwalSaya(tenantId: string, guruId: string, filters: FilterJadwalSayaDto) {
     const db = this.drizzleService.db;
 
-    // Determine the target date and day
     const today = new Date();
     const tanggal = filters.tanggal ?? today.toISOString().split('T')[0];
 
@@ -531,11 +487,9 @@ export class JadwalService {
     } else {
       const dateObj = filters.tanggal ? new Date(filters.tanggal) : today;
       const dayIndex = dateObj.getDay();
-      hari = JadwalService.DAY_MAP[dayIndex] ?? 'senin'; // Fallback (Sunday has no school)
+      hari = JadwalService.DAY_MAP[dayIndex] ?? 'senin';
     }
 
-    // Query jadwal where guru is the assigned teacher,
-    // hari matches, and today is within validity range
     const jadwalResults = await db
       .select({
         id: jadwalPelajaran.id,
@@ -543,8 +497,7 @@ export class JadwalService {
         kelasNama: kelas.nama,
         mataPelajaranId: jadwalPelajaran.mataPelajaranId,
         mataPelajaranNama: mataPelajaran.nama,
-        jamMulai: jadwalPelajaran.jamMulai,
-        jamSelesai: jadwalPelajaran.jamSelesai,
+        jamKe: jadwalPelajaran.jamKe,
       })
       .from(jadwalPelajaran)
       .innerJoin(kelas, eq(jadwalPelajaran.kelasId, kelas.id))
@@ -559,7 +512,6 @@ export class JadwalService {
         ),
       );
 
-    // For each slot, check if there's a guru_pengganti assigned for that date
     const results = await Promise.all(
       jadwalResults.map(async (slot) => {
         let hasGuruPengganti = false;
@@ -590,8 +542,7 @@ export class JadwalService {
           id: slot.id,
           kelasNama: slot.kelasNama,
           mataPelajaranNama: slot.mataPelajaranNama,
-          jamMulai: slot.jamMulai?.substring(0, 5) ?? slot.jamMulai,
-          jamSelesai: slot.jamSelesai?.substring(0, 5) ?? slot.jamSelesai,
+          jamKe: slot.jamKe,
           hasGuruPengganti,
           guruPenggantiNama,
         };
@@ -607,10 +558,6 @@ export class JadwalService {
 
   // ─── Private Validation Methods ─────────────────────────────────────────
 
-  /**
-   * Validate all references for guru pengganti assignment.
-   * Checks: guru exists & is active & has role 'guru', kelas exists, mataPelajaran exists.
-   */
   private async validateGuruPenggantiReferences(tenantId: string, dto: CreateGuruPenggantiDto) {
     await Promise.all([
       this.validateActiveGuru(tenantId, dto.guruPenggantiId),
@@ -619,9 +566,6 @@ export class JadwalService {
     ]);
   }
 
-  /**
-   * Validate that a guru exists, is active, and has role 'guru'.
-   */
   private async validateActiveGuru(tenantId: string, guruId: string) {
     const db = this.drizzleService.db;
 
@@ -633,19 +577,14 @@ export class JadwalService {
     if (!result) {
       throw new BadRequestException('Guru tidak ditemukan dalam tenant ini');
     }
-
     if (result.role !== 'guru') {
       throw new BadRequestException('User yang dipilih bukan guru');
     }
-
     if (!result.isActive) {
       throw new BadRequestException('Guru tidak aktif');
     }
   }
 
-  /**
-   * Validate all referenced entities exist in the same tenant.
-   */
   private async validateReferences(tenantId: string, dto: CreateJadwalDto) {
     await Promise.all([
       this.validateKelas(tenantId, dto.kelasId),
@@ -657,12 +596,10 @@ export class JadwalService {
 
   private async validateKelas(tenantId: string, kelasId: string) {
     const db = this.drizzleService.db;
-
     const [result] = await db
       .select({ id: kelas.id })
       .from(kelas)
       .where(and(eq(kelas.id, kelasId), eq(kelas.tenantId, tenantId)));
-
     if (!result) {
       throw new BadRequestException('Kelas tidak ditemukan dalam tenant ini');
     }
@@ -670,12 +607,10 @@ export class JadwalService {
 
   private async validateMataPelajaran(tenantId: string, mapelId: string) {
     const db = this.drizzleService.db;
-
     const [result] = await db
       .select({ id: mataPelajaran.id })
       .from(mataPelajaran)
       .where(and(eq(mataPelajaran.id, mapelId), eq(mataPelajaran.tenantId, tenantId)));
-
     if (!result) {
       throw new BadRequestException('Mata pelajaran tidak ditemukan dalam tenant ini');
     }
@@ -683,16 +618,13 @@ export class JadwalService {
 
   private async validateGuru(tenantId: string, guruId: string) {
     const db = this.drizzleService.db;
-
     const [result] = await db
       .select({ id: user.id, role: user.role })
       .from(user)
       .where(and(eq(user.id, guruId), eq(user.tenantId, tenantId)));
-
     if (!result) {
       throw new BadRequestException('Guru tidak ditemukan dalam tenant ini');
     }
-
     if (result.role !== 'guru') {
       throw new BadRequestException('User yang dipilih bukan guru');
     }
@@ -700,14 +632,25 @@ export class JadwalService {
 
   private async validateTahunAjaran(tenantId: string, tahunAjaranId: string) {
     const db = this.drizzleService.db;
-
     const [result] = await db
       .select({ id: tahunAjaran.id })
       .from(tahunAjaran)
       .where(and(eq(tahunAjaran.id, tahunAjaranId), eq(tahunAjaran.tenantId, tenantId)));
-
     if (!result) {
       throw new BadRequestException('Tahun ajaran tidak ditemukan dalam tenant ini');
+    }
+  }
+
+  private async validateHariKerja(tenantId: string, hari: string): Promise<void> {
+    const hariKerja = await this.tenantService.getHariKerja(tenantId);
+    const allowedDays =
+      hariKerja === '5_hari'
+        ? ['senin', 'selasa', 'rabu', 'kamis', 'jumat']
+        : ['senin', 'selasa', 'rabu', 'kamis', 'jumat', 'sabtu'];
+
+    if (!allowedDays.includes(hari)) {
+      const namaHari = hari.charAt(0).toUpperCase() + hari.slice(1);
+      throw new BadRequestException(`Hari ${namaHari} bukan hari aktif untuk sekolah ini`);
     }
   }
 }

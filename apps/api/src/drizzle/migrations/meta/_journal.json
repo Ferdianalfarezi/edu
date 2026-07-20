@@ -36,6 +36,34 @@
       "when": 1784101136181,
       "tag": "0004_striped_silver_fox",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "6",
+      "when": 1784166707090,
+      "tag": "0005_misty_hannibal_king",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "6",
+      "when": 1784356907035,
+      "tag": "0006_parched_chimera",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "6",
+      "when": 1784369682700,
+      "tag": "0007_overjoyed_random",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "6",
+      "when": 1784457544356,
+      "tag": "0008_lazy_whistler",
+      "breakpoints": true
     }
   ]
 }

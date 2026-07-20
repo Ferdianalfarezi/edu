@@ -32,6 +32,12 @@ export const router = createRouter({
       meta: { roles: [Role.ADMIN, Role.SUPER_ADMIN] },
     },
     {
+      path: '/siswa/:id',
+      name: 'siswa-detail',
+      component: () => import('@/views/SiswaDetailView.vue'),
+      meta: { roles: [Role.ADMIN, Role.GURU, Role.KEPALA_SEKOLAH] },
+    },
+    {
       path: '/siswa',
       name: 'siswa',
       component: () => import('@/views/SiswaManagementView.vue'),
@@ -150,6 +156,12 @@ export const router = createRouter({
       name: 'tagihan',
       component: () => import('@/views/TagihanView.vue'),
       meta: { roles: [Role.ADMIN, Role.BENDAHARA] },
+    },
+    {
+      path: '/pengumuman',
+      name: 'pengumuman',
+      component: () => import('@/views/PengumumanView.vue'),
+      meta: { roles: [Role.ADMIN, Role.KEPALA_SEKOLAH] },
     },
     {
       path: '/audit-logs',

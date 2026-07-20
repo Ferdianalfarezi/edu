@@ -108,8 +108,7 @@ export class MataPelajaranService {
         .select({
           id: jadwalPelajaran.id,
           hari: jadwalPelajaran.hari,
-          jamMulai: jadwalPelajaran.jamMulai,
-          jamSelesai: jadwalPelajaran.jamSelesai,
+          jamKe: jadwalPelajaran.jamKe,
           kelasNama: kelas.nama,
         })
         .from(jadwalPelajaran)
@@ -124,7 +123,7 @@ export class MataPelajaranService {
 
       if (activeJadwal.length > 0) {
         const jadwalList = activeJadwal.map(
-          (j) => `${j.kelasNama} - ${j.hari} (${j.jamMulai}-${j.jamSelesai})`,
+          (j) => `${j.kelasNama} - ${j.hari} (Jam ke-${j.jamKe})`,
         );
 
         throw new BadRequestException({

@@ -5,11 +5,12 @@ export class RekapAbsensiQueryDto {
   @IsUUID()
   kelas_id: string;
 
-  @Transform(({ value }) => parseInt(value, 10))
+  @Transform(({ value }) => (value !== undefined ? parseInt(value, 10) : undefined))
   @IsInt()
   @Min(1)
   @Max(12)
-  bulan: number;
+  @IsOptional()
+  bulan?: number;
 
   @Transform(({ value }) => parseInt(value, 10))
   @IsInt()
@@ -22,15 +23,33 @@ export class RekapAbsensiQueryDto {
   })
   @IsOptional()
   periode?: 'bulanan' | 'semester' = 'bulanan';
+
+  @Transform(({ value }) => (value !== undefined ? parseInt(value, 10) : undefined))
+  @IsInt()
+  @Min(1)
+  @Max(2)
+  @IsOptional()
+  semester?: number;
 }
 
 export interface RekapAbsensiItem {
   siswa_id: string;
   siswa_nama: string;
+  siswa_nisn: string | null;
   hadir: number;
   izin: number;
   sakit: number;
   alpa: number;
-  total_hari_efektif: number | null;
   persentase_kehadiran: number | null;
+}
+
+export interface RekapAbsensiResponse {
+  kelas_id: string;
+  kelas_nama: string;
+  bulan: number;
+  tahun: number;
+  periode: 'bulanan' | 'semester';
+  total_hari_efektif: number | null;
+  hari_efektif_source: 'manual' | 'otomatis' | null;
+  data: RekapAbsensiItem[];
 }

@@ -21,7 +21,7 @@ import { PaginationQueryDto } from '@/common/dto/pagination.dto';
 import { Role } from '@edu/shared';
 import { Auditable, AuditInterceptor } from '@/modules/audit-log';
 import { TenantService, CreateTenantResult, TenantStats } from './tenant.service';
-import { CreateTenantDto, UpdateTenantDto } from './dto';
+import { CreateTenantDto, UpdateHariKerjaDto, UpdateTenantDto } from './dto';
 
 @Controller('tenants')
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -54,6 +54,17 @@ export class TenantController {
   }
 
   /**
+   * GET /tenants/profile
+   * Get tenant profile (id, nama, jumlah_tingkat) for the current user's tenant.
+   */
+  @Get('profile')
+  @Roles(Role.ADMIN, Role.KEPALA_SEKOLAH, Role.BENDAHARA, Role.GURU)
+  @HttpCode(HttpStatus.OK)
+  async getTenantProfile(@TenantId() tenantId: string) {
+    return this.tenantService.getTenantProfile(tenantId);
+  }
+
+  /**
    * POST /tenants
    * Create a new tenant (school) with a default admin user.
    * Sends credentials email to the admin.
@@ -69,6 +80,20 @@ export class TenantController {
   })
   async createTenant(@Body() dto: CreateTenantDto): Promise<CreateTenantResult> {
     return this.tenantService.createTenant(dto);
+  }
+
+  /**
+   * PATCH /tenants/hari-kerja
+   * Update the hari_kerja setting for the current user's tenant.
+   */
+  @Patch('hari-kerja')
+  @Roles(Role.ADMIN, Role.SUPER_ADMIN)
+  @HttpCode(HttpStatus.OK)
+  async updateHariKerja(
+    @TenantId() tenantId: string,
+    @Body() dto: UpdateHariKerjaDto,
+  ): Promise<{ message: string }> {
+    return this.tenantService.updateHariKerja(tenantId, dto.hari_kerja);
   }
 
   /**

@@ -5,10 +5,11 @@ import {
   ForbiddenException,
   NotFoundException,
 } from '@nestjs/common';
-import { eq, and, desc, lt, ilike } from 'drizzle-orm';
+import { eq, and, desc, ilike, sql } from 'drizzle-orm';
 import { DRIZZLE } from '@/drizzle/drizzle.module';
 import { rpp, kategoriRpp, rppFavorit, mataPelajaran, user } from '@/drizzle/schema';
 import { StorageService, BUCKET_PATHS } from '@/modules/storage/storage.service';
+import { paginate } from '@/common/utils/paginate';
 import { CreateRppDto } from './dto/create-rpp.dto';
 import { UpdateRppDto } from './dto/update-rpp.dto';
 import { GetRppQueryDto } from './dto/get-rpp-query.dto';
@@ -326,13 +327,16 @@ export class RppService {
 
   /**
    * GET /rpp — List published RPP in the same tenant.
-   * Cursor-based pagination sorted by tanggal_publish DESC.
+   * Offset-based pagination sorted by tanggal_publish DESC.
    * Supports filters: kategori_id, mata_pelajaran_id, tahun_terbit, and text search by judul.
    *
-   * Requirements: 43.1, 43.2, 43.3, 43.6, 43.7
+   * Requirements: 43.1, 43.2, 43.3, 43.6, 43.7, 1.3, 1.8, 1.9, 1.10
    */
   async list(tenantId: string, query: GetRppQueryDto) {
-    const limit = query.limit ?? 20;
+    const page = query.page ?? 1;
+    const pageSize = query.page_size ?? 15;
+    const offset = (page - 1) * pageSize;
+
     const conditions: any[] = [eq(rpp.tenantId, tenantId), eq(rpp.status, 'published')];
 
     // Filter by kategori
@@ -355,60 +359,52 @@ export class RppService {
       conditions.push(ilike(rpp.judul, `%${query.search}%`));
     }
 
-    // Cursor-based pagination: fetch records older than cursor's tanggal_publish
-    if (query.cursor) {
-      const [cursorRpp] = await this.db
-        .select({ tanggalPublish: rpp.tanggalPublish })
+    // Parallel COUNT + SELECT for performance
+    const [countResult, dataResult] = await Promise.all([
+      this.db
+        .select({ count: sql<number>`count(*)::int` })
         .from(rpp)
-        .where(and(eq(rpp.id, query.cursor), eq(rpp.tenantId, tenantId)));
+        .innerJoin(user, eq(rpp.guruId, user.id))
+        .innerJoin(mataPelajaran, eq(rpp.mataPelajaranId, mataPelajaran.id))
+        .innerJoin(kategoriRpp, eq(rpp.kategoriId, kategoriRpp.id))
+        .where(and(...conditions)),
+      this.db
+        .select({
+          id: rpp.id,
+          judul: rpp.judul,
+          kontenType: rpp.kontenType,
+          tahunTerbit: rpp.tahunTerbit,
+          tanggalPublish: rpp.tanggalPublish,
+          updatedAt: rpp.updatedAt,
+          guruNama: user.nama,
+          mataPelajaranNama: mataPelajaran.nama,
+          kategoriNama: kategoriRpp.nama,
+        })
+        .from(rpp)
+        .innerJoin(user, eq(rpp.guruId, user.id))
+        .innerJoin(mataPelajaran, eq(rpp.mataPelajaranId, mataPelajaran.id))
+        .innerJoin(kategoriRpp, eq(rpp.kategoriId, kategoriRpp.id))
+        .where(and(...conditions))
+        .orderBy(desc(rpp.tanggalPublish))
+        .limit(pageSize)
+        .offset(offset),
+    ]);
 
-      if (cursorRpp) {
-        conditions.push(lt(rpp.tanggalPublish, cursorRpp.tanggalPublish));
-      }
-    }
+    const totalCount = countResult[0]?.count ?? 0;
 
-    // Fetch limit + 1 to determine if there's a next page
-    const rows = await this.db
-      .select({
-        id: rpp.id,
-        judul: rpp.judul,
-        kontenType: rpp.kontenType,
-        tahunTerbit: rpp.tahunTerbit,
-        tanggalPublish: rpp.tanggalPublish,
-        updatedAt: rpp.updatedAt,
-        guruNama: user.nama,
-        mataPelajaranNama: mataPelajaran.nama,
-        kategoriNama: kategoriRpp.nama,
-      })
-      .from(rpp)
-      .innerJoin(user, eq(rpp.guruId, user.id))
-      .innerJoin(mataPelajaran, eq(rpp.mataPelajaranId, mataPelajaran.id))
-      .innerJoin(kategoriRpp, eq(rpp.kategoriId, kategoriRpp.id))
-      .where(and(...conditions))
-      .orderBy(desc(rpp.tanggalPublish))
-      .limit(limit + 1);
+    const data = dataResult.map((row: any) => ({
+      id: row.id,
+      judul: row.judul,
+      konten_type: row.kontenType,
+      tahun_terbit: row.tahunTerbit,
+      tanggal_publish: row.tanggalPublish,
+      updated_at: row.updatedAt,
+      guru_nama: row.guruNama,
+      mata_pelajaran: row.mataPelajaranNama,
+      kategori: row.kategoriNama,
+    }));
 
-    const hasNext = rows.length > limit;
-    const data = rows.slice(0, limit);
-    const nextCursor = hasNext && data.length > 0 ? data[data.length - 1].id : null;
-
-    return {
-      data: data.map((row: any) => ({
-        id: row.id,
-        judul: row.judul,
-        konten_type: row.kontenType,
-        tahun_terbit: row.tahunTerbit,
-        tanggal_publish: row.tanggalPublish,
-        updated_at: row.updatedAt,
-        guru_nama: row.guruNama,
-        mata_pelajaran: row.mataPelajaranNama,
-        kategori: row.kategoriNama,
-      })),
-      meta: {
-        has_next: hasNext,
-        cursor: nextCursor,
-      },
-    };
+    return paginate(data, totalCount, page, pageSize);
   }
 
   /**

@@ -20,6 +20,7 @@ import { SiswaModule } from './modules/siswa/siswa.module';
 import { JadwalModule } from './modules/jadwal/jadwal.module';
 import { AbsensiModule } from './modules/absensi/absensi.module';
 import { NotifikasiModule } from './modules/notifikasi/notifikasi.module';
+import { PengumumanModule } from './modules/pengumuman/pengumuman.module';
 import { TagihanModule } from './modules/tagihan/tagihan.module';
 import { RaporModule } from './modules/rapor/rapor.module';
 import { RppModule } from './modules/rpp/rpp.module';
@@ -48,15 +49,25 @@ import { MONITORING_CONFIG } from './common/monitoring/monitoring.config';
     LoggerModule.forRootAsync({
       inject: [ConfigService],
       useFactory: (configService: ConfigService) => {
-        const isProduction = configService.get('NODE_ENV') === 'production';
+        // Check if pino-pretty is actually available (it's a devDependency,
+        // not present in production Docker builds)
+        let hasPinoPretty = false;
+        try {
+          require.resolve('pino-pretty');
+          hasPinoPretty = true;
+        } catch {
+          hasPinoPretty = false;
+        }
+        const isProduction = process.env.NODE_ENV === 'production';
         return {
           pinoHttp: {
             level: isProduction
               ? MONITORING_CONFIG.logging.productionLevel
               : MONITORING_CONFIG.logging.developmentLevel,
-            transport: isProduction
-              ? undefined
-              : { target: 'pino-pretty', options: { colorize: true, singleLine: true } },
+            transport:
+              !isProduction && hasPinoPretty
+                ? { target: 'pino-pretty', options: { colorize: true, singleLine: true } }
+                : undefined,
             redact: MONITORING_CONFIG.logging.redactPaths as unknown as string[],
             serializers: {
               // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -139,6 +150,9 @@ import { MONITORING_CONFIG } from './common/monitoring/monitoring.config';
 
     // Notifikasi (push notifications, device tokens)
     NotifikasiModule,
+
+    // Pengumuman (announcements broadcast/targeted)
+    PengumumanModule,
 
     // Tagihan (billing generation, payments)
     TagihanModule,

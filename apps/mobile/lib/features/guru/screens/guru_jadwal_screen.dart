@@ -7,7 +7,7 @@ import '../providers/jadwal_provider.dart';
 /// Guru Jadwal (teaching schedule) view screen.
 ///
 /// Displays:
-/// - Day selector chips (Senin–Sabtu), defaulting to today's day
+/// - Day selector chips (respects hari_kerja: Senin–Jumat or Senin–Sabtu)
 /// - List of jadwal entries for the selected day
 /// - Each card: jam_mulai–jam_selesai, kelas name, mapel name
 /// - Guru pengganti indicator when substitute is assigned
@@ -20,6 +20,7 @@ class GuruJadwalScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final selectedHari = ref.watch(selectedHariProvider);
     final jadwalAsync = ref.watch(jadwalSayaProvider(selectedHari));
+    final activeDays = ref.watch(activeHariListProvider);
 
     return Scaffold(
       appBar: AppBar(
@@ -30,6 +31,7 @@ class GuruJadwalScreen extends ConsumerWidget {
           // Day selector chips
           _DaySelector(
             selectedHari: selectedHari,
+            availableDays: activeDays,
             onSelected: (hari) {
               ref.read(selectedHariProvider.notifier).state = hari;
             },
@@ -60,10 +62,12 @@ class GuruJadwalScreen extends ConsumerWidget {
 class _DaySelector extends StatelessWidget {
   const _DaySelector({
     required this.selectedHari,
+    required this.availableDays,
     required this.onSelected,
   });
 
   final String selectedHari;
+  final List<String> availableDays;
   final ValueChanged<String> onSelected;
 
   static const _dayLabels = {
@@ -82,7 +86,7 @@ class _DaySelector extends StatelessWidget {
       child: SingleChildScrollView(
         scrollDirection: Axis.horizontal,
         child: Row(
-          children: hariList.map((hari) {
+          children: availableDays.map((hari) {
             final isSelected = hari == selectedHari;
             return Padding(
               padding: const EdgeInsets.only(right: 8),
@@ -174,24 +178,17 @@ class _JadwalCard extends StatelessWidget {
                   child: Column(
                     children: [
                       Text(
-                        entry.jamMulai,
+                        'Jam',
                         style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w600,
+                          fontSize: 11,
                           color: theme.colorScheme.onPrimaryContainer,
                         ),
                       ),
                       Text(
-                        '–',
+                        '${entry.jamKe}',
                         style: TextStyle(
-                          color: theme.colorScheme.onPrimaryContainer,
-                        ),
-                      ),
-                      Text(
-                        entry.jamSelesai,
-                        style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w600,
+                          fontSize: 18,
+                          fontWeight: FontWeight.w700,
                           color: theme.colorScheme.onPrimaryContainer,
                         ),
                       ),

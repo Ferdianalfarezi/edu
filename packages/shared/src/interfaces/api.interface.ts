@@ -38,3 +38,29 @@ export interface CursorPaginationQuery {
   cursor?: string;
   limit?: number;
 }
+
+/**
+ * Offset-based pagination metadata.
+ */
+export interface OffsetPaginationMeta {
+  page: number;
+  page_size: number;
+  total_count: number;
+  total_pages: number;
+}
+
+/**
+ * Offset-based pagination response.
+ */
+export interface OffsetPaginatedResponse<T> {
+  data: T[];
+  meta: OffsetPaginationMeta;
+}
+
+/**
+ * Offset-based pagination query params.
+ */
+export interface OffsetPaginationQuery {
+  page?: number;
+  page_size?: number;
+}

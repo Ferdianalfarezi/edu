@@ -341,7 +341,7 @@ onMounted(() => {
 
       <!-- Rekap Table -->
       <div
-        v-if="rekapData.data.length > 0"
+        v-if="rekapData.data && rekapData.data.length > 0"
         class="bg-white border border-border rounded-xl overflow-hidden"
       >
         <div class="overflow-x-auto">

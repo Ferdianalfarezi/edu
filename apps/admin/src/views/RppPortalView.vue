@@ -2,9 +2,10 @@
 import { ref, computed, onMounted, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import { api } from '@/api/client';
-import { PageHeader, SearchSelect, ActionButton } from '@/components/ui';
+import { PageHeader, SearchSelect, ActionButton, TablePagination } from '@/components/ui';
 import type { SelectOption } from '@/components/ui';
 import { useAuthStore } from '@/stores/auth';
+import { useTableUrlState } from '@/composables/useTableUrlState';
 import { Role } from '@edu/shared';
 
 interface RppItem {
@@ -30,11 +31,13 @@ interface KategoriRpp {
   nama: string;
 }
 
-interface PaginatedResponse {
+interface OffsetPaginatedResponse {
   data: RppItem[];
   meta: {
-    has_next: boolean;
-    cursor: string | null;
+    page: number;
+    page_size: number;
+    total_count: number;
+    total_pages: number;
   };
 }
 
@@ -44,14 +47,21 @@ const canCreateRpp = computed(() => !authStore.hasRole(Role.ADMIN));
 
 const items = ref<RppItem[]>([]);
 const loading = ref(false);
-const nextCursor = ref<string | null>(null);
-const hasMore = ref(false);
+const errorMessage = ref('');
 
-// Filters
-const search = ref('');
-const filterMapel = ref('');
-const filterKategori = ref('');
-const filterTahun = ref('');
+// URL-synced table state
+const { page, pageSize, search, filters } = useTableUrlState({
+  searchKey: 'search',
+  defaultPageSize: 15,
+  filters: [
+    { key: 'mapel', type: 'string' },
+    { key: 'kategori', type: 'string' },
+    { key: 'tahun', type: 'string' },
+  ],
+});
+
+const totalCount = ref(0);
+const totalPages = ref(0);
 
 // Selectors
 const mataPelajaranList = ref<MataPelajaran[]>([]);
@@ -69,8 +79,6 @@ const mapelFilterOptions = computed<SelectOption[]>(() =>
 const kategoriFilterOptions = computed<SelectOption[]>(() =>
   kategoriList.value.map((k) => ({ value: k.id, label: k.nama })),
 );
-
-let searchTimeout: ReturnType<typeof setTimeout> | null = null;
 
 async function fetchMataPelajaran() {
   try {
@@ -90,51 +98,29 @@ async function fetchKategori() {
   }
 }
 
-async function fetchRpp(reset = false) {
-  if (reset) {
-    items.value = [];
-    nextCursor.value = null;
-    hasMore.value = false;
-  }
-
+async function fetchRpp() {
   loading.value = true;
+  errorMessage.value = '';
   try {
-    const params: Record<string, string> = {};
+    const params: Record<string, string | number> = {
+      page: page.value,
+      page_size: pageSize.value,
+    };
     if (search.value) params.search = search.value;
-    if (filterMapel.value) params.mapel = filterMapel.value;
-    if (filterKategori.value) params.kategori = filterKategori.value;
-    if (filterTahun.value) params.tahun = filterTahun.value;
-    if (nextCursor.value) params.cursor = nextCursor.value;
+    if (filters['mapel'].value) params.mapel = filters['mapel'].value;
+    if (filters['kategori'].value) params.kategori = filters['kategori'].value;
+    if (filters['tahun'].value) params.tahun = filters['tahun'].value;
 
-    const { data } = await api.get<PaginatedResponse>('/rpp', { params });
-    if (reset) {
-      items.value = data.data;
-    } else {
-      items.value.push(...data.data);
-    }
-    nextCursor.value = data.meta.cursor;
-    hasMore.value = data.meta.has_next;
+    const { data } = await api.get<OffsetPaginatedResponse>('/rpp', { params });
+    items.value = data.data;
+    totalCount.value = data.meta.total_count;
+    totalPages.value = data.meta.total_pages;
   } catch (e) {
     console.error('Failed to fetch RPP:', e);
+    errorMessage.value = 'Gagal memuat data RPP. Silakan coba lagi.';
+    // Keep existing data on error (don't clear items.value)
   } finally {
     loading.value = false;
-  }
-}
-
-function onSearchInput() {
-  if (searchTimeout) clearTimeout(searchTimeout);
-  searchTimeout = setTimeout(() => {
-    fetchRpp(true);
-  }, 300);
-}
-
-function onFilterChange() {
-  fetchRpp(true);
-}
-
-function loadMore() {
-  if (hasMore.value && !loading.value) {
-    fetchRpp(false);
   }
 }
 
@@ -169,11 +155,12 @@ function formatDate(dateStr: string): string {
   });
 }
 
-watch([filterMapel, filterKategori, filterTahun], onFilterChange);
+// Watch composable state to trigger fetch
+watch([page, pageSize, search, filters['mapel'], filters['kategori'], filters['tahun']], fetchRpp);
 
 onMounted(async () => {
   await Promise.all([fetchMataPelajaran(), fetchKategori()]);
-  await fetchRpp(true);
+  await fetchRpp();
 });
 </script>
 
@@ -200,27 +187,34 @@ onMounted(async () => {
           type="text"
           class="w-full pl-8 pr-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
           placeholder="Cari judul RPP..."
-          @input="onSearchInput"
         />
       </div>
       <SearchSelect
-        v-model="filterMapel"
+        v-model="filters['mapel'].value"
         :options="mapelFilterOptions"
         placeholder="Semua Mata Pelajaran"
         clearable
       />
       <SearchSelect
-        v-model="filterKategori"
+        v-model="filters['kategori'].value"
         :options="kategoriFilterOptions"
         placeholder="Semua Kategori"
         clearable
       />
       <SearchSelect
-        v-model="filterTahun"
+        v-model="filters['tahun'].value"
         :options="tahunFilterOptions"
         placeholder="Semua Tahun"
         clearable
       />
+    </div>
+
+    <!-- Error message -->
+    <div
+      v-if="errorMessage"
+      class="mb-4 p-3 bg-danger-50 border border-danger-200 rounded-lg text-sm text-danger-700"
+    >
+      {{ errorMessage }}
     </div>
 
     <!-- RPP List -->
@@ -289,15 +283,15 @@ onMounted(async () => {
       </div>
     </div>
 
-    <!-- Load more -->
-    <div v-if="hasMore" class="flex justify-center mt-6">
-      <button
-        class="px-3 py-2 text-sm font-medium text-text-secondary bg-white border border-border rounded-lg hover:bg-surface-50 transition-colors"
-        :disabled="loading"
-        @click="loadMore"
-      >
-        {{ loading ? 'Memuat...' : 'Muat Lebih Banyak' }}
-      </button>
-    </div>
+    <!-- Pagination -->
+    <TablePagination
+      :current-page="page"
+      :total-pages="totalPages"
+      :total-count="totalCount"
+      :page-size="pageSize"
+      :loading="loading"
+      @page-change="page = $event"
+      @page-size-change="pageSize = $event"
+    />
   </div>
 </template>

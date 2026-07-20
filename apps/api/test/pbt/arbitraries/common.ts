@@ -57,7 +57,7 @@ export const RPP_STATUSES = ['draft', 'published'] as const;
 export type RppStatus = (typeof RPP_STATUSES)[number];
 
 /** Student statuses */
-export const STUDENT_STATUSES = ['aktif', 'pindah_sekolah', 'keluar', 'alumni'] as const;
+export const STUDENT_STATUSES = ['aktif', 'pindah_sekolah', 'keluar', 'lulus'] as const;
 export type StudentStatus = (typeof STUDENT_STATUSES)[number];
 
 /** Tahun Ajaran statuses */

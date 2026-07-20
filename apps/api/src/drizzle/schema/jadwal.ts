@@ -3,7 +3,6 @@ import {
   uuid,
   varchar,
   integer,
-  time,
   date,
   boolean,
   timestamp,
@@ -19,7 +18,7 @@ import { tahunAjaran } from './tahun-ajaran';
 
 /**
  * jadwal_pelajaran — Class schedule per semester.
- * One entry per slot (kelas + hari + jam + mapel + guru).
+ * One entry per slot (kelas + hari + jam_ke + mapel + guru).
  * Linked to tahun_ajaran and bounded by validity dates.
  *
  * Requirements: 27.1
@@ -41,8 +40,7 @@ export const jadwalPelajaran = pgTable(
       .references(() => tahunAjaran.id),
     semester: integer('semester').notNull(),
     hari: varchar('hari', { length: 10 }).notNull(),
-    jamMulai: time('jam_mulai').notNull(),
-    jamSelesai: time('jam_selesai').notNull(),
+    jamKe: integer('jam_ke').notNull(),
     tanggalMulaiBerlaku: date('tanggal_mulai_berlaku').notNull(),
     tanggalSelesaiBerlaku: date('tanggal_selesai_berlaku').notNull(),
     isIstirahat: boolean('is_istirahat').default(false),
@@ -56,6 +54,7 @@ export const jadwalPelajaran = pgTable(
       'jadwal_hari_check',
       sql`${table.hari} IN ('senin','selasa','rabu','kamis','jumat','sabtu')`,
     ),
+    jamKeCheck: check('jadwal_jam_ke_check', sql`${table.jamKe} BETWEEN 1 AND 10`),
     /** Composite index for guru schedule lookup by day and validity range (Requirements: 35.1) */
     guruHariIdx: index('idx_jadwal_guru_hari').on(
       table.guruId,

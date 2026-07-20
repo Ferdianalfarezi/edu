@@ -1,8 +1,8 @@
 import { ForbiddenException, Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { NodePgDatabase } from 'drizzle-orm/node-postgres';
-import { eq, and } from 'drizzle-orm';
+import { eq, and, inArray } from 'drizzle-orm';
 import { DRIZZLE } from '@/drizzle/drizzle.module';
-import { rapor, raporNilai } from '@/drizzle/schema/rapor';
+import { rapor, raporNilai, komponenPenilaian } from '@/drizzle/schema/rapor';
 import { mataPelajaran } from '@/drizzle/schema/mata-pelajaran';
 import { siswa } from '@/drizzle/schema/siswa';
 import { tahunAjaran } from '@/drizzle/schema/tahun-ajaran';
@@ -12,7 +12,7 @@ import { tahunAjaran } from '@/drizzle/schema/tahun-ajaran';
  */
 export interface RaporNilaiMapelItem {
   mapel: string;
-  komponen_nilai: { komponen_id: string; nilai: string | number }[];
+  komponen_nilai: { komponen_id: string; nama: string; nilai: string | number }[];
   capaian_pembelajaran: string | null;
 }
 
@@ -141,12 +141,27 @@ export class RaporOrangTuaService {
         }
       }
 
-      // Build nilai per mapel
-      const nilaiPerMapel: RaporNilaiMapelItem[] = nilaiRows.map((row) => ({
-        mapel: mapelNames.get(row.mataPelajaranId) ?? '',
-        komponen_nilai: (row.komponenNilai as any[]) ?? [],
-        capaian_pembelajaran: row.capaianPembelajaran,
-      }));
+      // Build komponen name lookup for this tenant
+      const komponenRows = await this.db
+        .select({ id: komponenPenilaian.id, nama: komponenPenilaian.nama })
+        .from(komponenPenilaian)
+        .where(eq(komponenPenilaian.tenantId, siswaData.tenantId));
+      const komponenMap = new Map(komponenRows.map((k) => [k.id, k.nama]));
+
+      // Build nilai per mapel with resolved komponen names
+      const nilaiPerMapel: RaporNilaiMapelItem[] = nilaiRows.map((row) => {
+        const rawKomponen = (row.komponenNilai as any[]) ?? [];
+        const resolvedKomponen = rawKomponen.map((k: any) => ({
+          komponen_id: k.komponen_id,
+          nama: komponenMap.get(k.komponen_id) ?? k.komponen_id,
+          nilai: k.nilai,
+        }));
+        return {
+          mapel: mapelNames.get(row.mataPelajaranId) ?? '',
+          komponen_nilai: resolvedKomponen,
+          capaian_pembelajaran: row.capaianPembelajaran,
+        };
+      });
 
       // peringkat, rata_rata, catatan_wali_kelas, p5_deskripsi are per-student per-rapor
       // They may appear on any row (typically set per-student, same across all mapel entries)
@@ -169,6 +184,15 @@ export class RaporOrangTuaService {
         p5_deskripsi: p5Deskripsi,
       });
     }
+
+    // Sort: terbaru di atas (semester_2 → uts_semester_2 → semester_1 → uts_semester_1)
+    const periodeOrder: Record<string, number> = {
+      semester_2: 0,
+      uts_semester_2: 1,
+      semester_1: 2,
+      uts_semester_1: 3,
+    };
+    results.sort((a, b) => (periodeOrder[a.periode] ?? 99) - (periodeOrder[b.periode] ?? 99));
 
     return results;
   }

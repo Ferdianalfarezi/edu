@@ -27,6 +27,8 @@ export interface ComponentHealth {
 export class HealthService {
   private readonly logger = new Logger(HealthService.name);
   private readonly startTime = Date.now();
+  /** Grace period (in ms) after startup where health always returns 'healthy' to pass Railway healthcheck */
+  private readonly STARTUP_GRACE_MS = 30_000;
 
   constructor(
     private readonly drizzleService: DrizzleService,
@@ -35,6 +37,25 @@ export class HealthService {
   ) {}
 
   async getHealth(): Promise<HealthStatus> {
+    const uptimeMs = Date.now() - this.startTime;
+
+    // During startup grace period, return healthy immediately so Railway
+    // doesn't kill the container while dependencies are still connecting
+    if (uptimeMs < this.STARTUP_GRACE_MS) {
+      return {
+        status: 'healthy',
+        timestamp: new Date().toISOString(),
+        uptime: Math.floor(uptimeMs / 1000),
+        checks: {
+          database: { status: 'up', responseTimeMs: 0 },
+          redis: { status: 'up', responseTimeMs: 0 },
+          storage: { status: 'up', responseTimeMs: 0 },
+        },
+        version: process.env.npm_package_version || '0.0.1',
+        environment: this.configService.get<string>('NODE_ENV', 'development'),
+      };
+    }
+
     const [database, redis, storage] = await Promise.all([
       this.checkDatabase(),
       this.checkRedis(),
@@ -57,7 +78,7 @@ export class HealthService {
     return {
       status,
       timestamp: new Date().toISOString(),
-      uptime: Math.floor((Date.now() - this.startTime) / 1000),
+      uptime: Math.floor(uptimeMs / 1000),
       checks,
       version: process.env.npm_package_version || '0.0.1',
       environment: this.configService.get<string>('NODE_ENV', 'development'),

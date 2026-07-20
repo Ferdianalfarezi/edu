@@ -8,7 +8,8 @@ import {
 } from '@nestjs/common';
 import { InjectQueue } from '@nestjs/bull';
 import { Queue } from 'bull';
-import { eq, and, or, asc, gt, sql } from 'drizzle-orm';
+import { eq, and, or, asc, gt, ilike, sql } from 'drizzle-orm';
+import { paginate } from '../../common/utils/paginate';
 import { DrizzleService } from '@/drizzle/drizzle.service';
 import { StorageService, BUCKET_PATHS } from '@/modules/storage/storage.service';
 import { KonfigurasiService, DEFAULT_CONFIG } from '@/modules/konfigurasi/konfigurasi.service';
@@ -132,7 +133,7 @@ export class TagihanService {
     }
 
     try {
-      return await this.processGeneration(tenantId, tahunAjaranId, months);
+      return await this.processGeneration(tenantId, tahunAjaranId, months, dto.kelas_id);
     } finally {
       await this.redisService.releaseLock(lockKey);
     }
@@ -900,10 +901,21 @@ export class TagihanService {
     tenantId: string,
     tahunAjaranId: string,
     months: { bulan: number; tahun: number }[],
+    kelasId?: string,
   ): Promise<GenerateTagihanResult> {
     const db = this.drizzleService.db;
 
     // Get all active students with their kelas for this tenant + tahun_ajaran
+    const conditions = [
+      eq(siswa.tenantId, tenantId),
+      eq(siswa.status, 'aktif'),
+      eq(kelas.tahunAjaranId, tahunAjaranId),
+    ];
+
+    if (kelasId) {
+      conditions.push(eq(siswa.kelasId, kelasId));
+    }
+
     const activeStudents = await db
       .select({
         id: siswa.id,
@@ -914,13 +926,7 @@ export class TagihanService {
       })
       .from(siswa)
       .innerJoin(kelas, eq(siswa.kelasId, kelas.id))
-      .where(
-        and(
-          eq(siswa.tenantId, tenantId),
-          eq(siswa.status, 'aktif'),
-          eq(kelas.tahunAjaranId, tahunAjaranId),
-        ),
-      );
+      .where(and(...conditions));
 
     if (activeStudents.length === 0) {
       return { created: 0, skipped: 0, total_nominal: 0, months_processed: months.length };
@@ -1509,12 +1515,17 @@ export class TagihanService {
   // ═══════════════════════════════════════════════════════════════════
 
   /**
-   * List all tagihan with cursor-pagination and filters.
+   * List all tagihan with offset-based pagination and filters.
    * Supports: status, kelas_id, bulan, tahun, search (by student name).
+   *
+   * Requirements: 1.2, 1.8, 1.9, 1.10
    */
   async listTagihan(tenantId: string, query: ListTagihanQueryDto) {
     const db = this.drizzleService.db;
-    const limit = query.limit ?? 20;
+    const page = query.page ?? 1;
+    const pageSize = query.page_size ?? 15;
+    const offset = (page - 1) * pageSize;
+
     const conditions: any[] = [eq(tagihan.tenantId, tenantId)];
 
     if (query.status) {
@@ -1529,69 +1540,58 @@ export class TagihanService {
     if (query.tahun) {
       conditions.push(eq(tagihan.tahun, query.tahun));
     }
-
-    // Cursor-based pagination
-    if (query.cursor) {
-      const [cursorRecord] = await db
-        .select({ createdAt: tagihan.createdAt, id: tagihan.id })
-        .from(tagihan)
-        .where(eq(tagihan.id, query.cursor))
-        .limit(1);
-
-      if (cursorRecord && cursorRecord.createdAt) {
-        conditions.push(
-          or(
-            sql`${tagihan.createdAt} < ${cursorRecord.createdAt}`,
-            and(eq(tagihan.createdAt, cursorRecord.createdAt), gt(tagihan.id, cursorRecord.id)),
-          )!,
-        );
-      }
+    if (query.search) {
+      conditions.push(ilike(siswa.nama, `%${query.search}%`));
     }
 
-    const results = await db
-      .select({
-        id: tagihan.id,
-        siswaId: tagihan.siswaId,
-        bulan: tagihan.bulan,
-        tahun: tagihan.tahun,
-        nominal: tagihan.nominal,
-        totalDibayar: tagihan.totalDibayar,
-        status: tagihan.status,
-        tanggalJatuhTempo: tagihan.tanggalJatuhTempo,
-        createdAt: tagihan.createdAt,
-        siswa_nama: siswa.nama,
-        kelas_nama: kelas.nama,
-      })
-      .from(tagihan)
-      .innerJoin(siswa, eq(tagihan.siswaId, siswa.id))
-      .leftJoin(kelas, eq(siswa.kelasId, kelas.id))
-      .where(and(...conditions))
-      .orderBy(sql`${tagihan.createdAt} DESC`)
-      .limit(limit + 1);
+    // Parallel COUNT + SELECT for performance (Requirements: 1.8, 1.9)
+    const [countResult, dataResult] = await Promise.all([
+      db
+        .select({ count: sql<number>`count(*)::int` })
+        .from(tagihan)
+        .innerJoin(siswa, eq(tagihan.siswaId, siswa.id))
+        .leftJoin(kelas, eq(siswa.kelasId, kelas.id))
+        .where(and(...conditions)),
+      db
+        .select({
+          id: tagihan.id,
+          siswaId: tagihan.siswaId,
+          bulan: tagihan.bulan,
+          tahun: tagihan.tahun,
+          nominal: tagihan.nominal,
+          totalDibayar: tagihan.totalDibayar,
+          status: tagihan.status,
+          tanggalJatuhTempo: tagihan.tanggalJatuhTempo,
+          createdAt: tagihan.createdAt,
+          siswa_nama: siswa.nama,
+          kelas_nama: kelas.nama,
+        })
+        .from(tagihan)
+        .innerJoin(siswa, eq(tagihan.siswaId, siswa.id))
+        .leftJoin(kelas, eq(siswa.kelasId, kelas.id))
+        .where(and(...conditions))
+        .orderBy(sql`${tagihan.createdAt} DESC`)
+        .limit(pageSize)
+        .offset(offset),
+    ]);
 
-    const hasNext = results.length > limit;
-    const data = results.slice(0, limit);
-    const nextCursor = hasNext && data.length > 0 ? data[data.length - 1].id : null;
+    const totalCount = countResult[0]?.count ?? 0;
 
-    return {
-      data: data.map((row) => ({
-        id: row.id,
-        siswa_id: row.siswaId,
-        siswa_nama: row.siswa_nama,
-        kelas_nama: row.kelas_nama,
-        bulan: row.bulan,
-        tahun: row.tahun,
-        nominal: row.nominal,
-        total_dibayar: row.totalDibayar,
-        status: row.status,
-        tanggal_jatuh_tempo: row.tanggalJatuhTempo,
-        created_at: row.createdAt,
-      })),
-      meta: {
-        has_next: hasNext,
-        cursor: nextCursor,
-      },
-    };
+    const data = dataResult.map((row) => ({
+      id: row.id,
+      siswa_id: row.siswaId,
+      siswa_nama: row.siswa_nama,
+      kelas_nama: row.kelas_nama,
+      bulan: row.bulan,
+      tahun: row.tahun,
+      nominal: row.nominal,
+      total_dibayar: row.totalDibayar,
+      status: row.status,
+      tanggal_jatuh_tempo: row.tanggalJatuhTempo,
+      created_at: row.createdAt,
+    }));
+
+    return paginate(data, totalCount, page, pageSize);
   }
 
   // ═══════════════════════════════════════════════════════════════════

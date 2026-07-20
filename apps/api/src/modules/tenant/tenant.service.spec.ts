@@ -80,6 +80,7 @@ describe('TenantService', () => {
       alamat: 'Jl. Merdeka No. 1',
       telepon: '021-123456',
       email: 'info@sdharapan.sch.id',
+      jumlah_tingkat: 6,
       admin_nama: 'Admin Sekolah',
       admin_email: 'admin@sdharapan.sch.id',
     };
@@ -247,6 +248,7 @@ describe('TenantService', () => {
           telepon: '021-111',
           email: 'a@a.com',
           logoUrl: null,
+          jumlahTingkat: 6,
           isActive: true,
           createdAt: new Date('2024-01-01'),
           updatedAt: new Date('2024-01-01'),
@@ -259,6 +261,7 @@ describe('TenantService', () => {
           telepon: null,
           email: 'b@b.com',
           logoUrl: null,
+          jumlahTingkat: 3,
           isActive: false,
           createdAt: new Date('2024-02-01'),
           updatedAt: new Date('2024-02-01'),
@@ -273,11 +276,11 @@ describe('TenantService', () => {
 
       expect(result).toHaveLength(2);
       expect(result[0].nama).toBe('SD Maju');
-      expect(result[0].userCount).toBe(5);
-      expect(result[0].isActive).toBe(true);
+      expect(result[0].user_count).toBe(5);
+      expect(result[0].is_active).toBe(true);
       expect(result[1].nama).toBe('SMP Bersama');
-      expect(result[1].userCount).toBe(0);
-      expect(result[1].isActive).toBe(false);
+      expect(result[1].user_count).toBe(0);
+      expect(result[1].is_active).toBe(false);
     });
 
     it('should return empty array when no tenants exist', async () => {

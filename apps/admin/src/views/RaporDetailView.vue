@@ -313,7 +313,11 @@ onMounted(() => {
                 </td>
                 <td class="px-4 py-3 text-sm text-text-secondary">{{ siswa.nisn || '-' }}</td>
                 <td class="px-4 py-3 text-sm">
-                  {{ siswa.rata_rata !== null ? siswa.rata_rata.toFixed(1) : '-' }}
+                  {{
+                    siswa.rata_rata !== null && siswa.rata_rata !== undefined
+                      ? Number(siswa.rata_rata).toFixed(1)
+                      : '-'
+                  }}
                 </td>
                 <td class="px-4 py-3 text-sm">{{ siswa.peringkat ?? '-' }}</td>
                 <td class="px-4 py-3">
@@ -366,7 +370,11 @@ onMounted(() => {
           <div class="flex flex-col">
             <span class="text-xs text-text-secondary uppercase tracking-wide">Rata-rata</span>
             <span class="text-xl font-bold text-text-primary">
-              {{ detailSiswa.rata_rata !== null ? detailSiswa.rata_rata.toFixed(1) : '-' }}
+              {{
+                detailSiswa.rata_rata !== null && detailSiswa.rata_rata !== undefined
+                  ? Number(detailSiswa.rata_rata).toFixed(1)
+                  : '-'
+              }}
             </span>
           </div>
           <div class="flex flex-col">

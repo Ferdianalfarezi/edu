@@ -5,6 +5,7 @@ import { AbsensiService } from './absensi.service';
 import { DrizzleService } from '@/drizzle/drizzle.service';
 import { KonfigurasiService } from '@/modules/konfigurasi/konfigurasi.service';
 import { JadwalService } from '@/modules/jadwal/jadwal.service';
+import { TenantService } from '@/modules/tenant/tenant.service';
 import { QUEUE_NAMES } from '@/modules/queue/queue.constants';
 import { CreateAbsensiDto } from './dto';
 
@@ -94,6 +95,10 @@ describe('AbsensiService - createAbsensi & getKelasHariIni', () => {
         { provide: DrizzleService, useValue: { db: mockDb } },
         { provide: KonfigurasiService, useValue: { getConfigByKey: jest.fn() } },
         { provide: JadwalService, useValue: mockJadwalService },
+        {
+          provide: TenantService,
+          useValue: { getHariKerja: jest.fn().mockResolvedValue('6_hari') },
+        },
         { provide: getQueueToken(QUEUE_NAMES.NOTIFICATION), useValue: mockNotificationQueue },
         { provide: getQueueToken(QUEUE_NAMES.EXPORT), useValue: { add: jest.fn() } },
       ],
@@ -402,9 +407,7 @@ describe('AbsensiService - createAbsensi & getKelasHariIni', () => {
      * Requirement 1.1: Returns scheduled classes with details.
      */
     it('should return scheduled classes when guru has jadwal today', async () => {
-      const scheduledClasses = [
-        { kelasId: kelasId, kelasNama: '6A', jamMulai: '08:00', jamSelesai: '09:30' },
-      ];
+      const scheduledClasses = [{ kelasId: kelasId, kelasNama: '6A' }];
 
       selectResults = [
         scheduledClasses, // jadwal
@@ -428,7 +431,7 @@ describe('AbsensiService - createAbsensi & getKelasHariIni', () => {
     it('should include pengganti classes in the result', async () => {
       const kelasId2 = 'eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee';
       selectResults = [
-        [{ kelasId: kelasId, kelasNama: '6A', jamMulai: '08:00', jamSelesai: '09:30' }],
+        [{ kelasId: kelasId, kelasNama: '6A' }],
         [{ kelasId: kelasId2, kelasNama: '5B' }], // pengganti class
       ];
 

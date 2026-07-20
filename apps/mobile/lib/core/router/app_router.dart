@@ -18,6 +18,7 @@ import '../../features/orang_tua/screens/attendance_screen.dart';
 import '../../features/orang_tua/screens/notification_history_screen.dart';
 import '../../features/orang_tua/screens/notification_preferences_screen.dart';
 import '../../features/orang_tua/screens/orang_tua_home_screen.dart';
+import '../../features/orang_tua/screens/pengumuman_detail_screen.dart';
 import '../../features/orang_tua/screens/payment_history_screen.dart';
 import '../../features/orang_tua/screens/rapor_screen.dart';
 import '../../features/orang_tua/screens/rapor_detail_screen.dart';
@@ -49,6 +50,8 @@ class AppRoutes {
   static const String orangTuaTagihan = '/orang-tua/tagihan';
   static const String orangTuaUploadBukti = '/orang-tua/tagihan/upload-bukti';
   static const String orangTuaPaymentHistory = '/orang-tua/tagihan/history';
+  static const String orangTuaPengumumanDetail =
+      '/orang-tua/pengumuman/:pengumumanId';
 }
 
 /// GoRouter configuration with role-based redirect logic.
@@ -203,6 +206,13 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             builder: (context, state) {
               final tagihan = state.extra as Tagihan;
               return PaymentHistoryScreen(tagihan: tagihan);
+            },
+          ),
+          GoRoute(
+            path: AppRoutes.orangTuaPengumumanDetail,
+            builder: (context, state) {
+              final pengumumanId = state.pathParameters['pengumumanId']!;
+              return PengumumanDetailScreen(pengumumanId: pengumumanId);
             },
           ),
         ],

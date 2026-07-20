@@ -2,6 +2,7 @@
 import { ref, onMounted } from 'vue';
 import { api } from '@/api/client';
 import { PageHeader, BaseModal, ActionButton } from '@/components/ui';
+import { useToast } from '@/composables/useToast';
 
 interface TahunAjaran {
   id: string;
@@ -16,8 +17,10 @@ interface TahunAjaranForm {
   nama: string;
   tanggal_mulai: string;
   tanggal_selesai: string;
+  generate_kelas: boolean;
 }
 
+const toast = useToast();
 const items = ref<TahunAjaran[]>([]);
 const loading = ref(false);
 
@@ -32,6 +35,7 @@ const form = ref<TahunAjaranForm>({
   nama: '',
   tanggal_mulai: '',
   tanggal_selesai: '',
+  generate_kelas: true,
 });
 
 function statusLabel(status: string): string {
@@ -83,7 +87,7 @@ async function fetchItems() {
 
 function openCreateForm() {
   formError.value = '';
-  form.value = { nama: '', tanggal_mulai: '', tanggal_selesai: '' };
+  form.value = { nama: '', tanggal_mulai: '', tanggal_selesai: '', generate_kelas: true };
   showFormModal.value = true;
 }
 
@@ -99,19 +103,31 @@ async function saveTahunAjaran() {
     nama: form.value.nama,
     tanggal_mulai: form.value.tanggal_mulai,
     tanggal_selesai: form.value.tanggal_selesai,
+    generate_kelas: form.value.generate_kelas,
   };
 
   try {
-    await api.post('/tahun-ajaran', payload);
+    const { data } = await api.post('/tahun-ajaran', payload);
     showFormModal.value = false;
-    await fetchItems();
-  } catch (error) {
-    const msg = error.response?.data?.message;
-    if (msg) {
-      formError.value = Array.isArray(msg) ? msg.join(', ') : msg;
+
+    if (!form.value.generate_kelas) {
+      toast.success('Berhasil membuat tahun ajaran tanpa generate kelas.');
+    } else if (data.duplicatedClassCount > 0) {
+      toast.success(
+        `Berhasil membuat tahun ajaran. ${data.duplicatedClassCount} kelas di-generate dari tahun sebelumnya.`,
+      );
     } else {
-      formError.value = 'Gagal membuat tahun ajaran.';
+      toast.info(
+        'Berhasil membuat tahun ajaran. Tidak ada kelas di-generate karena tidak ditemukan data kelas di tahun ajaran sebelumnya.',
+      );
     }
+
+    await fetchItems();
+  } catch (error: any) {
+    const msg = error.response?.data?.message;
+    const errorMsg = Array.isArray(msg) ? msg.join(', ') : msg || 'Gagal membuat tahun ajaran.';
+    formError.value = errorMsg;
+    toast.error(errorMsg);
   }
 }
 
@@ -242,8 +258,8 @@ onMounted(fetchItems);
     <!-- Create Modal -->
     <BaseModal :show="showFormModal" title="Tambah Tahun Ajaran" @close="showFormModal = false">
       <p class="text-sm text-text-secondary mb-4">
-        Tahun ajaran baru akan dibuat dengan status "Disiapkan". Struktur kelas dari tahun ajaran
-        aktif akan otomatis diduplikasi.
+        Tahun ajaran baru akan dibuat dengan status "Disiapkan". Anda dapat memilih untuk
+        men-generate struktur kelas dari tahun ajaran sebelumnya.
       </p>
       <form id="form-tahun-ajaran" class="space-y-4" @submit.prevent="saveTahunAjaran">
         <div>
@@ -273,6 +289,17 @@ onMounted(fetchItems);
             required
             class="w-full px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
           />
+        </div>
+        <div class="flex items-center gap-2">
+          <input
+            id="generate-kelas"
+            v-model="form.generate_kelas"
+            type="checkbox"
+            class="h-4 w-4 rounded border-border text-primary-600 focus:ring-primary-500/20"
+          />
+          <label for="generate-kelas" class="text-sm text-text-primary">
+            Generate kelas dari tahun sebelumnya
+          </label>
         </div>
         <p v-if="formError" class="text-xs text-danger-500 mt-1">{{ formError }}</p>
       </form>

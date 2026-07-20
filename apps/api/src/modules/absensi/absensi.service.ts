@@ -11,6 +11,7 @@ import { Role } from '@edu/shared';
 import { DrizzleService } from '@/drizzle/drizzle.service';
 import { KonfigurasiService } from '@/modules/konfigurasi/konfigurasi.service';
 import { JadwalService } from '@/modules/jadwal/jadwal.service';
+import { TenantService } from '@/modules/tenant/tenant.service';
 import { absensi, absensiAudit } from '@/drizzle/schema/absensi';
 import { siswa } from '@/drizzle/schema/siswa';
 import { kelas } from '@/drizzle/schema/kelas';
@@ -23,6 +24,7 @@ import {
   UpdateAbsensiDto,
   RekapAbsensiQueryDto,
   RekapAbsensiItem,
+  RekapAbsensiResponse,
   ExportRekapAbsensiQueryDto,
   ExportRekapAbsensiResponse,
   SyncAbsensiDto,
@@ -57,6 +59,7 @@ export class AbsensiService {
     private readonly drizzleService: DrizzleService,
     private readonly konfigurasiService: KonfigurasiService,
     private readonly jadwalService: JadwalService,
+    private readonly tenantService: TenantService,
     @InjectQueue(QUEUE_NAMES.NOTIFICATION) private readonly notificationQueue: Queue,
     @InjectQueue(QUEUE_NAMES.EXPORT) private readonly exportQueue: Queue,
   ) {}
@@ -72,6 +75,15 @@ export class AbsensiService {
   async createAbsensi(tenantId: string, guruId: string, kelasId: string, dto: CreateAbsensiDto) {
     const db = this.drizzleService.db;
     const { tanggal, records } = dto;
+
+    // Reject Saturday attendance submissions for 5_hari tenants
+    const tanggalDate = new Date(tanggal + 'T00:00:00');
+    if (tanggalDate.getDay() === 6) {
+      const hariKerja = await this.tenantService.getHariKerja(tenantId);
+      if (hariKerja === '5_hari') {
+        throw new BadRequestException('Hari Sabtu bukan hari aktif untuk sekolah ini');
+      }
+    }
 
     // Authorize: check if guru has jadwal for this class on this date's day,
     // OR is assigned as guru_pengganti for the date.
@@ -201,13 +213,24 @@ export class AbsensiService {
       };
     }
 
+    // If tenant is 5_hari and today is Saturday, return empty list
+    if (dayIndex === 6) {
+      const hariKerja = await this.tenantService.getHariKerja(tenantId);
+      if (hariKerja === '5_hari') {
+        return {
+          tanggal,
+          hari: 'sabtu',
+          kelas: [],
+          message: 'Tidak ada kelas terjadwal untuk hari ini',
+        };
+      }
+    }
+
     // Get all classes where guru is scheduled today within validity range
     const scheduledClasses = await db
       .select({
         kelasId: jadwalPelajaran.kelasId,
         kelasNama: kelas.nama,
-        jamMulai: jadwalPelajaran.jamMulai,
-        jamSelesai: jadwalPelajaran.jamSelesai,
       })
       .from(jadwalPelajaran)
       .innerJoin(kelas, eq(jadwalPelajaran.kelasId, kelas.id))
@@ -238,18 +261,13 @@ export class AbsensiService {
       );
 
     // Deduplicate by kelasId
-    const kelasMap = new Map<
-      string,
-      { kelasId: string; kelasNama: string; jamMulai?: string; jamSelesai?: string }
-    >();
+    const kelasMap = new Map<string, { kelasId: string; kelasNama: string }>();
 
     for (const slot of scheduledClasses) {
       if (!kelasMap.has(slot.kelasId)) {
         kelasMap.set(slot.kelasId, {
           kelasId: slot.kelasId,
           kelasNama: slot.kelasNama,
-          jamMulai: slot.jamMulai?.substring(0, 5) ?? slot.jamMulai,
-          jamSelesai: slot.jamSelesai?.substring(0, 5) ?? slot.jamSelesai,
         });
       }
     }
@@ -506,6 +524,21 @@ export class AbsensiService {
     );
     const thresholdAlpa = Number(thresholdConfig.value?.value ?? thresholdConfig.value ?? 10);
 
+    // Fetch hari_kerja to determine if Saturday records should be excluded from aggregation
+    const hariKerja = await this.tenantService.getHariKerja(tenantId);
+
+    // Build perhatian khusus conditions
+    const perhatianConditions = [
+      eq(absensi.tenantId, tenantId),
+      eq(absensi.status, 'alpa'),
+      eq(kelas.tahunAjaranId, activeTahunAjaran.id),
+    ];
+
+    // Exclude Saturday records when tenant uses 5_hari
+    if (hariKerja === '5_hari') {
+      perhatianConditions.push(sql`EXTRACT(DOW FROM ${absensi.tanggal}::date) != 6`);
+    }
+
     const perhatianKhusus = await db
       .select({
         siswa_id: siswa.id,
@@ -516,13 +549,7 @@ export class AbsensiService {
       .from(absensi)
       .innerJoin(siswa, eq(absensi.siswaId, siswa.id))
       .innerJoin(kelas, eq(absensi.kelasId, kelas.id))
-      .where(
-        and(
-          eq(absensi.tenantId, tenantId),
-          eq(absensi.status, 'alpa'),
-          eq(kelas.tahunAjaranId, activeTahunAjaran.id),
-        ),
-      )
+      .where(and(...perhatianConditions))
       .groupBy(siswa.id, siswa.nama, kelas.nama)
       .having(sql`count(${absensi.id}) > ${thresholdAlpa}`);
 
@@ -561,7 +588,12 @@ export class AbsensiService {
 
     // Validate that the siswa belongs to this parent
     const [siswaData] = await db
-      .select({ id: siswa.id, nama: siswa.nama, orangTuaId: siswa.orangTuaId })
+      .select({
+        id: siswa.id,
+        nama: siswa.nama,
+        orangTuaId: siswa.orangTuaId,
+        tenantId: siswa.tenantId,
+      })
       .from(siswa)
       .where(eq(siswa.id, siswaId));
 
@@ -578,6 +610,21 @@ export class AbsensiService {
     const lastDay = new Date(selectedTahun, selectedBulan, 0).getDate();
     const endDate = `${selectedTahun}-${String(selectedBulan).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`;
 
+    // Fetch hari_kerja to determine if Saturday records should be excluded
+    const hariKerja = await this.tenantService.getHariKerja(siswaData.tenantId);
+
+    // Build attendance query conditions
+    const anakConditions = [
+      eq(absensi.siswaId, siswaId),
+      gte(absensi.tanggal, startDate),
+      lte(absensi.tanggal, endDate),
+    ];
+
+    // Exclude Saturday records when tenant uses 5_hari
+    if (hariKerja === '5_hari') {
+      anakConditions.push(sql`EXTRACT(DOW FROM ${absensi.tanggal}::date) != 6`);
+    }
+
     // Get attendance records for this student in the date range
     const records = await db
       .select({
@@ -585,13 +632,7 @@ export class AbsensiService {
         status: absensi.status,
       })
       .from(absensi)
-      .where(
-        and(
-          eq(absensi.siswaId, siswaId),
-          gte(absensi.tanggal, startDate),
-          lte(absensi.tanggal, endDate),
-        ),
-      );
+      .where(and(...anakConditions));
 
     // Build summary totals
     const ringkasan = { hadir: 0, izin: 0, sakit: 0, alpa: 0 };
@@ -635,9 +676,18 @@ export class AbsensiService {
   async getRekapAbsensi(
     tenantId: string,
     query: RekapAbsensiQueryDto,
-  ): Promise<RekapAbsensiItem[]> {
+  ): Promise<RekapAbsensiResponse> {
     const db = this.drizzleService.db;
-    const { kelas_id, bulan, tahun, periode = 'bulanan' } = query;
+    const { kelas_id, tahun, periode = 'bulanan' } = query;
+
+    // Derive bulan: for semester period, use semester field to determine start month
+    // Semester 1 = bulan 7 (Juli), Semester 2 = bulan 1 (Januari)
+    let bulan: number;
+    if (periode === 'semester' && query.semester) {
+      bulan = query.semester === 1 ? 7 : 1;
+    } else {
+      bulan = query.bulan ?? new Date().getMonth() + 1;
+    }
 
     // Validate kelas exists
     const [kelasData] = await db
@@ -652,16 +702,41 @@ export class AbsensiService {
     // Determine date range based on period
     const { startDate, endDate } = this.getDateRange(bulan, tahun, periode);
 
-    // Get all active students in the class
+    // Get all active students in the class (include nisn)
     const students = await db
-      .select({ id: siswa.id, nama: siswa.nama })
+      .select({ id: siswa.id, nama: siswa.nama, nisn: siswa.nisn })
       .from(siswa)
       .where(
         and(eq(siswa.kelasId, kelas_id), eq(siswa.tenantId, tenantId), eq(siswa.status, 'aktif')),
       );
 
     if (students.length === 0) {
-      return [];
+      return {
+        kelas_id: kelasData.id,
+        kelas_nama: kelasData.nama,
+        bulan,
+        tahun,
+        periode,
+        total_hari_efektif: null,
+        hari_efektif_source: null,
+        data: [],
+      };
+    }
+
+    // Fetch hari_kerja to determine if Saturday records should be excluded
+    const hariKerja = await this.tenantService.getHariKerja(tenantId);
+
+    // Build attendance query conditions
+    const attendanceConditions = [
+      eq(absensi.tenantId, tenantId),
+      eq(absensi.kelasId, kelas_id),
+      gte(absensi.tanggal, startDate),
+      lte(absensi.tanggal, endDate),
+    ];
+
+    // Exclude Saturday records from rekap when tenant uses 5_hari
+    if (hariKerja === '5_hari') {
+      attendanceConditions.push(sql`EXTRACT(DOW FROM ${absensi.tanggal}::date) != 6`);
     }
 
     // Get attendance records for all students in the period
@@ -671,14 +746,7 @@ export class AbsensiService {
         status: absensi.status,
       })
       .from(absensi)
-      .where(
-        and(
-          eq(absensi.tenantId, tenantId),
-          eq(absensi.kelasId, kelas_id),
-          gte(absensi.tanggal, startDate),
-          lte(absensi.tanggal, endDate),
-        ),
-      );
+      .where(and(...attendanceConditions));
 
     // Aggregate counts per student
     const countsMap = new Map<
@@ -693,11 +761,12 @@ export class AbsensiService {
       counts[record.status]++;
     }
 
-    // Calculate hari efektif
+    // Calculate hari efektif and determine source
     const hariEfektif = await this.calculateHariEfektif(tenantId, bulan, tahun, periode);
+    const hariEfektifSource = await this.getHariEfektifSource(tenantId, bulan, tahun);
 
     // Build result
-    const result: RekapAbsensiItem[] = students.map((student) => {
+    const data: RekapAbsensiItem[] = students.map((student) => {
       const counts = countsMap.get(student.id) ?? { hadir: 0, izin: 0, sakit: 0, alpa: 0 };
 
       let persentaseKehadiran: number | null = null;
@@ -708,16 +777,25 @@ export class AbsensiService {
       return {
         siswa_id: student.id,
         siswa_nama: student.nama,
+        siswa_nisn: student.nisn ?? null,
         hadir: counts.hadir,
         izin: counts.izin,
         sakit: counts.sakit,
         alpa: counts.alpa,
-        total_hari_efektif: hariEfektif,
         persentase_kehadiran: persentaseKehadiran,
       };
     });
 
-    return result;
+    return {
+      kelas_id: kelasData.id,
+      kelas_nama: kelasData.nama,
+      bulan,
+      tahun,
+      periode,
+      total_hari_efektif: hariEfektif,
+      hari_efektif_source: hariEfektifSource,
+      data,
+    };
   }
 
   // ─── Export Rekap Absensi (Task 8.14) ──────────────────────────────────
@@ -815,6 +893,7 @@ export class AbsensiService {
   /**
    * Calculate hari efektif for a single month.
    * Checks for manual override first, then auto-calculates.
+   * Respects the tenant's hari_kerja setting (5_hari or 6_hari).
    */
   private async calculateHariEfektifForMonth(
     tenantId: string,
@@ -833,11 +912,12 @@ export class AbsensiService {
       // NotFoundException — no manual override, proceed to auto-calculate
     }
 
-    // 2. Auto-calculate: weekdays (senin-sabtu) minus holidays
+    // 2. Auto-calculate: school days minus holidays
+    const hariKerja = await this.tenantService.getHariKerja(tenantId);
     const { startDate, endDate } = this.getDateRange(bulan, tahun, 'bulanan');
 
-    // Count weekdays (Monday=1 to Saturday=6, skip Sunday=0)
-    const weekdays = this.countWeekdays(startDate, endDate);
+    // Count school days based on hari_kerja setting
+    const schoolDays = this.countSchoolDays(startDate, endDate, hariKerja);
 
     // Get holidays in this range
     const db = this.drizzleService.db;
@@ -852,35 +932,61 @@ export class AbsensiService {
         ),
       );
 
-    // Count holidays that fall on weekdays (so we only subtract school-day holidays)
-    let holidaysOnWeekdays = 0;
+    // Count holidays that fall on school days (so we only subtract active-day holidays)
+    const maxDay = hariKerja === '5_hari' ? 5 : 6;
+    let holidaysOnSchoolDays = 0;
     for (const holiday of holidays) {
       const dateObj = new Date(holiday.tanggal + 'T00:00:00');
       const dayOfWeek = dateObj.getDay();
-      // 1=Mon, 2=Tue, ..., 6=Sat are school days
-      if (dayOfWeek >= 1 && dayOfWeek <= 6) {
-        holidaysOnWeekdays++;
+      if (dayOfWeek >= 1 && dayOfWeek <= maxDay) {
+        holidaysOnSchoolDays++;
       }
     }
 
-    const hariEfektif = weekdays - holidaysOnWeekdays;
+    const hariEfektif = schoolDays - holidaysOnSchoolDays;
     return hariEfektif > 0 ? hariEfektif : null;
   }
 
   /**
-   * Count weekdays (Monday through Saturday) in a date range, inclusive.
+   * Determine whether hari efektif was sourced from manual config or auto-calculated.
    */
-  private countWeekdays(startDate: string, endDate: string): number {
+  private async getHariEfektifSource(
+    tenantId: string,
+    bulan: number,
+    tahun: number,
+  ): Promise<'manual' | 'otomatis' | null> {
+    const manualKey = `hari_efektif_manual_${bulan}_${tahun}`;
+    try {
+      const config = await this.konfigurasiService.getConfigByKey(tenantId, manualKey);
+      const value = config.value?.value ?? config.value;
+      if (typeof value === 'number' && value > 0) {
+        return 'manual';
+      }
+    } catch {
+      // No manual override
+    }
+    return 'otomatis';
+  }
+
+  /**
+   * Count school days in a date range, inclusive.
+   * For '5_hari': counts Monday–Friday (getDay() 1–5)
+   * For '6_hari': counts Monday–Saturday (getDay() 1–6)
+   */
+  private countSchoolDays(
+    startDate: string,
+    endDate: string,
+    hariKerja: '5_hari' | '6_hari',
+  ): number {
     const start = new Date(startDate + 'T00:00:00');
     const end = new Date(endDate + 'T00:00:00');
     let count = 0;
+    const maxDay = hariKerja === '5_hari' ? 5 : 6; // 5=Friday, 6=Saturday
 
     const current = new Date(start);
     while (current <= end) {
       const dayOfWeek = current.getDay();
-      // 0=Sunday, 1=Monday, ..., 6=Saturday
-      // School days are Monday-Saturday (1-6)
-      if (dayOfWeek >= 1 && dayOfWeek <= 6) {
+      if (dayOfWeek >= 1 && dayOfWeek <= maxDay) {
         count++;
       }
       current.setDate(current.getDate() + 1);

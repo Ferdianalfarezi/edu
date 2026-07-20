@@ -28,6 +28,9 @@ export * from './audit-log';
 // Notifikasi
 export * from './notifikasi';
 
+// Pengumuman
+export * from './pengumuman';
+
 // Konfigurasi & Utility
 export * from './konfigurasi';
 

@@ -87,59 +87,47 @@ describe('RppService — Portal', () => {
         },
       ];
 
-      // The chain terminates at .limit() which is the last call
-      mockDb.limit.mockResolvedValue(publishedRpp);
+      // The count query chain ends at .where(), data query chain ends at .offset()
+      mockDb.offset = jest.fn().mockResolvedValue(publishedRpp);
+      mockDb.where.mockResolvedValueOnce([{ count: 2 }]);
 
-      const query: GetRppQueryDto = { limit: 20 };
+      const query: GetRppQueryDto = { page: 1, page_size: 15 };
       const result = await service.list(TENANT_ID, query);
 
       expect(result.data).toHaveLength(2);
-      expect(result.data[0].judul).toBe('RPP Matematika');
-      expect(result.data[0].guru_nama).toBe('Pak Budi');
-      expect(result.data[0].mata_pelajaran).toBe('Matematika');
-      expect(result.data[0].kategori).toBe('Kurikulum Merdeka');
-      expect(result.meta.has_next).toBe(false);
-      expect(result.meta.cursor).toBeNull();
+      expect((result.data[0] as any).judul).toBe('RPP Matematika');
+      expect((result.data[0] as any).guru_nama).toBe('Pak Budi');
+      expect((result.data[0] as any).mata_pelajaran).toBe('Matematika');
+      expect((result.data[0] as any).kategori).toBe('Kurikulum Merdeka');
+      expect(result.meta.total_count).toBe(2);
+      expect(result.meta.total_pages).toBe(1);
+      expect(result.meta.page).toBe(1);
+      expect(result.meta.page_size).toBe(15);
     });
 
-    it('should return has_next=true and cursor when more items exist', async () => {
-      // Return limit + 1 items to indicate next page exists
-      const items = Array.from({ length: 3 }, (_, i) => ({
+    it('should calculate correct pagination meta for multiple pages', async () => {
+      const items = Array.from({ length: 15 }, (_, i) => ({
         id: `id-${i}`,
         judul: `RPP ${i}`,
         kontenType: 'richtext',
         tahunTerbit: 2024,
-        tanggalPublish: new Date(`2024-0${3 - i}-01`),
-        updatedAt: new Date(`2024-0${3 - i}-01`),
+        tanggalPublish: new Date(`2024-03-01`),
+        updatedAt: new Date(`2024-03-01`),
         guruNama: 'Guru',
         mataPelajaranNama: 'Mapel',
         kategoriNama: 'Kategori',
       }));
 
-      mockDb.limit.mockResolvedValue(items);
+      mockDb.offset = jest.fn().mockResolvedValue(items);
+      mockDb.where.mockResolvedValueOnce([{ count: 45 }]);
 
-      const query: GetRppQueryDto = { limit: 2 };
+      const query: GetRppQueryDto = { page: 1, page_size: 15 };
       const result = await service.list(TENANT_ID, query);
 
-      expect(result.data).toHaveLength(2);
-      expect(result.meta.has_next).toBe(true);
-      expect(result.meta.cursor).toBe('id-1');
-    });
-
-    it('should apply cursor filter when cursor is provided', async () => {
-      const cursorRpp = { tanggalPublish: new Date('2024-02-01') };
-
-      // The cursor lookup chain: .select().from().where() — where is the terminal
-      // The main query chain: .select().from().innerJoin().innerJoin().innerJoin().where().orderBy().limit()
-      // where() resolves first for cursor lookup, then limit() for main query
-      mockDb.where.mockResolvedValueOnce([cursorRpp]);
-      mockDb.limit.mockResolvedValueOnce([]);
-
-      const query: GetRppQueryDto = { cursor: RPP_ID, limit: 20 };
-      const result = await service.list(TENANT_ID, query);
-
-      expect(result.data).toHaveLength(0);
-      expect(result.meta.has_next).toBe(false);
+      expect(result.data).toHaveLength(15);
+      expect(result.meta.total_count).toBe(45);
+      expect(result.meta.total_pages).toBe(3);
+      expect(result.meta.page).toBe(1);
     });
 
     it('should apply search filter on judul', async () => {
@@ -157,29 +145,54 @@ describe('RppService — Portal', () => {
         },
       ];
 
-      mockDb.limit.mockResolvedValue(matchedRpp);
+      mockDb.offset = jest.fn().mockResolvedValue(matchedRpp);
+      mockDb.where.mockResolvedValueOnce([{ count: 1 }]);
 
-      const query: GetRppQueryDto = { search: 'Matematika', limit: 20 };
+      const query: GetRppQueryDto = { search: 'Matematika' };
       const result = await service.list(TENANT_ID, query);
 
       expect(result.data).toHaveLength(1);
-      expect(result.data[0].judul).toContain('Matematika');
+      expect((result.data[0] as any).judul).toContain('Matematika');
     });
 
     it('should return empty result when no published RPP match filters', async () => {
-      mockDb.limit.mockResolvedValue([]);
+      mockDb.offset = jest.fn().mockResolvedValue([]);
+      mockDb.where.mockResolvedValueOnce([{ count: 0 }]);
 
       const query: GetRppQueryDto = {
         kategori: KATEGORI_ID,
         mapel: MAPEL_ID,
         tahun: 2024,
-        limit: 20,
       };
       const result = await service.list(TENANT_ID, query);
 
       expect(result.data).toHaveLength(0);
-      expect(result.meta.has_next).toBe(false);
-      expect(result.meta.cursor).toBeNull();
+      expect(result.meta.total_count).toBe(0);
+      expect(result.meta.total_pages).toBe(0);
+    });
+
+    it('should use default page=1 and page_size=15 when not provided', async () => {
+      mockDb.offset = jest.fn().mockResolvedValue([]);
+      mockDb.where.mockResolvedValueOnce([{ count: 0 }]);
+
+      const query: GetRppQueryDto = {};
+      const result = await service.list(TENANT_ID, query);
+
+      expect(result.meta.page).toBe(1);
+      expect(result.meta.page_size).toBe(15);
+    });
+
+    it('should return empty data with correct meta for out-of-range page', async () => {
+      mockDb.offset = jest.fn().mockResolvedValue([]);
+      mockDb.where.mockResolvedValueOnce([{ count: 30 }]);
+
+      const query: GetRppQueryDto = { page: 5, page_size: 15 };
+      const result = await service.list(TENANT_ID, query);
+
+      expect(result.data).toHaveLength(0);
+      expect(result.meta.total_count).toBe(30);
+      expect(result.meta.total_pages).toBe(2);
+      expect(result.meta.page).toBe(5);
     });
   });
 

@@ -158,7 +158,7 @@ export interface SiswaFixture {
   nama: string;
   jenis_kelamin: 'L' | 'P';
   tanggal_lahir: string;
-  status: 'aktif' | 'pindah_sekolah' | 'keluar' | 'alumni';
+  status: 'aktif' | 'pindah_sekolah' | 'keluar' | 'lulus';
   orang_tua_id: string;
 }
 

@@ -6,16 +6,60 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { NodePgDatabase } from 'drizzle-orm/node-postgres';
-import { and, eq, ilike, gt, asc, sql } from 'drizzle-orm';
+import { and, eq, ilike, asc, desc, sql, inArray } from 'drizzle-orm';
 import { DRIZZLE } from '@/drizzle/drizzle.module';
 import { siswa } from '@/drizzle/schema/siswa';
 import { user } from '@/drizzle/schema/user';
 import { kelas } from '@/drizzle/schema/kelas';
 import { tahunAjaran } from '@/drizzle/schema/tahun-ajaran';
 import { tenant } from '@/drizzle/schema/tenant';
+import { riwayatKelas } from '@/drizzle/schema/konfigurasi';
+import { rapor, raporNilai, komponenPenilaian } from '@/drizzle/schema/rapor';
+import { mataPelajaran } from '@/drizzle/schema/mata-pelajaran';
 import { CreateSiswaDto, UpdateSiswaDto, SoftDeleteSiswaDto, ListSiswaQueryDto } from './dto';
+import { RiwayatKelasHelper, RiwayatKelasEntry } from './riwayat-kelas.helper';
+import { paginate } from '../../common/utils/paginate';
 
-const DEFAULT_PAGE_SIZE = 20;
+export interface SiswaDetailResponse {
+  profil: {
+    id: string;
+    nama: string;
+    nisn: string | null;
+    jenis_kelamin: 'L' | 'P' | null;
+    tanggal_lahir: string | null;
+    alamat: string | null;
+    status: 'aktif' | 'pindah_sekolah' | 'keluar' | 'lulus';
+    kelas_nama: string | null;
+    orang_tua_nama: string | null;
+  };
+  riwayat_kelas: Array<{
+    kelas_nama: string;
+    tingkat: number;
+    tahun_ajaran_nama: string;
+    tanggal_mulai: string;
+    is_current: boolean;
+  }>;
+  rapor_ringkasan: Array<{
+    tahun_ajaran_nama: string;
+    periode: 'uts_semester_1' | 'semester_1' | 'uts_semester_2' | 'semester_2';
+    rapor_id: string;
+    rata_rata: number;
+    peringkat: number | null;
+  }>;
+}
+
+export interface RaporDetailResponse {
+  nilai: Array<{
+    mata_pelajaran_nama: string;
+    komponen_nilai: Array<{
+      komponen_nama: string | null;
+      nilai: string | number;
+    }>;
+    rata_rata: string;
+    guru_nama: string;
+    capaian_pembelajaran: string | null;
+  }>;
+}
 
 export interface BulkImportSiswaResult {
   created: number;
@@ -35,7 +79,10 @@ export interface ParsedSiswaCsvRow {
 
 @Injectable()
 export class SiswaService {
-  constructor(@Inject(DRIZZLE) private readonly db: NodePgDatabase) {}
+  constructor(
+    @Inject(DRIZZLE) private readonly db: NodePgDatabase,
+    private readonly riwayatKelasHelper: RiwayatKelasHelper,
+  ) {}
 
   // ─── Create Siswa ─────────────────────────────────────────────
 
@@ -69,6 +116,24 @@ export class SiswaService {
         status: 'aktif',
       })
       .returning();
+
+    // Record riwayat kelas if kelasId is non-null
+    if (created.kelasId) {
+      const [kelasRecord] = await this.db
+        .select({ tahunAjaranId: kelas.tahunAjaranId })
+        .from(kelas)
+        .where(eq(kelas.id, created.kelasId))
+        .limit(1);
+
+      if (kelasRecord) {
+        await this.riwayatKelasHelper.record({
+          tenantId,
+          siswaId: created.id,
+          kelasId: created.kelasId,
+          tahunAjaranId: kelasRecord.tahunAjaranId,
+        });
+      }
+    }
 
     return {
       id: created.id,
@@ -117,6 +182,234 @@ export class SiswaService {
     return results[0];
   }
 
+  // ─── Get Siswa Detail ───────────────────────────────────────────
+
+  async getSiswaDetail(tenantId: string, siswaId: string): Promise<SiswaDetailResponse> {
+    // Alias user table for orang_tua join
+    const orangTuaUser = user;
+
+    // Query 1: Profile — siswa + LEFT JOIN kelas + LEFT JOIN user (orang_tua)
+    const profileResults = await this.db
+      .select({
+        id: siswa.id,
+        nama: siswa.nama,
+        nisn: siswa.nisn,
+        jenisKelamin: siswa.jenisKelamin,
+        tanggalLahir: siswa.tanggalLahir,
+        alamat: siswa.alamat,
+        status: siswa.status,
+        kelasId: siswa.kelasId,
+        kelasNama: kelas.nama,
+        kelasTingkat: kelas.tingkat,
+        kelasTahunAjaranId: kelas.tahunAjaranId,
+        orangTuaNama: orangTuaUser.nama,
+      })
+      .from(siswa)
+      .leftJoin(kelas, eq(siswa.kelasId, kelas.id))
+      .leftJoin(orangTuaUser, eq(siswa.orangTuaId, orangTuaUser.id))
+      .where(and(eq(siswa.id, siswaId), eq(siswa.tenantId, tenantId)))
+      .limit(1);
+
+    if (!profileResults[0]) {
+      throw new NotFoundException('Siswa tidak ditemukan');
+    }
+
+    const profile = profileResults[0];
+
+    // Query 2: Riwayat — riwayat_kelas JOIN kelas JOIN tahun_ajaran
+    const riwayatResults = await this.db
+      .select({
+        kelasNama: kelas.nama,
+        tingkat: kelas.tingkat,
+        tahunAjaranNama: tahunAjaran.nama,
+        tanggalMulai: riwayatKelas.tanggalMulai,
+      })
+      .from(riwayatKelas)
+      .innerJoin(kelas, eq(riwayatKelas.kelasId, kelas.id))
+      .innerJoin(tahunAjaran, eq(riwayatKelas.tahunAjaranId, tahunAjaran.id))
+      .where(and(eq(riwayatKelas.siswaId, siswaId), eq(riwayatKelas.tenantId, tenantId)))
+      .orderBy(desc(riwayatKelas.tanggalMulai));
+
+    // Build riwayat_kelas array: merge current kelas as first entry with is_current: true
+    const riwayatEntries: SiswaDetailResponse['riwayat_kelas'] = [];
+
+    if (profile.kelasId && profile.kelasNama !== null && profile.kelasTingkat !== null) {
+      // Fetch tahun_ajaran name for the current kelas
+      let currentTahunAjaranNama = '';
+      if (profile.kelasTahunAjaranId) {
+        const [taRecord] = await this.db
+          .select({ nama: tahunAjaran.nama })
+          .from(tahunAjaran)
+          .where(eq(tahunAjaran.id, profile.kelasTahunAjaranId))
+          .limit(1);
+        currentTahunAjaranNama = taRecord?.nama || '';
+      }
+
+      riwayatEntries.push({
+        kelas_nama: profile.kelasNama,
+        tingkat: profile.kelasTingkat,
+        tahun_ajaran_nama: currentTahunAjaranNama,
+        tanggal_mulai: new Date().toISOString().split('T')[0],
+        is_current: true,
+      });
+    }
+
+    // Append historical entries with is_current: false
+    for (const row of riwayatResults) {
+      riwayatEntries.push({
+        kelas_nama: row.kelasNama,
+        tingkat: row.tingkat,
+        tahun_ajaran_nama: row.tahunAjaranNama,
+        tanggal_mulai: row.tanggalMulai || '',
+        is_current: false,
+      });
+    }
+
+    // Sort merged array by tanggal_mulai DESC
+    riwayatEntries.sort((a, b) => {
+      if (b.tanggal_mulai > a.tanggal_mulai) return 1;
+      if (b.tanggal_mulai < a.tanggal_mulai) return -1;
+      return 0;
+    });
+
+    // Query 3: Rapor ringkasan — rapor (status='final') + rapor_nilai for this student
+    // Compute AVG(rata_rata) per rapor rounded to 2 decimal places
+    const raporResults = await this.db
+      .select({
+        raporId: rapor.id,
+        tahunAjaranNama: tahunAjaran.nama,
+        periode: rapor.periode,
+        avgRataRata: sql<string>`ROUND(AVG(${raporNilai.rataRata}::numeric), 2)`.as(
+          'avg_rata_rata',
+        ),
+        peringkat: sql<number | null>`MAX(${raporNilai.peringkat})`.as('peringkat'),
+      })
+      .from(rapor)
+      .innerJoin(raporNilai, and(eq(raporNilai.raporId, rapor.id), eq(raporNilai.siswaId, siswaId)))
+      .innerJoin(tahunAjaran, eq(rapor.tahunAjaranId, tahunAjaran.id))
+      .where(and(eq(rapor.tenantId, tenantId), eq(rapor.status, 'final')))
+      .groupBy(rapor.id, tahunAjaran.nama, rapor.periode)
+      .orderBy(desc(tahunAjaran.nama), desc(rapor.periode));
+
+    const raporRingkasan: SiswaDetailResponse['rapor_ringkasan'] = raporResults.map((row) => ({
+      tahun_ajaran_nama: row.tahunAjaranNama,
+      periode: row.periode,
+      rapor_id: row.raporId,
+      rata_rata: parseFloat(row.avgRataRata) || 0,
+      peringkat: row.peringkat ?? null,
+    }));
+
+    return {
+      profil: {
+        id: profile.id,
+        nama: profile.nama,
+        nisn: profile.nisn || null,
+        jenis_kelamin: profile.jenisKelamin || null,
+        tanggal_lahir: profile.tanggalLahir || null,
+        alamat: profile.alamat || null,
+        status: profile.status as 'aktif' | 'pindah_sekolah' | 'keluar' | 'lulus',
+        kelas_nama: profile.kelasNama || null,
+        orang_tua_nama: profile.orangTuaNama || null,
+      },
+      riwayat_kelas: riwayatEntries,
+      rapor_ringkasan: raporRingkasan,
+    };
+  }
+
+  // ─── Get Siswa Rapor Detail ───────────────────────────────────
+
+  async getSiswaRaporDetail(
+    tenantId: string,
+    siswaId: string,
+    raporId: string,
+  ): Promise<RaporDetailResponse> {
+    // Query rapor_nilai with status='submitted', JOIN mata_pelajaran and user (guru)
+    const guruUser = user;
+
+    const nilaiResults = await this.db
+      .select({
+        mataPelajaranNama: mataPelajaran.nama,
+        komponenNilai: raporNilai.komponenNilai,
+        rataRata: raporNilai.rataRata,
+        guruNama: guruUser.nama,
+        capaianPembelajaran: raporNilai.capaianPembelajaran,
+      })
+      .from(raporNilai)
+      .innerJoin(mataPelajaran, eq(raporNilai.mataPelajaranId, mataPelajaran.id))
+      .innerJoin(guruUser, eq(raporNilai.guruId, guruUser.id))
+      .where(
+        and(
+          eq(raporNilai.raporId, raporId),
+          eq(raporNilai.siswaId, siswaId),
+          eq(raporNilai.tenantId, tenantId),
+          eq(raporNilai.status, 'submitted'),
+        ),
+      )
+      .orderBy(asc(mataPelajaran.nama));
+
+    if (nilaiResults.length === 0) {
+      throw new NotFoundException('Data rapor tidak ditemukan');
+    }
+
+    // Collect all unique komponen_ids from all rapor_nilai rows
+    const allKomponenIds = new Set<string>();
+    for (const row of nilaiResults) {
+      const komponenArray = row.komponenNilai as Array<{
+        komponen_id: string;
+        nilai: string | number;
+      }>;
+      if (Array.isArray(komponenArray)) {
+        for (const k of komponenArray) {
+          if (k.komponen_id) {
+            allKomponenIds.add(k.komponen_id);
+          }
+        }
+      }
+    }
+
+    // Batch-resolve komponen names from komponen_penilaian table
+    const komponenNameMap = new Map<string, string>();
+    if (allKomponenIds.size > 0) {
+      const komponenRecords = await this.db
+        .select({
+          id: komponenPenilaian.id,
+          nama: komponenPenilaian.nama,
+        })
+        .from(komponenPenilaian)
+        .where(inArray(komponenPenilaian.id, Array.from(allKomponenIds)));
+
+      for (const record of komponenRecords) {
+        komponenNameMap.set(record.id, record.nama);
+      }
+    }
+
+    // Build response: for each rapor_nilai, resolve komponen names
+    const nilai: RaporDetailResponse['nilai'] = nilaiResults.map((row) => {
+      const komponenArray = row.komponenNilai as Array<{
+        komponen_id: string;
+        nilai: string | number;
+      }>;
+
+      const resolvedKomponen: RaporDetailResponse['nilai'][number]['komponen_nilai'] =
+        Array.isArray(komponenArray)
+          ? komponenArray.map((k) => ({
+              komponen_nama: komponenNameMap.get(k.komponen_id) ?? null,
+              nilai: k.nilai,
+            }))
+          : [];
+
+      return {
+        mata_pelajaran_nama: row.mataPelajaranNama,
+        komponen_nilai: resolvedKomponen,
+        rata_rata: row.rataRata || '0.00',
+        guru_nama: row.guruNama,
+        capaian_pembelajaran: row.capaianPembelajaran || null,
+      };
+    });
+
+    return { nilai };
+  }
+
   // ─── Update Siswa ─────────────────────────────────────────────
 
   async updateSiswa(tenantId: string, siswaId: string, dto: UpdateSiswaDto) {
@@ -155,6 +448,24 @@ export class SiswaService {
       .set(updateData)
       .where(and(eq(siswa.id, siswaId), eq(siswa.tenantId, tenantId)))
       .returning();
+
+    // Record riwayat kelas if kelasId changed to a non-null value
+    if (dto.kelasId !== undefined && dto.kelasId !== existing.kelasId && dto.kelasId !== null) {
+      const [kelasRecord] = await this.db
+        .select({ tahunAjaranId: kelas.tahunAjaranId })
+        .from(kelas)
+        .where(eq(kelas.id, dto.kelasId))
+        .limit(1);
+
+      if (kelasRecord) {
+        await this.riwayatKelasHelper.record({
+          tenantId,
+          siswaId,
+          kelasId: dto.kelasId,
+          tahunAjaranId: kelasRecord.tahunAjaranId,
+        });
+      }
+    }
 
     return {
       id: updated.id,
@@ -250,9 +561,13 @@ export class SiswaService {
     };
   }
 
-  // ─── List Siswa (cursor paginated, search, filter) ────────────
+  // ─── List Siswa (offset paginated, search, filter) ─────────────
 
   async listSiswa(tenantId: string, query: ListSiswaQueryDto) {
+    const page = query.page ?? 1;
+    const pageSize = query.page_size ?? 15;
+    const offset = (page - 1) * pageSize;
+
     const conditions: ReturnType<typeof eq>[] = [eq(siswa.tenantId, tenantId)];
 
     // Exact NISN search
@@ -286,52 +601,47 @@ export class SiswaService {
       conditions.push(sql`${siswa.kelasId} IN (${kelasIds})`);
     }
 
-    // Cursor pagination
-    if (query.cursor) {
-      conditions.push(gt(siswa.id, query.cursor));
-    }
-
-    const pageSize = query.limit ?? DEFAULT_PAGE_SIZE;
-
     // Alias the user table for the parent join
     const orangTuaUser = user;
 
-    const results = await this.db
-      .select({
-        id: siswa.id,
-        kelas_id: siswa.kelasId,
-        kelas_nama: kelas.nama,
-        tahun_ajaran_id: kelas.tahunAjaranId,
-        tahun_ajaran_nama: tahunAjaran.nama,
-        nama: siswa.nama,
-        nisn: siswa.nisn,
-        jenis_kelamin: siswa.jenisKelamin,
-        tanggal_lahir: siswa.tanggalLahir,
-        alamat: siswa.alamat,
-        orang_tua_nama: orangTuaUser.nama,
-        orang_tua_phone: orangTuaUser.phone,
-        status: siswa.status,
-        created_at: siswa.createdAt,
-      })
-      .from(siswa)
-      .leftJoin(kelas, eq(siswa.kelasId, kelas.id))
-      .leftJoin(tahunAjaran, eq(kelas.tahunAjaranId, tahunAjaran.id))
-      .leftJoin(orangTuaUser, eq(siswa.orangTuaId, orangTuaUser.id))
-      .where(and(...conditions))
-      .orderBy(asc(siswa.id))
-      .limit(pageSize + 1);
+    // Parallel COUNT + SELECT queries for performance
+    const [countResult, dataResult] = await Promise.all([
+      this.db
+        .select({ count: sql<number>`count(*)::int` })
+        .from(siswa)
+        .leftJoin(kelas, eq(siswa.kelasId, kelas.id))
+        .leftJoin(tahunAjaran, eq(kelas.tahunAjaranId, tahunAjaran.id))
+        .leftJoin(orangTuaUser, eq(siswa.orangTuaId, orangTuaUser.id))
+        .where(and(...conditions)),
+      this.db
+        .select({
+          id: siswa.id,
+          kelas_id: siswa.kelasId,
+          kelas_nama: kelas.nama,
+          tahun_ajaran_id: kelas.tahunAjaranId,
+          tahun_ajaran_nama: tahunAjaran.nama,
+          nama: siswa.nama,
+          nisn: siswa.nisn,
+          jenis_kelamin: siswa.jenisKelamin,
+          tanggal_lahir: siswa.tanggalLahir,
+          alamat: siswa.alamat,
+          orang_tua_nama: orangTuaUser.nama,
+          orang_tua_phone: orangTuaUser.phone,
+          status: siswa.status,
+          created_at: siswa.createdAt,
+        })
+        .from(siswa)
+        .leftJoin(kelas, eq(siswa.kelasId, kelas.id))
+        .leftJoin(tahunAjaran, eq(kelas.tahunAjaranId, tahunAjaran.id))
+        .leftJoin(orangTuaUser, eq(siswa.orangTuaId, orangTuaUser.id))
+        .where(and(...conditions))
+        .orderBy(asc(siswa.id))
+        .limit(pageSize)
+        .offset(offset),
+    ]);
 
-    const hasNext = results.length > pageSize;
-    const data = hasNext ? results.slice(0, pageSize) : results;
-    const nextCursor = hasNext ? data[data.length - 1].id : null;
-
-    return {
-      data,
-      meta: {
-        has_next: hasNext,
-        cursor: nextCursor,
-      },
-    };
+    const totalCount = countResult[0]?.count ?? 0;
+    return paginate(dataResult, totalCount, page, pageSize);
   }
 
   // ─── Bulk Import via CSV ──────────────────────────────────────
@@ -625,6 +935,8 @@ export class SiswaService {
     let updated = 0;
     let skipped = 0;
 
+    const riwayatEntries: RiwayatKelasEntry[] = [];
+
     for (const row of rows) {
       if (!row.nama) {
         skipped++;
@@ -684,8 +996,35 @@ export class SiswaService {
         insertData.orangTuaId = parentId;
       }
 
-      await this.db.insert(siswa).values(insertData);
+      const [insertedSiswa] = await this.db
+        .insert(siswa)
+        .values(insertData)
+        .returning({ id: siswa.id });
+
+      // Collect riwayat entry if kelasId is non-null
+      if (row.kelasId) {
+        const [kelasRecord] = await this.db
+          .select({ tahunAjaranId: kelas.tahunAjaranId })
+          .from(kelas)
+          .where(eq(kelas.id, row.kelasId))
+          .limit(1);
+
+        if (kelasRecord) {
+          riwayatEntries.push({
+            tenantId,
+            siswaId: insertedSiswa.id,
+            kelasId: row.kelasId,
+            tahunAjaranId: kelasRecord.tahunAjaranId,
+          });
+        }
+      }
+
       created++;
+    }
+
+    // Batch record all riwayat kelas entries at the end
+    if (riwayatEntries.length > 0) {
+      await this.riwayatKelasHelper.recordBatch(riwayatEntries);
     }
 
     return { created, updated, skipped };

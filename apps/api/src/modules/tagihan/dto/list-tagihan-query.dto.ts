@@ -1,20 +1,21 @@
-import { IsOptional, IsString, IsInt, Min, Max, IsUUID } from 'class-validator';
-import { Transform } from 'class-transformer';
+import { IsIn, IsInt, IsOptional, IsString, IsUUID, Min } from 'class-validator';
+import { Type } from 'class-transformer';
 
 /**
- * Query DTO for GET /tagihan (list tagihan with pagination and filters).
+ * Query DTO for GET /tagihan (list tagihan with offset pagination and filters).
  */
 export class ListTagihanQueryDto {
   @IsOptional()
-  @IsString()
-  cursor?: string;
-
-  @IsOptional()
-  @Transform(({ value }) => parseInt(value, 10))
+  @Type(() => Number)
   @IsInt()
   @Min(1)
-  @Max(100)
-  limit?: number = 20;
+  page?: number;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @IsIn([15, 50, 100], { message: 'page_size harus salah satu dari: 15, 50, 100' })
+  page_size?: number;
 
   @IsOptional()
   @IsString()
@@ -25,12 +26,12 @@ export class ListTagihanQueryDto {
   kelas_id?: string;
 
   @IsOptional()
-  @Transform(({ value }) => parseInt(value, 10))
+  @Type(() => Number)
   @IsInt()
   bulan?: number;
 
   @IsOptional()
-  @Transform(({ value }) => parseInt(value, 10))
+  @Type(() => Number)
   @IsInt()
   tahun?: number;
 

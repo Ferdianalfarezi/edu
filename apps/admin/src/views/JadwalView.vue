@@ -29,9 +29,7 @@ interface JadwalEntry {
   mata_pelajaran_id: string | null;
   guru_id: string | null;
   hari: string;
-  jam_ke?: number;
-  jam_mulai: string;
-  jam_selesai: string;
+  jam_ke: number;
   is_vacant: boolean;
   is_istirahat: boolean;
   mata_pelajaran?: MataPelajaran | null;
@@ -49,8 +47,6 @@ interface GuruPenggantiInfo {
 interface JadwalForm {
   mata_pelajaran_id: string;
   guru_id: string;
-  jam_mulai: string;
-  jam_selesai: string;
   is_istirahat: boolean;
 }
 
@@ -92,8 +88,6 @@ const selectedJamKe = ref(0);
 const form = ref<JadwalForm>({
   mata_pelajaran_id: '',
   guru_id: '',
-  jam_mulai: '',
-  jam_selesai: '',
   is_istirahat: false,
 });
 const formError = ref('');
@@ -144,37 +138,23 @@ const gridData = computed(() => {
   }
 
   for (const entry of jadwalEntries.value) {
-    const jamKe = entry.jam_ke || deriveJamKe(entry.jam_mulai);
-    if (jamKe >= 1 && jamKe <= 10) {
-      grid[jamKe][entry.hari] = entry;
+    if (entry.jam_ke >= 1 && entry.jam_ke <= 10) {
+      grid[entry.jam_ke][entry.hari] = entry;
     }
   }
 
   return grid;
 });
 
-function deriveJamKe(jamMulai: string): number {
-  const timeMap: Record<string, number> = {
-    '07:00': 1,
-    '07:40': 2,
-    '08:20': 3,
-    '09:00': 4,
-    '09:40': 5,
-    '10:20': 6,
-    '11:00': 7,
-    '11:40': 8,
-    '12:20': 9,
-    '13:00': 10,
-  };
-  // Handle both HH:mm and HH:mm:ss formats from the database
-  const normalized = jamMulai?.substring(0, 5) || '';
-  return timeMap[normalized] || 0;
-}
-
 // Data fetching
 async function fetchKelasList() {
   try {
-    const { data } = await api.get<{ data: Kelas[] }>('/kelas');
+    // Filter kelas by selected/active tahun ajaran
+    const params: Record<string, string> = {};
+    if (selectedTahunAjaranId.value) {
+      params.tahunAjaranId = selectedTahunAjaranId.value;
+    }
+    const { data } = await api.get<{ data: Kelas[] }>('/kelas', { params });
     kelasList.value = data.data;
     if (kelasList.value.length > 0 && !selectedKelasId.value) {
       selectedKelasId.value = kelasList.value[0].id;
@@ -229,7 +209,8 @@ watch(selectedKelasId, () => {
 });
 
 watch(selectedTahunAjaranId, () => {
-  fetchJadwal();
+  selectedKelasId.value = '';
+  fetchKelasList();
 });
 
 // Cell click handler
@@ -289,8 +270,6 @@ function openCreateForm(hari: string, jamKe: number) {
   form.value = {
     mata_pelajaran_id: '',
     guru_id: '',
-    jam_mulai: getDefaultJamMulai(jamKe),
-    jam_selesai: getDefaultJamSelesai(jamKe),
     is_istirahat: false,
   };
   formError.value = '';
@@ -304,30 +283,10 @@ function openEditForm(entry: JadwalEntry, hari: string, jamKe: number) {
   form.value = {
     mata_pelajaran_id: entry.mata_pelajaran_id || '',
     guru_id: entry.guru_id || '',
-    jam_mulai: entry.jam_mulai,
-    jam_selesai: entry.jam_selesai,
     is_istirahat: entry.is_istirahat || false,
   };
   formError.value = '';
   showFormModal.value = true;
-}
-
-function getDefaultJamMulai(jamKe: number): string {
-  const startHour = 7;
-  const minutesPerSlot = 40;
-  const totalMinutes = (jamKe - 1) * minutesPerSlot;
-  const hour = startHour + Math.floor(totalMinutes / 60);
-  const minute = totalMinutes % 60;
-  return `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`;
-}
-
-function getDefaultJamSelesai(jamKe: number): string {
-  const startHour = 7;
-  const minutesPerSlot = 40;
-  const totalMinutes = jamKe * minutesPerSlot;
-  const hour = startHour + Math.floor(totalMinutes / 60);
-  const minute = totalMinutes % 60;
-  return `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`;
 }
 
 async function saveJadwal() {
@@ -348,7 +307,6 @@ async function saveJadwal() {
   const currentMonth = new Date().getMonth() + 1;
   const semester = currentMonth >= 7 ? 1 : 2;
 
-  // Use selected tahun ajaran from the filter
   const tahunAjaranId = selectedTahunAjaranId.value;
 
   const payload: Record<string, unknown> = {
@@ -356,10 +314,9 @@ async function saveJadwal() {
     tahunAjaranId,
     semester,
     hari: selectedHari.value,
-    jamMulai: form.value.jam_mulai,
-    jamSelesai: form.value.jam_selesai,
-    tanggalMulaiBerlaku: '2024-07-15',
-    tanggalSelesaiBerlaku: '2025-06-30',
+    jamKe: selectedJamKe.value,
+    tanggalMulaiBerlaku: '2026-07-01',
+    tanggalSelesaiBerlaku: '2027-06-30',
     isIstirahat: form.value.is_istirahat,
   };
 
@@ -464,7 +421,8 @@ function handleRemovePengganti() {
 
 // Init
 onMounted(async () => {
-  await Promise.all([fetchKelasList(), fetchDropdowns()]);
+  await fetchDropdowns();
+  await fetchKelasList();
 });
 </script>
 
@@ -632,26 +590,6 @@ onMounted(async () => {
           </div>
         </template>
 
-        <div class="flex gap-4">
-          <div class="flex-1 mb-4">
-            <label class="block text-sm font-medium text-text-primary mb-1.5">Jam Mulai</label>
-            <input
-              v-model="form.jam_mulai"
-              type="time"
-              class="w-full px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
-              required
-            />
-          </div>
-          <div class="flex-1 mb-4">
-            <label class="block text-sm font-medium text-text-primary mb-1.5">Jam Selesai</label>
-            <input
-              v-model="form.jam_selesai"
-              type="time"
-              class="w-full px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
-              required
-            />
-          </div>
-        </div>
         <p v-if="formError" class="text-xs text-danger-500 mt-1">{{ formError }}</p>
       </form>
       <template #footer>

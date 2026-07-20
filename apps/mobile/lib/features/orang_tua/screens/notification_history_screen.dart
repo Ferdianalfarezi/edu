@@ -143,8 +143,23 @@ class _NotificationHistoryScreenState
     );
   }
 
-  /// Show full notification content in a bottom sheet dialog.
+  /// Show full notification content or navigate to detail screen.
+  ///
+  /// For pengumuman notifications, navigates to the pengumuman detail screen.
+  /// For other types, shows a bottom sheet with the notification content.
+  /// Requirements 6.1, 6.2: Navigate to pengumuman detail on tap.
   void _showNotificationDetail(BuildContext context, NotificationItem item) {
+    if (item.tipe == 'pengumuman') {
+      final pengumumanId = item.data?['pengumuman_id'] as String?;
+      if (pengumumanId != null && pengumumanId.isNotEmpty) {
+        context.go(
+          AppRoutes.orangTuaPengumumanDetail
+              .replaceFirst(':pengumumanId', pengumumanId),
+        );
+        return;
+      }
+    }
+
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -196,8 +211,6 @@ class _NotificationTile extends StatelessWidget {
                 _formatTimestamp(item.createdAt),
                 style: TextStyle(fontSize: 11, color: Colors.grey.shade500),
               ),
-              const SizedBox(width: 8),
-              _DeliveryStatusBadge(status: item.statusPengiriman),
             ],
           ),
         ],
@@ -248,44 +261,6 @@ class _TypeIcon extends StatelessWidget {
   }
 }
 
-/// Small badge showing delivery status.
-/// Requirement 7.2: display delivery status.
-class _DeliveryStatusBadge extends StatelessWidget {
-  const _DeliveryStatusBadge({required this.status});
-
-  final NotificationDeliveryStatus status;
-
-  @override
-  Widget build(BuildContext context) {
-    final (Color bgColor, Color textColor) = switch (status) {
-      NotificationDeliveryStatus.terkirim => (
-          Colors.green.shade50,
-          Colors.green.shade700
-        ),
-      NotificationDeliveryStatus.gagal => (
-          Colors.red.shade50,
-          Colors.red.shade700
-        ),
-      NotificationDeliveryStatus.pending => (
-          Colors.orange.shade50,
-          Colors.orange.shade700
-        ),
-    };
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-      decoration: BoxDecoration(
-        color: bgColor,
-        borderRadius: BorderRadius.circular(4),
-      ),
-      child: Text(
-        status.label,
-        style: TextStyle(fontSize: 10, color: textColor),
-      ),
-    );
-  }
-}
-
 /// Bottom sheet showing full notification details.
 class _NotificationDetailSheet extends StatelessWidget {
   const _NotificationDetailSheet({required this.item});
@@ -325,19 +300,12 @@ class _NotificationDetailSheet extends StatelessWidget {
                   _TypeIcon(type: item.notificationType),
                   const SizedBox(width: 12),
                   Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          item.notificationType.label,
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: Colors.grey.shade600,
-                          ),
-                        ),
-                        const SizedBox(height: 2),
-                        _DeliveryStatusBadge(status: item.statusPengiriman),
-                      ],
+                    child: Text(
+                      item.notificationType.label,
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.grey.shade600,
+                      ),
                     ),
                   ),
                 ],
