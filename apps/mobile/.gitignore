@@ -77,5 +77,11 @@ migrate_working_dir/
 **/ios/Runner/GoogleService-Info.plist
 **/ios/firebase_app_id_file.json
 
+# Android signing
+**/android/key.properties
+**/android/app/upload-keystore.jks
+**/android/app/*.keystore
+**/android/app/*.jks
+
 # Coverage
 coverage/

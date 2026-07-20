@@ -55,14 +55,28 @@ class NotificationService {
       provisional: false,
     );
 
+    _logger
+        .i('Notification permission status: ${settings.authorizationStatus}');
+
     if (settings.authorizationStatus == AuthorizationStatus.denied) {
       _logger.w('Push notification permissions denied');
       return;
     }
 
+    // On iOS, we need to wait for the APNs token before getting FCM token
+    final apnsToken = await _messaging.getAPNSToken();
+    _logger.i(
+        'APNs token: ${apnsToken != null ? "obtained (${apnsToken.length} chars)" : "NULL - APNs not configured!"}');
+
     // Get current FCM token
     _currentToken = await _messaging.getToken();
-    _logger.i('FCM Token obtained: ${_currentToken?.substring(0, 10)}...');
+    _logger.i(
+        'FCM Token: ${_currentToken != null ? "${_currentToken!.substring(0, 10)}..." : "NULL"}');
+
+    // Register initial token with the backend
+    if (_currentToken != null) {
+      onTokenRefresh?.call(_currentToken!);
+    }
 
     // Listen for token refreshes
     _messaging.onTokenRefresh.listen((newToken) {

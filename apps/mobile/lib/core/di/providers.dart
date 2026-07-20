@@ -1,6 +1,9 @@
+import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../constants/api_constants.dart';
 import '../database/app_database.dart';
 import '../models/auth_state.dart';
 import '../network/api_client.dart';
@@ -31,6 +34,11 @@ class AuthStateNotifier extends StateNotifier<AuthState> {
     final authService = _ref.read(authServiceProvider);
     final newState = await authService.restoreSession();
     state = newState;
+
+    // Register device token after session restore if authenticated
+    if (newState.isAuthenticated) {
+      _registerDeviceToken();
+    }
   }
 
   /// Login as guru with email and password.
@@ -44,6 +52,9 @@ class AuthStateNotifier extends StateNotifier<AuthState> {
       password: password,
     );
     state = newState;
+
+    // Register device token after login
+    _registerDeviceToken();
   }
 
   /// Login as orang_tua with phone number only.
@@ -51,6 +62,9 @@ class AuthStateNotifier extends StateNotifier<AuthState> {
     final authService = _ref.read(authServiceProvider);
     final newState = await authService.loginWithPhone(phone: phone);
     state = newState;
+
+    // Register device token after login
+    _registerDeviceToken();
   }
 
   /// Logout and clear state.
@@ -69,6 +83,36 @@ class AuthStateNotifier extends StateNotifier<AuthState> {
   void forceLogout() {
     _ref.read(tokenStorageProvider).clearTokens();
     state = const AuthState.unauthenticated();
+  }
+
+  /// Register FCM device token with the backend (fire-and-forget).
+  void _registerDeviceToken() {
+    final notificationService = _ref.read(notificationServiceProvider);
+    final apiClient = _ref.read(apiClientProvider);
+
+    notificationService.getToken().then((token) {
+      if (token == null) {
+        debugPrint('[DeviceToken] FCM token is null, skipping registration');
+        return;
+      }
+      debugPrint(
+          '[DeviceToken] Registering FCM token: ${token.substring(0, 10)}...');
+      final platform = Platform.isIOS ? 'ios' : 'android';
+      apiClient.dio.post(
+        ApiConstants.deviceToken,
+        data: {
+          'fcm_token': token,
+          'platform': platform,
+        },
+      ).then((response) {
+        debugPrint(
+            '[DeviceToken] Registration success: ${response.statusCode}');
+      }).catchError((error) {
+        debugPrint('[DeviceToken] Registration failed: $error');
+      });
+    }).catchError((error) {
+      debugPrint('[DeviceToken] Failed to get FCM token: $error');
+    });
   }
 }
 
@@ -103,6 +147,21 @@ final notificationServiceProvider = Provider<NotificationService>((ref) {
   final router = ref.read(appRouterProvider);
 
   return NotificationService(
+    onTokenRefresh: (token) {
+      // Re-register token if user is authenticated
+      final authState = ref.read(authStateProvider);
+      if (authState.isAuthenticated) {
+        final apiClient = ref.read(apiClientProvider);
+        final platform = Platform.isIOS ? 'ios' : 'android';
+        apiClient.dio.post(
+          ApiConstants.deviceToken,
+          data: {
+            'fcm_token': token,
+            'platform': platform,
+          },
+        ).ignore();
+      }
+    },
     onNotificationTap: (data) {
       handleNotificationNavigation(data, router);
     },

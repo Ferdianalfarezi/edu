@@ -55,5 +55,5 @@ class ApiConstants {
   static String absensiAnak(String siswaId) => '/absensi/anak/$siswaId';
 
   // Device token
-  static const String deviceToken = '/device-token';
+  static const String deviceToken = '/device-tokens';
 }
