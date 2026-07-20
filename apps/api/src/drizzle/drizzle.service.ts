@@ -30,8 +30,12 @@ export class DrizzleService implements OnModuleInit, OnModuleDestroy {
         `Database connected (pool: min=${this.pool.options.min}, max=${this.pool.options.max}, idle=${this.pool.options.idleTimeoutMillis}ms)`,
       );
     } catch (error) {
-      this.logger.error('Failed to connect to database', error);
-      throw error;
+      // Log but don't throw — let the app start and report degraded health.
+      // Railway healthcheck will catch persistent DB failures after grace period.
+      this.logger.error(
+        'Failed to connect to database on startup (will retry on first query)',
+        error,
+      );
     }
   }
 
