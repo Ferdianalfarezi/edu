@@ -49,7 +49,9 @@ import { MONITORING_CONFIG } from './common/monitoring/monitoring.config';
     LoggerModule.forRootAsync({
       inject: [ConfigService],
       useFactory: (configService: ConfigService) => {
-        const isProduction = configService.get('NODE_ENV') === 'production';
+        // Use process.env directly here — ConfigService may not be fully initialized
+        // when this factory runs, and pino-pretty is not available in production builds
+        const isProduction = process.env.NODE_ENV === 'production';
         return {
           pinoHttp: {
             level: isProduction
