@@ -214,20 +214,17 @@ onMounted(async () => {
 </script>
 
 <template>
-  <div class="p-4 lg:p-6 max-w-7xl mx-auto">
+  <div class="p-8 max-w-7xl mx-auto">
     <PageHeader title="Manajemen Kelas">
       <template #actions>
-        <button
-          class="px-3 py-2 text-sm font-medium text-white bg-primary-600 rounded-lg hover:bg-primary-700 transition-colors"
-          @click="openCreateForm"
-        >
+        <ActionButton variant="primary" icon="none" @click="openCreateForm">
           Tambah Kelas
-        </button>
+        </ActionButton>
       </template>
     </PageHeader>
 
     <!-- Filter by Tahun Ajaran & Tingkat -->
-    <div class="flex flex-wrap gap-3 mb-4">
+    <div class="flex flex-wrap gap-3 mb-5">
       <SearchSelect
         v-model="selectedTahunAjaran"
         :options="tahunAjaranSelectOptions"
@@ -245,56 +242,87 @@ onMounted(async () => {
       />
     </div>
 
-    <!-- Table -->
-    <div class="bg-white border border-border rounded-xl overflow-hidden">
+    <!-- Card + Section Header + Data Table -->
+    <div class="bg-white rounded-(--radius-md) border-2 border-border shadow-xs overflow-hidden">
+      <!-- Section Header -->
+      <div
+        class="flex items-center justify-between bg-primary-50 p-5 px-6 border-b-2 border-primary-200"
+      >
+        <h2 class="text-[16px] font-bold text-primary-800">Daftar Kelas</h2>
+        <span v-if="!loading" class="text-[13px] font-semibold text-primary-600">
+          {{ filteredKelas.length }} kelas
+        </span>
+      </div>
+
+      <!-- Table -->
       <div v-if="!loading && filteredKelas.length > 0" class="overflow-x-auto">
         <table class="w-full">
           <thead>
-            <tr class="border-b border-border bg-surface-50">
-              <th class="px-4 py-3 text-left font-medium text-text-secondary text-xs">
+            <tr class="border-b-2 border-border bg-surface-warm">
+              <th
+                class="px-5 py-3.5 text-left text-[13px] font-bold uppercase tracking-[0.04em] text-text-secondary"
+              >
                 Nama Kelas
               </th>
-              <th class="px-4 py-3 text-left font-medium text-text-secondary text-xs">Tingkat</th>
-              <th class="px-4 py-3 text-left font-medium text-text-secondary text-xs">
+              <th
+                class="px-5 py-3.5 text-left text-[13px] font-bold uppercase tracking-[0.04em] text-text-secondary"
+              >
+                Tingkat
+              </th>
+              <th
+                class="px-5 py-3.5 text-left text-[13px] font-bold uppercase tracking-[0.04em] text-text-secondary"
+              >
                 Wali Kelas
               </th>
-              <th class="px-4 py-3 text-left font-medium text-text-secondary text-xs">
+              <th
+                class="px-5 py-3.5 text-left text-[13px] font-bold uppercase tracking-[0.04em] text-text-secondary"
+              >
                 Jumlah Siswa
               </th>
-              <th class="px-4 py-3 text-left font-medium text-text-secondary text-xs">Kapasitas</th>
-              <th class="px-4 py-3 text-left font-medium text-text-secondary text-xs">Aksi</th>
+              <th
+                class="px-5 py-3.5 text-left text-[13px] font-bold uppercase tracking-[0.04em] text-text-secondary"
+              >
+                Kapasitas
+              </th>
+              <th
+                class="px-5 py-3.5 text-left text-[13px] font-bold uppercase tracking-[0.04em] text-text-secondary"
+              >
+                Aksi
+              </th>
             </tr>
           </thead>
           <tbody class="divide-y divide-border">
             <tr
               v-for="kelas in filteredKelas"
               :key="kelas.id"
-              class="hover:bg-surface-50 transition-colors"
+              class="hover:bg-primary-50 transition-colors"
             >
-              <td class="px-4 py-3 text-sm text-text-primary">{{ kelas.nama }}</td>
-              <td class="px-4 py-3 text-sm text-text-primary">{{ kelas.tingkat }}</td>
-              <td class="px-4 py-3 text-sm text-text-primary">
+              <td class="px-5 py-4 text-[15px] text-text-primary font-medium">{{ kelas.nama }}</td>
+              <td class="px-5 py-4 text-[15px] text-text-primary">{{ kelas.tingkat }}</td>
+              <td class="px-5 py-4 text-[15px] text-text-primary">
                 {{ kelas.wali_kelas_nama || '-' }}
               </td>
-              <td class="px-4 py-3 text-sm text-text-primary">{{ kelas.jumlah_siswa }}</td>
-              <td class="px-4 py-3 text-sm text-text-primary">{{ kelas.kapasitas || '-' }}</td>
-              <td class="px-4 py-3">
+              <td class="px-5 py-4 text-[15px] text-text-primary">{{ kelas.jumlah_siswa }}</td>
+              <td class="px-5 py-4 text-[15px] text-text-primary">{{ kelas.kapasitas || '-' }}</td>
+              <td class="px-5 py-4">
                 <div class="flex items-center gap-2">
-                  <ActionButton variant="warning" icon="edit" @click="openEditForm(kelas)"
-                    >Edit</ActionButton
-                  >
-                  <ActionButton variant="danger" icon="delete" @click="openDeleteConfirm(kelas)"
-                    >Hapus</ActionButton
-                  >
+                  <ActionButton variant="warning" icon="edit" @click="openEditForm(kelas)">
+                    Edit
+                  </ActionButton>
+                  <ActionButton variant="danger" icon="delete" @click="openDeleteConfirm(kelas)">
+                    Hapus
+                  </ActionButton>
                 </div>
               </td>
             </tr>
           </tbody>
         </table>
       </div>
-      <div v-else-if="loading" class="py-12 text-center">
+
+      <!-- Loading state -->
+      <div v-else-if="loading" class="py-16 text-center">
         <svg
-          class="w-6 h-6 animate-spin text-primary-500 mx-auto"
+          class="w-7 h-7 animate-spin text-primary-500 mx-auto"
           xmlns="http://www.w3.org/2000/svg"
           fill="none"
           viewBox="0 0 24 24"
@@ -313,10 +341,25 @@ onMounted(async () => {
             d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
           ></path>
         </svg>
-        <p class="text-sm text-text-tertiary mt-2">Memuat data...</p>
+        <p class="mt-3 text-[15px] text-text-secondary">Memuat data...</p>
       </div>
-      <div v-else class="py-12 text-center">
-        <p class="text-sm text-text-tertiary">Belum ada kelas untuk tahun ajaran ini.</p>
+
+      <!-- Empty state -->
+      <div v-else class="py-16 text-center">
+        <svg
+          class="w-12 h-12 text-stone-300 mx-auto mb-3"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+          stroke-width="1.5"
+        >
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            d="M4.26 10.147a60.438 60.438 0 0 0-.491 6.347A48.62 48.62 0 0 1 12 20.904a48.62 48.62 0 0 1 8.232-4.41 60.46 60.46 0 0 0-.491-6.347m-15.482 0a50.636 50.636 0 0 0-2.658-.813A59.906 59.906 0 0 1 12 3.493a59.903 59.903 0 0 1 10.399 5.84c-.896.248-1.783.52-2.658.814m-15.482 0A50.717 50.717 0 0 1 12 13.489a50.702 50.702 0 0 1 7.74-3.342"
+          />
+        </svg>
+        <p class="text-[15px] text-text-secondary">Belum ada kelas untuk tahun ajaran ini.</p>
       </div>
     </div>
 
@@ -328,24 +371,24 @@ onMounted(async () => {
     >
       <form @submit.prevent="saveKelas">
         <div class="mb-4">
-          <label class="block text-sm font-medium text-text-primary mb-1.5">Nama Kelas</label>
+          <label class="block text-[15px] font-medium text-text-primary mb-1.5">Nama Kelas</label>
           <input
             v-model="form.nama"
             type="text"
             required
-            class="w-full px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
+            class="w-full px-3 py-2.5 text-[15px] border-2 border-border rounded-xs focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-colors"
             placeholder="1A, 2B, 6C..."
           />
         </div>
         <div class="mb-4">
-          <label class="block text-sm font-medium text-text-primary mb-1.5">Tingkat</label>
+          <label class="block text-[15px] font-medium text-text-primary mb-1.5">Tingkat</label>
           <input
             v-model="form.tingkat"
             type="number"
             required
             min="1"
             max="12"
-            class="w-full px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
+            class="w-full px-3 py-2.5 text-[15px] border-2 border-border rounded-xs focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-colors"
             placeholder="1-12"
           />
         </div>
@@ -359,58 +402,40 @@ onMounted(async () => {
           />
         </div>
         <div class="mb-4">
-          <label class="block text-sm font-medium text-text-primary mb-1.5"
-            >Kapasitas <span class="text-text-tertiary font-normal">(opsional)</span></label
-          >
+          <label class="block text-[15px] font-medium text-text-primary mb-1.5">
+            Kapasitas <span class="text-text-tertiary font-normal">(opsional)</span>
+          </label>
           <input
             v-model="form.kapasitas"
             type="number"
             min="1"
-            class="w-full px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
+            class="w-full px-3 py-2.5 text-[15px] border-2 border-border rounded-xs focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-colors"
             placeholder="30"
           />
         </div>
-        <p v-if="formError" class="text-xs text-danger-500 mt-1">{{ formError }}</p>
+        <p v-if="formError" class="text-[13px] text-danger-500 mt-1">{{ formError }}</p>
       </form>
       <template #footer>
-        <button
-          type="button"
-          class="px-3 py-2 text-sm font-medium text-text-secondary bg-white border border-border rounded-lg hover:bg-surface-50 transition-colors"
-          @click="showFormModal = false"
-        >
+        <ActionButton variant="neutral" icon="none" @click="showFormModal = false">
           Batal
-        </button>
-        <button
-          type="button"
-          class="px-3 py-2 text-sm font-medium text-white bg-primary-600 rounded-lg hover:bg-primary-700 transition-colors"
-          @click="saveKelas"
-        >
-          Simpan
-        </button>
+        </ActionButton>
+        <ActionButton variant="primary" icon="none" @click="saveKelas"> Simpan </ActionButton>
       </template>
     </BaseModal>
 
     <!-- Delete Confirmation Modal -->
     <BaseModal :show="showDeleteModal" title="Konfirmasi Hapus" @close="showDeleteModal = false">
-      <p class="text-sm text-text-primary">
+      <p class="text-[15px] text-text-primary">
         Apakah Anda yakin ingin menghapus kelas
         <strong>{{ deletingKelas?.nama }}</strong
         >?
       </p>
-      <p v-if="deleteError" class="text-xs text-danger-500 mt-1">{{ deleteError }}</p>
+      <p v-if="deleteError" class="text-[13px] text-danger-500 mt-2">{{ deleteError }}</p>
       <template #footer>
-        <button
-          class="px-3 py-2 text-sm font-medium text-text-secondary bg-white border border-border rounded-lg hover:bg-surface-50 transition-colors"
-          @click="showDeleteModal = false"
-        >
+        <ActionButton variant="neutral" icon="none" @click="showDeleteModal = false">
           Batal
-        </button>
-        <button
-          class="px-4 py-2 text-sm font-medium text-white bg-danger-500 rounded-lg hover:bg-danger-700 transition-colors"
-          @click="deleteKelas"
-        >
-          Hapus
-        </button>
+        </ActionButton>
+        <ActionButton variant="danger" icon="delete" @click="deleteKelas"> Hapus </ActionButton>
       </template>
     </BaseModal>
   </div>

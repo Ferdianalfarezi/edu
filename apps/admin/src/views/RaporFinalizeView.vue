@@ -195,7 +195,7 @@ function getStatusBadgeClass(status: string): string {
     case 'draft':
       return 'bg-warning-50 text-warning-700';
     default:
-      return 'bg-surface-100 text-text-secondary';
+      return 'bg-stone-100 text-text-secondary';
   }
 }
 
@@ -218,14 +218,14 @@ onMounted(fetchKelas);
 </script>
 
 <template>
-  <div class="p-4 lg:p-6 max-w-7xl mx-auto">
+  <div class="p-8 max-w-7xl mx-auto">
     <PageHeader
       title="Finalisasi Rapor"
       description="Review status input nilai dari guru, tambahkan P5 dan catatan wali kelas, lalu finalkan rapor."
     />
 
     <!-- Filters -->
-    <div class="flex flex-wrap items-center gap-3 mb-4">
+    <div class="flex flex-wrap items-center gap-3 mb-6">
       <div class="min-w-[200px]">
         <SearchSelect
           v-model="selectedKelas"
@@ -248,13 +248,13 @@ onMounted(fetchKelas);
 
     <div
       v-if="error"
-      class="p-3 bg-danger-50 border border-danger-500/20 rounded-lg text-sm text-danger-700 mb-4"
+      class="p-3 bg-danger-50 border-2 border-danger-200 rounded-[8px] text-[15px] text-danger-700 mb-4"
     >
       {{ error }}
     </div>
     <div
       v-if="successMessage"
-      class="p-3 bg-success-50 border border-success-500/20 rounded-lg text-sm text-success-700 mb-4"
+      class="p-3 bg-success-50 border-2 border-success-200 rounded-[8px] text-[15px] text-success-700 mb-4"
     >
       {{ successMessage }}
     </div>
@@ -268,14 +268,14 @@ onMounted(fetchKelas);
           d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
         />
       </svg>
-      <p class="text-sm text-text-secondary mt-2">Memuat data...</p>
+      <p class="text-[15px] text-text-secondary mt-2">Memuat data...</p>
     </div>
 
     <template v-else-if="selectedKelas && selectedPeriode && mapelStatuses.length > 0">
       <!-- Rapor Status Banner -->
       <div
         v-if="isFinalized"
-        class="p-3 bg-primary-50 border border-primary-500/20 rounded-lg text-sm text-primary-700 mb-4"
+        class="p-3 bg-primary-50 border-2 border-primary-200 rounded-[8px] text-[15px] text-primary-700 mb-4"
       >
         <strong>Status: Final</strong> — Rapor sudah difinalkan pada
         {{
@@ -287,33 +287,39 @@ onMounted(fetchKelas);
 
       <!-- Status Mata Pelajaran -->
       <section class="mb-6">
-        <h2 class="text-lg font-semibold text-text-primary mb-3">
-          Status Input Nilai per Mata Pelajaran
-        </h2>
-        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 mb-4">
-          <div
-            v-for="m in mapelStatuses"
-            :key="m.mata_pelajaran_id"
-            class="bg-white border border-border rounded-lg p-3"
-          >
-            <div class="flex justify-between items-center">
-              <span class="font-semibold text-sm text-text-primary">{{
-                m.mata_pelajaran_nama
-              }}</span>
-              <span
-                class="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium"
-                :class="getStatusBadgeClass(m.status)"
+        <div class="bg-white rounded-[16px] border-2 border-stone-200 shadow-xs overflow-hidden">
+          <div class="bg-primary-50 px-6 py-5 border-b-2 border-primary-200">
+            <h2 class="text-[16px] font-bold text-primary-800">
+              Status Input Nilai per Mata Pelajaran
+            </h2>
+          </div>
+          <div class="p-6">
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              <div
+                v-for="m in mapelStatuses"
+                :key="m.mata_pelajaran_id"
+                class="bg-white border-2 border-stone-200 rounded-[12px] p-4"
               >
-                {{ getStatusLabel(m.status) }}
-              </span>
+                <div class="flex justify-between items-center">
+                  <span class="font-semibold text-[15px] text-text-primary">{{
+                    m.mata_pelajaran_nama
+                  }}</span>
+                  <span
+                    class="inline-flex items-center px-2.5 py-1 rounded-[8px] text-[13px] font-semibold"
+                    :class="getStatusBadgeClass(m.status)"
+                  >
+                    {{ getStatusLabel(m.status) }}
+                  </span>
+                </div>
+                <p class="text-[13px] text-text-secondary mt-1">Guru: {{ m.guru_nama }}</p>
+              </div>
             </div>
-            <p class="text-xs text-text-secondary mt-1">Guru: {{ m.guru_nama }}</p>
           </div>
         </div>
 
         <div
           v-if="!allSubmitted"
-          class="p-3 bg-warning-50 border border-warning-500/20 rounded-lg text-sm text-warning-700 mb-4"
+          class="p-3 bg-warning-50 border-2 border-warning-200 rounded-[8px] text-[15px] text-warning-700 mt-4"
         >
           Belum semua guru submit nilai. Finalisasi belum dapat dilakukan.
         </div>
@@ -321,59 +327,76 @@ onMounted(fetchKelas);
 
       <!-- Siswa Overview & Catatan -->
       <section v-if="allSubmitted && siswaRapors.length > 0" class="mb-6">
-        <h2 class="text-lg font-semibold text-text-primary mb-3">
-          Data Siswa & Catatan Wali Kelas
-        </h2>
-        <div class="bg-white border border-border rounded-xl overflow-hidden">
+        <div class="bg-white rounded-[16px] border-2 border-stone-200 shadow-xs overflow-hidden">
+          <div class="bg-primary-50 px-6 py-5 border-b-2 border-primary-200">
+            <h2 class="text-[16px] font-bold text-primary-800">Data Siswa & Catatan Wali Kelas</h2>
+          </div>
           <div class="overflow-x-auto">
             <table class="w-full">
-              <thead class="border-b border-border bg-surface-50">
+              <thead class="border-b-2 border-stone-200">
                 <tr>
-                  <th class="px-4 py-3 text-left font-medium text-text-secondary text-xs">No</th>
-                  <th class="px-4 py-3 text-left font-medium text-text-secondary text-xs">
+                  <th
+                    class="px-5 py-4 text-left text-[13px] font-bold uppercase tracking-[0.04em] text-text-secondary bg-surface-warm"
+                  >
+                    No
+                  </th>
+                  <th
+                    class="px-5 py-4 text-left text-[13px] font-bold uppercase tracking-[0.04em] text-text-secondary bg-surface-warm"
+                  >
                     Nama Siswa
                   </th>
-                  <th class="px-4 py-3 text-left font-medium text-text-secondary text-xs">
+                  <th
+                    class="px-5 py-4 text-left text-[13px] font-bold uppercase tracking-[0.04em] text-text-secondary bg-surface-warm"
+                  >
                     Rata-rata
                   </th>
-                  <th class="px-4 py-3 text-left font-medium text-text-secondary text-xs">
+                  <th
+                    class="px-5 py-4 text-left text-[13px] font-bold uppercase tracking-[0.04em] text-text-secondary bg-surface-warm"
+                  >
                     Peringkat
                   </th>
-                  <th class="px-4 py-3 text-left font-medium text-text-secondary text-xs">
+                  <th
+                    class="px-5 py-4 text-left text-[13px] font-bold uppercase tracking-[0.04em] text-text-secondary bg-surface-warm"
+                  >
                     Catatan Wali Kelas
                   </th>
-                  <th class="px-4 py-3 text-left font-medium text-text-secondary text-xs">P5</th>
+                  <th
+                    class="px-5 py-4 text-left text-[13px] font-bold uppercase tracking-[0.04em] text-text-secondary bg-surface-warm"
+                  >
+                    P5
+                  </th>
                 </tr>
               </thead>
-              <tbody class="divide-y divide-border">
+              <tbody class="divide-y divide-stone-200">
                 <tr
                   v-for="(siswa, idx) in siswaRapors"
                   :key="siswa.siswa_id"
-                  class="hover:bg-surface-50 transition-colors"
+                  class="hover:bg-primary-50 transition-colors"
                 >
-                  <td class="px-4 py-3 text-sm">{{ idx + 1 }}</td>
-                  <td class="px-4 py-3 text-sm text-text-primary">{{ siswa.siswa_nama }}</td>
-                  <td class="px-4 py-3 text-sm">
+                  <td class="px-5 py-4 text-[15px]">{{ idx + 1 }}</td>
+                  <td class="px-5 py-4 text-[15px] text-text-primary">{{ siswa.siswa_nama }}</td>
+                  <td class="px-5 py-4 text-[15px]">
                     {{ siswa.rata_rata !== null ? siswa.rata_rata.toFixed(1) : '-' }}
                   </td>
-                  <td class="px-4 py-3 text-sm">{{ siswa.peringkat ?? '-' }}</td>
-                  <td class="px-4 py-3">
+                  <td class="px-5 py-4 text-[15px]">{{ siswa.peringkat ?? '-' }}</td>
+                  <td class="px-5 py-4">
                     <textarea
                       v-model="siswa.catatan_wali_kelas"
-                      class="w-full min-w-[150px] px-2 py-1.5 text-xs border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 resize-y"
+                      class="w-full min-w-[150px] px-3 py-2 text-[15px] border-2 border-stone-200 rounded-xs focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 resize-y"
                       :disabled="isFinalized"
                       rows="2"
                       placeholder="Catatan tentang siswa..."
                     />
                   </td>
-                  <td class="px-4 py-3">
+                  <td class="px-5 py-4">
                     <ActionButton
                       variant="purple"
                       icon="edit"
                       :disabled="isFinalized"
                       @click="openP5Modal(idx)"
-                      >{{ siswa.p5_deskripsi ? 'Edit P5' : 'Isi P5' }}</ActionButton
                     >
+                      {{ siswa.p5_deskripsi ? 'Edit P5' : 'Isi P5' }}
+                    </ActionButton>
                   </td>
                 </tr>
               </tbody>
@@ -383,35 +406,37 @@ onMounted(fetchKelas);
       </section>
 
       <!-- Action Buttons -->
-      <div class="flex justify-end gap-3 mt-4 pt-4 border-t border-border">
-        <button
+      <div class="flex justify-end gap-3 mt-6 pt-4 border-t-2 border-stone-200">
+        <ActionButton
           v-if="isFinalized"
-          class="px-3 py-2 text-sm font-medium text-white bg-warning-500 rounded-lg hover:bg-warning-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          variant="warning"
+          icon="revert"
           :disabled="saving"
           @click="revertFinalize"
         >
           {{ saving ? 'Memproses...' : 'Batalkan Finalisasi (Revert)' }}
-        </button>
-        <button
+        </ActionButton>
+        <ActionButton
           v-else
-          class="px-3 py-2 text-sm font-medium text-white bg-primary-600 rounded-lg hover:bg-primary-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          variant="primary"
+          icon="check"
           :disabled="saving || !allSubmitted"
           @click="finalize"
         >
           {{ saving ? 'Memproses...' : 'Finalkan Rapor' }}
-        </button>
+        </ActionButton>
       </div>
     </template>
 
     <div
       v-else-if="selectedKelas && selectedPeriode && !loading"
-      class="text-center text-text-secondary py-8 text-sm"
+      class="text-center text-text-secondary py-8 text-[15px]"
     >
       Tidak ada data rapor untuk kelas dan periode ini.
     </div>
     <div
       v-else-if="!selectedKelas || !selectedPeriode"
-      class="text-center text-text-secondary py-8 text-sm"
+      class="text-center text-text-secondary py-8 text-[15px]"
     >
       Pilih kelas dan periode untuk melihat status rapor.
     </div>
@@ -423,17 +448,17 @@ onMounted(fetchKelas);
       size="lg"
       @close="showP5Modal = false"
     >
-      <p class="text-sm text-text-secondary mb-4">
+      <p class="text-[15px] text-text-secondary mb-4">
         Isi deskripsi naratif per dimensi (opsional). Kosongkan jika tidak relevan.
       </p>
       <div class="flex flex-col gap-3">
         <div v-for="(item, idx) in p5Form" :key="idx">
-          <label class="block text-sm font-medium text-text-primary mb-1.5">{{
+          <label class="block text-[15px] font-medium text-text-primary mb-1.5">{{
             item.dimensi
           }}</label>
           <textarea
             v-model="item.deskripsi"
-            class="w-full px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
+            class="w-full px-3 py-2.5 text-[15px] border-2 border-stone-200 rounded-xs focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
             rows="2"
             placeholder="Deskripsi naratif..."
           />
@@ -441,18 +466,8 @@ onMounted(fetchKelas);
       </div>
 
       <template #footer>
-        <button
-          class="px-3 py-2 text-sm font-medium text-text-secondary bg-white border border-border rounded-lg hover:bg-surface-50 transition-colors"
-          @click="showP5Modal = false"
-        >
-          Batal
-        </button>
-        <button
-          class="px-3 py-2 text-sm font-medium text-white bg-primary-600 rounded-lg hover:bg-primary-700 transition-colors"
-          @click="saveP5"
-        >
-          Simpan
-        </button>
+        <ActionButton variant="neutral" icon="x" @click="showP5Modal = false"> Batal </ActionButton>
+        <ActionButton variant="primary" icon="check" @click="saveP5"> Simpan </ActionButton>
       </template>
     </BaseModal>
   </div>

@@ -1,0 +1,1201 @@
+<!doctype html>
+<html lang="id">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Teman Sekolah - Admin Panel Redesign (High Visibility)</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,400;0,500;0,600;0,700;0,800&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --primary-50: #eef4ff;
+        --primary-100: #d9e6ff;
+        --primary-200: #bcd4ff;
+        --primary-500: #3b7cf6;
+        --primary-600: #2563eb;
+        --primary-700: #1d4fd8;
+        --primary-800: #1e40af;
+        --primary-900: #172554;
+
+        --surface-warm: #f5f3ef;
+        --surface-card: #ffffff;
+
+        --text-primary: #1c1917;
+        --text-secondary: #44403c;
+        --text-tertiary: #78716c;
+        --text-inverse: #ffffff;
+
+        --border: #e7e5e4;
+
+        --accent-50: #fffbeb;
+        --accent-100: #fef3c7;
+        --accent-500: #f59e0b;
+        --accent-600: #d97706;
+
+        --success-50: #ecfdf5;
+        --success-100: #d1fae5;
+        --success-500: #10b981;
+        --success-600: #059669;
+        --success-700: #047857;
+
+        --warning-50: #fffbeb;
+        --warning-500: #f59e0b;
+        --warning-700: #b45309;
+
+        --danger-50: #fef2f2;
+        --danger-500: #ef4444;
+        --danger-700: #b91c1c;
+
+        --purple-50: #faf5ff;
+        --purple-100: #f3e8ff;
+        --purple-500: #a855f7;
+        --purple-600: #9333ea;
+
+        --teal-50: #f0fdfa;
+        --teal-100: #ccfbf1;
+        --teal-500: #14b8a6;
+        --teal-600: #0d9488;
+
+        --radius: 16px;
+        --radius-sm: 12px;
+        --radius-xs: 8px;
+      }
+
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+
+      body {
+        font-family:
+          'Plus Jakarta Sans',
+          -apple-system,
+          BlinkMacSystemFont,
+          sans-serif;
+        background: var(--surface-warm);
+        color: var(--text-primary);
+        line-height: 1.5;
+        -webkit-font-smoothing: antialiased;
+      }
+
+      .app-shell {
+        display: flex;
+        height: 100vh;
+        overflow: hidden;
+      }
+
+      /* ===== SIDEBAR - Colorful & High Visibility ===== */
+      .sidebar {
+        width: 96px;
+        background: linear-gradient(180deg, #1a3a3a, #0f2424);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        padding: 16px 0;
+        flex-shrink: 0;
+        transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        overflow: hidden;
+      }
+
+      .sidebar:hover {
+        width: 240px;
+      }
+
+      .sidebar-logo {
+        width: 52px;
+        height: 52px;
+        background: white;
+        border-radius: 14px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-bottom: 28px;
+        flex-shrink: 0;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+      }
+
+      .sidebar-logo span {
+        color: var(--primary-700);
+        font-weight: 800;
+        font-size: 18px;
+      }
+
+      .sidebar-nav {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        width: 100%;
+        padding: 0 12px;
+        overflow-y: auto;
+        overflow-x: hidden;
+      }
+
+      .sidebar-item {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 4px;
+        padding: 10px 6px 8px;
+        min-height: 64px;
+        border-radius: var(--radius-sm);
+        cursor: pointer;
+        transition: all 0.2s ease;
+        position: relative;
+        color: rgba(255, 255, 255, 0.6);
+        text-decoration: none;
+      }
+
+      .sidebar:hover .sidebar-item {
+        flex-direction: row;
+        justify-content: flex-start;
+        align-items: center;
+        gap: 14px;
+        padding: 12px 16px;
+        min-height: 48px;
+      }
+
+      .sidebar-item:hover {
+        background: rgba(255, 255, 255, 0.1);
+        color: rgba(255, 255, 255, 0.9);
+      }
+
+      .sidebar-item.active {
+        background: rgba(255, 255, 255, 0.15);
+        color: #ffffff;
+      }
+
+      .sidebar-item.active::before {
+        content: '';
+        position: absolute;
+        left: -12px;
+        top: 50%;
+        transform: translateY(-50%);
+        width: 4px;
+        height: 28px;
+        background: var(--accent-500);
+        border-radius: 0 4px 4px 0;
+      }
+
+      .sidebar-item svg {
+        width: 24px;
+        height: 24px;
+        flex-shrink: 0;
+      }
+
+      .sidebar-item .nav-label {
+        font-size: 10px;
+        font-weight: 600;
+        white-space: nowrap;
+        text-align: center;
+        line-height: 1.2;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        max-width: 68px;
+        transition: all 0.2s ease;
+      }
+
+      .sidebar:hover .sidebar-item .nav-label {
+        font-size: 14px;
+        font-weight: 500;
+        text-align: left;
+        max-width: 180px;
+      }
+
+      .sidebar-user {
+        width: 44px;
+        height: 44px;
+        border-radius: 50%;
+        background: var(--accent-500);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-weight: 700;
+        font-size: 16px;
+        margin-top: 16px;
+        cursor: pointer;
+        flex-shrink: 0;
+        border: 3px solid rgba(255, 255, 255, 0.2);
+      }
+
+      /* ===== MAIN AREA ===== */
+      .main-area {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+      }
+
+      /* ===== TOP BAR - Colorful ===== */
+      .topbar {
+        height: 70px;
+        background: linear-gradient(135deg, var(--primary-600), var(--primary-700));
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0 28px;
+        flex-shrink: 0;
+      }
+
+      .topbar-title {
+        font-size: 20px;
+        font-weight: 700;
+        color: white;
+      }
+
+      .topbar-right {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+      }
+
+      .school-badge {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 8px 16px;
+        background: rgba(255, 255, 255, 0.15);
+        backdrop-filter: blur(8px);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        border-radius: 24px;
+        font-size: 14px;
+        font-weight: 600;
+        color: white;
+      }
+
+      .school-badge svg {
+        width: 18px;
+        height: 18px;
+      }
+
+      /* ===== SUB-NAVIGATION - Prominent ===== */
+      .subnav {
+        height: 62px;
+        background: var(--primary-50);
+        border-bottom: 3px solid var(--primary-200);
+        display: flex;
+        align-items: center;
+        padding: 0 28px;
+        gap: 8px;
+        flex-shrink: 0;
+      }
+
+      .subnav-tab {
+        padding: 12px 22px;
+        font-size: 15px;
+        font-weight: 700;
+        color: var(--primary-800);
+        border-radius: 10px;
+        cursor: pointer;
+        transition: all 0.15s ease;
+        text-decoration: none;
+        border: 2px solid transparent;
+        background: rgba(255, 255, 255, 0.6);
+      }
+
+      .subnav-tab:hover {
+        background: white;
+        color: var(--primary-700);
+        border-color: var(--primary-300);
+        box-shadow: 0 2px 8px rgba(37, 99, 235, 0.1);
+      }
+
+      .subnav-tab.active {
+        background: var(--primary-600);
+        color: white;
+        border-color: var(--primary-600);
+      }
+
+      /* ===== PAGE CONTENT ===== */
+      .page-content {
+        flex: 1;
+        overflow-y: auto;
+        padding: 32px;
+      }
+
+      /* ===== GREETING ===== */
+      .greeting {
+        margin-bottom: 32px;
+      }
+
+      .greeting h1 {
+        font-size: 26px;
+        font-weight: 800;
+        color: var(--text-primary);
+        margin-bottom: 6px;
+      }
+
+      .greeting p {
+        font-size: 15px;
+        color: var(--text-secondary);
+      }
+
+      .tahun-ajaran-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+        padding: 10px 18px;
+        background: var(--success-50);
+        border: 2px solid var(--success-100);
+        border-radius: 24px;
+        font-size: 14px;
+        font-weight: 600;
+        color: var(--success-700);
+        margin-top: 14px;
+      }
+
+      .tahun-ajaran-badge .dot {
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        background: var(--success-500);
+        animation: pulse 2s infinite;
+      }
+
+      @keyframes pulse {
+        0%,
+        100% {
+          opacity: 1;
+        }
+        50% {
+          opacity: 0.4;
+        }
+      }
+
+      /* ===== STAT CARDS - Colorful backgrounds ===== */
+      .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 18px;
+        margin-bottom: 32px;
+      }
+
+      .stat-card {
+        border-radius: var(--radius);
+        padding: 22px;
+        transition:
+          transform 0.2s ease,
+          box-shadow 0.2s ease;
+        cursor: default;
+        position: relative;
+        overflow: hidden;
+      }
+
+      .stat-card:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 12px 32px rgba(0, 0, 0, 0.12);
+      }
+
+      .stat-card.card-blue {
+        background: linear-gradient(135deg, #eef4ff, #dbeafe);
+        border: 2px solid var(--primary-200);
+      }
+
+      .stat-card.card-green {
+        background: linear-gradient(135deg, #ecfdf5, #d1fae5);
+        border: 2px solid var(--success-100);
+      }
+
+      .stat-card.card-amber {
+        background: linear-gradient(135deg, #fffbeb, #fef3c7);
+        border: 2px solid var(--accent-100);
+      }
+
+      .stat-card.card-purple {
+        background: linear-gradient(135deg, #faf5ff, #f3e8ff);
+        border: 2px solid var(--purple-100);
+      }
+
+      .stat-card-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 16px;
+      }
+
+      .stat-card-label {
+        font-size: 14px;
+        font-weight: 600;
+        color: var(--text-secondary);
+      }
+
+      .stat-card-icon {
+        width: 42px;
+        height: 42px;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      .stat-card-icon.blue {
+        background: var(--primary-600);
+        color: white;
+      }
+      .stat-card-icon.green {
+        background: var(--success-600);
+        color: white;
+      }
+      .stat-card-icon.amber {
+        background: var(--accent-500);
+        color: white;
+      }
+      .stat-card-icon.purple {
+        background: var(--purple-500);
+        color: white;
+      }
+
+      .stat-card-icon svg {
+        width: 22px;
+        height: 22px;
+      }
+
+      .stat-card-value {
+        font-size: 32px;
+        font-weight: 800;
+        color: var(--text-primary);
+        line-height: 1.1;
+      }
+
+      .stat-card-change {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        margin-top: 8px;
+        font-size: 13px;
+        font-weight: 600;
+        color: var(--success-700);
+        background: rgba(16, 185, 129, 0.1);
+        padding: 4px 10px;
+        border-radius: 14px;
+      }
+
+      /* ===== QUICK ACTIONS - Colorful ===== */
+      .quick-actions {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 16px;
+        margin-bottom: 32px;
+      }
+
+      .quick-action-card {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        padding: 20px;
+        background: var(--surface-card);
+        border-radius: var(--radius-sm);
+        cursor: pointer;
+        transition: all 0.2s ease;
+        border: 2px solid var(--border);
+      }
+
+      .quick-action-card:hover {
+        border-color: var(--primary-300);
+        box-shadow: 0 6px 20px rgba(37, 99, 235, 0.12);
+        transform: translateY(-2px);
+      }
+
+      .quick-action-icon {
+        width: 48px;
+        height: 48px;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+      }
+
+      .quick-action-icon svg {
+        width: 24px;
+        height: 24px;
+      }
+
+      .quick-action-text h4 {
+        font-size: 15px;
+        font-weight: 700;
+        color: var(--text-primary);
+        margin-bottom: 3px;
+      }
+
+      .quick-action-text p {
+        font-size: 13px;
+        color: var(--text-tertiary);
+      }
+
+      /* ===== TABLE SECTION ===== */
+      .content-section {
+        background: var(--surface-card);
+        border-radius: var(--radius);
+        border: 2px solid var(--border);
+        overflow: hidden;
+      }
+
+      .section-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 20px 24px;
+        border-bottom: 2px solid var(--border);
+        background: var(--primary-50);
+      }
+
+      .section-title {
+        font-size: 16px;
+        font-weight: 700;
+        color: var(--primary-800);
+      }
+
+      .section-actions {
+        display: flex;
+        gap: 10px;
+      }
+
+      .btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 10px 18px;
+        font-size: 14px;
+        font-weight: 600;
+        border-radius: var(--radius-xs);
+        border: none;
+        cursor: pointer;
+        transition: all 0.15s ease;
+        font-family: inherit;
+      }
+
+      .btn-primary {
+        background: var(--primary-600);
+        color: white;
+        box-shadow: 0 2px 6px rgba(37, 99, 235, 0.3);
+      }
+
+      .btn-primary:hover {
+        background: var(--primary-700);
+        transform: translateY(-1px);
+        box-shadow: 0 4px 14px rgba(37, 99, 235, 0.3);
+      }
+
+      .btn-secondary {
+        background: white;
+        color: var(--text-secondary);
+        border: 2px solid var(--border);
+      }
+
+      .btn-secondary:hover {
+        background: var(--surface-warm);
+        border-color: var(--primary-300);
+        color: var(--primary-700);
+      }
+
+      .data-table {
+        width: 100%;
+        border-collapse: collapse;
+      }
+
+      .data-table th {
+        padding: 14px 20px;
+        font-size: 13px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        color: var(--text-secondary);
+        text-align: left;
+        background: var(--surface-warm);
+        border-bottom: 2px solid var(--border);
+      }
+
+      .data-table td {
+        padding: 16px 20px;
+        font-size: 15px;
+        color: var(--text-primary);
+        border-bottom: 1px solid var(--border);
+      }
+
+      .data-table tr:last-child td {
+        border-bottom: none;
+      }
+
+      .data-table tr:hover td {
+        background: var(--primary-50);
+      }
+
+      .student-name {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+
+      .student-avatar {
+        width: 38px;
+        height: 38px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 13px;
+        font-weight: 700;
+        color: white;
+      }
+
+      .student-avatar.av-1 {
+        background: linear-gradient(135deg, #6366f1, #8b5cf6);
+      }
+      .student-avatar.av-2 {
+        background: linear-gradient(135deg, #ec4899, #f43f5e);
+      }
+      .student-avatar.av-3 {
+        background: linear-gradient(135deg, #10b981, #059669);
+      }
+      .student-avatar.av-4 {
+        background: linear-gradient(135deg, #f59e0b, #d97706);
+      }
+      .student-avatar.av-5 {
+        background: linear-gradient(135deg, #3b82f6, #2563eb);
+      }
+
+      .badge {
+        display: inline-flex;
+        align-items: center;
+        padding: 4px 12px;
+        border-radius: 14px;
+        font-size: 13px;
+        font-weight: 700;
+      }
+
+      .badge-success {
+        background: var(--success-100);
+        color: var(--success-700);
+      }
+      .badge-warning {
+        background: var(--accent-100);
+        color: var(--warning-700);
+      }
+      .badge-danger {
+        background: var(--danger-50);
+        color: var(--danger-700);
+      }
+
+      .percentage-bar {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+
+      .percentage-bar-track {
+        flex: 1;
+        height: 8px;
+        background: #e5e7eb;
+        border-radius: 4px;
+        overflow: hidden;
+        max-width: 90px;
+      }
+
+      .percentage-bar-fill {
+        height: 100%;
+        border-radius: 4px;
+      }
+
+      .percentage-bar-fill.high {
+        background: var(--success-500);
+      }
+      .percentage-bar-fill.medium {
+        background: var(--warning-500);
+      }
+      .percentage-bar-fill.low {
+        background: var(--danger-500);
+      }
+
+      .percentage-value {
+        font-size: 15px;
+        font-weight: 700;
+        min-width: 44px;
+      }
+
+      .percentage-value.high {
+        color: var(--success-700);
+      }
+      .percentage-value.medium {
+        color: var(--warning-700);
+      }
+      .percentage-value.low {
+        color: var(--danger-700);
+      }
+
+      /* Scrollbar */
+      ::-webkit-scrollbar {
+        width: 8px;
+      }
+      ::-webkit-scrollbar-track {
+        background: transparent;
+      }
+      ::-webkit-scrollbar-thumb {
+        background: #d1d5db;
+        border-radius: 4px;
+      }
+      ::-webkit-scrollbar-thumb:hover {
+        background: #9ca3af;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="app-shell">
+      <!-- Sidebar: Dark navy, large icons, high contrast -->
+      <aside class="sidebar">
+        <div class="sidebar-logo">
+          <span>TS</span>
+        </div>
+
+        <nav class="sidebar-nav">
+          <a class="sidebar-item active">
+            <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"
+              />
+            </svg>
+            <span class="nav-label">Dashboard</span>
+          </a>
+          <a class="sidebar-item">
+            <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"
+              />
+            </svg>
+            <span class="nav-label">Akademik</span>
+          </a>
+          <a class="sidebar-item">
+            <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"
+              />
+            </svg>
+            <span class="nav-label">Absensi</span>
+          </a>
+          <a class="sidebar-item">
+            <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+              />
+            </svg>
+            <span class="nav-label">Rapor</span>
+          </a>
+          <a class="sidebar-item">
+            <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"
+              />
+            </svg>
+            <span class="nav-label">RPP</span>
+          </a>
+          <a class="sidebar-item">
+            <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"
+              />
+            </svg>
+            <span class="nav-label">Keuangan</span>
+          </a>
+          <a class="sidebar-item">
+            <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z"
+              />
+            </svg>
+            <span class="nav-label">Pengumuman</span>
+          </a>
+          <a class="sidebar-item">
+            <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"
+              />
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+              />
+            </svg>
+            <span class="nav-label">Pengaturan</span>
+          </a>
+        </nav>
+
+        <div class="sidebar-user">A</div>
+      </aside>
+
+      <!-- Main content area -->
+      <div class="main-area">
+        <!-- Top bar - Blue gradient -->
+        <header class="topbar">
+          <div class="topbar-title">Dashboard</div>
+          <div class="topbar-right">
+            <div class="school-badge">
+              <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"
+                />
+              </svg>
+              SD Negeri 1 Denpasar
+            </div>
+          </div>
+        </header>
+
+        <!-- Sub-navigation - Prominent with filled active state -->
+        <nav class="subnav">
+          <a class="subnav-tab active">Ringkasan</a>
+          <a class="subnav-tab">Siswa</a>
+          <a class="subnav-tab">Kelas</a>
+          <a class="subnav-tab">Mata Pelajaran</a>
+          <a class="subnav-tab">Jadwal</a>
+        </nav>
+
+        <!-- Page content -->
+        <main class="page-content">
+          <div class="greeting">
+            <h1>Selamat pagi, Admin</h1>
+            <p>Berikut ringkasan informasi sekolah Anda hari ini.</p>
+            <div class="tahun-ajaran-badge">
+              <span class="dot"></span>
+              Tahun Ajaran 2025/2026 - Semester 1
+            </div>
+          </div>
+
+          <!-- Stats - Colorful gradient cards -->
+          <div class="stats-grid">
+            <div class="stat-card card-blue">
+              <div class="stat-card-header">
+                <span class="stat-card-label">Total Siswa</span>
+                <div class="stat-card-icon blue">
+                  <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      d="M12 14l9-5-9-5-9 5 9 5z"
+                    />
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      d="M12 14l6.16-3.422a12.083 12.083 0 01.665 6.479A11.952 11.952 0 0012 20.055a11.952 11.952 0 00-6.824-2.998 12.078 12.078 0 01.665-6.479L12 14z"
+                    />
+                  </svg>
+                </div>
+              </div>
+              <div class="stat-card-value">342</div>
+              <div class="stat-card-change">+12 semester ini</div>
+            </div>
+
+            <div class="stat-card card-green">
+              <div class="stat-card-header">
+                <span class="stat-card-label">Total Guru</span>
+                <div class="stat-card-icon green">
+                  <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
+                    />
+                  </svg>
+                </div>
+              </div>
+              <div class="stat-card-value">28</div>
+            </div>
+
+            <div class="stat-card card-amber">
+              <div class="stat-card-header">
+                <span class="stat-card-label">Kelas Aktif</span>
+                <div class="stat-card-icon amber">
+                  <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      d="M4 5a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM4 13a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H5a1 1 0 01-1-1v-6zM16 13a1 1 0 011-1h2a1 1 0 011 1v6a1 1 0 01-1 1h-2a1 1 0 01-1-1v-6z"
+                    />
+                  </svg>
+                </div>
+              </div>
+              <div class="stat-card-value">12</div>
+            </div>
+
+            <div class="stat-card card-purple">
+              <div class="stat-card-header">
+                <span class="stat-card-label">Kehadiran Hari Ini</span>
+                <div class="stat-card-icon purple">
+                  <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+                    />
+                  </svg>
+                </div>
+              </div>
+              <div class="stat-card-value">94.2%</div>
+              <div class="stat-card-change">+1.3% dari kemarin</div>
+            </div>
+          </div>
+
+          <!-- Quick Actions -->
+          <div class="quick-actions">
+            <div class="quick-action-card">
+              <div class="quick-action-icon" style="background: var(--primary-600); color: white">
+                <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"
+                  />
+                </svg>
+              </div>
+              <div class="quick-action-text">
+                <h4>Tambah Siswa</h4>
+                <p>Daftarkan siswa baru</p>
+              </div>
+            </div>
+            <div class="quick-action-card">
+              <div class="quick-action-icon" style="background: var(--success-600); color: white">
+                <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"
+                  />
+                </svg>
+              </div>
+              <div class="quick-action-text">
+                <h4>Input Absensi</h4>
+                <p>Catat kehadiran hari ini</p>
+              </div>
+            </div>
+            <div class="quick-action-card">
+              <div class="quick-action-icon" style="background: var(--accent-500); color: white">
+                <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"
+                  />
+                </svg>
+              </div>
+              <div class="quick-action-text">
+                <h4>Kelola Tagihan</h4>
+                <p>Lihat status pembayaran</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Recent Attendance Table -->
+          <div class="content-section">
+            <div class="section-header">
+              <span class="section-title">Kehadiran Terbaru</span>
+              <div class="section-actions">
+                <button class="btn btn-secondary">
+                  <svg
+                    width="16"
+                    height="16"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                    stroke-width="2"
+                  >
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"
+                    />
+                  </svg>
+                  Filter
+                </button>
+                <button class="btn btn-primary">
+                  <svg
+                    width="16"
+                    height="16"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                    stroke-width="2"
+                  >
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"
+                    />
+                  </svg>
+                  Export
+                </button>
+              </div>
+            </div>
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Siswa</th>
+                  <th>Kelas</th>
+                  <th>Hadir</th>
+                  <th>Izin</th>
+                  <th>Sakit</th>
+                  <th>Alpa</th>
+                  <th>Kehadiran</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>
+                    <div class="student-name">
+                      <div class="student-avatar av-1">AP</div>
+                      <div>
+                        <div style="font-weight: 600; font-size: 15px">Aisyah Putri</div>
+                        <div style="font-size: 12px; color: var(--text-tertiary)">
+                          NISN: 0098765432
+                        </div>
+                      </div>
+                    </div>
+                  </td>
+                  <td><strong>6A</strong></td>
+                  <td><span class="badge badge-success">22</span></td>
+                  <td>1</td>
+                  <td>0</td>
+                  <td>0</td>
+                  <td>
+                    <div class="percentage-bar">
+                      <div class="percentage-bar-track">
+                        <div class="percentage-bar-fill high" style="width: 96%"></div>
+                      </div>
+                      <span class="percentage-value high">96%</span>
+                    </div>
+                  </td>
+                </tr>
+                <tr>
+                  <td>
+                    <div class="student-name">
+                      <div class="student-avatar av-2">BR</div>
+                      <div>
+                        <div style="font-weight: 600; font-size: 15px">Budi Rahayu</div>
+                        <div style="font-size: 12px; color: var(--text-tertiary)">
+                          NISN: 0098765433
+                        </div>
+                      </div>
+                    </div>
+                  </td>
+                  <td><strong>6A</strong></td>
+                  <td><span class="badge badge-success">20</span></td>
+                  <td>2</td>
+                  <td>1</td>
+                  <td>0</td>
+                  <td>
+                    <div class="percentage-bar">
+                      <div class="percentage-bar-track">
+                        <div class="percentage-bar-fill high" style="width: 87%"></div>
+                      </div>
+                      <span class="percentage-value high">87%</span>
+                    </div>
+                  </td>
+                </tr>
+                <tr>
+                  <td>
+                    <div class="student-name">
+                      <div class="student-avatar av-3">CW</div>
+                      <div>
+                        <div style="font-weight: 600; font-size: 15px">Citra Wulandari</div>
+                        <div style="font-size: 12px; color: var(--text-tertiary)">
+                          NISN: 0098765434
+                        </div>
+                      </div>
+                    </div>
+                  </td>
+                  <td><strong>5B</strong></td>
+                  <td><span class="badge badge-success">19</span></td>
+                  <td>0</td>
+                  <td>2</td>
+                  <td>2</td>
+                  <td>
+                    <div class="percentage-bar">
+                      <div class="percentage-bar-track">
+                        <div class="percentage-bar-fill medium" style="width: 82%"></div>
+                      </div>
+                      <span class="percentage-value medium">82%</span>
+                    </div>
+                  </td>
+                </tr>
+                <tr>
+                  <td>
+                    <div class="student-name">
+                      <div class="student-avatar av-4">DS</div>
+                      <div>
+                        <div style="font-weight: 600; font-size: 15px">Dimas Saputra</div>
+                        <div style="font-size: 12px; color: var(--text-tertiary)">
+                          NISN: 0098765435
+                        </div>
+                      </div>
+                    </div>
+                  </td>
+                  <td><strong>4A</strong></td>
+                  <td><span class="badge badge-warning">16</span></td>
+                  <td>1</td>
+                  <td>3</td>
+                  <td>3</td>
+                  <td>
+                    <div class="percentage-bar">
+                      <div class="percentage-bar-track">
+                        <div class="percentage-bar-fill low" style="width: 70%"></div>
+                      </div>
+                      <span class="percentage-value low">70%</span>
+                    </div>
+                  </td>
+                </tr>
+                <tr>
+                  <td>
+                    <div class="student-name">
+                      <div class="student-avatar av-5">EH</div>
+                      <div>
+                        <div style="font-weight: 600; font-size: 15px">Eka Handayani</div>
+                        <div style="font-size: 12px; color: var(--text-tertiary)">
+                          NISN: 0098765436
+                        </div>
+                      </div>
+                    </div>
+                  </td>
+                  <td><strong>5A</strong></td>
+                  <td><span class="badge badge-success">23</span></td>
+                  <td>0</td>
+                  <td>0</td>
+                  <td>0</td>
+                  <td>
+                    <div class="percentage-bar">
+                      <div class="percentage-bar-track">
+                        <div class="percentage-bar-fill high" style="width: 100%"></div>
+                      </div>
+                      <span class="percentage-value high">100%</span>
+                    </div>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </main>
+      </div>
+    </div>
+  </body>
+</html>

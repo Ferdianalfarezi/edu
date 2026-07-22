@@ -68,33 +68,36 @@ function goToLogin() {
 </script>
 
 <template>
-  <div class="min-h-screen flex items-center justify-center bg-surface-50 px-4">
-    <div class="w-full max-w-[400px] bg-white border border-border rounded-xl p-8 shadow-sm">
+  <div class="min-h-screen flex items-center justify-center bg-surface-warm px-4">
+    <div
+      class="w-full max-w-[400px] bg-white border-2 border-stone-200 rounded-[16px] p-8 shadow-xs"
+    >
       <h1 class="text-center text-xl font-semibold text-text-primary mb-6">Atur Password Baru</h1>
 
       <template v-if="tokenMissing">
-        <div class="text-center p-4 bg-danger-50 rounded-lg mb-4">
-          <p class="text-sm text-danger-700">
+        <div class="text-center p-4 bg-danger-50 rounded-xs mb-4">
+          <p class="text-[15px] text-danger-700">
             Tautan reset password tidak valid. Silakan minta tautan baru dari halaman reset
             password.
           </p>
         </div>
         <router-link
           to="/reset-password"
-          class="block text-center text-xs text-primary-600 hover:underline"
+          class="block text-center text-[13px] text-primary-600 hover:text-primary-700 transition-colors"
         >
           Minta tautan reset baru
         </router-link>
       </template>
 
       <template v-else-if="success">
-        <div class="text-center p-4 bg-success-50 rounded-lg mb-4">
-          <p class="text-sm text-success-700">
+        <div class="text-center p-4 bg-success-50 rounded-xs mb-4">
+          <p class="text-[15px] text-success-700">
             Password berhasil diubah! Silakan login dengan password baru Anda.
           </p>
         </div>
         <button
-          class="w-full px-3 py-2 text-sm font-medium text-white bg-primary-600 rounded-lg hover:bg-primary-700 transition-colors"
+          class="w-full py-2.5 px-[18px] text-[14px] font-semibold text-white bg-primary-600 rounded-xs hover:bg-primary-700 hover:-translate-y-[1px] transition-all focus:outline-2 focus:outline-primary-500 focus:outline-offset-2"
+          style="box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3)"
           @click="goToLogin"
         >
           Login
@@ -115,9 +118,9 @@ function goToLogin() {
               autocomplete="new-password"
               placeholder="Minimal 8 karakter"
               minlength="8"
-              class="w-full px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
+              class="w-full px-3 py-2.5 text-[15px] border-2 border-stone-200 rounded-xs placeholder:text-text-tertiary focus:outline-2 focus:outline-primary-500 focus:outline-offset-2 transition-colors"
             />
-            <span v-if="passwordTooShort" class="text-xs text-danger-500 mt-1"
+            <span v-if="passwordTooShort" class="text-[13px] text-danger-500 mt-1"
               >Password minimal 8 karakter</span
             >
           </div>
@@ -132,15 +135,15 @@ function goToLogin() {
               required
               autocomplete="new-password"
               placeholder="Ketik ulang password"
-              class="w-full px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
+              class="w-full px-3 py-2.5 text-[15px] border-2 border-stone-200 rounded-xs placeholder:text-text-tertiary focus:outline-2 focus:outline-primary-500 focus:outline-offset-2 transition-colors"
             />
-            <span v-if="passwordMismatch" class="text-xs text-danger-500 mt-1"
+            <span v-if="passwordMismatch" class="text-[13px] text-danger-500 mt-1"
               >Password tidak cocok</span
             >
           </div>
           <p
             v-if="error"
-            class="text-xs text-danger-500 bg-danger-50 rounded-md px-3 py-2"
+            class="text-[13px] text-danger-500 bg-danger-50 rounded-xs px-3 py-2"
             role="alert"
           >
             {{ error }}
@@ -148,7 +151,8 @@ function goToLogin() {
           <button
             type="submit"
             :disabled="!canSubmit"
-            class="w-full px-3 py-2 text-sm font-medium text-white bg-primary-600 rounded-lg hover:bg-primary-700 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+            class="w-full py-2.5 px-[18px] text-[14px] font-semibold text-white bg-primary-600 rounded-xs hover:bg-primary-700 hover:-translate-y-[1px] transition-all disabled:opacity-50 disabled:cursor-not-allowed focus:outline-2 focus:outline-primary-500 focus:outline-offset-2"
+            style="box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3)"
           >
             {{ loading ? 'Menyimpan...' : 'Simpan Password Baru' }}
           </button>
@@ -158,7 +162,7 @@ function goToLogin() {
       <router-link
         v-if="!success && !tokenMissing"
         to="/login"
-        class="block text-center mt-4 text-xs text-primary-600 hover:underline"
+        class="block text-center mt-4 text-[13px] text-primary-600 hover:text-primary-700 transition-colors"
       >
         &larr; Kembali ke halaman login
       </router-link>

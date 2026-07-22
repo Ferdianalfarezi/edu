@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue';
 import { api } from '@/api/client';
-import { PageHeader, SearchSelect } from '@/components/ui';
+import { PageHeader, SearchSelect, ActionButton } from '@/components/ui';
 import type { SelectOption } from '@/components/ui';
 
 interface Kelas {
@@ -203,8 +203,8 @@ async function exportRekap() {
 
 function getPercentageClass(value: number | null): string {
   if (value === null) return '';
-  if (value >= 90) return 'text-success-700';
-  if (value >= 75) return 'text-warning-700';
+  if (value >= 90) return 'text-success-700 font-bold';
+  if (value >= 75) return 'text-warning-700 font-bold';
   return 'text-danger-700 font-bold';
 }
 
@@ -222,22 +222,23 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="p-4 lg:p-6 max-w-7xl mx-auto">
+  <div class="p-8 max-w-7xl mx-auto">
     <PageHeader title="Rekap Absensi">
       <template #actions>
-        <button
+        <ActionButton
           v-if="rekapData && rekapData.data.length > 0"
-          class="px-3 py-2 text-sm font-medium text-white bg-primary-600 rounded-lg hover:bg-primary-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          variant="primary"
+          icon="download"
           :disabled="exporting"
           @click="exportRekap"
         >
-          {{ exporting ? 'Mengexport...' : '📥 Export' }}
-        </button>
+          {{ exporting ? 'Mengexport...' : 'Export' }}
+        </ActionButton>
       </template>
     </PageHeader>
 
     <!-- Filter Bar -->
-    <div class="flex flex-wrap items-center gap-3 mb-4">
+    <div class="flex flex-wrap items-center gap-4 mb-6">
       <div class="min-w-[200px]">
         <SearchSelect
           v-model="selectedKelasId"
@@ -282,14 +283,14 @@ onMounted(() => {
     <!-- Error -->
     <div
       v-if="errorMessage"
-      class="p-3 bg-danger-50 border border-danger-500/20 rounded-lg text-sm text-danger-700 mb-4"
+      class="p-4 bg-danger-50 border-2 border-danger-500/20 rounded-xs text-[15px] text-danger-700 mb-4"
     >
       {{ errorMessage }}
     </div>
 
     <!-- Loading -->
-    <div v-if="loading" class="text-center py-8">
-      <svg class="w-6 h-6 animate-spin text-primary-500 mx-auto" fill="none" viewBox="0 0 24 24">
+    <div v-if="loading" class="text-center py-12">
+      <svg class="w-7 h-7 animate-spin text-primary-500 mx-auto" fill="none" viewBox="0 0 24 24">
         <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
         <path
           class="opacity-75"
@@ -297,35 +298,35 @@ onMounted(() => {
           d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
         />
       </svg>
-      <p class="text-sm text-text-secondary mt-2">Memuat data rekap...</p>
+      <p class="text-[15px] text-text-secondary mt-3">Memuat data rekap...</p>
     </div>
 
     <!-- Rekap Content -->
     <div v-else-if="rekapData">
       <!-- Info Bar -->
-      <div class="flex flex-wrap gap-6 p-3 bg-surface-50 rounded-lg mb-4 text-sm">
-        <div class="flex items-center gap-1.5">
-          <span class="text-text-secondary">Periode:</span>
-          <span class="font-semibold text-text-primary">{{ periodeLabel }}</span>
+      <div class="flex flex-wrap gap-6 p-4 bg-surface-warm rounded-xs mb-5 text-[15px]">
+        <div class="flex items-center gap-2">
+          <span class="text-stone-500">Periode:</span>
+          <span class="font-bold text-stone-800">{{ periodeLabel }}</span>
         </div>
-        <div class="flex items-center gap-1.5">
-          <span class="text-text-secondary">Total Hari Efektif:</span>
-          <span class="font-semibold text-text-primary">
+        <div class="flex items-center gap-2">
+          <span class="text-stone-500">Total Hari Efektif:</span>
+          <span class="font-bold text-stone-800">
             {{
               rekapData.total_hari_efektif !== null
                 ? rekapData.total_hari_efektif + ' hari'
                 : 'Belum tersedia'
             }}
           </span>
-          <span v-if="rekapData.hari_efektif_source" class="text-xs text-text-tertiary">
+          <span v-if="rekapData.hari_efektif_source" class="text-[13px] text-stone-400">
             ({{
               rekapData.hari_efektif_source === 'manual' ? 'input manual' : 'kalkulasi otomatis'
             }})
           </span>
         </div>
-        <div v-if="averagePercentage !== null" class="flex items-center gap-1.5">
-          <span class="text-text-secondary">Rata-rata Kehadiran:</span>
-          <span class="font-semibold" :class="getPercentageClass(averagePercentage)">
+        <div v-if="averagePercentage !== null" class="flex items-center gap-2">
+          <span class="text-stone-500">Rata-rata Kehadiran:</span>
+          <span class="font-bold" :class="getPercentageClass(averagePercentage)">
             {{ averagePercentage }}%
           </span>
         </div>
@@ -334,61 +335,84 @@ onMounted(() => {
       <!-- Hari efektif warning -->
       <div
         v-if="rekapData.total_hari_efektif === null"
-        class="p-3 bg-warning-50 border border-warning-500/20 rounded-lg text-sm text-warning-700 mb-4"
+        class="p-4 bg-warning-50 border-2 border-warning-500/20 rounded-xs text-[15px] text-warning-700 mb-4"
       >
         ⚠️ Data hari efektif belum tersedia. Persentase kehadiran tidak dapat dihitung.
       </div>
 
-      <!-- Rekap Table -->
+      <!-- Rekap Table Card -->
       <div
         v-if="rekapData.data && rekapData.data.length > 0"
-        class="bg-white border border-border rounded-xl overflow-hidden"
+        class="bg-white rounded-[16px] border-2 border-stone-200 shadow-xs overflow-hidden"
       >
+        <!-- Section Header -->
+        <div class="bg-primary-50 px-6 py-5 border-b-2 border-primary-200">
+          <h3 class="text-[16px] font-bold text-primary-800">Rekap Kehadiran</h3>
+        </div>
+
         <div class="overflow-x-auto">
           <table class="w-full">
-            <thead class="border-b border-border bg-surface-50">
+            <thead class="border-b-2 border-stone-200">
               <tr>
-                <th class="px-4 py-3 font-medium text-text-secondary text-xs w-[50px] text-center">
+                <th
+                  class="px-5 py-4 font-bold text-text-secondary text-[13px] uppercase tracking-[0.04em] bg-surface-warm w-[50px] text-center"
+                >
                   No
                 </th>
-                <th class="px-4 py-3 text-left font-medium text-text-secondary text-xs">
+                <th
+                  class="px-5 py-4 text-left font-bold text-text-secondary text-[13px] uppercase tracking-[0.04em] bg-surface-warm"
+                >
                   Nama Siswa
                 </th>
-                <th class="px-4 py-3 text-left font-medium text-text-secondary text-xs w-[120px]">
+                <th
+                  class="px-5 py-4 text-left font-bold text-text-secondary text-[13px] uppercase tracking-[0.04em] bg-surface-warm w-[120px]"
+                >
                   NISN
                 </th>
-                <th class="px-4 py-3 text-center font-medium text-xs w-[70px] text-success-700">
+                <th
+                  class="px-5 py-4 text-center font-bold text-[13px] uppercase tracking-[0.04em] bg-surface-warm w-[70px] text-success-700"
+                >
                   Hadir
                 </th>
-                <th class="px-4 py-3 text-center font-medium text-xs w-[70px] text-warning-700">
+                <th
+                  class="px-5 py-4 text-center font-bold text-[13px] uppercase tracking-[0.04em] bg-surface-warm w-[70px] text-warning-700"
+                >
                   Izin
                 </th>
-                <th class="px-4 py-3 text-center font-medium text-xs w-[70px] text-primary-700">
+                <th
+                  class="px-5 py-4 text-center font-bold text-[13px] uppercase tracking-[0.04em] bg-surface-warm w-[70px] text-primary-700"
+                >
                   Sakit
                 </th>
-                <th class="px-4 py-3 text-center font-medium text-xs w-[70px] text-danger-700">
+                <th
+                  class="px-5 py-4 text-center font-bold text-[13px] uppercase tracking-[0.04em] bg-surface-warm w-[70px] text-danger-700"
+                >
                   Alpa
                 </th>
-                <th class="px-4 py-3 text-center font-medium text-text-secondary text-xs w-[110px]">
+                <th
+                  class="px-5 py-4 text-center font-bold text-text-secondary text-[13px] uppercase tracking-[0.04em] bg-surface-warm w-[110px]"
+                >
                   % Kehadiran
                 </th>
               </tr>
             </thead>
-            <tbody class="divide-y divide-border">
+            <tbody class="divide-y divide-stone-200">
               <tr
                 v-for="(siswa, index) in rekapData.data"
                 :key="siswa.siswa_id"
-                class="hover:bg-surface-50 transition-colors"
+                class="hover:bg-primary-50 transition-colors"
               >
-                <td class="px-4 py-3 text-sm text-center">{{ index + 1 }}</td>
-                <td class="px-4 py-3 text-sm text-text-primary">{{ siswa.siswa_nama }}</td>
-                <td class="px-4 py-3 text-sm text-text-secondary">{{ siswa.siswa_nisn || '-' }}</td>
-                <td class="px-4 py-3 text-sm text-center">{{ siswa.hadir }}</td>
-                <td class="px-4 py-3 text-sm text-center">{{ siswa.izin }}</td>
-                <td class="px-4 py-3 text-sm text-center">{{ siswa.sakit }}</td>
-                <td class="px-4 py-3 text-sm text-center">{{ siswa.alpa }}</td>
+                <td class="px-5 py-4 text-[15px] text-center text-stone-600">{{ index + 1 }}</td>
+                <td class="px-5 py-4 text-[15px] text-stone-800 font-medium">
+                  {{ siswa.siswa_nama }}
+                </td>
+                <td class="px-5 py-4 text-[15px] text-stone-500">{{ siswa.siswa_nisn || '-' }}</td>
+                <td class="px-5 py-4 text-[15px] text-center">{{ siswa.hadir }}</td>
+                <td class="px-5 py-4 text-[15px] text-center">{{ siswa.izin }}</td>
+                <td class="px-5 py-4 text-[15px] text-center">{{ siswa.sakit }}</td>
+                <td class="px-5 py-4 text-[15px] text-center">{{ siswa.alpa }}</td>
                 <td
-                  class="px-4 py-3 text-sm text-center font-medium"
+                  class="px-5 py-4 text-[15px] text-center"
                   :class="getPercentageClass(siswa.persentase_kehadiran)"
                 >
                   {{ siswa.persentase_kehadiran !== null ? siswa.persentase_kehadiran + '%' : '-' }}
@@ -396,14 +420,18 @@ onMounted(() => {
               </tr>
             </tbody>
             <tfoot>
-              <tr class="bg-surface-50 border-t-2 border-border font-semibold">
-                <td colspan="3" class="px-4 py-3 text-sm">Total</td>
-                <td class="px-4 py-3 text-sm text-center">{{ totals.hadir }}</td>
-                <td class="px-4 py-3 text-sm text-center">{{ totals.izin }}</td>
-                <td class="px-4 py-3 text-sm text-center">{{ totals.sakit }}</td>
-                <td class="px-4 py-3 text-sm text-center">{{ totals.alpa }}</td>
-                <td class="px-4 py-3 text-sm text-center">
-                  <span v-if="averagePercentage !== null">{{ averagePercentage }}%</span>
+              <tr class="bg-surface-warm border-t-2 border-stone-200 font-bold">
+                <td colspan="3" class="px-5 py-4 text-[15px] text-stone-800">Total</td>
+                <td class="px-5 py-4 text-[15px] text-center">{{ totals.hadir }}</td>
+                <td class="px-5 py-4 text-[15px] text-center">{{ totals.izin }}</td>
+                <td class="px-5 py-4 text-[15px] text-center">{{ totals.sakit }}</td>
+                <td class="px-5 py-4 text-[15px] text-center">{{ totals.alpa }}</td>
+                <td class="px-5 py-4 text-[15px] text-center">
+                  <span
+                    v-if="averagePercentage !== null"
+                    :class="getPercentageClass(averagePercentage)"
+                    >{{ averagePercentage }}%</span
+                  >
                   <span v-else>-</span>
                 </td>
               </tr>
@@ -412,13 +440,13 @@ onMounted(() => {
         </div>
       </div>
 
-      <div v-else class="text-center text-text-secondary py-8 text-sm">
+      <div v-else class="text-center text-text-secondary py-12 text-[15px]">
         Tidak ada data absensi untuk periode yang dipilih.
       </div>
     </div>
 
     <!-- Initial empty state -->
-    <div v-else-if="!selectedKelasId" class="text-center text-text-secondary py-8 text-sm">
+    <div v-else-if="!selectedKelasId" class="text-center text-text-secondary py-12 text-[15px]">
       Pilih kelas untuk melihat rekap absensi.
     </div>
   </div>

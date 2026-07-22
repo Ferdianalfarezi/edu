@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue';
 import { api } from '@/api/client';
-import { PageHeader, SearchSelect } from '@/components/ui';
+import { PageHeader, SearchSelect, ActionButton } from '@/components/ui';
 import type { SelectOption } from '@/components/ui';
 
 interface TahunAjaran {
@@ -100,7 +100,6 @@ async function fetchTahunAjaran() {
   try {
     const { data } = await api.get<TahunAjaran[]>('/tahun-ajaran');
     tahunAjaranList.value = data;
-    // Default target to the first 'disiapkan' or 'aktif' tahun ajaran
     const prepared = data.find((t) => t.status === 'disiapkan');
     const aktif = data.find((t) => t.status === 'aktif');
     if (prepared) {
@@ -113,8 +112,6 @@ async function fetchTahunAjaran() {
   }
 }
 
-// Source kelas should come from a tahun ajaran that has students (typically the previous one)
-// Show all tahun ajaran in dropdown for source selection
 const sourceTahunAjaranId = ref('');
 
 const sourceTahunAjaranOptions = computed(() =>
@@ -169,7 +166,6 @@ async function goToPreview() {
     }
 
     const { data } = await api.post<PreviewResult>('/kenaikan-kelas/preview', payload);
-    // Map siswa_id to id for frontend compatibility
     previewStudents.value = data.students.map((s) => ({
       id: s.siswa_id,
       nama: s.nama,
@@ -178,7 +174,6 @@ async function goToPreview() {
     isHighestGrade.value = data.is_highest_grade;
     excludedStudentIds.value = new Set();
 
-    // Auto-select suggested target from response
     if (!targetKelasId.value && data.target_kelas) {
       targetKelasId.value = data.target_kelas.id;
     }
@@ -283,7 +278,6 @@ function getTargetTahunAjaranName(): string {
 
 onMounted(async () => {
   await fetchTahunAjaran();
-  // Auto-select the first non-target tahun ajaran as source (e.g., the one with status nonaktif or aktif that has kelas)
   const nonTarget = tahunAjaranList.value.find((t) => t.id !== targetTahunAjaranId.value);
   if (nonTarget) {
     sourceTahunAjaranId.value = nonTarget.id;
@@ -296,58 +290,54 @@ onMounted(async () => {
 </script>
 
 <template>
-  <div class="p-4 lg:p-6 max-w-7xl mx-auto">
+  <div class="p-8">
     <PageHeader title="Kenaikan Kelas" />
 
     <!-- Wizard Steps Indicator -->
-    <div class="flex items-center justify-center gap-0 mb-6">
+    <div class="flex items-center justify-center gap-0 mb-8">
       <div class="flex items-center gap-2">
         <div
           :class="[
-            'w-7 h-7 rounded-full flex items-center justify-center text-xs font-semibold',
-            currentStep >= 1 ? 'bg-primary-600 text-white' : 'bg-surface-200 text-text-tertiary',
+            'w-8 h-8 rounded-full flex items-center justify-center text-[13px] font-bold',
+            currentStep >= 1 ? 'bg-primary-600 text-white' : 'bg-stone-200 text-text-tertiary',
           ]"
         >
           1
         </div>
         <span
-          class="text-sm font-medium"
+          class="text-[15px] font-semibold"
           :class="currentStep >= 1 ? 'text-primary-600' : 'text-text-tertiary'"
           >Pilih Kelas</span
         >
       </div>
-      <div
-        :class="['w-12 h-0.5 mx-2', currentStep >= 2 ? 'bg-primary-600' : 'bg-surface-200']"
-      ></div>
+      <div :class="['w-12 h-0.5 mx-3', currentStep >= 2 ? 'bg-primary-600' : 'bg-stone-200']"></div>
       <div class="flex items-center gap-2">
         <div
           :class="[
-            'w-7 h-7 rounded-full flex items-center justify-center text-xs font-semibold',
-            currentStep >= 2 ? 'bg-primary-600 text-white' : 'bg-surface-200 text-text-tertiary',
+            'w-8 h-8 rounded-full flex items-center justify-center text-[13px] font-bold',
+            currentStep >= 2 ? 'bg-primary-600 text-white' : 'bg-stone-200 text-text-tertiary',
           ]"
         >
           2
         </div>
         <span
-          class="text-sm font-medium"
+          class="text-[15px] font-semibold"
           :class="currentStep >= 2 ? 'text-primary-600' : 'text-text-tertiary'"
           >Preview Siswa</span
         >
       </div>
-      <div
-        :class="['w-12 h-0.5 mx-2', currentStep >= 3 ? 'bg-primary-600' : 'bg-surface-200']"
-      ></div>
+      <div :class="['w-12 h-0.5 mx-3', currentStep >= 3 ? 'bg-primary-600' : 'bg-stone-200']"></div>
       <div class="flex items-center gap-2">
         <div
           :class="[
-            'w-7 h-7 rounded-full flex items-center justify-center text-xs font-semibold',
-            currentStep >= 3 ? 'bg-primary-600 text-white' : 'bg-surface-200 text-text-tertiary',
+            'w-8 h-8 rounded-full flex items-center justify-center text-[13px] font-bold',
+            currentStep >= 3 ? 'bg-primary-600 text-white' : 'bg-stone-200 text-text-tertiary',
           ]"
         >
           3
         </div>
         <span
-          class="text-sm font-medium"
+          class="text-[15px] font-semibold"
           :class="currentStep >= 3 ? 'text-primary-600' : 'text-text-tertiary'"
           >Konfirmasi</span
         >
@@ -355,225 +345,240 @@ onMounted(async () => {
     </div>
 
     <!-- Step 1: Select Source & Target -->
-    <div v-if="currentStep === 1" class="max-w-xl">
-      <h2 class="text-lg font-semibold text-text-primary mb-4">Pilih Kelas Asal dan Tujuan</h2>
-
-      <div
-        v-if="targetTahunAjaranOptions.length === 0"
-        class="p-3 bg-warning-50 border border-warning-500/20 rounded-lg text-sm text-warning-700 mb-4"
-      >
-        Hanya ada satu tahun ajaran. Buat tahun ajaran baru terlebih dahulu sebelum melakukan
-        kenaikan kelas.
+    <div
+      v-if="currentStep === 1"
+      class="bg-white border-2 border-stone-200 rounded-[16px] shadow-xs overflow-hidden max-w-xl mx-auto"
+    >
+      <!-- Section Header -->
+      <div class="px-6 py-5 bg-primary-50 border-b-2 border-primary-200">
+        <h3 class="text-[16px] font-bold text-primary-800">Pilih Kelas Asal dan Tujuan</h3>
       </div>
 
-      <template v-else>
-        <div class="mb-4">
-          <SearchSelect
-            v-model="sourceTahunAjaranId"
-            label="Tahun Ajaran Asal"
-            :options="sourceTahunAjaranSelectOptions"
-            placeholder="-- Pilih Tahun Ajaran Asal --"
-            @change="fetchSourceKelas"
-          />
+      <div class="p-6">
+        <div
+          v-if="targetTahunAjaranOptions.length === 0"
+          class="p-4 bg-warning-50 border-2 border-warning-500/20 rounded-xs text-[15px] text-warning-700 mb-5"
+        >
+          Hanya ada satu tahun ajaran. Buat tahun ajaran baru terlebih dahulu sebelum melakukan
+          kenaikan kelas.
         </div>
 
-        <div class="mb-4">
-          <SearchSelect
-            v-model="sourceKelasId"
-            label="Kelas Asal"
-            :options="sourceKelasSelectOptions"
-            placeholder="-- Pilih Kelas Asal --"
-            :disabled="!sourceTahunAjaranId"
-            @change="error = ''"
-          />
-        </div>
+        <template v-else>
+          <div class="mb-5">
+            <SearchSelect
+              v-model="sourceTahunAjaranId"
+              label="Tahun Ajaran Asal"
+              :options="sourceTahunAjaranSelectOptions"
+              placeholder="-- Pilih Tahun Ajaran Asal --"
+              @change="fetchSourceKelas"
+            />
+          </div>
 
-        <div class="mb-4">
-          <SearchSelect
-            v-model="targetTahunAjaranId"
-            label="Tahun Ajaran Tujuan"
-            :options="targetTahunAjaranSelectOptions"
-            placeholder="-- Pilih Tahun Ajaran Tujuan --"
-            @change="fetchTargetKelas"
-          />
-        </div>
+          <div class="mb-5">
+            <SearchSelect
+              v-model="sourceKelasId"
+              label="Kelas Asal"
+              :options="sourceKelasSelectOptions"
+              placeholder="-- Pilih Kelas Asal --"
+              :disabled="!sourceTahunAjaranId"
+              @change="error = ''"
+            />
+          </div>
 
-        <div class="mb-4">
-          <SearchSelect
-            v-model="targetKelasId"
-            label="Kelas Tujuan"
-            :options="targetKelasSelectOptions"
-            placeholder="-- Otomatis (Tingkat +1) --"
-            :disabled="!targetTahunAjaranId"
-            clearable
-          />
-          <p class="mt-1 text-xs text-text-tertiary">
-            Opsional — kosong berarti otomatis tingkat +1
-          </p>
-        </div>
+          <div class="mb-5">
+            <SearchSelect
+              v-model="targetTahunAjaranId"
+              label="Tahun Ajaran Tujuan"
+              :options="targetTahunAjaranSelectOptions"
+              placeholder="-- Pilih Tahun Ajaran Tujuan --"
+              @change="fetchTargetKelas"
+            />
+          </div>
 
-        <p v-if="error" class="text-xs text-danger-500 mt-1">{{ error }}</p>
+          <div class="mb-5">
+            <SearchSelect
+              v-model="targetKelasId"
+              label="Kelas Tujuan"
+              :options="targetKelasSelectOptions"
+              placeholder="-- Otomatis (Tingkat +1) --"
+              :disabled="!targetTahunAjaranId"
+              clearable
+            />
+            <p class="mt-1.5 text-[13px] text-text-tertiary">
+              Opsional — kosong berarti otomatis tingkat +1
+            </p>
+          </div>
 
-        <div class="flex justify-end mt-6">
-          <button
-            class="px-3 py-2 text-sm font-medium text-white bg-primary-600 rounded-lg hover:bg-primary-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-            :disabled="!sourceKelasId || !targetTahunAjaranId || loading"
-            @click="goToPreview"
-          >
-            {{ loading ? 'Memuat...' : 'Lanjut →' }}
-          </button>
-        </div>
-      </template>
+          <p v-if="error" class="text-[13px] text-danger-600 mt-1">{{ error }}</p>
+
+          <div class="flex justify-end mt-6">
+            <ActionButton
+              variant="primary"
+              :disabled="!sourceKelasId || !targetTahunAjaranId || loading"
+              @click="goToPreview"
+            >
+              {{ loading ? 'Memuat...' : 'Lanjut →' }}
+            </ActionButton>
+          </div>
+        </template>
+      </div>
     </div>
 
     <!-- Step 2: Preview Students -->
-    <div v-if="currentStep === 2" class="max-w-xl">
-      <h2 class="text-lg font-semibold text-text-primary mb-2">Preview Siswa</h2>
-      <p class="text-sm text-text-secondary mb-4">
-        Centang siswa yang ingin <strong>dikecualikan</strong> dari kenaikan kelas (tidak naik
-        kelas).
-      </p>
-
-      <div
-        v-if="isHighestGrade"
-        class="p-3 bg-primary-50 border border-primary-500/20 rounded-lg text-sm text-primary-700 mb-4"
-      >
-        Kelas ini adalah tingkat tertinggi. Siswa yang dipromosikan akan ditandai sebagai
-        <strong>Lulus/Alumni</strong>.
+    <div
+      v-if="currentStep === 2"
+      class="bg-white border-2 border-stone-200 rounded-[16px] shadow-xs overflow-hidden max-w-xl mx-auto"
+    >
+      <!-- Section Header -->
+      <div class="px-6 py-5 bg-primary-50 border-b-2 border-primary-200">
+        <h3 class="text-[16px] font-bold text-primary-800">Preview Siswa</h3>
+        <p class="text-[13px] text-text-secondary mt-1">
+          Centang siswa yang ingin <strong>dikecualikan</strong> dari kenaikan kelas (tidak naik
+          kelas).
+        </p>
       </div>
 
-      <div class="flex gap-4 p-3 bg-surface-50 rounded-lg mb-4 text-sm text-text-secondary">
-        <span>Total siswa: {{ previewStudents.length }}</span>
-        <span>Naik kelas: {{ selectedStudentCount }}</span>
-        <span>Dikecualikan: {{ excludedStudentIds.size }}</span>
-      </div>
-
-      <div
-        class="bg-white border border-border rounded-xl overflow-hidden max-h-[400px] overflow-y-auto"
-      >
+      <div class="p-6">
         <div
-          v-for="student in previewStudents"
-          :key="student.id"
-          :class="[
-            'px-4 py-3 border-b border-border last:border-b-0',
-            excludedStudentIds.has(student.id) ? 'bg-danger-50' : '',
-          ]"
+          v-if="isHighestGrade"
+          class="p-4 bg-primary-50 border-2 border-primary-200 rounded-xs text-[15px] text-primary-700 mb-5"
         >
-          <label class="flex items-center gap-3 cursor-pointer text-sm">
-            <input
-              type="checkbox"
-              :checked="excludedStudentIds.has(student.id)"
-              class="rounded border-border"
-              @change="toggleExclude(student.id)"
-            />
-            <span class="flex-1 text-text-primary">{{ student.nama }}</span>
-            <span v-if="student.nisn" class="text-xs text-text-tertiary">{{ student.nisn }}</span>
-          </label>
+          Kelas ini adalah tingkat tertinggi. Siswa yang dipromosikan akan ditandai sebagai
+          <strong>Lulus/Alumni</strong>.
         </div>
-        <div v-if="previewStudents.length === 0" class="py-12 text-center">
-          <p class="text-sm text-text-tertiary">Tidak ada siswa aktif di kelas ini.</p>
+
+        <div class="flex gap-5 p-4 bg-surface-warm rounded-xs mb-5 text-[15px] text-text-secondary">
+          <span
+            >Total: <strong class="text-text-primary">{{ previewStudents.length }}</strong></span
+          >
+          <span
+            >Naik: <strong class="text-text-primary">{{ selectedStudentCount }}</strong></span
+          >
+          <span
+            >Dikecualikan:
+            <strong class="text-text-primary">{{ excludedStudentIds.size }}</strong></span
+          >
         </div>
-      </div>
 
-      <p v-if="error" class="text-xs text-danger-500 mt-1">{{ error }}</p>
+        <div class="border-2 border-stone-200 rounded-xs overflow-hidden max-h-100 overflow-y-auto">
+          <div
+            v-for="student in previewStudents"
+            :key="student.id"
+            :class="[
+              'px-5 py-4 border-b border-stone-200 last:border-b-0 transition-colors duration-200',
+              excludedStudentIds.has(student.id) ? 'bg-danger-50' : 'hover:bg-primary-50',
+            ]"
+          >
+            <label class="flex items-center gap-3 cursor-pointer text-[15px]">
+              <input
+                type="checkbox"
+                :checked="excludedStudentIds.has(student.id)"
+                class="rounded border-stone-300 text-primary-600 focus:ring-primary-500/20"
+                @change="toggleExclude(student.id)"
+              />
+              <span class="flex-1 text-text-primary font-medium">{{ student.nama }}</span>
+              <span v-if="student.nisn" class="text-[13px] text-text-tertiary font-mono">{{
+                student.nisn
+              }}</span>
+            </label>
+          </div>
+          <div v-if="previewStudents.length === 0" class="py-12 text-center">
+            <p class="text-[15px] text-text-tertiary">Tidak ada siswa aktif di kelas ini.</p>
+          </div>
+        </div>
 
-      <div class="flex justify-between mt-6">
-        <button
-          class="px-3 py-2 text-sm font-medium text-text-secondary bg-white border border-border rounded-lg hover:bg-surface-50 transition-colors"
-          @click="goBackToStep1"
-        >
-          ← Kembali
-        </button>
-        <button
-          class="px-3 py-2 text-sm font-medium text-white bg-primary-600 rounded-lg hover:bg-primary-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-          :disabled="selectedStudentCount === 0"
-          @click="goToConfirmation"
-        >
-          Lanjut →
-        </button>
+        <p v-if="error" class="text-[13px] text-danger-600 mt-2">{{ error }}</p>
+
+        <div class="flex justify-between mt-6">
+          <ActionButton variant="neutral" @click="goBackToStep1">← Kembali</ActionButton>
+          <ActionButton
+            variant="primary"
+            :disabled="selectedStudentCount === 0"
+            @click="goToConfirmation"
+          >
+            Lanjut →
+          </ActionButton>
+        </div>
       </div>
     </div>
 
     <!-- Step 3: Confirm and Execute -->
-    <div v-if="currentStep === 3" class="max-w-xl">
-      <h2 class="text-lg font-semibold text-text-primary mb-4">Konfirmasi Kenaikan Kelas</h2>
-
-      <div v-if="!executionResult" class="bg-surface-50 rounded-lg p-4 divide-y divide-border">
-        <div class="flex justify-between py-2 text-sm">
-          <span class="text-text-secondary">Kelas Asal:</span>
-          <span class="font-medium text-text-primary">{{ getSourceKelasName() }}</span>
-        </div>
-        <div class="flex justify-between py-2 text-sm">
-          <span class="text-text-secondary">Kelas Tujuan:</span>
-          <span class="font-medium text-text-primary">{{ getTargetKelasName() }}</span>
-        </div>
-        <div class="flex justify-between py-2 text-sm">
-          <span class="text-text-secondary">Tahun Ajaran Tujuan:</span>
-          <span class="font-medium text-text-primary">{{ getTargetTahunAjaranName() }}</span>
-        </div>
-        <div class="flex justify-between py-2 text-sm">
-          <span class="text-text-secondary">Siswa Naik Kelas:</span>
-          <span class="font-medium text-text-primary">{{ selectedStudentCount }} siswa</span>
-        </div>
-        <div v-if="excludedStudentIds.size > 0" class="flex justify-between py-2 text-sm">
-          <span class="text-text-secondary">Siswa Dikecualikan:</span>
-          <span class="font-medium text-text-primary">{{ excludedStudentIds.size }} siswa</span>
-        </div>
-        <div v-if="isHighestGrade" class="flex justify-between py-2 text-sm">
-          <span class="text-text-secondary">Status Setelah Proses:</span>
-          <span
-            class="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-primary-50 text-primary-700"
-            >Lulus / Alumni</span
-          >
-        </div>
+    <div
+      v-if="currentStep === 3"
+      class="bg-white border-2 border-stone-200 rounded-[16px] shadow-xs overflow-hidden max-w-xl mx-auto"
+    >
+      <!-- Section Header -->
+      <div class="px-6 py-5 bg-primary-50 border-b-2 border-primary-200">
+        <h3 class="text-[16px] font-bold text-primary-800">Konfirmasi Kenaikan Kelas</h3>
       </div>
 
-      <!-- Success Result -->
-      <div
-        v-if="executionResult"
-        class="text-center p-6 bg-success-50 border border-success-500/20 rounded-xl"
-      >
+      <div class="p-6">
         <div
-          class="w-12 h-12 rounded-full bg-success-700 text-white flex items-center justify-center text-xl mx-auto mb-3"
+          v-if="!executionResult"
+          class="bg-surface-warm rounded-xs p-5 divide-y divide-stone-200"
         >
-          ✓
+          <div class="flex justify-between py-3 text-[15px]">
+            <span class="text-text-secondary">Kelas Asal:</span>
+            <span class="font-semibold text-text-primary">{{ getSourceKelasName() }}</span>
+          </div>
+          <div class="flex justify-between py-3 text-[15px]">
+            <span class="text-text-secondary">Kelas Tujuan:</span>
+            <span class="font-semibold text-text-primary">{{ getTargetKelasName() }}</span>
+          </div>
+          <div class="flex justify-between py-3 text-[15px]">
+            <span class="text-text-secondary">Tahun Ajaran Tujuan:</span>
+            <span class="font-semibold text-text-primary">{{ getTargetTahunAjaranName() }}</span>
+          </div>
+          <div class="flex justify-between py-3 text-[15px]">
+            <span class="text-text-secondary">Siswa Naik Kelas:</span>
+            <span class="font-semibold text-text-primary">{{ selectedStudentCount }} siswa</span>
+          </div>
+          <div v-if="excludedStudentIds.size > 0" class="flex justify-between py-3 text-[15px]">
+            <span class="text-text-secondary">Siswa Dikecualikan:</span>
+            <span class="font-semibold text-text-primary">{{ excludedStudentIds.size }} siswa</span>
+          </div>
+          <div v-if="isHighestGrade" class="flex justify-between py-3 text-[15px]">
+            <span class="text-text-secondary">Status Setelah Proses:</span>
+            <span
+              class="inline-flex items-center px-2.5 py-1 rounded-md text-[13px] font-semibold bg-primary-50 text-primary-700"
+              >Lulus / Alumni</span
+            >
+          </div>
         </div>
-        <h3 class="text-lg font-semibold text-success-700 mb-3">{{ successMessage }}</h3>
-        <div class="space-y-1 mb-4">
-          <p class="text-sm text-text-primary">
-            Siswa naik kelas: <strong>{{ executionResult.promoted }}</strong>
-          </p>
-          <p v-if="executionResult.excluded > 0" class="text-sm text-text-primary">
-            Siswa dikecualikan: <strong>{{ executionResult.excluded }}</strong>
-          </p>
-          <p v-if="executionResult.graduated > 0" class="text-sm text-text-primary">
-            Siswa lulus/alumni: <strong>{{ executionResult.graduated }}</strong>
-          </p>
+
+        <!-- Success Result -->
+        <div
+          v-if="executionResult"
+          class="text-center p-8 bg-success-50 border-2 border-success-600/20 rounded-sm"
+        >
+          <div
+            class="w-14 h-14 rounded-full bg-success-600 text-white flex items-center justify-center text-2xl mx-auto mb-4"
+          >
+            ✓
+          </div>
+          <h3 class="text-[18px] font-bold text-success-700 mb-4">{{ successMessage }}</h3>
+          <div class="space-y-2 mb-6">
+            <p class="text-[15px] text-text-primary">
+              Siswa naik kelas: <strong>{{ executionResult.promoted }}</strong>
+            </p>
+            <p v-if="executionResult.excluded > 0" class="text-[15px] text-text-primary">
+              Siswa dikecualikan: <strong>{{ executionResult.excluded }}</strong>
+            </p>
+            <p v-if="executionResult.graduated > 0" class="text-[15px] text-text-primary">
+              Siswa lulus/alumni: <strong>{{ executionResult.graduated }}</strong>
+            </p>
+          </div>
+          <ActionButton variant="primary" @click="resetWizard">Proses Kelas Lain</ActionButton>
         </div>
-        <button
-          class="px-3 py-2 text-sm font-medium text-white bg-primary-600 rounded-lg hover:bg-primary-700 transition-colors"
-          @click="resetWizard"
-        >
-          Proses Kelas Lain
-        </button>
-      </div>
 
-      <p v-if="error" class="text-xs text-danger-500 mt-1">{{ error }}</p>
+        <p v-if="error" class="text-[13px] text-danger-600 mt-2">{{ error }}</p>
 
-      <div v-if="!executionResult" class="flex justify-between mt-6">
-        <button
-          class="px-3 py-2 text-sm font-medium text-text-secondary bg-white border border-border rounded-lg hover:bg-surface-50 transition-colors"
-          @click="goBackToStep2"
-        >
-          ← Kembali
-        </button>
-        <button
-          class="px-3 py-2 text-sm font-medium text-white bg-primary-600 rounded-lg hover:bg-primary-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-          :disabled="executing"
-          @click="executePromotion"
-        >
-          {{ executing ? 'Memproses...' : 'Proses Kenaikan Kelas' }}
-        </button>
+        <div v-if="!executionResult" class="flex justify-between mt-6">
+          <ActionButton variant="neutral" @click="goBackToStep2">← Kembali</ActionButton>
+          <ActionButton variant="success" :disabled="executing" @click="executePromotion">
+            {{ executing ? 'Memproses...' : 'Proses Kenaikan Kelas' }}
+          </ActionButton>
+        </div>
       </div>
     </div>
   </div>

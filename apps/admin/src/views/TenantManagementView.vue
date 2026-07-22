@@ -143,56 +143,83 @@ onMounted(fetchTenants);
 </script>
 
 <template>
-  <div class="p-4 lg:p-6 max-w-7xl mx-auto">
-    <PageHeader title="Manajemen Tenant (Sekolah)" description="">
+  <div class="p-8 max-w-7xl mx-auto">
+    <PageHeader title="Manajemen Tenant (Sekolah)">
       <template #actions>
-        <button
-          class="px-3 py-2 text-sm font-medium text-white bg-primary-600 rounded-lg hover:bg-primary-700 transition-colors"
-          @click="openCreateForm"
-        >
-          Tambah Sekolah
-        </button>
+        <ActionButton variant="primary" @click="openCreateForm"> Tambah Sekolah </ActionButton>
       </template>
     </PageHeader>
 
-    <div class="bg-white border border-border rounded-xl overflow-hidden">
+    <!-- Table Card -->
+    <div class="bg-white rounded-[16px] border-2 border-stone-200 shadow-xs overflow-hidden">
+      <!-- Section Header -->
+      <div class="bg-primary-50 px-6 py-5 border-b-2 border-primary-200">
+        <h3 class="text-[16px] font-bold text-primary-800">Daftar Sekolah</h3>
+      </div>
+
       <div v-if="!loading && tenants.length > 0" class="overflow-x-auto">
         <table class="w-full">
-          <thead class="border-b border-border bg-surface-50">
+          <thead class="border-b-2 border-stone-200">
             <tr>
-              <th class="px-4 py-3 text-left font-medium text-text-secondary text-xs">
+              <th
+                class="px-5 py-4 text-left font-bold text-text-secondary text-[13px] uppercase tracking-[0.04em] bg-surface-warm"
+              >
                 Nama Sekolah
               </th>
-              <th class="px-4 py-3 text-left font-medium text-text-secondary text-xs">Email</th>
-              <th class="px-4 py-3 text-left font-medium text-text-secondary text-xs">Telepon</th>
-              <th class="px-4 py-3 text-left font-medium text-text-secondary text-xs">
+              <th
+                class="px-5 py-4 text-left font-bold text-text-secondary text-[13px] uppercase tracking-[0.04em] bg-surface-warm"
+              >
+                Email
+              </th>
+              <th
+                class="px-5 py-4 text-left font-bold text-text-secondary text-[13px] uppercase tracking-[0.04em] bg-surface-warm"
+              >
+                Telepon
+              </th>
+              <th
+                class="px-5 py-4 text-left font-bold text-text-secondary text-[13px] uppercase tracking-[0.04em] bg-surface-warm"
+              >
                 Jumlah User
               </th>
-              <th class="px-4 py-3 text-left font-medium text-text-secondary text-xs">
+              <th
+                class="px-5 py-4 text-left font-bold text-text-secondary text-[13px] uppercase tracking-[0.04em] bg-surface-warm"
+              >
                 Hari Kerja
               </th>
-              <th class="px-4 py-3 text-left font-medium text-text-secondary text-xs">Status</th>
-              <th class="px-4 py-3 text-left font-medium text-text-secondary text-xs">Terdaftar</th>
-              <th class="px-4 py-3 text-left font-medium text-text-secondary text-xs">Aksi</th>
+              <th
+                class="px-5 py-4 text-left font-bold text-text-secondary text-[13px] uppercase tracking-[0.04em] bg-surface-warm"
+              >
+                Status
+              </th>
+              <th
+                class="px-5 py-4 text-left font-bold text-text-secondary text-[13px] uppercase tracking-[0.04em] bg-surface-warm"
+              >
+                Terdaftar
+              </th>
+              <th
+                class="px-5 py-4 text-left font-bold text-text-secondary text-[13px] uppercase tracking-[0.04em] bg-surface-warm"
+              >
+                Aksi
+              </th>
             </tr>
           </thead>
-          <tbody class="divide-y divide-border">
+          <tbody class="divide-y divide-stone-200">
             <tr
               v-for="tenant in tenants"
               :key="tenant.id"
-              class="hover:bg-surface-50 transition-colors"
+              class="hover:bg-primary-50 transition-colors"
             >
-              <td class="px-4 py-3 text-sm text-text-primary">{{ tenant.nama }}</td>
-              <td class="px-4 py-3 text-sm text-text-secondary">{{ tenant.email || '-' }}</td>
-              <td class="px-4 py-3 text-sm text-text-secondary">{{ tenant.telepon || '-' }}</td>
-              <td class="px-4 py-3 text-sm text-text-secondary">{{ tenant.user_count ?? '-' }}</td>
-              <td class="px-4 py-3 text-sm text-text-secondary">
+              <td class="px-5 py-4 text-[15px] text-stone-800 font-medium">{{ tenant.nama }}</td>
+              <td class="px-5 py-4 text-[15px] text-stone-500">{{ tenant.email || '-' }}</td>
+              <td class="px-5 py-4 text-[15px] text-stone-500">{{ tenant.telepon || '-' }}</td>
+              <td class="px-5 py-4 text-[15px] text-stone-500">{{ tenant.user_count ?? '-' }}</td>
+              <td class="px-5 py-4 text-[15px] text-stone-500">
                 {{ tenant.hari_kerja === '5_hari' ? '5 Hari' : '6 Hari' }}
               </td>
-              <td class="px-4 py-3">
+              <td class="px-5 py-4">
                 <span
                   :class="[
-                    'inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium',
+                    'inline-flex items-center px-2.5 py-1 rounded-[8px] text-[13px] font-semibold',
                     tenant.is_active
                       ? 'bg-success-50 text-success-700'
                       : 'bg-danger-50 text-danger-700',
@@ -201,28 +228,29 @@ onMounted(fetchTenants);
                   {{ tenant.is_active ? 'Aktif' : 'Nonaktif' }}
                 </span>
               </td>
-              <td class="px-4 py-3 text-sm text-text-secondary">
+              <td class="px-5 py-4 text-[15px] text-stone-500">
                 {{ formatDate(tenant.created_at) }}
               </td>
-              <td class="px-4 py-3">
+              <td class="px-5 py-4">
                 <div class="flex gap-2">
-                  <ActionButton variant="warning" icon="edit" @click="openEditForm(tenant)"
-                    >Edit</ActionButton
-                  >
+                  <ActionButton variant="warning" icon="edit" @click="openEditForm(tenant)">
+                    Edit
+                  </ActionButton>
                   <ActionButton
                     :variant="tenant.is_active ? 'danger' : 'success'"
                     :icon="tenant.is_active ? 'cancel' : 'activate'"
                     @click="toggleTenantStatus(tenant)"
-                    >{{ tenant.is_active ? 'Nonaktifkan' : 'Aktifkan' }}</ActionButton
                   >
+                    {{ tenant.is_active ? 'Nonaktifkan' : 'Aktifkan' }}
+                  </ActionButton>
                 </div>
               </td>
             </tr>
           </tbody>
         </table>
       </div>
-      <p v-else-if="loading" class="text-center text-text-secondary py-8">Memuat data...</p>
-      <p v-else class="text-center text-text-secondary py-8">Belum ada tenant terdaftar.</p>
+      <p v-else-if="loading" class="text-center text-stone-500 text-[15px] py-12">Memuat data...</p>
+      <p v-else class="text-center text-stone-500 text-[15px] py-12">Belum ada tenant terdaftar.</p>
     </div>
 
     <!-- Create/Edit Modal -->
@@ -232,50 +260,52 @@ onMounted(fetchTenants);
       size="lg"
       @close="showFormModal = false"
     >
-      <p v-if="!editingTenant" class="text-sm text-text-secondary mb-4">
+      <p v-if="!editingTenant" class="text-[15px] text-stone-500 mb-4">
         Setelah dibuat, satu user Admin default akan dibuatkan dan kredensial dikirim ke email
         sekolah.
       </p>
       <form @submit.prevent="saveTenant">
         <div class="mb-4">
-          <label class="block text-sm font-medium text-text-primary mb-1.5">Nama Sekolah</label>
+          <label class="block text-[14px] font-semibold text-stone-800 mb-1.5">Nama Sekolah</label>
           <input
             v-model="form.nama"
             type="text"
             required
-            class="w-full px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
+            class="w-full px-4 py-2.5 text-[15px] border-2 border-stone-200 rounded-[8px] focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-colors"
             placeholder="SD Negeri 1 Contoh"
           />
         </div>
         <div class="mb-4">
-          <label class="block text-sm font-medium text-text-primary mb-1.5">Alamat</label>
+          <label class="block text-[14px] font-semibold text-stone-800 mb-1.5">Alamat</label>
           <textarea
             v-model="form.alamat"
-            class="w-full px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 min-h-[60px] resize-y"
+            class="w-full px-4 py-2.5 text-[15px] border-2 border-stone-200 rounded-[8px] focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 min-h-[60px] resize-y transition-colors"
             placeholder="Jl. Pendidikan No. 1"
           ></textarea>
         </div>
         <div class="mb-4">
-          <label class="block text-sm font-medium text-text-primary mb-1.5">Telepon</label>
+          <label class="block text-[14px] font-semibold text-stone-800 mb-1.5">Telepon</label>
           <input
             v-model="form.telepon"
             type="text"
-            class="w-full px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
+            class="w-full px-4 py-2.5 text-[15px] border-2 border-stone-200 rounded-[8px] focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-colors"
             placeholder="021-12345678"
           />
         </div>
         <div class="mb-4">
-          <label class="block text-sm font-medium text-text-primary mb-1.5">Email</label>
+          <label class="block text-[14px] font-semibold text-stone-800 mb-1.5">Email</label>
           <input
             v-model="form.email"
             type="email"
-            class="w-full px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
+            class="w-full px-4 py-2.5 text-[15px] border-2 border-stone-200 rounded-[8px] focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-colors"
             placeholder="admin@sekolah.sch.id"
           />
         </div>
         <!-- Jumlah Tingkat -->
         <div class="mb-4">
-          <label class="block text-sm font-medium text-text-primary mb-1.5">Jumlah Tingkat</label>
+          <label class="block text-[14px] font-semibold text-stone-800 mb-1.5"
+            >Jumlah Tingkat</label
+          >
           <input
             v-if="!editingTenant"
             v-model.number="form.jumlah_tingkat"
@@ -283,22 +313,22 @@ onMounted(fetchTenants);
             min="1"
             max="13"
             required
-            class="w-full px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
+            class="w-full px-4 py-2.5 text-[15px] border-2 border-stone-200 rounded-[8px] focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-colors"
           />
           <div
             v-else
-            class="w-full px-3 py-2 text-sm border border-border rounded-lg bg-surface-50 text-text-secondary"
+            class="w-full px-4 py-2.5 text-[15px] border-2 border-stone-200 rounded-[8px] bg-surface-warm text-stone-500"
           >
             {{ form.jumlah_tingkat }}
           </div>
-          <p class="mt-1 text-xs text-text-secondary">SD = 6, SMP/SMA = 3</p>
+          <p class="mt-1 text-[13px] text-stone-400">SD = 6, SMP/SMA = 3</p>
         </div>
         <!-- Hari Kerja (create mode only) -->
         <div v-if="!editingTenant" class="mb-4">
-          <label class="block text-sm font-medium text-text-primary mb-1.5">Hari Kerja</label>
+          <label class="block text-[14px] font-semibold text-stone-800 mb-1.5">Hari Kerja</label>
           <select
             v-model="form.hari_kerja"
-            class="w-full px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
+            class="w-full px-4 py-2.5 text-[15px] border-2 border-stone-200 rounded-[8px] focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-colors"
           >
             <option value="6_hari">6 Hari (Senin-Sabtu)</option>
             <option value="5_hari">5 Hari (Senin-Jumat)</option>
@@ -307,42 +337,30 @@ onMounted(fetchTenants);
         <!-- Admin fields (create mode only) -->
         <template v-if="!editingTenant">
           <div class="mb-4">
-            <label class="block text-sm font-medium text-text-primary mb-1.5">Nama Admin</label>
+            <label class="block text-[14px] font-semibold text-stone-800 mb-1.5">Nama Admin</label>
             <input
               v-model="form.admin_nama"
               type="text"
               required
-              class="w-full px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
+              class="w-full px-4 py-2.5 text-[15px] border-2 border-stone-200 rounded-[8px] focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-colors"
               placeholder="Nama lengkap admin sekolah"
             />
           </div>
           <div class="mb-4">
-            <label class="block text-sm font-medium text-text-primary mb-1.5">Email Admin</label>
+            <label class="block text-[14px] font-semibold text-stone-800 mb-1.5">Email Admin</label>
             <input
               v-model="form.admin_email"
               type="email"
               required
-              class="w-full px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
+              class="w-full px-4 py-2.5 text-[15px] border-2 border-stone-200 rounded-[8px] focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-colors"
               placeholder="admin@sekolah.sch.id"
             />
           </div>
         </template>
       </form>
       <template #footer>
-        <button
-          type="button"
-          class="px-3 py-2 text-sm font-medium text-text-secondary bg-white border border-border rounded-lg hover:bg-surface-50 transition-colors"
-          @click="showFormModal = false"
-        >
-          Batal
-        </button>
-        <button
-          type="button"
-          class="px-3 py-2 text-sm font-medium text-white bg-primary-600 rounded-lg hover:bg-primary-700 transition-colors"
-          @click="saveTenant"
-        >
-          Simpan
-        </button>
+        <ActionButton variant="neutral" @click="showFormModal = false"> Batal </ActionButton>
+        <ActionButton variant="primary" @click="saveTenant"> Simpan </ActionButton>
       </template>
     </BaseModal>
   </div>

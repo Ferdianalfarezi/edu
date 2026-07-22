@@ -26,6 +26,7 @@ import { RaporModule } from './modules/rapor/rapor.module';
 import { RppModule } from './modules/rpp/rpp.module';
 import { KenaikanKelasModule } from './modules/kenaikan-kelas/kenaikan-kelas.module';
 import { AuditLogModule } from './modules/audit-log';
+import { BarangModule } from './modules/barang/barang.module';
 import { DashboardModule } from './modules/dashboard/dashboard.module';
 import { HealthModule } from './modules/health/health.module';
 import { TenantInterceptor } from './common/interceptors/tenant.interceptor';
@@ -168,6 +169,9 @@ import { MONITORING_CONFIG } from './common/monitoring/monitoring.config';
 
     // Audit Log (global — cross-tenant audit trail)
     AuditLogModule,
+
+    // Barang (pencatatan inventaris barang sekolah)
+    BarangModule,
 
     // Dashboard (Superadmin cross-tenant metrics)
     DashboardModule,

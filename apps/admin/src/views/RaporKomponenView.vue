@@ -173,80 +173,102 @@ onMounted(fetchItems);
 </script>
 
 <template>
-  <div class="p-4 lg:p-6 max-w-7xl mx-auto">
+  <div class="p-8 max-w-7xl mx-auto">
     <PageHeader
       title="Konfigurasi Komponen Penilaian"
       description="Atur komponen penilaian rapor sesuai kurikulum sekolah. Template default: Kurikulum Merdeka (Nilai Akhir angka 0-100, Capaian Pembelajaran deskripsi naratif)."
     >
       <template #actions>
-        <button
-          class="px-3 py-2 text-sm font-medium text-white bg-primary-600 rounded-lg hover:bg-primary-700 transition-colors"
-          @click="openCreateForm"
-        >
+        <ActionButton variant="primary" icon="check" @click="openCreateForm">
           Tambah Komponen
-        </button>
+        </ActionButton>
       </template>
     </PageHeader>
 
     <div
       v-if="error"
-      class="p-3 bg-danger-50 border border-danger-500/20 rounded-lg text-sm text-danger-700 mb-4"
+      class="p-3 bg-danger-50 border-2 border-danger-200 rounded-[8px] text-[15px] text-danger-700 mb-4"
     >
       {{ error }}
     </div>
 
     <div
       v-if="!loading && items.length > 0"
-      class="bg-white border border-border rounded-xl overflow-hidden"
+      class="bg-white rounded-[16px] border-2 border-stone-200 shadow-xs overflow-hidden"
     >
+      <div class="bg-primary-50 px-6 py-5 border-b-2 border-primary-200">
+        <h2 class="text-[16px] font-bold text-primary-800">Daftar Komponen Penilaian</h2>
+      </div>
       <div class="overflow-x-auto">
         <table class="w-full">
-          <thead class="border-b border-border bg-surface-50">
+          <thead class="border-b-2 border-stone-200">
             <tr>
-              <th class="px-4 py-3 text-left font-medium text-text-secondary text-xs w-[80px]">
+              <th
+                class="px-5 py-4 text-left text-[13px] font-bold uppercase tracking-[0.04em] text-text-secondary bg-surface-warm w-[80px]"
+              >
                 Urutan
               </th>
-              <th class="px-4 py-3 text-left font-medium text-text-secondary text-xs">
+              <th
+                class="px-5 py-4 text-left text-[13px] font-bold uppercase tracking-[0.04em] text-text-secondary bg-surface-warm"
+              >
                 Nama Komponen
               </th>
-              <th class="px-4 py-3 text-left font-medium text-text-secondary text-xs">Tipe</th>
-              <th class="px-4 py-3 text-left font-medium text-text-secondary text-xs">Skala</th>
-              <th class="px-4 py-3 text-left font-medium text-text-secondary text-xs">Wajib</th>
-              <th class="px-4 py-3 text-left font-medium text-text-secondary text-xs">Aksi</th>
+              <th
+                class="px-5 py-4 text-left text-[13px] font-bold uppercase tracking-[0.04em] text-text-secondary bg-surface-warm"
+              >
+                Tipe
+              </th>
+              <th
+                class="px-5 py-4 text-left text-[13px] font-bold uppercase tracking-[0.04em] text-text-secondary bg-surface-warm"
+              >
+                Skala
+              </th>
+              <th
+                class="px-5 py-4 text-left text-[13px] font-bold uppercase tracking-[0.04em] text-text-secondary bg-surface-warm"
+              >
+                Wajib
+              </th>
+              <th
+                class="px-5 py-4 text-left text-[13px] font-bold uppercase tracking-[0.04em] text-text-secondary bg-surface-warm"
+              >
+                Aksi
+              </th>
             </tr>
           </thead>
-          <tbody class="divide-y divide-border">
-            <tr v-for="item in items" :key="item.id" class="hover:bg-surface-50 transition-colors">
-              <td class="px-4 py-3 text-sm">{{ item.urutan }}</td>
-              <td class="px-4 py-3 text-sm text-text-primary font-medium">{{ item.nama }}</td>
-              <td class="px-4 py-3 text-sm text-text-secondary">{{ getTipeLabel(item.tipe) }}</td>
-              <td class="px-4 py-3 text-sm text-text-secondary">
+          <tbody class="divide-y divide-stone-200">
+            <tr v-for="item in items" :key="item.id" class="hover:bg-primary-50 transition-colors">
+              <td class="px-5 py-4 text-[15px]">{{ item.urutan }}</td>
+              <td class="px-5 py-4 text-[15px] text-text-primary font-medium">{{ item.nama }}</td>
+              <td class="px-5 py-4 text-[15px] text-text-secondary">
+                {{ getTipeLabel(item.tipe) }}
+              </td>
+              <td class="px-5 py-4 text-[15px] text-text-secondary">
                 <span v-if="item.tipe === 'angka'"
                   >{{ item.skala_min }} - {{ item.skala_max }}</span
                 >
                 <span v-else-if="item.tipe === 'huruf'">A/B/C/D/E</span>
                 <span v-else>-</span>
               </td>
-              <td class="px-4 py-3">
+              <td class="px-5 py-4">
                 <span
-                  class="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium"
+                  class="inline-flex items-center px-2.5 py-1 rounded-[8px] text-[13px] font-semibold"
                   :class="
                     item.is_wajib
                       ? 'bg-primary-50 text-primary-700'
-                      : 'bg-surface-100 text-text-secondary'
+                      : 'bg-stone-100 text-text-secondary'
                   "
                 >
                   {{ item.is_wajib ? 'Wajib' : 'Opsional' }}
                 </span>
               </td>
-              <td class="px-4 py-3">
-                <div class="flex gap-1.5">
-                  <ActionButton variant="warning" icon="edit" @click="openEditForm(item)"
-                    >Edit</ActionButton
-                  >
-                  <ActionButton variant="danger" icon="delete" @click="openDeleteConfirm(item)"
-                    >Hapus</ActionButton
-                  >
+              <td class="px-5 py-4">
+                <div class="flex gap-2">
+                  <ActionButton variant="warning" icon="edit" @click="openEditForm(item)">
+                    Edit
+                  </ActionButton>
+                  <ActionButton variant="danger" icon="delete" @click="openDeleteConfirm(item)">
+                    Hapus
+                  </ActionButton>
                 </div>
               </td>
             </tr>
@@ -264,10 +286,10 @@ onMounted(fetchItems);
           d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
         />
       </svg>
-      <p class="text-sm text-text-secondary mt-2">Memuat data...</p>
+      <p class="text-[15px] text-text-secondary mt-2">Memuat data...</p>
     </div>
 
-    <div v-else class="text-center text-text-secondary py-8 text-sm">
+    <div v-else class="text-center text-text-secondary py-8 text-[15px]">
       Belum ada komponen penilaian. Klik "Tambah Komponen" untuk mengatur format rapor.
     </div>
 
@@ -279,12 +301,14 @@ onMounted(fetchItems);
     >
       <form @submit.prevent="saveItem">
         <div class="mb-4">
-          <label class="block text-sm font-medium text-text-primary mb-1.5">Nama Komponen</label>
+          <label class="block text-[15px] font-medium text-text-primary mb-1.5"
+            >Nama Komponen</label
+          >
           <input
             v-model="form.nama"
             type="text"
             required
-            class="w-full px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
+            class="w-full px-3 py-2.5 text-[15px] border-2 border-stone-200 rounded-xs focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
             placeholder="Contoh: Nilai Akhir, Tugas Harian, UTS"
           />
         </div>
@@ -302,83 +326,65 @@ onMounted(fetchItems);
 
         <div v-if="form.tipe === 'angka'" class="grid grid-cols-2 gap-4 mb-4">
           <div>
-            <label class="block text-sm font-medium text-text-primary mb-1.5">Skala Min</label>
+            <label class="block text-[15px] font-medium text-text-primary mb-1.5">Skala Min</label>
             <input
               v-model.number="form.skala_min"
               type="number"
-              class="w-full px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
+              class="w-full px-3 py-2.5 text-[15px] border-2 border-stone-200 rounded-xs focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
             />
           </div>
           <div>
-            <label class="block text-sm font-medium text-text-primary mb-1.5">Skala Max</label>
+            <label class="block text-[15px] font-medium text-text-primary mb-1.5">Skala Max</label>
             <input
               v-model.number="form.skala_max"
               type="number"
-              class="w-full px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
+              class="w-full px-3 py-2.5 text-[15px] border-2 border-stone-200 rounded-xs focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
             />
           </div>
         </div>
 
         <div class="mb-4">
-          <label class="block text-sm font-medium text-text-primary mb-1.5">Urutan</label>
+          <label class="block text-[15px] font-medium text-text-primary mb-1.5">Urutan</label>
           <input
             v-model.number="form.urutan"
             type="number"
             min="0"
-            class="w-full px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
+            class="w-full px-3 py-2.5 text-[15px] border-2 border-stone-200 rounded-xs focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
           />
         </div>
 
         <div class="mb-4">
-          <label class="flex items-center gap-2 text-sm text-text-primary cursor-pointer">
-            <input v-model="form.is_wajib" type="checkbox" class="rounded border-border" />
+          <label class="flex items-center gap-2 text-[15px] text-text-primary cursor-pointer">
+            <input v-model="form.is_wajib" type="checkbox" class="rounded border-stone-200" />
             Wajib diisi oleh guru
           </label>
         </div>
 
-        <p v-if="formError" class="text-xs text-danger-500 mt-1">{{ formError }}</p>
+        <p v-if="formError" class="text-[13px] text-danger-500 mt-1">{{ formError }}</p>
       </form>
 
       <template #footer>
-        <button
-          type="button"
-          class="px-3 py-2 text-sm font-medium text-text-secondary bg-white border border-border rounded-lg hover:bg-surface-50 transition-colors"
-          @click="showFormModal = false"
-        >
+        <ActionButton variant="neutral" icon="x" @click="showFormModal = false">
           Batal
-        </button>
-        <button
-          type="button"
-          class="px-3 py-2 text-sm font-medium text-white bg-primary-600 rounded-lg hover:bg-primary-700 transition-colors"
-          @click="saveItem"
-        >
-          Simpan
-        </button>
+        </ActionButton>
+        <ActionButton variant="primary" icon="check" @click="saveItem"> Simpan </ActionButton>
       </template>
     </BaseModal>
 
     <!-- Delete Confirmation Modal -->
     <BaseModal :show="showDeleteModal" title="Konfirmasi Hapus" @close="showDeleteModal = false">
-      <p class="text-sm text-text-primary">
+      <p class="text-[15px] text-text-primary">
         Apakah Anda yakin ingin menghapus komponen
         <strong>{{ deletingItem?.nama }}</strong
         >?
       </p>
-      <p v-if="deleteError" class="text-xs text-danger-500 mt-1">{{ deleteError }}</p>
+      <p v-if="deleteError" class="text-[13px] text-danger-500 mt-1">{{ deleteError }}</p>
 
       <template #footer>
-        <button
-          class="px-3 py-2 text-sm font-medium text-text-secondary bg-white border border-border rounded-lg hover:bg-surface-50 transition-colors"
-          @click="showDeleteModal = false"
-        >
+        <ActionButton variant="neutral" icon="x" @click="showDeleteModal = false">
           Batal
-        </button>
-        <button
-          class="px-4 py-2 text-sm font-medium text-white bg-danger-500 rounded-lg hover:bg-danger-700 transition-colors"
-          @click="deleteItem"
-        >
-          Hapus
-        </button>
+        </ActionButton>
+        <ActionButton variant="danger" icon="delete" @click="deleteItem"> Hapus </ActionButton>
       </template>
     </BaseModal>
   </div>

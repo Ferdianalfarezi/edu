@@ -118,7 +118,6 @@ async function fetchRpp() {
   } catch (e) {
     console.error('Failed to fetch RPP:', e);
     errorMessage.value = 'Gagal memuat data RPP. Silakan coba lagi.';
-    // Keep existing data on error (don't clear items.value)
   } finally {
     loading.value = false;
   }
@@ -165,27 +164,30 @@ onMounted(async () => {
 </script>
 
 <template>
-  <div class="p-4 lg:p-6 max-w-7xl mx-auto">
-    <PageHeader title="Portal RPP / Modul Ajar" description="">
+  <div class="p-8 max-w-7xl mx-auto">
+    <PageHeader title="Portal RPP / Modul Ajar">
       <template #actions>
-        <button
+        <ActionButton
           v-if="canCreateRpp"
-          class="px-3 py-2 text-sm font-medium text-white bg-primary-600 rounded-lg hover:bg-primary-700 transition-colors"
+          variant="primary"
+          size="sm"
           @click="router.push({ name: 'rpp-create' })"
         >
           + Buat RPP Baru
-        </button>
+        </ActionButton>
       </template>
     </PageHeader>
 
     <!-- Filters -->
-    <div class="flex flex-wrap gap-3 mb-4">
+    <div class="flex flex-wrap gap-3 mb-6">
       <div class="flex-1 min-w-[200px] relative">
-        <span class="absolute left-3 top-1/2 -translate-y-1/2 text-text-tertiary text-sm">🔍</span>
+        <span class="absolute left-3 top-1/2 -translate-y-1/2 text-text-tertiary text-[15px]"
+          >🔍</span
+        >
         <input
           v-model="search"
           type="text"
-          class="w-full pl-8 pr-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
+          class="w-full pl-9 pr-4 py-2.5 text-[15px] border-2 border-stone-200 rounded-xs focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-colors"
           placeholder="Cari judul RPP..."
         />
       </div>
@@ -212,7 +214,7 @@ onMounted(async () => {
     <!-- Error message -->
     <div
       v-if="errorMessage"
-      class="mb-4 p-3 bg-danger-50 border border-danger-200 rounded-lg text-sm text-danger-700"
+      class="mb-6 p-4 bg-danger-50 border-2 border-danger-200 rounded-[12px] text-[15px] text-danger-700"
     >
       {{ errorMessage }}
     </div>
@@ -227,21 +229,21 @@ onMounted(async () => {
           d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
         />
       </svg>
-      <p class="mt-2 text-sm">Memuat data...</p>
+      <p class="mt-2 text-[15px]">Memuat data...</p>
     </div>
     <div v-else-if="items.length === 0" class="text-center text-text-secondary py-12">
-      <p class="text-sm">Belum ada RPP yang dipublish.</p>
+      <p class="text-[15px]">Belum ada RPP yang dipublish.</p>
     </div>
-    <div v-else class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+    <div v-else class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
       <div
         v-for="item in items"
         :key="item.id"
-        class="bg-white border border-border rounded-xl p-4 hover:shadow-md transition-shadow"
+        class="bg-white border-2 border-stone-200 rounded-[16px] p-5 hover:shadow-md hover:-translate-y-0.5 transition-all duration-200"
       >
-        <div class="flex justify-between items-center mb-2">
+        <div class="flex justify-between items-center mb-3">
           <span
             :class="[
-              'inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium',
+              'inline-flex items-center px-2.5 py-1 rounded-xs text-[13px] font-semibold',
               item.konten_type === 'file'
                 ? 'bg-warning-50 text-warning-700'
                 : 'bg-primary-50 text-primary-600',
@@ -261,18 +263,24 @@ onMounted(async () => {
           </button>
         </div>
         <h3
-          class="text-sm font-semibold text-text-primary cursor-pointer hover:text-primary-600 transition-colors mb-2"
+          class="text-[15px] font-bold text-text-primary cursor-pointer hover:text-primary-600 transition-colors mb-3"
           @click="viewRpp(item)"
         >
           {{ item.judul }}
         </h3>
-        <div class="flex flex-wrap gap-2 mb-3">
-          <span class="text-xs text-text-tertiary">👤 {{ item.guru_nama }}</span>
-          <span class="text-xs text-text-tertiary">📚 {{ item.mata_pelajaran_nama }}</span>
-          <span class="text-xs text-text-tertiary">🏷️ {{ item.kategori_nama }}</span>
+        <div class="flex flex-wrap gap-2 mb-4">
+          <span class="text-[13px] font-medium text-text-tertiary">👤 {{ item.guru_nama }}</span>
+          <span class="text-[13px] font-medium text-text-tertiary"
+            >📚 {{ item.mata_pelajaran_nama }}</span
+          >
+          <span class="text-[13px] font-medium text-text-tertiary"
+            >🏷️ {{ item.kategori_nama }}</span
+          >
         </div>
-        <div class="flex justify-between items-center pt-3 border-t border-border">
-          <span class="text-xs text-text-tertiary">{{ formatDate(item.tanggal_publish) }}</span>
+        <div class="flex justify-between items-center pt-4 border-t-2 border-stone-200">
+          <span class="text-[13px] font-medium text-text-tertiary">{{
+            formatDate(item.tanggal_publish)
+          }}</span>
           <div class="flex gap-2">
             <ActionButton variant="primary" icon="view" @click="viewRpp(item)">Lihat</ActionButton>
             <ActionButton variant="success" icon="download" @click="downloadRpp(item)"

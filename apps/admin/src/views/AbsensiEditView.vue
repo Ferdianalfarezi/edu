@@ -198,21 +198,21 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="p-4 lg:p-6 max-w-7xl mx-auto">
+  <div class="p-8 max-w-7xl mx-auto">
     <PageHeader title="Edit Absensi" />
 
     <!-- Filter Bar -->
-    <div class="flex flex-wrap items-center gap-3 mb-4">
+    <div class="flex flex-wrap items-center gap-4 mb-6">
       <div class="flex items-center gap-2">
-        <label class="text-sm font-medium text-text-primary">Tanggal:</label>
+        <label class="text-[15px] font-semibold text-stone-700">Tanggal:</label>
         <input
           v-model="selectedTanggal"
           type="date"
-          class="px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 min-w-[160px]"
+          class="px-4 py-2.5 text-[15px] border-2 border-stone-200 rounded-xs focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 min-w-[160px]"
         />
       </div>
       <div class="flex items-center gap-2">
-        <label class="text-sm font-medium text-text-primary">Kelas:</label>
+        <label class="text-[15px] font-semibold text-stone-700">Kelas:</label>
         <SearchSelect
           v-model="selectedKelasId"
           :options="kelasSelectOptions"
@@ -223,8 +223,8 @@ onMounted(() => {
     </div>
 
     <!-- Loading -->
-    <div v-if="loading" class="text-center py-8">
-      <svg class="w-6 h-6 animate-spin text-primary-500 mx-auto" fill="none" viewBox="0 0 24 24">
+    <div v-if="loading" class="text-center py-12">
+      <svg class="w-7 h-7 animate-spin text-primary-500 mx-auto" fill="none" viewBox="0 0 24 24">
         <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
         <path
           class="opacity-75"
@@ -232,58 +232,77 @@ onMounted(() => {
           d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
         />
       </svg>
-      <p class="text-sm text-text-secondary mt-2">Memuat data absensi...</p>
+      <p class="text-[15px] text-text-secondary mt-3">Memuat data absensi...</p>
     </div>
 
-    <!-- Absensi Table -->
+    <!-- Absensi Table Card -->
     <div
       v-else-if="absensiList.length > 0"
-      class="bg-white border border-border rounded-xl overflow-hidden"
+      class="bg-white rounded-[16px] border-2 border-stone-200 shadow-xs overflow-hidden"
     >
+      <!-- Section Header -->
+      <div class="bg-primary-50 px-6 py-5 border-b-2 border-primary-200">
+        <h3 class="text-[16px] font-bold text-primary-800">Data Absensi</h3>
+      </div>
+
       <div class="overflow-x-auto">
         <table class="w-full">
-          <thead class="border-b border-border bg-surface-50">
+          <thead class="border-b-2 border-stone-200">
             <tr>
-              <th class="px-4 py-3 font-medium text-text-secondary text-xs w-[50px] text-center">
+              <th
+                class="px-5 py-4 font-bold text-text-secondary text-[13px] uppercase tracking-[0.04em] bg-surface-warm w-[50px] text-center"
+              >
                 No
               </th>
-              <th class="px-4 py-3 text-left font-medium text-text-secondary text-xs">
+              <th
+                class="px-5 py-4 text-left font-bold text-text-secondary text-[13px] uppercase tracking-[0.04em] bg-surface-warm"
+              >
                 Nama Siswa
               </th>
-              <th class="px-4 py-3 text-left font-medium text-text-secondary text-xs w-[120px]">
+              <th
+                class="px-5 py-4 text-left font-bold text-text-secondary text-[13px] uppercase tracking-[0.04em] bg-surface-warm w-[120px]"
+              >
                 NISN
               </th>
-              <th class="px-4 py-3 text-left font-medium text-text-secondary text-xs w-[100px]">
+              <th
+                class="px-5 py-4 text-left font-bold text-text-secondary text-[13px] uppercase tracking-[0.04em] bg-surface-warm w-[100px]"
+              >
                 Status
               </th>
-              <th class="px-4 py-3 text-left font-medium text-text-secondary text-xs w-[150px]">
+              <th
+                class="px-5 py-4 text-left font-bold text-text-secondary text-[13px] uppercase tracking-[0.04em] bg-surface-warm w-[150px]"
+              >
                 Diinput Oleh
               </th>
-              <th class="px-4 py-3 text-left font-medium text-text-secondary text-xs w-[130px]">
+              <th
+                class="px-5 py-4 text-left font-bold text-text-secondary text-[13px] uppercase tracking-[0.04em] bg-surface-warm w-[130px]"
+              >
                 Aksi
               </th>
             </tr>
           </thead>
-          <tbody class="divide-y divide-border">
+          <tbody class="divide-y divide-stone-200">
             <tr
               v-for="(item, index) in absensiList"
               :key="item.id"
-              class="hover:bg-surface-50 transition-colors"
+              class="hover:bg-primary-50 transition-colors"
             >
-              <td class="px-4 py-3 text-sm text-center">{{ index + 1 }}</td>
-              <td class="px-4 py-3 text-sm text-text-primary">{{ item.siswa_nama }}</td>
-              <td class="px-4 py-3 text-sm text-text-secondary">{{ item.siswa_nisn || '-' }}</td>
-              <td class="px-4 py-3">
+              <td class="px-5 py-4 text-[15px] text-center text-stone-600">{{ index + 1 }}</td>
+              <td class="px-5 py-4 text-[15px] text-stone-800 font-medium">
+                {{ item.siswa_nama }}
+              </td>
+              <td class="px-5 py-4 text-[15px] text-stone-500">{{ item.siswa_nisn || '-' }}</td>
+              <td class="px-5 py-4">
                 <span
-                  class="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium"
+                  class="inline-flex items-center px-2.5 py-1 rounded-xs text-[13px] font-semibold"
                   :style="{ background: STATUS_COLORS[item.status] }"
                 >
                   {{ STATUS_LABELS[item.status] }}
                 </span>
               </td>
-              <td class="px-4 py-3 text-sm text-text-secondary">{{ item.guru_nama }}</td>
-              <td class="px-4 py-3">
-                <div class="flex gap-1.5">
+              <td class="px-5 py-4 text-[15px] text-stone-500">{{ item.guru_nama }}</td>
+              <td class="px-5 py-4">
+                <div class="flex gap-2">
                   <ActionButton
                     v-if="canEdit"
                     variant="warning"
@@ -305,31 +324,31 @@ onMounted(() => {
     <!-- Empty state -->
     <div
       v-else-if="selectedKelasId && !loading"
-      class="text-center text-text-secondary py-8 text-sm"
+      class="text-center text-text-secondary py-12 text-[15px]"
     >
       Belum ada data absensi untuk kelas dan tanggal yang dipilih.
     </div>
-    <div v-else class="text-center text-text-secondary py-8 text-sm">
+    <div v-else class="text-center text-text-secondary py-12 text-[15px]">
       Pilih kelas dan tanggal untuk melihat data absensi.
     </div>
 
     <!-- Edit Modal -->
     <BaseModal :show="showEditModal" title="Edit Status Absensi" @close="showEditModal = false">
-      <p v-if="editingItem" class="text-sm text-text-secondary mb-4">
+      <p v-if="editingItem" class="text-[15px] text-stone-500 mb-5">
         {{ editingItem.siswa_nama }} — {{ selectedTanggal }}
       </p>
 
-      <div class="mb-4">
-        <label class="block text-sm font-medium text-text-primary mb-1.5">Status Kehadiran</label>
+      <div class="mb-5">
+        <label class="block text-[15px] font-semibold text-stone-700 mb-2">Status Kehadiran</label>
         <div class="flex flex-wrap gap-2">
           <label
             v-for="status in STATUS_OPTIONS"
             :key="status"
-            class="inline-flex items-center px-3 py-2 rounded-lg text-sm font-medium cursor-pointer border-2 transition-all select-none"
+            class="inline-flex items-center px-4 py-2.5 rounded-xs text-[15px] font-semibold cursor-pointer border-2 transition-all select-none"
             :class="
               editStatus === status
-                ? 'border-transparent font-semibold'
-                : 'border-border hover:border-text-tertiary'
+                ? 'border-transparent font-bold'
+                : 'border-stone-200 hover:border-stone-400'
             "
             :style="editStatus === status ? { background: STATUS_COLORS[status] } : {}"
           >
@@ -339,23 +358,14 @@ onMounted(() => {
         </div>
       </div>
 
-      <p v-if="editError" class="text-xs text-danger-500 mt-1">{{ editError }}</p>
-      <p v-if="editSuccess" class="text-xs text-success-700 mt-1">{{ editSuccess }}</p>
+      <p v-if="editError" class="text-[13px] text-danger-500 mt-1">{{ editError }}</p>
+      <p v-if="editSuccess" class="text-[13px] text-success-700 mt-1">{{ editSuccess }}</p>
 
       <template #footer>
-        <button
-          class="px-3 py-2 text-sm font-medium text-text-secondary bg-white border border-border rounded-lg hover:bg-surface-50 transition-colors"
-          @click="showEditModal = false"
-        >
-          Batal
-        </button>
-        <button
-          class="px-3 py-2 text-sm font-medium text-white bg-primary-600 rounded-lg hover:bg-primary-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-          :disabled="editSubmitting"
-          @click="saveEdit"
-        >
+        <ActionButton variant="neutral" @click="showEditModal = false"> Batal </ActionButton>
+        <ActionButton variant="primary" icon="check" :disabled="editSubmitting" @click="saveEdit">
           {{ editSubmitting ? 'Menyimpan...' : 'Simpan' }}
-        </button>
+        </ActionButton>
       </template>
     </BaseModal>
 
@@ -366,10 +376,10 @@ onMounted(() => {
       size="lg"
       @close="showAuditModal = false"
     >
-      <p class="text-sm text-text-secondary mb-4">{{ auditSiswaName }}</p>
+      <p class="text-[15px] text-stone-500 mb-5">{{ auditSiswaName }}</p>
 
-      <div v-if="loadingAudit" class="text-center py-4">
-        <svg class="w-6 h-6 animate-spin text-primary-500 mx-auto" fill="none" viewBox="0 0 24 24">
+      <div v-if="loadingAudit" class="text-center py-6">
+        <svg class="w-7 h-7 animate-spin text-primary-500 mx-auto" fill="none" viewBox="0 0 24 24">
           <circle
             class="opacity-25"
             cx="12"
@@ -386,27 +396,27 @@ onMounted(() => {
         </svg>
       </div>
 
-      <div v-else-if="auditLog.length > 0" class="flex flex-col gap-2">
+      <div v-else-if="auditLog.length > 0" class="flex flex-col gap-3">
         <div
           v-for="entry in auditLog"
           :key="entry.id"
-          class="p-3 bg-surface-50 rounded-lg border-l-3 border-primary-500 mb-2"
+          class="p-4 bg-surface-warm rounded-xs border-l-4 border-primary-500 mb-2"
         >
-          <div class="flex items-center gap-1.5 mb-1.5 text-xs">
-            <span class="font-semibold text-text-primary">{{ entry.user_nama }}</span>
-            <span class="text-text-tertiary">({{ entry.role }})</span>
-            <span class="ml-auto text-text-tertiary">{{ formatDateTime(entry.created_at) }}</span>
+          <div class="flex items-center gap-2 mb-2 text-[13px]">
+            <span class="font-bold text-stone-800">{{ entry.user_nama }}</span>
+            <span class="text-stone-400">({{ entry.role }})</span>
+            <span class="ml-auto text-stone-400">{{ formatDateTime(entry.created_at) }}</span>
           </div>
           <div class="flex items-center gap-2">
             <span
-              class="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium"
+              class="inline-flex items-center px-2.5 py-1 rounded-xs text-[13px] font-semibold"
               :style="{ background: STATUS_COLORS[entry.status_sebelum] }"
             >
               {{ STATUS_LABELS[entry.status_sebelum] || entry.status_sebelum }}
             </span>
-            <span class="text-text-secondary font-semibold">→</span>
+            <span class="text-stone-400 font-bold">→</span>
             <span
-              class="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium"
+              class="inline-flex items-center px-2.5 py-1 rounded-xs text-[13px] font-semibold"
               :style="{ background: STATUS_COLORS[entry.status_sesudah] }"
             >
               {{ STATUS_LABELS[entry.status_sesudah] || entry.status_sesudah }}
@@ -415,17 +425,12 @@ onMounted(() => {
         </div>
       </div>
 
-      <div v-else class="text-center text-text-tertiary py-4 text-sm">
+      <div v-else class="text-center text-stone-400 py-6 text-[15px]">
         Belum ada riwayat perubahan.
       </div>
 
       <template #footer>
-        <button
-          class="px-3 py-2 text-sm font-medium text-text-secondary bg-white border border-border rounded-lg hover:bg-surface-50 transition-colors"
-          @click="showAuditModal = false"
-        >
-          Tutup
-        </button>
+        <ActionButton variant="neutral" @click="showAuditModal = false"> Tutup </ActionButton>
       </template>
     </BaseModal>
   </div>

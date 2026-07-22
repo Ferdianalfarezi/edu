@@ -70,22 +70,17 @@ function onPageSizeChange(event: Event) {
 </script>
 
 <template>
-  <div v-if="totalPages > 1" class="flex flex-col items-center gap-2 py-4">
+  <div v-if="totalPages > 1" class="pagination-container">
     <!-- Pagination controls -->
-    <div class="flex items-center justify-center gap-2">
+    <div class="pagination-controls">
       <!-- Previous button -->
       <button
         :disabled="currentPage === 1"
-        :class="[
-          'inline-flex items-center gap-1 px-4 py-2 text-sm font-medium rounded-full transition-colors',
-          currentPage === 1
-            ? 'border border-border text-text-tertiary opacity-50 cursor-not-allowed'
-            : 'bg-primary-600 text-white hover:bg-primary-700',
-        ]"
+        class="pagination-arrow"
+        :class="{ 'pagination-arrow--disabled': currentPage === 1 }"
         @click="onPrev"
       >
         <span>←</span>
-        <span>Previous</span>
       </button>
 
       <!-- Page numbers -->
@@ -94,15 +89,11 @@ function onPageSizeChange(event: Event) {
         :key="page === -1 ? `ellipsis-${idx}` : `page-${page}`"
         class="inline-flex"
       >
-        <span v-if="page === -1" class="text-text-tertiary text-sm px-1 self-center"> ... </span>
+        <span v-if="page === -1" class="pagination-ellipsis"> ... </span>
         <button
           v-else
-          :class="[
-            'w-9 h-9 flex items-center justify-center rounded-full text-sm font-medium transition-colors',
-            page === currentPage
-              ? 'bg-primary-600 text-white'
-              : 'bg-surface-50 text-text-primary hover:bg-primary-100',
-          ]"
+          class="pagination-page"
+          :class="page === currentPage ? 'pagination-page--active' : 'pagination-page--inactive'"
           @click="onPageClick(page)"
         >
           {{ page }}
@@ -112,15 +103,10 @@ function onPageSizeChange(event: Event) {
       <!-- Next button -->
       <button
         :disabled="currentPage === totalPages"
-        :class="[
-          'inline-flex items-center gap-1 px-4 py-2 text-sm font-medium rounded-full transition-colors',
-          currentPage === totalPages
-            ? 'border border-border text-text-tertiary opacity-50 cursor-not-allowed'
-            : 'bg-primary-600 text-white hover:bg-primary-700',
-        ]"
+        class="pagination-arrow"
+        :class="{ 'pagination-arrow--disabled': currentPage === totalPages }"
         @click="onNext"
       >
-        <span>Next</span>
         <span>→</span>
       </button>
 
@@ -128,7 +114,7 @@ function onPageSizeChange(event: Event) {
       <select
         :value="pageSize"
         :disabled="loading"
-        class="rounded-full border border-border bg-white px-3 py-2 text-sm font-medium text-text-primary appearance-none cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+        class="pagination-select"
         @change="onPageSizeChange"
       >
         <option v-for="size in pageSizeOptions" :key="size" :value="size">{{ size }} Items</option>
@@ -136,9 +122,124 @@ function onPageSizeChange(event: Event) {
     </div>
 
     <!-- Info text -->
-    <p class="text-sm text-text-secondary text-center mt-2">
+    <p class="pagination-info">
       Menampilkan {{ displayedItems }} dari {{ totalCount }} entri (Halaman {{ currentPage }} dari
       {{ totalPages }})
     </p>
   </div>
 </template>
+
+<style scoped>
+.pagination-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 16px 0;
+}
+
+.pagination-controls {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+/* Page number buttons — 40px touch targets */
+.pagination-page {
+  min-width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-xs);
+  font-size: 14px;
+  font-weight: 600;
+  transition: all 200ms ease;
+  cursor: pointer;
+  border: none;
+}
+
+.pagination-page--active {
+  background-color: var(--color-primary-600);
+  color: #ffffff;
+}
+
+.pagination-page--inactive {
+  background-color: #ffffff;
+  color: var(--color-text-secondary);
+  border: 1px solid var(--color-border);
+}
+
+.pagination-page--inactive:hover {
+  background-color: var(--color-primary-50);
+  color: var(--color-primary-700);
+}
+
+/* Prev/Next arrow buttons — 40px touch targets */
+.pagination-arrow {
+  min-width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-xs);
+  font-size: 14px;
+  font-weight: 600;
+  background-color: #ffffff;
+  color: var(--color-text-secondary);
+  border: 1px solid var(--color-border);
+  cursor: pointer;
+  transition: all 200ms ease;
+}
+
+.pagination-arrow:hover:not(:disabled) {
+  background-color: var(--color-primary-50);
+  color: var(--color-primary-700);
+}
+
+.pagination-arrow--disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* Ellipsis */
+.pagination-ellipsis {
+  color: var(--color-text-tertiary);
+  font-size: 14px;
+  padding: 0 4px;
+  align-self: center;
+}
+
+/* Page size select */
+.pagination-select {
+  height: 40px;
+  border-radius: var(--radius-xs);
+  border: 1px solid var(--color-border);
+  background-color: #ffffff;
+  padding: 0 12px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--color-text-primary);
+  appearance: none;
+  cursor: pointer;
+  transition: all 200ms ease;
+}
+
+.pagination-select:hover {
+  border-color: var(--color-border-hover);
+}
+
+.pagination-select:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* Info text */
+.pagination-info {
+  font-size: 14px;
+  color: var(--color-text-secondary);
+  text-align: center;
+  margin-top: 8px;
+}
+</style>

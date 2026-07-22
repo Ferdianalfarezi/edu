@@ -58,7 +58,7 @@ function statusClass(status: string): string {
     case 'disiapkan':
       return 'bg-warning-50 text-warning-700';
     case 'nonaktif':
-      return 'bg-surface-100 text-text-tertiary';
+      return 'bg-stone-100 text-stone-500';
     default:
       return '';
   }
@@ -153,54 +153,71 @@ onMounted(fetchItems);
 </script>
 
 <template>
-  <div class="p-4 lg:p-6 max-w-7xl mx-auto">
+  <div class="p-8 max-w-7xl mx-auto">
     <PageHeader title="Manajemen Tahun Ajaran">
       <template #actions>
-        <button
-          class="px-3 py-2 text-sm font-medium text-white bg-primary-600 rounded-lg hover:bg-primary-700 transition-colors"
-          @click="openCreateForm"
-        >
-          Tambah Tahun Ajaran
-        </button>
+        <ActionButton variant="primary" @click="openCreateForm"> Tambah Tahun Ajaran </ActionButton>
       </template>
     </PageHeader>
 
-    <div class="bg-white border border-border rounded-xl overflow-hidden">
+    <!-- Table Card -->
+    <div class="bg-white rounded-[16px] border-2 border-stone-200 shadow-xs overflow-hidden">
+      <!-- Section Header -->
+      <div class="bg-primary-50 px-6 py-5 border-b-2 border-primary-200">
+        <h3 class="text-[16px] font-bold text-primary-800">Daftar Tahun Ajaran</h3>
+      </div>
+
       <div v-if="!loading && items.length > 0" class="overflow-x-auto">
         <table class="w-full">
-          <thead class="border-b border-border bg-surface-50">
+          <thead class="border-b-2 border-stone-200">
             <tr>
-              <th class="px-4 py-3 text-left font-medium text-text-secondary text-xs">Nama</th>
-              <th class="px-4 py-3 text-left font-medium text-text-secondary text-xs">
+              <th
+                class="px-5 py-4 text-left font-bold text-text-secondary text-[13px] uppercase tracking-[0.04em] bg-surface-warm"
+              >
+                Nama
+              </th>
+              <th
+                class="px-5 py-4 text-left font-bold text-text-secondary text-[13px] uppercase tracking-[0.04em] bg-surface-warm"
+              >
                 Tanggal Mulai
               </th>
-              <th class="px-4 py-3 text-left font-medium text-text-secondary text-xs">
+              <th
+                class="px-5 py-4 text-left font-bold text-text-secondary text-[13px] uppercase tracking-[0.04em] bg-surface-warm"
+              >
                 Tanggal Selesai
               </th>
-              <th class="px-4 py-3 text-left font-medium text-text-secondary text-xs">Status</th>
-              <th class="px-4 py-3 text-left font-medium text-text-secondary text-xs">Aksi</th>
+              <th
+                class="px-5 py-4 text-left font-bold text-text-secondary text-[13px] uppercase tracking-[0.04em] bg-surface-warm"
+              >
+                Status
+              </th>
+              <th
+                class="px-5 py-4 text-left font-bold text-text-secondary text-[13px] uppercase tracking-[0.04em] bg-surface-warm"
+              >
+                Aksi
+              </th>
             </tr>
           </thead>
-          <tbody class="divide-y divide-border">
-            <tr v-for="item in items" :key="item.id" class="hover:bg-surface-50 transition-colors">
-              <td class="px-4 py-3 text-sm text-text-primary">{{ item.nama }}</td>
-              <td class="px-4 py-3 text-sm text-text-secondary">
+          <tbody class="divide-y divide-stone-200">
+            <tr v-for="item in items" :key="item.id" class="hover:bg-primary-50 transition-colors">
+              <td class="px-5 py-4 text-[15px] text-stone-800 font-medium">{{ item.nama }}</td>
+              <td class="px-5 py-4 text-[15px] text-stone-600">
                 {{ formatDate(item.tanggal_mulai) }}
               </td>
-              <td class="px-4 py-3 text-sm text-text-secondary">
+              <td class="px-5 py-4 text-[15px] text-stone-600">
                 {{ formatDate(item.tanggal_selesai) }}
               </td>
-              <td class="px-4 py-3">
+              <td class="px-5 py-4">
                 <span
                   :class="[
-                    'inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium',
+                    'inline-flex items-center px-2.5 py-1 rounded-md text-[13px] font-semibold',
                     statusClass(item.status),
                   ]"
                 >
                   {{ statusLabel(item.status) }}
                 </span>
               </td>
-              <td class="px-4 py-3">
+              <td class="px-5 py-4">
                 <ActionButton
                   v-if="item.status === 'disiapkan'"
                   variant="primary"
@@ -208,10 +225,12 @@ onMounted(fetchItems);
                   @click="openActivateConfirm(item)"
                   >Aktifkan</ActionButton
                 >
-                <span v-else-if="item.status === 'aktif'" class="text-xs text-text-tertiary"
+                <span
+                  v-else-if="item.status === 'aktif'"
+                  class="text-[13px] text-success-700 font-semibold"
                   >Sedang Aktif</span
                 >
-                <span v-else class="text-xs text-text-tertiary">Historis</span>
+                <span v-else class="text-[13px] text-stone-400">Historis</span>
               </td>
             </tr>
           </tbody>
@@ -219,7 +238,7 @@ onMounted(fetchItems);
       </div>
 
       <div v-else-if="loading" class="py-12 text-center">
-        <svg class="w-6 h-6 animate-spin text-primary-500 mx-auto" fill="none" viewBox="0 0 24 24">
+        <svg class="w-7 h-7 animate-spin text-primary-500 mx-auto" fill="none" viewBox="0 0 24 24">
           <circle
             class="opacity-25"
             cx="12"
@@ -227,19 +246,19 @@ onMounted(fetchItems);
             r="10"
             stroke="currentColor"
             stroke-width="4"
-          ></circle>
+          />
           <path
             class="opacity-75"
             fill="currentColor"
             d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
-          ></path>
+          />
         </svg>
-        <p class="mt-2 text-sm text-text-tertiary">Memuat data...</p>
+        <p class="mt-3 text-[15px] text-text-secondary">Memuat data...</p>
       </div>
 
       <div v-else class="py-12 text-center">
         <svg
-          class="w-10 h-10 text-text-tertiary mx-auto mb-2"
+          class="w-10 h-10 text-stone-300 mx-auto mb-3"
           fill="none"
           viewBox="0 0 24 24"
           stroke="currentColor"
@@ -251,43 +270,43 @@ onMounted(fetchItems);
             d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 0 1 2.25-2.25h13.5A2.25 2.25 0 0 1 21 7.5v11.25m-18 0A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75m-18 0v-7.5A2.25 2.25 0 0 1 5.25 9h13.5A2.25 2.25 0 0 1 21 11.25v7.5"
           />
         </svg>
-        <p class="text-sm text-text-tertiary">Belum ada tahun ajaran.</p>
+        <p class="text-[15px] text-stone-500">Belum ada tahun ajaran.</p>
       </div>
     </div>
 
     <!-- Create Modal -->
     <BaseModal :show="showFormModal" title="Tambah Tahun Ajaran" @close="showFormModal = false">
-      <p class="text-sm text-text-secondary mb-4">
+      <p class="text-[15px] text-stone-600 mb-4">
         Tahun ajaran baru akan dibuat dengan status "Disiapkan". Anda dapat memilih untuk
         men-generate struktur kelas dari tahun ajaran sebelumnya.
       </p>
       <form id="form-tahun-ajaran" class="space-y-4" @submit.prevent="saveTahunAjaran">
         <div>
-          <label class="block text-sm font-medium text-text-primary mb-1.5">Nama Periode</label>
+          <label class="block text-[15px] font-medium text-stone-800 mb-1.5">Nama Periode</label>
           <input
             v-model="form.nama"
             type="text"
             required
             placeholder="2024/2025"
-            class="w-full px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
+            class="w-full px-3 py-2.5 text-[15px] border-2 border-stone-200 rounded-xs focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
           />
         </div>
         <div>
-          <label class="block text-sm font-medium text-text-primary mb-1.5">Tanggal Mulai</label>
+          <label class="block text-[15px] font-medium text-stone-800 mb-1.5">Tanggal Mulai</label>
           <input
             v-model="form.tanggal_mulai"
             type="date"
             required
-            class="w-full px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
+            class="w-full px-3 py-2.5 text-[15px] border-2 border-stone-200 rounded-xs focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
           />
         </div>
         <div>
-          <label class="block text-sm font-medium text-text-primary mb-1.5">Tanggal Selesai</label>
+          <label class="block text-[15px] font-medium text-stone-800 mb-1.5">Tanggal Selesai</label>
           <input
             v-model="form.tanggal_selesai"
             type="date"
             required
-            class="w-full px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
+            class="w-full px-3 py-2.5 text-[15px] border-2 border-stone-200 rounded-xs focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
           />
         </div>
         <div class="flex items-center gap-2">
@@ -295,28 +314,24 @@ onMounted(fetchItems);
             id="generate-kelas"
             v-model="form.generate_kelas"
             type="checkbox"
-            class="h-4 w-4 rounded border-border text-primary-600 focus:ring-primary-500/20"
+            class="h-4 w-4 rounded border-stone-300 text-primary-600 focus:ring-primary-500/20"
           />
-          <label for="generate-kelas" class="text-sm text-text-primary">
+          <label for="generate-kelas" class="text-[15px] text-stone-800">
             Generate kelas dari tahun sebelumnya
           </label>
         </div>
-        <p v-if="formError" class="text-xs text-danger-500 mt-1">{{ formError }}</p>
+        <p v-if="formError" class="text-[13px] text-danger-500 mt-1">{{ formError }}</p>
       </form>
       <template #footer>
-        <button
-          class="px-3 py-2 text-sm font-medium text-text-secondary bg-white border border-border rounded-lg hover:bg-surface-50 transition-colors"
-          @click="showFormModal = false"
-        >
-          Batal
-        </button>
-        <button
+        <ActionButton variant="neutral" @click="showFormModal = false"> Batal </ActionButton>
+        <ActionButton
+          variant="primary"
           type="submit"
           form="form-tahun-ajaran"
-          class="px-3 py-2 text-sm font-medium text-white bg-primary-600 rounded-lg hover:bg-primary-700 transition-colors"
+          @click="saveTahunAjaran"
         >
           Simpan
-        </button>
+        </ActionButton>
       </template>
     </BaseModal>
 
@@ -326,28 +341,18 @@ onMounted(fetchItems);
       title="Aktifkan Tahun Ajaran"
       @close="showActivateModal = false"
     >
-      <p class="text-sm text-text-primary mb-2">
+      <p class="text-[15px] text-stone-800 mb-2">
         Apakah Anda yakin ingin mengaktifkan tahun ajaran <strong>{{ activatingItem?.nama }}</strong
         >?
       </p>
-      <p class="text-sm text-text-secondary">
+      <p class="text-[15px] text-stone-600">
         Tahun ajaran yang sedang aktif akan otomatis dinonaktifkan. Hanya boleh ada satu tahun
         ajaran aktif dalam satu waktu.
       </p>
-      <p v-if="activateError" class="text-xs text-danger-500 mt-2">{{ activateError }}</p>
+      <p v-if="activateError" class="text-[13px] text-danger-500 mt-2">{{ activateError }}</p>
       <template #footer>
-        <button
-          class="px-3 py-2 text-sm font-medium text-text-secondary bg-white border border-border rounded-lg hover:bg-surface-50 transition-colors"
-          @click="showActivateModal = false"
-        >
-          Batal
-        </button>
-        <button
-          class="px-3 py-2 text-sm font-medium text-white bg-primary-600 rounded-lg hover:bg-primary-700 transition-colors"
-          @click="activateTahunAjaran"
-        >
-          Aktifkan
-        </button>
+        <ActionButton variant="neutral" @click="showActivateModal = false"> Batal </ActionButton>
+        <ActionButton variant="primary" @click="activateTahunAjaran"> Aktifkan </ActionButton>
       </template>
     </BaseModal>
   </div>

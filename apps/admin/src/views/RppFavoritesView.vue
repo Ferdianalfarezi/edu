@@ -67,15 +67,12 @@ onMounted(fetchFavorites);
 </script>
 
 <template>
-  <div class="p-4 lg:p-6 max-w-7xl mx-auto">
-    <PageHeader title="RPP Favorit Saya" description="">
+  <div class="p-8 max-w-7xl mx-auto">
+    <PageHeader title="RPP Favorit Saya">
       <template #actions>
-        <button
-          class="px-3 py-2 text-sm font-medium text-text-secondary bg-white border border-border rounded-lg hover:bg-surface-50 transition-colors"
-          @click="router.push({ name: 'rpp-portal' })"
-        >
+        <ActionButton variant="neutral" size="sm" @click="router.push({ name: 'rpp-portal' })">
           ← Kembali ke Portal
-        </button>
+        </ActionButton>
       </template>
     </PageHeader>
 
@@ -88,25 +85,25 @@ onMounted(fetchFavorites);
           d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
         />
       </svg>
-      <p class="mt-2 text-sm">Memuat data...</p>
+      <p class="mt-2 text-[15px]">Memuat data...</p>
     </div>
     <div v-else-if="items.length === 0" class="text-center text-text-secondary py-12">
-      <p class="text-5xl mb-2">☆</p>
-      <p class="text-sm">Belum ada RPP favorit.</p>
-      <p class="text-xs text-text-tertiary mt-1">
+      <p class="text-5xl mb-3">☆</p>
+      <p class="text-[15px]">Belum ada RPP favorit.</p>
+      <p class="text-[13px] text-text-tertiary mt-1">
         Tandai RPP dari portal untuk menyimpannya di sini.
       </p>
     </div>
-    <div v-else class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+    <div v-else class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
       <div
         v-for="item in items"
         :key="item.id"
-        class="bg-white border border-border rounded-xl p-4 hover:shadow-md transition-shadow"
+        class="bg-white border-2 border-stone-200 rounded-[16px] p-5 hover:shadow-md hover:-translate-y-0.5 transition-all duration-200"
       >
-        <div class="flex justify-between items-center mb-2">
+        <div class="flex justify-between items-center mb-3">
           <span
             :class="[
-              'inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium',
+              'inline-flex items-center px-2.5 py-1 rounded-xs text-[13px] font-semibold',
               item.konten_type === 'file'
                 ? 'bg-warning-50 text-warning-700'
                 : 'bg-primary-50 text-primary-600',
@@ -123,19 +120,23 @@ onMounted(fetchFavorites);
           </button>
         </div>
         <h3
-          class="text-sm font-semibold text-text-primary cursor-pointer hover:text-primary-600 transition-colors mb-2"
+          class="text-[15px] font-bold text-text-primary cursor-pointer hover:text-primary-600 transition-colors mb-3"
           @click="viewRpp(item)"
         >
           {{ item.judul }}
         </h3>
-        <div class="flex flex-wrap gap-2 mb-3">
-          <span class="text-xs text-text-tertiary">👤 {{ item.guru_nama }}</span>
-          <span class="text-xs text-text-tertiary">📚 {{ item.mata_pelajaran_nama }}</span>
-          <span class="text-xs text-text-tertiary">🏷️ {{ item.kategori_nama }}</span>
-          <span class="text-xs text-text-tertiary">📅 {{ item.tahun_terbit }}</span>
+        <div class="flex flex-wrap gap-2 mb-4">
+          <span class="text-[13px] font-medium text-text-tertiary">👤 {{ item.guru_nama }}</span>
+          <span class="text-[13px] font-medium text-text-tertiary"
+            >📚 {{ item.mata_pelajaran_nama }}</span
+          >
+          <span class="text-[13px] font-medium text-text-tertiary"
+            >🏷️ {{ item.kategori_nama }}</span
+          >
+          <span class="text-[13px] font-medium text-text-tertiary">📅 {{ item.tahun_terbit }}</span>
         </div>
-        <div class="flex justify-between items-center pt-3 border-t border-border">
-          <span class="text-xs text-text-tertiary"
+        <div class="flex justify-between items-center pt-4 border-t-2 border-stone-200">
+          <span class="text-[13px] font-medium text-text-tertiary"
             >Dipublish: {{ formatDate(item.tanggal_publish) }}</span
           >
           <div class="flex gap-2">

@@ -45,7 +45,7 @@ async function handleLogin() {
 </script>
 
 <template>
-  <div class="min-h-screen flex bg-surface-50">
+  <div class="min-h-screen flex bg-surface-warm">
     <!-- Left: Brand panel -->
     <div
       class="hidden lg:flex lg:w-1/2 xl:w-[60%] relative overflow-hidden items-center justify-center p-12"
@@ -54,7 +54,7 @@ async function handleLogin() {
       <!-- Dark overlay for text readability -->
       <div class="absolute inset-0 bg-white/70 backdrop-blur-sm" />
 
-      <div class="relative z-10 max-w-md text-black">
+      <div class="relative z-10 max-w-md text-stone-900">
         <img
           src="/logo-text.png"
           alt="Teman Sekolah"
@@ -63,7 +63,7 @@ async function handleLogin() {
         <h1 class="text-3xl font-semibold leading-tight mb-4">
           Kelola sekolah dengan lebih efisien
         </h1>
-        <p class="text-base leading-relaxed">
+        <p class="text-base leading-relaxed text-stone-700">
           Absensi, pembayaran SPP, rapor, dan komunikasi orang tua — semua dalam satu platform
           terintegrasi.
         </p>
@@ -72,7 +72,7 @@ async function handleLogin() {
 
     <!-- Right: Login form -->
     <div class="flex-1 flex items-center justify-center p-6 sm:p-12">
-      <div class="w-full max-w-sm">
+      <div class="w-full max-w-sm bg-white rounded-[16px] border-2 border-stone-200 shadow-xs p-8">
         <!-- Mobile logo -->
         <div class="lg:hidden flex items-center gap-2.5 mb-8">
           <img src="/logo-text.png" alt="Teman Sekolah" class="h-16 w-36 -ml-4 object-cover" />
@@ -80,7 +80,9 @@ async function handleLogin() {
 
         <div class="mb-8">
           <h2 class="text-xl font-semibold text-text-primary mb-1">Masuk ke akun Anda</h2>
-          <p class="text-sm text-text-secondary">Masukkan email dan password untuk melanjutkan</p>
+          <p class="text-[15px] text-text-secondary">
+            Masukkan email dan password untuk melanjutkan
+          </p>
         </div>
 
         <form class="space-y-4" @submit.prevent="handleLogin">
@@ -95,7 +97,7 @@ async function handleLogin() {
               required
               autocomplete="email"
               placeholder="nama@sekolah.com"
-              class="w-full px-3 py-2.5 text-sm border border-border rounded-lg bg-white placeholder:text-text-tertiary focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-colors"
+              class="w-full px-3 py-2.5 text-[15px] border-2 border-stone-200 rounded-xs bg-white placeholder:text-text-tertiary focus:outline-2 focus:outline-primary-500 focus:outline-offset-2 transition-colors"
             />
           </div>
 
@@ -111,7 +113,7 @@ async function handleLogin() {
                 required
                 autocomplete="current-password"
                 placeholder="Masukkan password"
-                class="w-full px-3 py-2.5 pr-10 text-sm border border-border rounded-lg bg-white placeholder:text-text-tertiary focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-colors"
+                class="w-full px-3 py-2.5 pr-10 text-[15px] border-2 border-stone-200 rounded-xs bg-white placeholder:text-text-tertiary focus:outline-2 focus:outline-primary-500 focus:outline-offset-2 transition-colors"
               />
               <button
                 type="button"
@@ -158,7 +160,7 @@ async function handleLogin() {
           <!-- Error message -->
           <div
             v-if="error"
-            class="flex items-start gap-2 p-3 bg-danger-50 border border-danger-500/20 rounded-lg"
+            class="flex items-start gap-2 p-3 bg-danger-50 border-2 border-danger-500/20 rounded-xs"
             role="alert"
           >
             <svg
@@ -174,13 +176,14 @@ async function handleLogin() {
                 d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
               />
             </svg>
-            <span class="text-sm text-danger-700">{{ error }}</span>
+            <span class="text-[15px] text-danger-700">{{ error }}</span>
           </div>
 
           <button
             type="submit"
             :disabled="loading"
-            class="w-full py-2.5 px-4 bg-primary-600 hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed text-white text-sm font-medium rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:ring-offset-2"
+            class="w-full py-2.5 px-[18px] bg-primary-600 hover:bg-primary-700 hover:-translate-y-[1px] disabled:opacity-50 disabled:cursor-not-allowed text-white text-[14px] font-semibold rounded-xs transition-all focus:outline-2 focus:outline-primary-500 focus:outline-offset-2"
+            style="box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3)"
           >
             <span v-if="loading" class="flex items-center justify-center gap-2">
               <svg class="w-4 h-4 animate-spin" viewBox="0 0 24 24" fill="none">
@@ -206,7 +209,7 @@ async function handleLogin() {
           <div class="text-center">
             <router-link
               to="/reset-password"
-              class="text-sm text-primary-600 hover:text-primary-700 transition-colors"
+              class="text-[14px] text-primary-600 hover:text-primary-700 transition-colors"
             >
               Lupa password?
             </router-link>

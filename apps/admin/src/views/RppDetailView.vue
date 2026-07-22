@@ -3,7 +3,7 @@ import { ref, computed, onMounted } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import { api } from '@/api/client';
 import { useAuthStore } from '@/stores/auth';
-import { BaseModal } from '@/components/ui';
+import { BaseModal, ActionButton } from '@/components/ui';
 
 interface RppDetail {
   id: string;
@@ -98,15 +98,12 @@ onMounted(fetchDetail);
 </script>
 
 <template>
-  <div class="p-4 lg:p-6 max-w-4xl mx-auto">
+  <div class="p-8 max-w-4xl mx-auto">
     <!-- Back button -->
-    <div class="mb-4">
-      <button
-        class="px-3 py-2 text-sm font-medium text-text-secondary bg-white border border-border rounded-lg hover:bg-surface-50 transition-colors"
-        @click="router.push({ name: 'rpp-portal' })"
-      >
+    <div class="mb-6">
+      <ActionButton variant="neutral" size="sm" @click="router.push({ name: 'rpp-portal' })">
         ← Kembali ke Portal
-      </button>
+      </ActionButton>
     </div>
 
     <div v-if="loading" class="text-center text-text-secondary py-12">
@@ -118,128 +115,154 @@ onMounted(fetchDetail);
           d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
         />
       </svg>
-      <p class="mt-2 text-sm">Memuat data...</p>
+      <p class="mt-2 text-[15px]">Memuat data...</p>
     </div>
-    <div v-else-if="error" class="text-center text-danger-500 py-12">{{ error }}</div>
-    <div v-else-if="rpp">
-      <!-- Header -->
-      <div class="flex flex-wrap justify-between items-start gap-4 mb-6">
-        <div>
-          <span
-            :class="[
-              'inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium',
-              rpp.status === 'published'
-                ? 'bg-success-50 text-success-700'
-                : 'bg-warning-50 text-warning-700',
-            ]"
-          >
-            {{ rpp.status === 'published' ? 'Published' : 'Draft' }}
-          </span>
-          <h1 class="text-xl font-bold text-text-primary mt-2">{{ rpp.judul }}</h1>
+    <div v-else-if="error" class="text-center text-danger-500 py-12 text-[15px]">{{ error }}</div>
+    <div v-else-if="rpp" class="space-y-6">
+      <!-- Header Card -->
+      <div class="bg-white border-2 border-stone-200 rounded-[16px] shadow-xs overflow-hidden">
+        <div class="px-6 py-5 bg-primary-50 border-b-2 border-primary-200">
+          <div class="flex flex-wrap justify-between items-center gap-4">
+            <div class="flex items-center gap-3">
+              <span
+                :class="[
+                  'inline-flex items-center px-2.5 py-1 rounded-xs text-[13px] font-semibold',
+                  rpp.status === 'published'
+                    ? 'bg-success-50 text-success-700'
+                    : 'bg-warning-50 text-warning-700',
+                ]"
+              >
+                {{ rpp.status === 'published' ? 'Published' : 'Draft' }}
+              </span>
+              <h3 class="text-[16px] font-bold text-primary-800">Detail RPP</h3>
+            </div>
+            <div class="flex flex-wrap gap-2">
+              <ActionButton
+                :variant="rpp.is_favorited ? 'warning' : 'neutral'"
+                size="sm"
+                @click="toggleFavorite"
+              >
+                {{ rpp.is_favorited ? '★ Favorit' : '☆ Favorit' }}
+              </ActionButton>
+              <ActionButton variant="primary" icon="download" size="sm" @click="downloadRpp">
+                Download
+              </ActionButton>
+              <template v-if="isOwner">
+                <ActionButton
+                  variant="warning"
+                  icon="edit"
+                  size="sm"
+                  @click="router.push({ name: 'rpp-edit', params: { id: rpp.id } })"
+                >
+                  Edit
+                </ActionButton>
+                <ActionButton
+                  variant="danger"
+                  icon="delete"
+                  size="sm"
+                  @click="showDeleteModal = true"
+                >
+                  Hapus
+                </ActionButton>
+              </template>
+            </div>
+          </div>
         </div>
-        <div class="flex flex-wrap gap-2">
-          <button
-            :class="[
-              'px-3 py-2 text-sm font-medium rounded-lg border transition-colors',
-              rpp.is_favorited
-                ? 'bg-warning-50 border-amber-500 text-warning-700'
-                : 'bg-white border-border text-text-secondary hover:bg-surface-50',
-            ]"
-            @click="toggleFavorite"
+
+        <!-- Title & Content -->
+        <div class="p-6">
+          <h1 class="text-[26px] font-extrabold text-text-primary mb-4">{{ rpp.judul }}</h1>
+
+          <!-- Metadata Grid -->
+          <div
+            class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 p-5 bg-stone-50 rounded-[12px]"
           >
-            {{ rpp.is_favorited ? '★ Favorit' : '☆ Favorit' }}
-          </button>
-          <button
-            class="px-3 py-2 text-sm font-medium text-white bg-primary-600 rounded-lg hover:bg-primary-700 transition-colors"
-            @click="downloadRpp"
-          >
-            ⬇ Download
-          </button>
-          <template v-if="isOwner">
-            <button
-              class="px-3 py-2 text-sm font-medium text-primary-600 bg-white border border-primary-600 rounded-lg hover:bg-primary-50 transition-colors"
-              @click="router.push({ name: 'rpp-edit', params: { id: rpp.id } })"
-            >
-              ✏️ Edit
-            </button>
-            <button
-              class="px-4 py-2 text-sm font-medium text-white bg-danger-500 rounded-lg hover:bg-danger-700 transition-colors"
-              @click="showDeleteModal = true"
-            >
-              🗑 Hapus
-            </button>
-          </template>
+            <div class="flex flex-col gap-1">
+              <span class="text-[13px] font-semibold text-text-tertiary uppercase tracking-wide"
+                >Guru Pembuat</span
+              >
+              <span class="text-[15px] font-semibold text-text-primary">{{ rpp.guru_nama }}</span>
+            </div>
+            <div class="flex flex-col gap-1">
+              <span class="text-[13px] font-semibold text-text-tertiary uppercase tracking-wide"
+                >Mata Pelajaran</span
+              >
+              <span class="text-[15px] font-semibold text-text-primary">{{
+                rpp.mata_pelajaran_nama
+              }}</span>
+            </div>
+            <div class="flex flex-col gap-1">
+              <span class="text-[13px] font-semibold text-text-tertiary uppercase tracking-wide"
+                >Kategori</span
+              >
+              <span class="text-[15px] font-semibold text-text-primary">{{
+                rpp.kategori_nama
+              }}</span>
+            </div>
+            <div class="flex flex-col gap-1">
+              <span class="text-[13px] font-semibold text-text-tertiary uppercase tracking-wide"
+                >Tahun Terbit</span
+              >
+              <span class="text-[15px] font-semibold text-text-primary">{{
+                rpp.tahun_terbit
+              }}</span>
+            </div>
+            <div class="flex flex-col gap-1">
+              <span class="text-[13px] font-semibold text-text-tertiary uppercase tracking-wide"
+                >Tanggal Publish</span
+              >
+              <span class="text-[15px] font-semibold text-text-primary">{{
+                formatDate(rpp.tanggal_publish)
+              }}</span>
+            </div>
+            <div class="flex flex-col gap-1">
+              <span class="text-[13px] font-semibold text-text-tertiary uppercase tracking-wide"
+                >Terakhir Diperbarui</span
+              >
+              <span class="text-[15px] font-semibold text-text-primary">{{
+                formatDate(rpp.updated_at)
+              }}</span>
+            </div>
+            <div v-if="rpp.konten_type === 'file'" class="flex flex-col gap-1">
+              <span class="text-[13px] font-semibold text-text-tertiary uppercase tracking-wide"
+                >File</span
+              >
+              <span class="text-[15px] font-semibold text-text-primary"
+                >{{ rpp.file_nama }} ({{ formatFileSize(rpp.file_size) }})</span
+              >
+            </div>
+          </div>
         </div>
       </div>
 
-      <!-- Metadata -->
-      <div
-        class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 p-4 bg-surface-50 rounded-xl mb-6"
-      >
-        <div class="flex flex-col gap-0.5">
-          <span class="text-xs text-text-tertiary uppercase tracking-wide">Guru Pembuat</span>
-          <span class="text-sm font-medium text-text-primary">{{ rpp.guru_nama }}</span>
-        </div>
-        <div class="flex flex-col gap-0.5">
-          <span class="text-xs text-text-tertiary uppercase tracking-wide">Mata Pelajaran</span>
-          <span class="text-sm font-medium text-text-primary">{{ rpp.mata_pelajaran_nama }}</span>
-        </div>
-        <div class="flex flex-col gap-0.5">
-          <span class="text-xs text-text-tertiary uppercase tracking-wide">Kategori</span>
-          <span class="text-sm font-medium text-text-primary">{{ rpp.kategori_nama }}</span>
-        </div>
-        <div class="flex flex-col gap-0.5">
-          <span class="text-xs text-text-tertiary uppercase tracking-wide">Tahun Terbit</span>
-          <span class="text-sm font-medium text-text-primary">{{ rpp.tahun_terbit }}</span>
-        </div>
-        <div class="flex flex-col gap-0.5">
-          <span class="text-xs text-text-tertiary uppercase tracking-wide">Tanggal Publish</span>
-          <span class="text-sm font-medium text-text-primary">{{
-            formatDate(rpp.tanggal_publish)
-          }}</span>
-        </div>
-        <div class="flex flex-col gap-0.5">
-          <span class="text-xs text-text-tertiary uppercase tracking-wide"
-            >Terakhir Diperbarui</span
-          >
-          <span class="text-sm font-medium text-text-primary">{{
-            formatDate(rpp.updated_at)
-          }}</span>
-        </div>
-        <div v-if="rpp.konten_type === 'file'" class="flex flex-col gap-0.5">
-          <span class="text-xs text-text-tertiary uppercase tracking-wide">File</span>
-          <span class="text-sm font-medium text-text-primary"
-            >{{ rpp.file_nama }} ({{ formatFileSize(rpp.file_size) }})</span
-          >
-        </div>
-      </div>
-
-      <!-- Content -->
+      <!-- Content Card -->
       <div
         v-if="rpp.konten_type === 'richtext' && rpp.konten"
-        class="bg-white border border-border rounded-xl overflow-hidden"
+        class="bg-white border-2 border-stone-200 rounded-[16px] shadow-xs overflow-hidden"
       >
-        <div class="px-4 py-3 border-b border-border bg-surface-50">
-          <h2 class="text-base font-semibold text-text-primary">Konten</h2>
+        <div class="px-6 py-5 bg-primary-50 border-b-2 border-primary-200">
+          <h3 class="text-[16px] font-bold text-primary-800">Konten</h3>
         </div>
-        <div class="p-6 text-sm leading-relaxed prose max-w-none" v-html="rpp.konten"></div>
+        <div class="p-6 text-[15px] leading-relaxed prose max-w-none" v-html="rpp.konten"></div>
       </div>
+
+      <!-- File Card -->
       <div
         v-else-if="rpp.konten_type === 'file'"
-        class="bg-white border border-border rounded-xl overflow-hidden"
+        class="bg-white border-2 border-stone-200 rounded-[16px] shadow-xs overflow-hidden"
       >
-        <div class="px-4 py-3 border-b border-border bg-surface-50">
-          <h2 class="text-base font-semibold text-text-primary">File Terlampir</h2>
+        <div class="px-6 py-5 bg-primary-50 border-b-2 border-primary-200">
+          <h3 class="text-[16px] font-bold text-primary-800">File Terlampir</h3>
         </div>
-        <div class="p-4">
+        <div class="p-6">
           <div
-            class="flex items-center gap-4 p-4 border border-border rounded-lg cursor-pointer hover:bg-surface-50 transition-colors"
+            class="flex items-center gap-4 p-5 border-2 border-stone-200 rounded-[12px] cursor-pointer hover:bg-primary-50 hover:border-primary-300 transition-all duration-200"
             @click="downloadRpp"
           >
             <span class="text-3xl">📄</span>
             <div>
-              <p class="text-sm font-medium text-text-primary">{{ rpp.file_nama }}</p>
-              <p class="text-xs text-text-tertiary">{{ formatFileSize(rpp.file_size) }}</p>
+              <p class="text-[15px] font-semibold text-text-primary">{{ rpp.file_nama }}</p>
+              <p class="text-[13px] text-text-tertiary">{{ formatFileSize(rpp.file_size) }}</p>
             </div>
             <span class="ml-auto text-lg text-text-tertiary">⬇</span>
           </div>
@@ -254,23 +277,17 @@ onMounted(fetchDetail);
       size="lg"
       @close="showDeleteModal = false"
     >
-      <p class="text-sm text-text-secondary">
+      <p class="text-[15px] text-text-secondary">
         Apakah Anda yakin ingin menghapus RPP <strong>{{ rpp?.judul }}</strong
         >? Tindakan ini tidak dapat dibatalkan.
       </p>
       <template #footer>
-        <button
-          class="px-3 py-2 text-sm font-medium text-text-secondary bg-white border border-border rounded-lg hover:bg-surface-50 transition-colors"
-          @click="showDeleteModal = false"
-        >
+        <ActionButton variant="neutral" size="sm" @click="showDeleteModal = false">
           Batal
-        </button>
-        <button
-          class="px-4 py-2 text-sm font-medium text-white bg-danger-500 rounded-lg hover:bg-danger-700 transition-colors"
-          @click="deleteRpp"
-        >
+        </ActionButton>
+        <ActionButton variant="danger" icon="delete" size="sm" @click="deleteRpp">
           Hapus Permanen
-        </button>
+        </ActionButton>
       </template>
     </BaseModal>
   </div>

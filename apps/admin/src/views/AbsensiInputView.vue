@@ -3,7 +3,7 @@ import { ref, computed, onMounted, watch } from 'vue';
 import { api } from '@/api/client';
 import { useAuthStore } from '@/stores/auth';
 import { Role } from '@edu/shared';
-import { PageHeader, SearchSelect } from '@/components/ui';
+import { PageHeader, SearchSelect, ActionButton } from '@/components/ui';
 import type { SelectOption } from '@/components/ui';
 
 interface Kelas {
@@ -209,21 +209,21 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="p-4 lg:p-6 max-w-7xl mx-auto">
+  <div class="p-8 max-w-7xl mx-auto">
     <PageHeader title="Input Absensi" />
 
     <!-- Filter Bar -->
-    <div class="flex flex-wrap items-center gap-3 mb-4">
+    <div class="flex flex-wrap items-center gap-4 mb-6">
       <div class="flex items-center gap-2">
-        <label class="text-sm font-medium text-text-primary">Tanggal:</label>
+        <label class="text-[15px] font-semibold text-stone-700">Tanggal:</label>
         <input
           v-model="selectedTanggal"
           type="date"
-          class="px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 min-w-[160px]"
+          class="px-4 py-2.5 text-[15px] border-2 border-stone-200 rounded-xs focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 min-w-[160px]"
         />
       </div>
       <div class="flex items-center gap-2">
-        <label class="text-sm font-medium text-text-primary">Kelas:</label>
+        <label class="text-[15px] font-semibold text-stone-700">Kelas:</label>
         <SearchSelect
           v-model="selectedKelasId"
           :options="kelasSelectOptions"
@@ -236,7 +236,7 @@ onMounted(() => {
     <!-- Holiday Warning -->
     <div
       v-if="holidayWarning"
-      class="p-3 bg-warning-50 border border-warning-500/20 rounded-lg text-sm text-warning-700 mb-4"
+      class="p-4 bg-warning-50 border-2 border-warning-500/20 rounded-xs text-[15px] text-warning-700 mb-4"
     >
       ⚠️ {{ holidayWarning }}
     </div>
@@ -244,7 +244,7 @@ onMounted(() => {
     <!-- Read-only Notice -->
     <div
       v-if="isReadOnly && existingAbsensi.length > 0"
-      class="p-3 bg-primary-50 border border-primary-500/20 rounded-lg text-sm text-primary-700 mb-4"
+      class="p-4 bg-primary-50 border-2 border-primary-500/20 rounded-xs text-[15px] text-primary-700 mb-4"
     >
       ℹ️ Absensi sudah diinput. Data ditampilkan dalam mode read-only.
     </div>
@@ -252,20 +252,20 @@ onMounted(() => {
     <!-- Messages -->
     <div
       v-if="successMessage"
-      class="p-3 bg-success-50 border border-success-500/20 rounded-lg text-sm text-success-700 mb-4"
+      class="p-4 bg-success-50 border-2 border-success-500/20 rounded-xs text-[15px] text-success-700 mb-4"
     >
       ✅ {{ successMessage }}
     </div>
     <div
       v-if="errorMessage"
-      class="p-3 bg-danger-50 border border-danger-500/20 rounded-lg text-sm text-danger-700 mb-4"
+      class="p-4 bg-danger-50 border-2 border-danger-500/20 rounded-xs text-[15px] text-danger-700 mb-4"
     >
       ❌ {{ errorMessage }}
     </div>
 
     <!-- Loading -->
-    <div v-if="loading" class="text-center py-8">
-      <svg class="w-6 h-6 animate-spin text-primary-500 mx-auto" fill="none" viewBox="0 0 24 24">
+    <div v-if="loading" class="text-center py-12">
+      <svg class="w-7 h-7 animate-spin text-primary-500 mx-auto" fill="none" viewBox="0 0 24 24">
         <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
         <path
           class="opacity-75"
@@ -273,18 +273,18 @@ onMounted(() => {
           d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
         />
       </svg>
-      <p class="text-sm text-text-secondary mt-2">Memuat data siswa...</p>
+      <p class="text-[15px] text-text-secondary mt-3">Memuat data siswa...</p>
     </div>
 
     <!-- Student List -->
     <div v-else-if="siswaList.length > 0 && selectedKelasId">
       <!-- Quick Actions -->
-      <div v-if="!isReadOnly" class="flex items-center gap-2 mb-3">
-        <span class="text-sm font-medium text-text-primary">Set Semua:</span>
+      <div v-if="!isReadOnly" class="flex items-center gap-3 mb-4">
+        <span class="text-[15px] font-semibold text-stone-700">Set Semua:</span>
         <button
           v-for="status in STATUS_OPTIONS"
           :key="status"
-          class="px-2.5 py-1 text-xs font-medium rounded-md border border-border transition-colors hover:opacity-80"
+          class="px-3 py-1.5 text-[13px] font-semibold rounded-xs border-2 border-stone-200 transition-colors hover:opacity-80"
           :style="{ background: STATUS_COLORS[status] }"
           @click="setAllStatus(status)"
         >
@@ -294,7 +294,7 @@ onMounted(() => {
 
       <!-- Summary -->
       <div
-        class="flex flex-wrap gap-4 p-3 bg-surface-50 rounded-lg mb-4 text-xs text-text-secondary"
+        class="flex flex-wrap gap-5 p-4 bg-surface-warm rounded-xs mb-5 text-[13px] text-text-secondary"
       >
         <span
           v-for="(count, status) in statusSummary"
@@ -302,56 +302,69 @@ onMounted(() => {
           class="inline-flex items-center gap-1.5"
         >
           <span
-            class="w-2.5 h-2.5 rounded-full inline-block"
+            class="w-3 h-3 rounded-full inline-block"
             :style="{ background: STATUS_COLORS[status] }"
           ></span>
           {{ STATUS_LABELS[status] }}: {{ count }}
         </span>
-        <span class="font-semibold text-text-primary">Total: {{ records.length }}</span>
+        <span class="font-bold text-stone-800">Total: {{ records.length }}</span>
       </div>
 
-      <!-- Student Table -->
-      <div class="bg-white border border-border rounded-xl overflow-hidden">
+      <!-- Student Table Card -->
+      <div class="bg-white rounded-[16px] border-2 border-stone-200 shadow-xs overflow-hidden">
+        <!-- Section Header -->
+        <div class="bg-primary-50 px-6 py-5 border-b-2 border-primary-200">
+          <h3 class="text-[16px] font-bold text-primary-800">Daftar Siswa</h3>
+        </div>
+
         <div class="overflow-x-auto">
           <table class="w-full">
-            <thead class="border-b border-border bg-surface-50">
+            <thead class="border-b-2 border-stone-200">
               <tr>
-                <th class="px-4 py-3 font-medium text-text-secondary text-xs w-[50px] text-center">
+                <th
+                  class="px-5 py-4 font-bold text-text-secondary text-[13px] uppercase tracking-[0.04em] bg-surface-warm w-[50px] text-center"
+                >
                   No
                 </th>
-                <th class="px-4 py-3 text-left font-medium text-text-secondary text-xs">
+                <th
+                  class="px-5 py-4 text-left font-bold text-text-secondary text-[13px] uppercase tracking-[0.04em] bg-surface-warm"
+                >
                   Nama Siswa
                 </th>
-                <th class="px-4 py-3 text-left font-medium text-text-secondary text-xs w-[120px]">
+                <th
+                  class="px-5 py-4 text-left font-bold text-text-secondary text-[13px] uppercase tracking-[0.04em] bg-surface-warm w-[120px]"
+                >
                   NISN
                 </th>
-                <th class="px-4 py-3 text-left font-medium text-text-secondary text-xs w-[360px]">
+                <th
+                  class="px-5 py-4 text-left font-bold text-text-secondary text-[13px] uppercase tracking-[0.04em] bg-surface-warm w-[360px]"
+                >
                   Status Kehadiran
                 </th>
               </tr>
             </thead>
-            <tbody class="divide-y divide-border">
+            <tbody class="divide-y divide-stone-200">
               <tr
                 v-for="(record, index) in records"
                 :key="record.siswa_id"
-                class="hover:bg-surface-50 transition-colors"
+                class="hover:bg-primary-50 transition-colors"
               >
-                <td class="px-4 py-3 text-sm text-center">{{ index + 1 }}</td>
-                <td class="px-4 py-3 text-sm text-text-primary">
+                <td class="px-5 py-4 text-[15px] text-center text-stone-600">{{ index + 1 }}</td>
+                <td class="px-5 py-4 text-[15px] text-stone-800 font-medium">
                   {{ getSiswaName(record.siswa_id) }}
                 </td>
-                <td class="px-4 py-3 text-sm text-text-secondary">
+                <td class="px-5 py-4 text-[15px] text-stone-500">
                   {{ getSiswaNisn(record.siswa_id) }}
                 </td>
-                <td class="px-4 py-3">
-                  <div class="flex gap-1.5">
+                <td class="px-5 py-4">
+                  <div class="flex gap-2">
                     <label
                       v-for="status in STATUS_OPTIONS"
                       :key="status"
-                      class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium border cursor-pointer transition-colors"
+                      class="inline-flex items-center px-3 py-1.5 rounded-xs text-[13px] font-semibold border-2 cursor-pointer transition-colors"
                       :class="{
-                        'border-transparent font-semibold': record.status === status,
-                        'border-border hover:border-text-secondary':
+                        'border-transparent font-bold': record.status === status,
+                        'border-stone-200 hover:border-stone-400':
                           record.status !== status && !isReadOnly,
                         'opacity-70 cursor-default': isReadOnly,
                       }"
@@ -378,34 +391,35 @@ onMounted(() => {
       <!-- Submit -->
       <div
         v-if="!isReadOnly"
-        class="flex justify-between items-center mt-4 pt-4 border-t border-border"
+        class="flex justify-between items-center mt-6 pt-5 border-t-2 border-stone-200"
       >
         <div
           v-if="unfilledStudents.length > 0"
-          class="p-3 bg-warning-50 border border-warning-500/20 rounded-lg text-sm text-warning-700"
+          class="p-4 bg-warning-50 border-2 border-warning-500/20 rounded-xs text-[15px] text-warning-700"
         >
           ⚠️ {{ unfilledStudents.length }} siswa belum diisi
         </div>
         <div v-else></div>
-        <button
-          class="px-4 py-2.5 text-sm font-medium text-white bg-primary-600 rounded-lg hover:bg-primary-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+        <ActionButton
+          variant="primary"
+          icon="check"
           :disabled="!allFilled || submitting"
           @click="submitAbsensi"
         >
           {{ submitting ? 'Menyimpan...' : 'Simpan Absensi' }}
-        </button>
+        </ActionButton>
       </div>
     </div>
 
     <!-- Empty state -->
     <div
       v-else-if="selectedKelasId && !loading"
-      class="text-center text-text-secondary py-8 text-sm"
+      class="text-center text-text-secondary py-12 text-[15px]"
     >
       Tidak ada siswa aktif di kelas ini.
     </div>
 
-    <div v-else-if="!selectedKelasId" class="text-center text-text-secondary py-8 text-sm">
+    <div v-else-if="!selectedKelasId" class="text-center text-text-secondary py-12 text-[15px]">
       <template v-if="isGuru && kelasList.length === 0">
         Tidak ada kelas terjadwal untuk hari ini.
       </template>

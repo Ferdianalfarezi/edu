@@ -2,13 +2,15 @@
 
 /*
  * Teman Sekolah Admin — Design System
- * Style: Clean Corporate SaaS (Linear/Notion-inspired)
- * Palette: Neutral slate with blue accent
- * Typography: System font stack (clean, fast, professional)
+ * Style: Warm & Friendly Education-focused
+ * Palette: Stone neutrals with blue primary, amber accent, teal sidebar
+ * Typography: Plus Jakarta Sans (warm, rounded, legible)
  */
 
 @theme {
-  /* Color Tokens */
+  /* ===== Color Tokens ===== */
+
+  /* Primary (Blue) */
   --color-primary-50: #eff6ff;
   --color-primary-100: #dbeafe;
   --color-primary-200: #bfdbfe;
@@ -20,52 +22,92 @@
   --color-primary-800: #1e40af;
   --color-primary-900: #1e3a8a;
 
+  /* Surface (Warm) */
+  --color-surface-warm: #f5f3ef;
   --color-surface-0: #ffffff;
-  --color-surface-50: #f8fafc;
-  --color-surface-100: #f1f5f9;
-  --color-surface-200: #e2e8f0;
-  --color-surface-300: #cbd5e1;
+  --color-surface-50: #fafaf9;
+  --color-surface-100: #f5f5f4;
+  --color-surface-200: #e7e5e4;
+  --color-surface-300: #d6d3d1;
 
-  --color-text-primary: #0f172a;
-  --color-text-secondary: #475569;
-  --color-text-tertiary: #94a3b8;
+  /* Text (Stone family — warm undertone) */
+  --color-text-primary: #1c1917;
+  --color-text-secondary: #57534e;
+  --color-text-tertiary: #a8a29e;
   --color-text-inverse: #ffffff;
 
-  --color-border: #e2e8f0;
-  --color-border-hover: #cbd5e1;
+  /* Borders (Stone family) */
+  --color-border: #e7e5e4;
+  --color-border-hover: #d6d3d1;
 
+  /* Accent (Amber/Gold) */
+  --color-accent-50: #fffbeb;
+  --color-accent-100: #fef3c7;
+  --color-accent-200: #fde68a;
+  --color-accent-300: #fcd34d;
+  --color-accent-400: #fbbf24;
+  --color-accent-500: #f59e0b;
+  --color-accent-600: #d97706;
+  --color-accent-700: #b45309;
+
+  /* Success (Green) */
   --color-success-50: #f0fdf4;
+  --color-success-100: #dcfce7;
   --color-success-500: #22c55e;
+  --color-success-600: #16a34a;
   --color-success-700: #15803d;
 
+  /* Warning (Amber) */
   --color-warning-50: #fffbeb;
+  --color-warning-100: #fef3c7;
   --color-warning-500: #f59e0b;
+  --color-warning-600: #d97706;
   --color-warning-700: #b45309;
 
+  /* Danger (Red) */
   --color-danger-50: #fef2f2;
+  --color-danger-100: #fee2e2;
   --color-danger-500: #ef4444;
+  --color-danger-600: #dc2626;
   --color-danger-700: #b91c1c;
 
-  /* Spacing scale */
-  --spacing-page: 1.5rem;
-  --spacing-section: 1.25rem;
+  /* Purple (Stat card variant) */
+  --color-purple-50: #faf5ff;
+  --color-purple-100: #f3e8ff;
+  --color-purple-200: #e9d5ff;
+  --color-purple-500: #a855f7;
+  --color-purple-600: #9333ea;
+  --color-purple-700: #7e22ce;
+
+  /* Teal (Sidebar) */
+  --color-teal-dark: #1a3a3a;
+  --color-teal-darker: #0f2424;
+
+  /* ===== Typography ===== */
+  --font-sans: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+
+  /* ===== Spacing Scale ===== */
+  --spacing-page: 2rem;
+  --spacing-section: 1.5rem;
+  --spacing-section-lg: 2rem;
   --spacing-element: 0.75rem;
 
-  /* Border radius */
-  --radius-sm: 0.375rem;
-  --radius-md: 0.5rem;
-  --radius-lg: 0.75rem;
-  --radius-xl: 1rem;
+  /* ===== Border Radius ===== */
+  --radius-xs: 8px;
+  --radius-sm: 12px;
+  --radius-md: 16px;
+  --radius-lg: 20px;
 
-  /* Shadows */
+  /* ===== Shadows ===== */
   --shadow-xs: 0 1px 2px 0 rgb(0 0 0 / 0.03);
-  --shadow-sm: 0 1px 3px 0 rgb(0 0 0 / 0.04), 0 1px 2px -1px rgb(0 0 0 / 0.03);
-  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.05), 0 2px 4px -2px rgb(0 0 0 / 0.03);
-  --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.05), 0 4px 6px -4px rgb(0 0 0 / 0.03);
+  --shadow-sm: 0 1px 3px 0 rgb(0 0 0 / 0.04), 0 1px 2px -1px rgb(0 0 0 / 0.02);
+  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.04), 0 2px 4px -2px rgb(0 0 0 / 0.02);
+  --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.04), 0 4px 6px -4px rgb(0 0 0 / 0.02);
+  --shadow-hover-lift: 0 12px 32px rgba(0, 0, 0, 0.12);
 
-  /* Sidebar width */
-  --sidebar-width: 260px;
-  --sidebar-collapsed-width: 64px;
+  /* ===== Sidebar Dimensions ===== */
+  --sidebar-width: 240px;
+  --sidebar-collapsed-width: 96px;
 }
 
 /* Base styles */
@@ -83,18 +125,16 @@ html {
 
 body {
   margin: 0;
-  font-family:
-    -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell',
-    sans-serif;
+  font-family: var(--font-sans);
   color: var(--color-text-primary);
-  background: var(--color-surface-50);
+  background: var(--color-surface-warm);
   line-height: 1.5;
 }
 
 /* Scrollbar styling */
 ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 8px;
+  height: 8px;
 }
 
 ::-webkit-scrollbar-track {
@@ -103,11 +143,18 @@ body {
 
 ::-webkit-scrollbar-thumb {
   background: var(--color-surface-300);
-  border-radius: 3px;
+  border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
   background: var(--color-text-tertiary);
+}
+
+/* Base transitions for interactive elements (Requirement 14.1) */
+button,
+a,
+[role='button'] {
+  transition: all 200ms ease;
 }
 
 /* ===== Table Styles ===== */
@@ -129,4 +176,34 @@ table tbody tr:hover {
 /* Ensure table containers allow horizontal scroll */
 .overflow-x-auto {
   -webkit-overflow-scrolling: touch;
+}
+
+/* ===== Accessibility — Focus States ===== */
+
+/* Global focus-visible ring for all interactive elements */
+:focus-visible {
+  outline: 2px solid var(--color-primary-500);
+  outline-offset: 2px;
+}
+
+/* Remove default focus outline (focus-visible handles accessibility) */
+:focus:not(:focus-visible) {
+  outline: none;
+}
+
+/* ===== Animations ===== */
+
+/* Pulse animation for live status badges */
+@keyframes pulse-badge {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+.animate-pulse-badge {
+  animation: pulse-badge 2s ease-in-out infinite;
 }

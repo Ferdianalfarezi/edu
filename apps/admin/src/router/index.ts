@@ -158,6 +158,12 @@ export const router = createRouter({
       meta: { roles: [Role.ADMIN, Role.BENDAHARA] },
     },
     {
+      path: '/barang',
+      name: 'barang',
+      component: () => import('@/views/BarangView.vue'),
+      meta: { roles: [Role.ADMIN, Role.GURU, Role.KEPALA_SEKOLAH] },
+    },
+    {
       path: '/pengumuman',
       name: 'pengumuman',
       component: () => import('@/views/PengumumanView.vue'),

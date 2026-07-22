@@ -187,206 +187,200 @@ onMounted(fetchKonfigurasi);
 </script>
 
 <template>
-  <div class="p-4 lg:p-6 max-w-7xl mx-auto">
+  <div class="p-8 max-w-7xl mx-auto">
     <PageHeader title="Konfigurasi Sekolah" />
 
     <div v-if="loading" class="py-12 text-center">
-      <svg
-        class="w-6 h-6 animate-spin text-primary-500 mx-auto"
-        xmlns="http://www.w3.org/2000/svg"
-        fill="none"
-        viewBox="0 0 24 24"
-      >
-        <circle
-          class="opacity-25"
-          cx="12"
-          cy="12"
-          r="10"
-          stroke="currentColor"
-          stroke-width="4"
-        ></circle>
+      <svg class="w-7 h-7 animate-spin text-primary-500 mx-auto" fill="none" viewBox="0 0 24 24">
+        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
         <path
           class="opacity-75"
           fill="currentColor"
           d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
-        ></path>
+        />
       </svg>
-      <p class="text-sm text-text-tertiary mt-2">Memuat konfigurasi...</p>
+      <p class="text-[15px] text-text-secondary mt-3">Memuat konfigurasi...</p>
     </div>
 
-    <div v-else class="space-y-4 max-w-3xl">
-      <!-- Hari Kerja Sekolah -->
-      <section class="bg-white border border-border rounded-xl p-5 mb-4">
-        <h2 class="text-base font-semibold text-text-primary mb-4">Hari Kerja Sekolah</h2>
-        <div class="flex items-center gap-4">
-          <label class="flex items-center gap-2 cursor-pointer">
-            <input type="radio" v-model="hariKerja" value="5_hari" class="accent-primary-600" />
-            <span class="text-sm">5 Hari (Senin-Jumat)</span>
-          </label>
-          <label class="flex items-center gap-2 cursor-pointer">
-            <input type="radio" v-model="hariKerja" value="6_hari" class="accent-primary-600" />
-            <span class="text-sm">6 Hari (Senin-Sabtu)</span>
-          </label>
+    <div v-else class="space-y-6 max-w-3xl">
+      <!-- Hari Kerja Sekolah Card -->
+      <div class="bg-white rounded-[16px] border-2 border-stone-200 shadow-xs overflow-hidden">
+        <div class="bg-primary-50 px-6 py-5 border-b-2 border-primary-200">
+          <h3 class="text-[16px] font-bold text-primary-800">Hari Kerja Sekolah</h3>
         </div>
-        <p class="text-xs text-text-tertiary mt-2">
-          Perubahan ini akan mempengaruhi jadwal dan perhitungan absensi.
-        </p>
-        <button
-          @click="updateHariKerja"
-          :disabled="savingHariKerja"
-          class="mt-3 px-3 py-2 text-sm font-medium text-white bg-primary-600 rounded-lg hover:bg-primary-700 transition-colors disabled:opacity-50"
-        >
-          {{ savingHariKerja ? 'Menyimpan...' : 'Simpan Hari Kerja' }}
-        </button>
-      </section>
-
-      <!-- Threshold & General Settings -->
-      <section class="bg-white border border-border rounded-xl p-5 mb-4">
-        <h2 class="text-base font-semibold text-text-primary mb-4">Pengaturan Umum</h2>
-
-        <div class="mb-4">
-          <label class="block text-sm font-medium text-text-primary mb-1.5"
-            >Batas Ketidakhadiran untuk Notifikasi (hari/bulan)</label
-          >
-          <input
-            v-model.number="config.batas_ketidakhadiran_notifikasi"
-            type="number"
-            min="1"
-            max="30"
-            class="w-32 px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
-          />
-          <p class="text-xs text-text-tertiary mt-1">
-            Siswa dengan alpa melebihi angka ini akan masuk daftar perhatian khusus.
+        <div class="px-6 py-5">
+          <div class="flex items-center gap-6">
+            <label class="flex items-center gap-2 cursor-pointer">
+              <input type="radio" v-model="hariKerja" value="5_hari" class="accent-primary-600" />
+              <span class="text-[15px] text-stone-800">5 Hari (Senin-Jumat)</span>
+            </label>
+            <label class="flex items-center gap-2 cursor-pointer">
+              <input type="radio" v-model="hariKerja" value="6_hari" class="accent-primary-600" />
+              <span class="text-[15px] text-stone-800">6 Hari (Senin-Sabtu)</span>
+            </label>
+          </div>
+          <p class="text-[13px] text-stone-500 mt-2">
+            Perubahan ini akan mempengaruhi jadwal dan perhitungan absensi.
           </p>
-        </div>
-
-        <div class="mb-4">
-          <label class="block text-sm font-medium text-text-primary mb-1.5"
-            >Tanggal Jatuh Tempo Tagihan (tanggal per bulan)</label
+          <ActionButton
+            variant="primary"
+            class="mt-4"
+            :disabled="savingHariKerja"
+            @click="updateHariKerja"
           >
-          <input
-            v-model.number="config.tanggal_jatuh_tempo"
-            type="number"
-            min="1"
-            max="28"
-            class="w-32 px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
-          />
-          <p class="text-xs text-text-tertiary mt-1">
-            Tanggal default jatuh tempo tagihan SPP setiap bulan.
-          </p>
+            {{ savingHariKerja ? 'Menyimpan...' : 'Simpan Hari Kerja' }}
+          </ActionButton>
         </div>
-      </section>
+      </div>
 
-      <!-- Nominal SPP per Tingkat -->
-      <section class="bg-white border border-border rounded-xl p-5 mb-4">
-        <h2 class="text-base font-semibold text-text-primary mb-4">
-          Nominal SPP per Tingkat Kelas
-        </h2>
-        <div class="space-y-3">
-          <div v-for="entry in sppEntries" :key="entry.tingkat" class="flex items-end gap-3">
+      <!-- Pengaturan Umum Card -->
+      <div class="bg-white rounded-[16px] border-2 border-stone-200 shadow-xs overflow-hidden">
+        <div class="bg-primary-50 px-6 py-5 border-b-2 border-primary-200">
+          <h3 class="text-[16px] font-bold text-primary-800">Pengaturan Umum</h3>
+        </div>
+        <div class="px-6 py-5 space-y-5">
+          <div>
+            <label class="block text-[15px] font-medium text-stone-800 mb-1.5">
+              Batas Ketidakhadiran untuk Notifikasi (hari/bulan)
+            </label>
+            <input
+              v-model.number="config.batas_ketidakhadiran_notifikasi"
+              type="number"
+              min="1"
+              max="30"
+              class="w-32 px-3 py-2.5 text-[15px] border-2 border-stone-200 rounded-xs focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
+            />
+            <p class="text-[13px] text-stone-500 mt-1">
+              Siswa dengan alpa melebihi angka ini akan masuk daftar perhatian khusus.
+            </p>
+          </div>
+
+          <div>
+            <label class="block text-[15px] font-medium text-stone-800 mb-1.5">
+              Tanggal Jatuh Tempo Tagihan (tanggal per bulan)
+            </label>
+            <input
+              v-model.number="config.tanggal_jatuh_tempo"
+              type="number"
+              min="1"
+              max="28"
+              class="w-32 px-3 py-2.5 text-[15px] border-2 border-stone-200 rounded-xs focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
+            />
+            <p class="text-[13px] text-stone-500 mt-1">
+              Tanggal default jatuh tempo tagihan SPP setiap bulan.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Nominal SPP per Tingkat Card -->
+      <div class="bg-white rounded-[16px] border-2 border-stone-200 shadow-xs overflow-hidden">
+        <div class="bg-primary-50 px-6 py-5 border-b-2 border-primary-200">
+          <h3 class="text-[16px] font-bold text-primary-800">Nominal SPP per Tingkat Kelas</h3>
+        </div>
+        <div class="px-6 py-5 space-y-4">
+          <div v-for="entry in sppEntries" :key="entry.tingkat" class="flex items-end gap-4">
             <div>
-              <label class="block text-sm font-medium text-text-primary mb-1.5">Tingkat</label>
+              <label class="block text-[15px] font-medium text-stone-800 mb-1.5">Tingkat</label>
               <span
-                class="inline-block w-24 px-3 py-2 text-sm bg-surface-50 border border-border rounded-lg text-text-primary"
-                >Tingkat {{ entry.tingkat }}</span
+                class="inline-block w-28 px-3 py-2.5 text-[15px] bg-surface-warm border-2 border-stone-200 rounded-xs text-stone-800"
               >
+                Tingkat {{ entry.tingkat }}
+              </span>
             </div>
             <div>
-              <label class="block text-sm font-medium text-text-primary mb-1.5">Nominal</label>
-              <div class="flex items-center gap-2">
+              <label class="block text-[15px] font-medium text-stone-800 mb-1.5">Nominal</label>
+              <div class="flex items-center gap-3">
                 <input
                   v-model.number="entry.nominal"
                   type="number"
                   min="0"
-                  class="w-40 px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
+                  class="w-44 px-3 py-2.5 text-[15px] border-2 border-stone-200 rounded-xs focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
                   placeholder="0"
                 />
-                <span class="text-xs text-text-tertiary">{{
+                <span class="text-[13px] text-stone-500">{{
                   formatCurrency(entry.nominal || 0)
                 }}</span>
               </div>
             </div>
           </div>
         </div>
-      </section>
+      </div>
 
       <!-- Save Button -->
       <div class="flex items-center gap-4">
-        <button
-          class="px-3 py-2 text-sm font-medium text-white bg-primary-600 rounded-lg hover:bg-primary-700 transition-colors"
-          :disabled="saving"
-          @click="saveKonfigurasi"
-        >
+        <ActionButton variant="primary" :disabled="saving" @click="saveKonfigurasi">
           {{ saving ? 'Menyimpan...' : 'Simpan Konfigurasi' }}
-        </button>
-        <span v-if="saveSuccess" class="text-sm text-success-700 font-medium"
-          >✓ Konfigurasi berhasil disimpan</span
-        >
+        </ActionButton>
+        <span v-if="saveSuccess" class="text-[15px] text-success-700 font-semibold">
+          ✓ Konfigurasi berhasil disimpan
+        </span>
       </div>
 
-      <!-- Hari Libur -->
-      <section class="bg-white border border-border rounded-xl p-5 mb-4">
-        <div class="flex justify-between items-center mb-4">
-          <h2 class="text-base font-semibold text-text-primary">Hari Libur</h2>
-          <button
-            class="px-3 py-2 text-sm font-medium text-text-secondary bg-white border border-border rounded-lg hover:bg-surface-50 transition-colors"
-            @click="showAddHoliday = !showAddHoliday"
-          >
+      <!-- Hari Libur Card -->
+      <div class="bg-white rounded-[16px] border-2 border-stone-200 shadow-xs overflow-hidden">
+        <div
+          class="bg-primary-50 px-6 py-5 border-b-2 border-primary-200 flex justify-between items-center"
+        >
+          <h3 class="text-[16px] font-bold text-primary-800">Hari Libur</h3>
+          <ActionButton variant="neutral" @click="showAddHoliday = !showAddHoliday">
             {{ showAddHoliday ? 'Batal' : '+ Tambah Hari Libur' }}
-          </button>
+          </ActionButton>
         </div>
-
-        <div v-if="showAddHoliday" class="bg-surface-50 border border-border rounded-lg p-4 mb-4">
-          <div class="flex items-end gap-3">
-            <div>
-              <label class="block text-sm font-medium text-text-primary mb-1.5">Tanggal</label>
-              <input
-                v-model="newHoliday.tanggal"
-                type="date"
-                required
-                class="w-full px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
-              />
-            </div>
-            <div class="flex-1">
-              <label class="block text-sm font-medium text-text-primary mb-1.5"
-                >Keterangan <span class="text-text-tertiary font-normal">(opsional)</span></label
-              >
-              <input
-                v-model="newHoliday.keterangan"
-                type="text"
-                class="w-full px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
-                placeholder="Tahun Baru"
-              />
-            </div>
-            <button
-              class="px-3 py-2 text-sm font-medium text-white bg-primary-600 rounded-lg hover:bg-primary-700 transition-colors"
-              :disabled="!newHoliday.tanggal"
-              @click="addHoliday"
-            >
-              Tambah
-            </button>
-          </div>
-        </div>
-
-        <div v-if="hariLibur.length > 0" class="space-y-2">
+        <div class="px-6 py-5">
+          <!-- Add Holiday Form -->
           <div
-            v-for="hl in hariLibur"
-            :key="hl.id"
-            class="flex items-center justify-between p-3 bg-white border border-border rounded-lg"
+            v-if="showAddHoliday"
+            class="bg-surface-warm border-2 border-stone-200 rounded-xs p-4 mb-5"
           >
-            <div class="text-sm text-text-primary">
-              <strong>{{ formatDate(hl.tanggal) }}</strong>
-              <span v-if="hl.keterangan" class="text-text-secondary"> — {{ hl.keterangan }}</span>
+            <div class="flex items-end gap-4">
+              <div>
+                <label class="block text-[15px] font-medium text-stone-800 mb-1.5">Tanggal</label>
+                <input
+                  v-model="newHoliday.tanggal"
+                  type="date"
+                  required
+                  class="w-full px-3 py-2.5 text-[15px] border-2 border-stone-200 rounded-xs focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
+                />
+              </div>
+              <div class="flex-1">
+                <label class="block text-[15px] font-medium text-stone-800 mb-1.5">
+                  Keterangan <span class="text-stone-400 font-normal">(opsional)</span>
+                </label>
+                <input
+                  v-model="newHoliday.keterangan"
+                  type="text"
+                  class="w-full px-3 py-2.5 text-[15px] border-2 border-stone-200 rounded-xs focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
+                  placeholder="Tahun Baru"
+                />
+              </div>
+              <ActionButton variant="primary" :disabled="!newHoliday.tanggal" @click="addHoliday">
+                Tambah
+              </ActionButton>
             </div>
-            <ActionButton variant="danger" icon="delete" @click="removeHoliday(hl.id)"
-              >Hapus</ActionButton
+          </div>
+
+          <!-- Holiday List -->
+          <div v-if="hariLibur.length > 0" class="space-y-3">
+            <div
+              v-for="hl in hariLibur"
+              :key="hl.id"
+              class="flex items-center justify-between p-4 bg-white border-2 border-stone-200 rounded-xs"
             >
+              <div class="text-[15px] text-stone-800">
+                <strong>{{ formatDate(hl.tanggal) }}</strong>
+                <span v-if="hl.keterangan" class="text-stone-600"> — {{ hl.keterangan }}</span>
+              </div>
+              <ActionButton variant="danger" icon="delete" @click="removeHoliday(hl.id)">
+                Hapus
+              </ActionButton>
+            </div>
+          </div>
+          <div v-else class="py-12 text-center">
+            <p class="text-[15px] text-stone-500">Belum ada hari libur yang dikonfigurasi.</p>
           </div>
         </div>
-        <div v-else class="py-12 text-center">
-          <p class="text-sm text-text-tertiary">Belum ada hari libur yang dikonfigurasi.</p>
-        </div>
-      </section>
+      </div>
     </div>
   </div>
 </template>

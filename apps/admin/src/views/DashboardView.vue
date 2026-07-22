@@ -35,13 +35,13 @@ const greeting = computed(() => {
 </script>
 
 <template>
-  <div class="p-4 lg:p-6 max-w-7xl mx-auto">
+  <div class="p-8 max-w-7xl mx-auto">
     <!-- Page header -->
-    <div class="mb-6">
-      <h1 class="text-lg font-semibold text-text-primary">
+    <div class="mb-8">
+      <h1 class="text-[26px] font-extrabold text-text-primary">
         {{ greeting }}, {{ authStore.user?.name }}
       </h1>
-      <p class="text-sm text-text-secondary mt-0.5">
+      <p class="text-[15px] text-text-secondary mt-1">
         Berikut ringkasan informasi sekolah Anda hari ini.
       </p>
     </div>
