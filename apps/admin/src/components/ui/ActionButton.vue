@@ -52,22 +52,18 @@ defineEmits<{
   <button
     type="button"
     :disabled="disabled"
+    class="action-button"
     :class="[
-      'inline-flex items-center gap-1 rounded-md font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed',
-      size === 'xs' ? 'px-2 py-1 text-xs' : 'px-2.5 py-1.5 text-xs',
-      variant === 'primary' && 'text-primary-700 bg-primary-50 hover:bg-primary-100',
-      variant === 'warning' && 'text-warning-700 bg-warning-50 hover:bg-warning-50/80',
-      variant === 'danger' && 'text-danger-700 bg-danger-50 hover:bg-danger-50/80',
-      variant === 'success' && 'text-success-700 bg-success-50 hover:bg-success-50/80',
-      variant === 'neutral' && 'text-text-secondary bg-surface-100 hover:bg-surface-200',
-      variant === 'purple' && 'text-purple-700 bg-purple-50 hover:bg-purple-100',
+      `action-button--${variant}`,
+      `action-button--${size}`,
+      { 'action-button--disabled': disabled },
     ]"
     @click="$emit('click', $event)"
   >
     <!-- Icon -->
     <svg
       v-if="icon !== 'none'"
-      class="w-3.5 h-3.5 shrink-0"
+      class="action-button__icon"
       fill="none"
       viewBox="0 0 24 24"
       stroke="currentColor"
@@ -176,3 +172,133 @@ defineEmits<{
     <slot />
   </button>
 </template>
+
+<style scoped>
+.action-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 18px;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1;
+  border-radius: var(--radius-xs);
+  border: 2px solid transparent;
+  cursor: pointer;
+  transition: all 200ms ease;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+/* Size variants */
+.action-button--xs {
+  padding: 8px 14px;
+  font-size: 13px;
+}
+
+.action-button--sm {
+  padding: 10px 18px;
+  font-size: 14px;
+}
+
+/* === Primary variant === */
+.action-button--primary {
+  background: var(--color-primary-600);
+  color: white;
+  border-color: var(--color-primary-600);
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+}
+
+.action-button--primary:hover:not(.action-button--disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgba(37, 99, 235, 0.4);
+}
+
+/* === Neutral / Secondary variant === */
+.action-button--neutral {
+  background: white;
+  color: var(--color-text-secondary);
+  border: 2px solid var(--color-border);
+}
+
+.action-button--neutral:hover:not(.action-button--disabled) {
+  background: var(--color-surface-warm);
+  border-color: var(--color-primary-300);
+  color: var(--color-primary-700);
+}
+
+/* === Danger variant === */
+.action-button--danger {
+  background: var(--color-danger-600);
+  color: white;
+  border-color: var(--color-danger-600);
+  box-shadow: 0 4px 12px rgba(220, 38, 38, 0.3);
+}
+
+.action-button--danger:hover:not(.action-button--disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgba(220, 38, 38, 0.4);
+}
+
+/* === Warning variant === */
+.action-button--warning {
+  background: var(--color-accent-500);
+  color: white;
+  border-color: var(--color-accent-500);
+  box-shadow: 0 4px 12px rgba(245, 158, 11, 0.3);
+}
+
+.action-button--warning:hover:not(.action-button--disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgba(245, 158, 11, 0.4);
+}
+
+/* === Success variant === */
+.action-button--success {
+  background: var(--color-success-600);
+  color: white;
+  border-color: var(--color-success-600);
+  box-shadow: 0 4px 12px rgba(22, 163, 74, 0.3);
+}
+
+.action-button--success:hover:not(.action-button--disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgba(22, 163, 74, 0.4);
+}
+
+/* === Purple variant === */
+.action-button--purple {
+  background: var(--color-purple-600);
+  color: white;
+  border-color: var(--color-purple-600);
+  box-shadow: 0 4px 12px rgba(147, 51, 234, 0.3);
+}
+
+.action-button--purple:hover:not(.action-button--disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgba(147, 51, 234, 0.4);
+}
+
+/* === Disabled state === */
+.action-button--disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.action-button--disabled:hover {
+  transform: none;
+  box-shadow: none;
+}
+
+/* === Icon sizing === */
+.action-button__icon {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+}
+
+.action-button--xs .action-button__icon {
+  width: 14px;
+  height: 14px;
+}
+</style>

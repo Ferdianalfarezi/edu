@@ -281,11 +281,11 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="p-4 lg:p-6 max-w-7xl mx-auto">
-    <PageHeader title="Audit Log" description="Riwayat perubahan data sensitif pada sistem." />
+  <div class="p-8 max-w-7xl mx-auto">
+    <PageHeader title="Audit Log" subtitle="Riwayat perubahan data sensitif pada sistem." />
 
     <!-- Filters -->
-    <div class="flex flex-wrap items-end gap-2 mb-4">
+    <div class="flex flex-wrap items-end gap-3 mb-6">
       <!-- Tenant filter (SUPER_ADMIN only) -->
       <div v-if="isSuperAdmin" class="w-48">
         <SearchSelect
@@ -324,7 +324,7 @@ onMounted(() => {
           v-model="filters['user_id'].value"
           type="text"
           placeholder="Actor User ID..."
-          class="w-full px-3 py-2 text-sm border border-border rounded-lg bg-white placeholder:text-text-tertiary focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-colors"
+          class="w-full px-4 py-2.5 text-[15px] border-2 border-stone-200 rounded-[8px] bg-white placeholder:text-stone-400 focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-colors"
         />
       </div>
 
@@ -334,7 +334,7 @@ onMounted(() => {
           v-model="filters['date_from'].value"
           type="date"
           title="Dari tanggal"
-          class="w-full px-3 py-2 text-sm border border-border rounded-lg bg-white placeholder:text-text-tertiary focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-colors"
+          class="w-full px-4 py-2.5 text-[15px] border-2 border-stone-200 rounded-[8px] bg-white placeholder:text-stone-400 focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-colors"
         />
       </div>
 
@@ -344,64 +344,81 @@ onMounted(() => {
           v-model="filters['date_to'].value"
           type="date"
           title="Sampai tanggal"
-          class="w-full px-3 py-2 text-sm border border-border rounded-lg bg-white placeholder:text-text-tertiary focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-colors"
+          class="w-full px-4 py-2.5 text-[15px] border-2 border-stone-200 rounded-[8px] bg-white placeholder:text-stone-400 focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-colors"
         />
       </div>
     </div>
 
-    <!-- Table -->
-    <div class="bg-white border border-border rounded-xl overflow-hidden">
+    <!-- Table Card -->
+    <div class="bg-white rounded-[16px] border-2 border-stone-200 shadow-xs overflow-hidden">
+      <!-- Section Header -->
+      <div class="bg-primary-50 px-6 py-5 border-b-2 border-primary-200">
+        <h3 class="text-[16px] font-bold text-primary-800">Riwayat Audit</h3>
+      </div>
+
       <div class="overflow-x-auto">
-        <table v-if="!loading && entries.length > 0" class="w-full text-sm">
-          <thead>
-            <tr class="border-b border-border">
-              <th class="text-left px-4 py-3 font-medium text-text-secondary bg-surface-50">
+        <table v-if="!loading && entries.length > 0" class="w-full">
+          <thead class="border-b-2 border-stone-200">
+            <tr>
+              <th
+                class="px-5 py-4 text-left font-bold text-text-secondary text-[13px] uppercase tracking-[0.04em] bg-surface-warm"
+              >
                 Timestamp
               </th>
-              <th class="text-left px-4 py-3 font-medium text-text-secondary bg-surface-50">
+              <th
+                class="px-5 py-4 text-left font-bold text-text-secondary text-[13px] uppercase tracking-[0.04em] bg-surface-warm"
+              >
                 Action
               </th>
-              <th class="text-left px-4 py-3 font-medium text-text-secondary bg-surface-50">
+              <th
+                class="px-5 py-4 text-left font-bold text-text-secondary text-[13px] uppercase tracking-[0.04em] bg-surface-warm"
+              >
                 Entity Type
               </th>
-              <th class="text-left px-4 py-3 font-medium text-text-secondary bg-surface-50">
+              <th
+                class="px-5 py-4 text-left font-bold text-text-secondary text-[13px] uppercase tracking-[0.04em] bg-surface-warm"
+              >
                 Entity ID
               </th>
-              <th class="text-left px-4 py-3 font-medium text-text-secondary bg-surface-50">
+              <th
+                class="px-5 py-4 text-left font-bold text-text-secondary text-[13px] uppercase tracking-[0.04em] bg-surface-warm"
+              >
                 Actor
               </th>
-              <th class="text-left px-4 py-3 font-medium text-text-secondary bg-surface-50">
+              <th
+                class="px-5 py-4 text-left font-bold text-text-secondary text-[13px] uppercase tracking-[0.04em] bg-surface-warm"
+              >
                 Tenant
               </th>
             </tr>
           </thead>
-          <tbody class="divide-y divide-border">
+          <tbody class="divide-y divide-stone-200">
             <tr
               v-for="entry in entries"
               :key="entry.id"
-              class="hover:bg-surface-50 transition-colors cursor-pointer"
+              class="hover:bg-primary-50 transition-colors cursor-pointer"
               @click="openDetail(entry)"
             >
-              <td class="px-4 py-3 text-text-secondary whitespace-nowrap">
+              <td class="px-5 py-4 text-[15px] text-stone-500 whitespace-nowrap">
                 {{ formatTimestamp(entry.createdAt) }}
               </td>
-              <td class="px-4 py-3">
+              <td class="px-5 py-4">
                 <span
-                  class="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-primary-50 text-primary-700"
+                  class="inline-flex items-center px-2.5 py-1 rounded-[8px] text-[13px] font-semibold bg-primary-50 text-primary-700"
                 >
                   {{ formatAction(entry.action) }}
                 </span>
               </td>
-              <td class="px-4 py-3 text-text-primary">
+              <td class="px-5 py-4 text-[15px] text-stone-800">
                 {{ formatEntityType(entry.entityType) }}
               </td>
-              <td class="px-4 py-3 text-text-secondary font-mono text-xs">
+              <td class="px-5 py-4 text-[13px] text-stone-500 font-mono">
                 {{ entry.entityId.substring(0, 8) }}...
               </td>
-              <td class="px-4 py-3 text-text-secondary font-mono text-xs">
+              <td class="px-5 py-4 text-[13px] text-stone-500 font-mono">
                 {{ entry.actorUserId.substring(0, 8) }}...
               </td>
-              <td class="px-4 py-3 text-text-secondary font-mono text-xs">
+              <td class="px-5 py-4 text-[13px] text-stone-500 font-mono">
                 {{ entry.tenantId.substring(0, 8) }}...
               </td>
             </tr>
@@ -411,7 +428,7 @@ onMounted(() => {
         <!-- Loading -->
         <div v-else-if="loading" class="p-12 text-center">
           <svg
-            class="w-6 h-6 animate-spin text-primary-500 mx-auto"
+            class="w-7 h-7 animate-spin text-primary-500 mx-auto"
             viewBox="0 0 24 24"
             fill="none"
           >
@@ -429,13 +446,13 @@ onMounted(() => {
               d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
             />
           </svg>
-          <p class="text-sm text-text-tertiary mt-2">Memuat data...</p>
+          <p class="text-[15px] text-stone-500 mt-3">Memuat data...</p>
         </div>
 
         <!-- Empty state -->
         <div v-else class="p-12 text-center">
           <svg
-            class="w-10 h-10 text-surface-300 mx-auto mb-3"
+            class="w-10 h-10 text-stone-300 mx-auto mb-3"
             fill="none"
             viewBox="0 0 24 24"
             stroke="currentColor"
@@ -447,7 +464,7 @@ onMounted(() => {
               d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
             />
           </svg>
-          <p class="text-sm text-text-tertiary">
+          <p class="text-[15px] text-stone-500">
             Tidak ada audit log ditemukan. Coba sesuaikan filter pencarian Anda.
           </p>
         </div>
@@ -469,7 +486,7 @@ onMounted(() => {
     <BaseModal :show="showDetailModal" title="Detail Audit Log" size="xl" @close="closeDetail">
       <!-- Loading state -->
       <div v-if="detailLoading" class="py-8 text-center">
-        <svg class="w-6 h-6 animate-spin text-primary-500 mx-auto" viewBox="0 0 24 24" fill="none">
+        <svg class="w-7 h-7 animate-spin text-primary-500 mx-auto" viewBox="0 0 24 24" fill="none">
           <circle
             class="opacity-25"
             cx="12"
@@ -484,69 +501,81 @@ onMounted(() => {
             d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
           />
         </svg>
-        <p class="text-sm text-text-tertiary mt-2">Memuat detail...</p>
+        <p class="text-[15px] text-stone-500 mt-3">Memuat detail...</p>
       </div>
 
       <!-- Detail content -->
       <div v-else-if="detailEntry" class="space-y-5">
         <!-- Entry metadata -->
-        <div class="grid grid-cols-2 gap-3 text-sm">
+        <div class="grid grid-cols-2 gap-4 text-[15px]">
           <div>
-            <span class="text-text-tertiary">ID</span>
-            <p class="font-mono text-xs text-text-primary mt-0.5">{{ detailEntry.id }}</p>
+            <span class="text-stone-500 text-[13px] font-semibold">ID</span>
+            <p class="font-mono text-[13px] text-stone-800 mt-0.5">{{ detailEntry.id }}</p>
           </div>
           <div>
-            <span class="text-text-tertiary">Timestamp</span>
-            <p class="text-text-primary mt-0.5">{{ formatTimestamp(detailEntry.createdAt) }}</p>
+            <span class="text-stone-500 text-[13px] font-semibold">Timestamp</span>
+            <p class="text-stone-800 mt-0.5">{{ formatTimestamp(detailEntry.createdAt) }}</p>
           </div>
           <div>
-            <span class="text-text-tertiary">Action</span>
+            <span class="text-stone-500 text-[13px] font-semibold">Action</span>
             <p class="mt-0.5">
               <span
-                class="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-primary-50 text-primary-700"
+                class="inline-flex items-center px-2.5 py-1 rounded-[8px] text-[13px] font-semibold bg-primary-50 text-primary-700"
               >
                 {{ formatAction(detailEntry.action) }}
               </span>
             </p>
           </div>
           <div>
-            <span class="text-text-tertiary">Entity Type</span>
-            <p class="text-text-primary mt-0.5">{{ formatEntityType(detailEntry.entityType) }}</p>
+            <span class="text-stone-500 text-[13px] font-semibold">Entity Type</span>
+            <p class="text-stone-800 mt-0.5">{{ formatEntityType(detailEntry.entityType) }}</p>
           </div>
           <div>
-            <span class="text-text-tertiary">Entity ID</span>
-            <p class="font-mono text-xs text-text-primary mt-0.5">{{ detailEntry.entityId }}</p>
+            <span class="text-stone-500 text-[13px] font-semibold">Entity ID</span>
+            <p class="font-mono text-[13px] text-stone-800 mt-0.5">{{ detailEntry.entityId }}</p>
           </div>
           <div>
-            <span class="text-text-tertiary">Tenant ID</span>
-            <p class="font-mono text-xs text-text-primary mt-0.5">{{ detailEntry.tenantId }}</p>
+            <span class="text-stone-500 text-[13px] font-semibold">Tenant ID</span>
+            <p class="font-mono text-[13px] text-stone-800 mt-0.5">{{ detailEntry.tenantId }}</p>
           </div>
           <div>
-            <span class="text-text-tertiary">Actor User ID</span>
-            <p class="font-mono text-xs text-text-primary mt-0.5">{{ detailEntry.actorUserId }}</p>
+            <span class="text-stone-500 text-[13px] font-semibold">Actor User ID</span>
+            <p class="font-mono text-[13px] text-stone-800 mt-0.5">{{ detailEntry.actorUserId }}</p>
           </div>
           <div>
-            <span class="text-text-tertiary">Actor Role</span>
-            <p class="text-text-primary mt-0.5">{{ detailEntry.actorRole }}</p>
+            <span class="text-stone-500 text-[13px] font-semibold">Actor Role</span>
+            <p class="text-stone-800 mt-0.5">{{ detailEntry.actorRole }}</p>
           </div>
           <div>
-            <span class="text-text-tertiary">IP Address</span>
-            <p class="font-mono text-xs text-text-primary mt-0.5">{{ detailEntry.ipAddress }}</p>
+            <span class="text-stone-500 text-[13px] font-semibold">IP Address</span>
+            <p class="font-mono text-[13px] text-stone-800 mt-0.5">{{ detailEntry.ipAddress }}</p>
           </div>
         </div>
 
         <!-- Before/After Diff Section -->
         <div v-if="detailEntry.beforeValues || detailEntry.afterValues">
-          <h3 class="text-sm font-semibold text-text-primary mb-2 border-t border-border pt-4">
+          <h3 class="text-[15px] font-bold text-stone-800 mb-3 border-t-2 border-stone-200 pt-4">
             Perubahan Data
           </h3>
 
-          <div class="border border-border rounded-lg overflow-hidden">
+          <div class="border-2 border-stone-200 rounded-[12px] overflow-hidden">
             <!-- Header row -->
-            <div class="grid grid-cols-3 bg-surface-50 border-b border-border">
-              <div class="px-3 py-2 text-xs font-medium text-text-secondary">Field</div>
-              <div class="px-3 py-2 text-xs font-medium text-text-secondary">Before</div>
-              <div class="px-3 py-2 text-xs font-medium text-text-secondary">After</div>
+            <div class="grid grid-cols-3 bg-surface-warm border-b-2 border-stone-200">
+              <div
+                class="px-4 py-3 text-[13px] font-bold uppercase tracking-[0.04em] text-stone-600"
+              >
+                Field
+              </div>
+              <div
+                class="px-4 py-3 text-[13px] font-bold uppercase tracking-[0.04em] text-stone-600"
+              >
+                Before
+              </div>
+              <div
+                class="px-4 py-3 text-[13px] font-bold uppercase tracking-[0.04em] text-stone-600"
+              >
+                After
+              </div>
             </div>
 
             <!-- Diff rows -->
@@ -554,49 +583,49 @@ onMounted(() => {
               v-for="field in computeDiffFields(detailEntry)"
               :key="field.key"
               :class="[
-                'grid grid-cols-3 border-b border-border last:border-b-0 text-xs',
-                field.status === 'added' ? 'bg-green-50' : '',
-                field.status === 'removed' ? 'bg-red-50' : '',
-                field.status === 'modified' ? 'bg-amber-50' : '',
+                'grid grid-cols-3 border-b border-stone-200 last:border-b-0 text-[13px]',
+                field.status === 'added' ? 'bg-success-50' : '',
+                field.status === 'removed' ? 'bg-danger-50' : '',
+                field.status === 'modified' ? 'bg-warning-50' : '',
               ]"
             >
-              <div class="px-3 py-2 font-medium text-text-primary flex items-center gap-1.5">
+              <div class="px-4 py-3 font-semibold text-stone-800 flex items-center gap-1.5">
                 <span
                   v-if="field.status === 'added'"
-                  class="inline-block w-2 h-2 rounded-full bg-green-500 shrink-0"
+                  class="inline-block w-2 h-2 rounded-full bg-success-500 shrink-0"
                   title="Ditambahkan"
                 />
                 <span
                   v-else-if="field.status === 'removed'"
-                  class="inline-block w-2 h-2 rounded-full bg-red-500 shrink-0"
+                  class="inline-block w-2 h-2 rounded-full bg-danger-500 shrink-0"
                   title="Dihapus"
                 />
                 <span
                   v-else-if="field.status === 'modified'"
-                  class="inline-block w-2 h-2 rounded-full bg-amber-500 shrink-0"
+                  class="inline-block w-2 h-2 rounded-full bg-warning-500 shrink-0"
                   title="Diubah"
                 />
                 <span
                   v-else
-                  class="inline-block w-2 h-2 rounded-full bg-surface-300 shrink-0"
+                  class="inline-block w-2 h-2 rounded-full bg-stone-300 shrink-0"
                   title="Tidak berubah"
                 />
                 {{ field.key }}
               </div>
               <div
                 :class="[
-                  'px-3 py-2 font-mono break-all text-text-secondary',
-                  field.status === 'removed' ? 'text-red-700' : '',
-                  field.status === 'modified' ? 'text-red-600' : '',
+                  'px-4 py-3 font-mono break-all text-stone-500',
+                  field.status === 'removed' ? 'text-danger-700' : '',
+                  field.status === 'modified' ? 'text-danger-600' : '',
                 ]"
               >
                 {{ formatValue(field.beforeValue) }}
               </div>
               <div
                 :class="[
-                  'px-3 py-2 font-mono break-all text-text-secondary',
-                  field.status === 'added' ? 'text-green-700' : '',
-                  field.status === 'modified' ? 'text-green-600' : '',
+                  'px-4 py-3 font-mono break-all text-stone-500',
+                  field.status === 'added' ? 'text-success-700' : '',
+                  field.status === 'modified' ? 'text-success-600' : '',
                 ]"
               >
                 {{ formatValue(field.afterValue) }}
@@ -605,18 +634,18 @@ onMounted(() => {
           </div>
 
           <!-- Legend -->
-          <div class="flex items-center gap-4 mt-2 text-xs text-text-tertiary">
+          <div class="flex items-center gap-4 mt-3 text-[13px] text-stone-500">
             <span class="flex items-center gap-1">
-              <span class="inline-block w-2 h-2 rounded-full bg-green-500" /> Ditambahkan
+              <span class="inline-block w-2 h-2 rounded-full bg-success-500" /> Ditambahkan
             </span>
             <span class="flex items-center gap-1">
-              <span class="inline-block w-2 h-2 rounded-full bg-red-500" /> Dihapus
+              <span class="inline-block w-2 h-2 rounded-full bg-danger-500" /> Dihapus
             </span>
             <span class="flex items-center gap-1">
-              <span class="inline-block w-2 h-2 rounded-full bg-amber-500" /> Diubah
+              <span class="inline-block w-2 h-2 rounded-full bg-warning-500" /> Diubah
             </span>
             <span class="flex items-center gap-1">
-              <span class="inline-block w-2 h-2 rounded-full bg-surface-300" /> Tidak berubah
+              <span class="inline-block w-2 h-2 rounded-full bg-stone-300" /> Tidak berubah
             </span>
           </div>
         </div>
@@ -624,7 +653,7 @@ onMounted(() => {
         <!-- No diff data -->
         <div
           v-else
-          class="text-sm text-text-tertiary text-center py-4 border-t border-border mt-4 pt-4"
+          class="text-[15px] text-stone-500 text-center py-4 border-t-2 border-stone-200 mt-4 pt-4"
         >
           Tidak ada data before/after untuk entri ini.
         </div>
@@ -632,7 +661,7 @@ onMounted(() => {
 
       <template #footer>
         <button
-          class="px-4 py-2 text-sm font-medium rounded-lg border border-border hover:bg-surface-50 text-text-primary transition-colors"
+          class="px-4 py-2.5 text-[14px] font-semibold rounded-[8px] border-2 border-stone-200 hover:bg-surface-warm text-stone-800 transition-colors"
           @click="closeDetail"
         >
           Tutup

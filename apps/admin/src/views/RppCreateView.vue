@@ -2,7 +2,7 @@
 import { ref, computed, onMounted } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import { api } from '@/api/client';
-import { PageHeader, SearchSelect } from '@/components/ui';
+import { PageHeader, SearchSelect, ActionButton } from '@/components/ui';
 import type { SelectOption } from '@/components/ui';
 
 interface MataPelajaran {
@@ -285,9 +285,8 @@ onMounted(async () => {
 </script>
 
 <template>
-  <div class="p-4 lg:p-6 max-w-3xl mx-auto">
-    <PageHeader :title="isEdit ? 'Edit RPP / Modul Ajar' : 'Buat RPP / Modul Ajar'" description="">
-    </PageHeader>
+  <div class="p-8 max-w-3xl mx-auto">
+    <PageHeader :title="isEdit ? 'Edit RPP / Modul Ajar' : 'Buat RPP / Modul Ajar'"> </PageHeader>
 
     <div v-if="loading" class="text-center text-text-secondary py-12">
       <svg class="w-6 h-6 animate-spin text-primary-500 mx-auto" fill="none" viewBox="0 0 24 24">
@@ -298,284 +297,299 @@ onMounted(async () => {
           d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
         />
       </svg>
-      <p class="mt-2 text-sm">Memuat data...</p>
+      <p class="mt-2 text-[15px]">Memuat data...</p>
     </div>
 
-    <form v-else class="space-y-5" @submit.prevent>
-      <div
-        v-if="error"
-        class="p-3 bg-danger-50 border border-danger-500/20 rounded-lg text-sm text-danger-700"
-      >
-        {{ error }}
+    <!-- Form Card -->
+    <div v-else class="bg-white border-2 border-stone-200 rounded-[16px] shadow-xs overflow-hidden">
+      <!-- Section Header -->
+      <div class="px-6 py-5 bg-primary-50 border-b-2 border-primary-200">
+        <h3 class="text-[16px] font-bold text-primary-800">
+          {{ isEdit ? 'Edit Informasi RPP' : 'Informasi RPP Baru' }}
+        </h3>
       </div>
 
-      <!-- Judul -->
-      <div>
-        <label class="block text-sm font-medium text-text-primary mb-1.5"
-          >Judul RPP <span class="text-danger-500">*</span></label
-        >
-        <input
-          v-model="judul"
-          type="text"
-          class="w-full px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
-          placeholder="Masukkan judul RPP"
-          required
-        />
-      </div>
-
-      <!-- Mata Pelajaran -->
-      <div>
-        <SearchSelect
-          v-model="mataPelajaranId"
-          label="Mata Pelajaran"
-          :options="mataPelajaranSelectOptions"
-          placeholder="Pilih mata pelajaran"
-          required
-        />
-      </div>
-
-      <!-- Kategori (searchable with auto-create) -->
-      <div class="relative">
-        <label class="block text-sm font-medium text-text-primary mb-1.5"
-          >Kategori <span class="text-danger-500">*</span></label
-        >
-        <div class="relative">
-          <input
-            v-model="kategoriSearch"
-            type="text"
-            class="w-full px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
-            placeholder="Cari atau buat kategori baru"
-            @input="onKategoriInput"
-            @focus="showKategoriDropdown = true"
-            @blur="handleKategoriBlur"
-          />
+      <!-- Form Body -->
+      <div class="p-6">
+        <form class="space-y-6" @submit.prevent>
           <div
-            v-if="showKategoriDropdown && (filteredKategori.length > 0 || isNewKategori)"
-            class="absolute top-full left-0 right-0 bg-white border border-border rounded-lg shadow-lg max-h-[200px] overflow-y-auto z-20"
+            v-if="error"
+            class="p-4 bg-danger-50 border-2 border-danger-200 rounded-[12px] text-[15px] text-danger-700"
           >
-            <div
-              v-for="kat in filteredKategori"
-              :key="kat.id"
-              class="px-3 py-2 text-sm cursor-pointer hover:bg-surface-50 transition-colors"
-              @mousedown.prevent="selectKategori(kat)"
-            >
-              {{ kat.nama }}
-            </div>
-            <div
-              v-if="isNewKategori"
-              class="px-3 py-2 text-sm cursor-pointer text-primary-600 border-t border-border hover:bg-surface-50 transition-colors"
-              @mousedown.prevent="
-                () => {
-                  kategoriId = '';
-                  showKategoriDropdown = false;
-                }
-              "
-            >
-              + Buat kategori baru: <strong>{{ kategoriSearch }}</strong>
-            </div>
+            {{ error }}
           </div>
-        </div>
-      </div>
 
-      <!-- Tahun Terbit -->
-      <div>
-        <label class="block text-sm font-medium text-text-primary mb-1.5"
-          >Tahun Terbit <span class="text-danger-500">*</span></label
-        >
-        <input
-          v-model.number="tahunTerbit"
-          type="number"
-          class="w-full px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
-          :min="2020"
-          :max="2040"
-          required
-        />
-      </div>
-
-      <!-- Tipe Konten Toggle -->
-      <div>
-        <label class="block text-sm font-medium text-text-primary mb-1.5">Tipe Konten</label>
-        <div class="flex gap-1 p-1 bg-surface-100 rounded-lg w-fit">
-          <button
-            type="button"
-            :class="[
-              'px-3 py-1.5 text-sm font-medium rounded-md transition-colors',
-              kontenType === 'richtext'
-                ? 'bg-white text-text-primary shadow-xs'
-                : 'text-text-secondary hover:text-text-primary',
-            ]"
-            @click="kontenType = 'richtext'"
-          >
-            ✏️ Tulis Konten
-          </button>
-          <button
-            type="button"
-            :class="[
-              'px-3 py-1.5 text-sm font-medium rounded-md transition-colors',
-              kontenType === 'file'
-                ? 'bg-white text-text-primary shadow-xs'
-                : 'text-text-secondary hover:text-text-primary',
-            ]"
-            @click="kontenType = 'file'"
-          >
-            📁 Upload File
-          </button>
-        </div>
-      </div>
-
-      <!-- Rich Text Editor -->
-      <div v-if="kontenType === 'richtext'">
-        <label class="block text-sm font-medium text-text-primary mb-1.5">Konten RPP</label>
-        <div class="flex gap-1 p-2 bg-surface-50 border border-border border-b-0 rounded-t-lg">
-          <button
-            type="button"
-            class="w-8 h-8 flex items-center justify-center border border-border rounded-md bg-white hover:bg-surface-50 text-sm"
-            title="Bold"
-            @click="execCommand('bold')"
-          >
-            <strong>B</strong>
-          </button>
-          <button
-            type="button"
-            class="w-8 h-8 flex items-center justify-center border border-border rounded-md bg-white hover:bg-surface-50 text-sm"
-            title="Italic"
-            @click="execCommand('italic')"
-          >
-            <em>I</em>
-          </button>
-          <button
-            type="button"
-            class="w-8 h-8 flex items-center justify-center border border-border rounded-md bg-white hover:bg-surface-50 text-sm"
-            title="Heading"
-            @click="execCommand('formatBlock', 'h3')"
-          >
-            H
-          </button>
-          <button
-            type="button"
-            class="w-8 h-8 flex items-center justify-center border border-border rounded-md bg-white hover:bg-surface-50 text-sm"
-            title="Bullet List"
-            @click="execCommand('insertUnorderedList')"
-          >
-            •
-          </button>
-          <button
-            type="button"
-            class="w-8 h-8 flex items-center justify-center border border-border rounded-md bg-white hover:bg-surface-50 text-sm"
-            title="Numbered List"
-            @click="execCommand('insertOrderedList')"
-          >
-            1.
-          </button>
-          <button
-            type="button"
-            class="w-8 h-8 flex items-center justify-center border border-border rounded-md bg-white hover:bg-surface-50 text-sm"
-            title="Table"
-            @click="insertTable"
-          >
-            ⊞
-          </button>
-        </div>
-        <div
-          class="min-h-[300px] p-4 border border-border rounded-b-lg text-sm leading-relaxed focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
-          contenteditable="true"
-          @input="onEditorInput"
-          v-html="konten"
-        ></div>
-      </div>
-
-      <!-- File Upload -->
-      <div v-if="kontenType === 'file'">
-        <label class="block text-sm font-medium text-text-primary mb-1.5">Upload File</label>
-        <div
-          :class="[
-            'border-2 border-dashed rounded-xl p-8 text-center transition-colors',
-            isDragging ? 'border-primary-500 bg-primary-50' : 'border-border',
-          ]"
-          @dragover.prevent="isDragging = true"
-          @dragleave="isDragging = false"
-          @drop.prevent="handleDrop"
-        >
-          <div v-if="selectedFile" class="flex items-center gap-3 justify-center">
-            <span class="text-2xl">📄</span>
-            <div class="text-left">
-              <span class="text-sm font-medium text-text-primary block">{{
-                selectedFile.name
-              }}</span>
-              <span class="text-xs text-text-tertiary">{{
-                formatFileSize(selectedFile.size)
-              }}</span>
-            </div>
-            <button
-              type="button"
-              class="ml-4 w-6 h-6 flex items-center justify-center bg-danger-50 text-danger-700 rounded-full text-xs hover:bg-danger-50/80 transition-colors"
-              @click="removeFile"
+          <!-- Judul -->
+          <div>
+            <label class="block text-[15px] font-semibold text-text-primary mb-2"
+              >Judul RPP <span class="text-danger-500">*</span></label
             >
-              ✕
-            </button>
+            <input
+              v-model="judul"
+              type="text"
+              class="w-full px-4 py-3 text-[15px] border-2 border-stone-200 rounded-xs focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-colors"
+              placeholder="Masukkan judul RPP"
+              required
+            />
           </div>
-          <div v-else-if="existingFileName" class="flex items-center gap-3 justify-center">
-            <span class="text-2xl">📄</span>
-            <div class="text-left">
-              <span class="text-sm font-medium text-text-primary block">{{
-                existingFileName
-              }}</span>
-              <span class="text-xs text-text-tertiary">(file tersimpan)</span>
-            </div>
-            <button
-              type="button"
-              class="ml-4 w-6 h-6 flex items-center justify-center bg-danger-50 text-danger-700 rounded-full text-xs hover:bg-danger-50/80 transition-colors"
-              @click="removeFile"
-            >
-              ✕
-            </button>
+
+          <!-- Mata Pelajaran -->
+          <div>
+            <SearchSelect
+              v-model="mataPelajaranId"
+              label="Mata Pelajaran"
+              :options="mataPelajaranSelectOptions"
+              placeholder="Pilih mata pelajaran"
+              required
+            />
           </div>
-          <div v-else class="flex flex-col items-center gap-2">
-            <span class="text-3xl">📂</span>
-            <p class="text-sm text-text-secondary">Drag & drop file di sini, atau</p>
-            <label
-              class="px-3 py-2 text-sm font-medium text-text-secondary bg-white border border-border rounded-lg hover:bg-surface-50 transition-colors cursor-pointer"
+
+          <!-- Kategori (searchable with auto-create) -->
+          <div class="relative">
+            <label class="block text-[15px] font-semibold text-text-primary mb-2"
+              >Kategori <span class="text-danger-500">*</span></label
             >
-              Pilih File
+            <div class="relative">
               <input
-                type="file"
-                accept=".pdf,.doc,.docx,.ppt,.pptx"
-                hidden
-                @change="handleFileSelect"
+                v-model="kategoriSearch"
+                type="text"
+                class="w-full px-4 py-3 text-[15px] border-2 border-stone-200 rounded-xs focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-colors"
+                placeholder="Cari atau buat kategori baru"
+                @input="onKategoriInput"
+                @focus="showKategoriDropdown = true"
+                @blur="handleKategoriBlur"
               />
-            </label>
-            <p class="text-xs text-text-tertiary">PDF, DOC, DOCX, PPT, PPTX — maks. 10MB</p>
+              <div
+                v-if="showKategoriDropdown && (filteredKategori.length > 0 || isNewKategori)"
+                class="absolute top-full left-0 right-0 bg-white border-2 border-stone-200 rounded-[12px] shadow-lg max-h-[200px] overflow-y-auto z-20 mt-1"
+              >
+                <div
+                  v-for="kat in filteredKategori"
+                  :key="kat.id"
+                  class="px-4 py-3 text-[15px] cursor-pointer hover:bg-primary-50 transition-colors"
+                  @mousedown.prevent="selectKategori(kat)"
+                >
+                  {{ kat.nama }}
+                </div>
+                <div
+                  v-if="isNewKategori"
+                  class="px-4 py-3 text-[15px] cursor-pointer text-primary-600 border-t-2 border-stone-200 hover:bg-primary-50 transition-colors"
+                  @mousedown.prevent="
+                    () => {
+                      kategoriId = '';
+                      showKategoriDropdown = false;
+                    }
+                  "
+                >
+                  + Buat kategori baru: <strong>{{ kategoriSearch }}</strong>
+                </div>
+              </div>
+            </div>
           </div>
-        </div>
-        <p v-if="fileError" class="text-xs text-danger-500 mt-1">{{ fileError }}</p>
-      </div>
 
-      <!-- Actions -->
-      <div class="flex justify-end gap-3 mt-4 pt-4 border-t border-border">
-        <button
-          type="button"
-          class="px-3 py-2 text-sm font-medium text-text-secondary bg-white border border-border rounded-lg hover:bg-surface-50 transition-colors"
-          @click="router.push({ name: 'rpp-portal' })"
-        >
-          Batal
-        </button>
-        <button
-          type="button"
-          class="px-3 py-2 text-sm font-medium text-primary-600 bg-white border border-primary-600 rounded-lg hover:bg-primary-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-          :disabled="saving"
-          @click="handleSubmit('draft')"
-        >
-          Simpan sebagai Draft
-        </button>
-        <button
-          type="button"
-          class="px-3 py-2 text-sm font-medium text-white bg-primary-600 rounded-lg hover:bg-primary-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-          :disabled="saving"
-          @click="handleSubmit('published')"
-        >
-          {{ saving ? 'Menyimpan...' : 'Publish' }}
-        </button>
+          <!-- Tahun Terbit -->
+          <div>
+            <label class="block text-[15px] font-semibold text-text-primary mb-2"
+              >Tahun Terbit <span class="text-danger-500">*</span></label
+            >
+            <input
+              v-model.number="tahunTerbit"
+              type="number"
+              class="w-full px-4 py-3 text-[15px] border-2 border-stone-200 rounded-xs focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-colors"
+              :min="2020"
+              :max="2040"
+              required
+            />
+          </div>
+
+          <!-- Tipe Konten Toggle -->
+          <div>
+            <label class="block text-[15px] font-semibold text-text-primary mb-2"
+              >Tipe Konten</label
+            >
+            <div class="flex gap-1 p-1.5 bg-stone-100 rounded-[10px] w-fit">
+              <button
+                type="button"
+                :class="[
+                  'px-4 py-2 text-[15px] font-semibold rounded-xs transition-colors',
+                  kontenType === 'richtext'
+                    ? 'bg-white text-text-primary shadow-xs'
+                    : 'text-text-secondary hover:text-text-primary',
+                ]"
+                @click="kontenType = 'richtext'"
+              >
+                ✏️ Tulis Konten
+              </button>
+              <button
+                type="button"
+                :class="[
+                  'px-4 py-2 text-[15px] font-semibold rounded-xs transition-colors',
+                  kontenType === 'file'
+                    ? 'bg-white text-text-primary shadow-xs'
+                    : 'text-text-secondary hover:text-text-primary',
+                ]"
+                @click="kontenType = 'file'"
+              >
+                📁 Upload File
+              </button>
+            </div>
+          </div>
+
+          <!-- Rich Text Editor -->
+          <div v-if="kontenType === 'richtext'">
+            <label class="block text-[15px] font-semibold text-text-primary mb-2">Konten RPP</label>
+            <div
+              class="flex gap-1 p-2 bg-stone-50 border-2 border-stone-200 border-b-0 rounded-t-[8px]"
+            >
+              <button
+                type="button"
+                class="w-9 h-9 flex items-center justify-center border-2 border-stone-200 rounded-xs bg-white hover:bg-primary-50 text-[15px] transition-colors"
+                title="Bold"
+                @click="execCommand('bold')"
+              >
+                <strong>B</strong>
+              </button>
+              <button
+                type="button"
+                class="w-9 h-9 flex items-center justify-center border-2 border-stone-200 rounded-xs bg-white hover:bg-primary-50 text-[15px] transition-colors"
+                title="Italic"
+                @click="execCommand('italic')"
+              >
+                <em>I</em>
+              </button>
+              <button
+                type="button"
+                class="w-9 h-9 flex items-center justify-center border-2 border-stone-200 rounded-xs bg-white hover:bg-primary-50 text-[15px] transition-colors"
+                title="Heading"
+                @click="execCommand('formatBlock', 'h3')"
+              >
+                H
+              </button>
+              <button
+                type="button"
+                class="w-9 h-9 flex items-center justify-center border-2 border-stone-200 rounded-xs bg-white hover:bg-primary-50 text-[15px] transition-colors"
+                title="Bullet List"
+                @click="execCommand('insertUnorderedList')"
+              >
+                •
+              </button>
+              <button
+                type="button"
+                class="w-9 h-9 flex items-center justify-center border-2 border-stone-200 rounded-xs bg-white hover:bg-primary-50 text-[15px] transition-colors"
+                title="Numbered List"
+                @click="execCommand('insertOrderedList')"
+              >
+                1.
+              </button>
+              <button
+                type="button"
+                class="w-9 h-9 flex items-center justify-center border-2 border-stone-200 rounded-xs bg-white hover:bg-primary-50 text-[15px] transition-colors"
+                title="Table"
+                @click="insertTable"
+              >
+                ⊞
+              </button>
+            </div>
+            <div
+              class="min-h-[300px] p-5 border-2 border-stone-200 rounded-b-[8px] text-[15px] leading-relaxed focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-colors"
+              contenteditable="true"
+              @input="onEditorInput"
+              v-html="konten"
+            ></div>
+          </div>
+
+          <!-- File Upload -->
+          <div v-if="kontenType === 'file'">
+            <label class="block text-[15px] font-semibold text-text-primary mb-2"
+              >Upload File</label
+            >
+            <div
+              :class="[
+                'border-2 border-dashed rounded-[16px] p-8 text-center transition-colors',
+                isDragging ? 'border-primary-500 bg-primary-50' : 'border-stone-200',
+              ]"
+              @dragover.prevent="isDragging = true"
+              @dragleave="isDragging = false"
+              @drop.prevent="handleDrop"
+            >
+              <div v-if="selectedFile" class="flex items-center gap-3 justify-center">
+                <span class="text-2xl">📄</span>
+                <div class="text-left">
+                  <span class="text-[15px] font-semibold text-text-primary block">{{
+                    selectedFile.name
+                  }}</span>
+                  <span class="text-[13px] text-text-tertiary">{{
+                    formatFileSize(selectedFile.size)
+                  }}</span>
+                </div>
+                <button
+                  type="button"
+                  class="ml-4 w-7 h-7 flex items-center justify-center bg-danger-50 text-danger-700 rounded-full text-[13px] hover:bg-danger-100 transition-colors"
+                  @click="removeFile"
+                >
+                  ✕
+                </button>
+              </div>
+              <div v-else-if="existingFileName" class="flex items-center gap-3 justify-center">
+                <span class="text-2xl">📄</span>
+                <div class="text-left">
+                  <span class="text-[15px] font-semibold text-text-primary block">{{
+                    existingFileName
+                  }}</span>
+                  <span class="text-[13px] text-text-tertiary">(file tersimpan)</span>
+                </div>
+                <button
+                  type="button"
+                  class="ml-4 w-7 h-7 flex items-center justify-center bg-danger-50 text-danger-700 rounded-full text-[13px] hover:bg-danger-100 transition-colors"
+                  @click="removeFile"
+                >
+                  ✕
+                </button>
+              </div>
+              <div v-else class="flex flex-col items-center gap-3">
+                <span class="text-4xl">📂</span>
+                <p class="text-[15px] text-text-secondary">Drag & drop file di sini, atau</p>
+                <label
+                  class="px-4 py-2.5 text-[15px] font-semibold text-text-secondary bg-white border-2 border-stone-200 rounded-xs hover:bg-primary-50 hover:border-primary-300 transition-colors cursor-pointer"
+                >
+                  Pilih File
+                  <input
+                    type="file"
+                    accept=".pdf,.doc,.docx,.ppt,.pptx"
+                    hidden
+                    @change="handleFileSelect"
+                  />
+                </label>
+                <p class="text-[13px] text-text-tertiary">PDF, DOC, DOCX, PPT, PPTX — maks. 10MB</p>
+              </div>
+            </div>
+            <p v-if="fileError" class="text-[13px] text-danger-500 mt-2">{{ fileError }}</p>
+          </div>
+
+          <!-- Actions -->
+          <div class="flex justify-end gap-3 pt-6 border-t-2 border-stone-200">
+            <ActionButton variant="neutral" size="sm" @click="router.push({ name: 'rpp-portal' })">
+              Batal
+            </ActionButton>
+            <ActionButton
+              variant="primary"
+              size="sm"
+              :disabled="saving"
+              @click="handleSubmit('draft')"
+            >
+              Simpan sebagai Draft
+            </ActionButton>
+            <ActionButton
+              variant="success"
+              size="sm"
+              :disabled="saving"
+              @click="handleSubmit('published')"
+            >
+              {{ saving ? 'Menyimpan...' : 'Publish' }}
+            </ActionButton>
+          </div>
+        </form>
       </div>
-    </form>
+    </div>
   </div>
 </template>

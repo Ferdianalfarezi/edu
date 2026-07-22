@@ -191,22 +191,23 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="p-4 lg:p-6 max-w-7xl mx-auto">
+  <div class="p-8 max-w-7xl mx-auto">
     <PageHeader title="Rapor Siswa">
       <template #actions>
-        <button
+        <ActionButton
           v-if="raporOverview?.status === 'final'"
-          class="px-3 py-2 text-sm font-medium text-white bg-primary-600 rounded-lg hover:bg-primary-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          variant="primary"
+          icon="download"
           :disabled="exporting"
           @click="exportRapor"
         >
           {{ exporting ? 'Mengexport...' : 'Export Excel' }}
-        </button>
+        </ActionButton>
       </template>
     </PageHeader>
 
     <!-- Filters -->
-    <div class="flex flex-wrap items-center gap-3 mb-4">
+    <div class="flex flex-wrap items-center gap-3 mb-6">
       <div class="flex flex-col gap-1 min-w-[200px]">
         <SearchSelect
           v-model="selectedTahunAjaran"
@@ -238,7 +239,7 @@ onMounted(() => {
 
     <div
       v-if="error"
-      class="p-3 bg-danger-50 border border-danger-500/20 rounded-lg text-sm text-danger-700 mb-4"
+      class="p-3 bg-danger-50 border-2 border-danger-200 rounded-[8px] text-[15px] text-danger-700 mb-4"
     >
       {{ error }}
     </div>
@@ -252,22 +253,22 @@ onMounted(() => {
           d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
         />
       </svg>
-      <p class="text-sm text-text-secondary mt-2">Memuat data...</p>
+      <p class="text-[15px] text-text-secondary mt-2">Memuat data...</p>
     </div>
 
     <template v-else-if="raporOverview && siswaRapors.length > 0">
       <!-- Status Banner -->
       <div
-        class="flex items-center justify-between p-3 bg-surface-50 border border-border rounded-lg mb-4"
+        class="flex items-center justify-between p-4 bg-surface-warm border-2 border-stone-200 rounded-[12px] mb-4"
       >
         <div class="flex items-center gap-3">
           <span
-            class="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium"
+            class="inline-flex items-center px-2.5 py-1 rounded-[8px] text-[13px] font-semibold"
             :class="getStatusBadgeClass(raporOverview.status)"
           >
             {{ raporOverview.status === 'final' ? 'Final' : 'Draft' }}
           </span>
-          <span class="text-sm font-medium text-text-primary">
+          <span class="text-[15px] font-medium text-text-primary">
             {{ raporOverview.kelas_nama }} —
             {{
               periodeOptions.find((p) => p.value === (raporOverview ? raporOverview.periode : ''))
@@ -275,54 +276,79 @@ onMounted(() => {
             }}
           </span>
         </div>
-        <div v-if="raporOverview.finalized_at" class="text-xs text-text-secondary">
+        <div v-if="raporOverview.finalized_at" class="text-[13px] text-text-secondary">
           Difinalkan: {{ new Date(raporOverview.finalized_at).toLocaleString('id-ID') }}
         </div>
       </div>
 
       <!-- Students Table -->
-      <div class="bg-white border border-border rounded-xl overflow-hidden">
+      <div class="bg-white rounded-[16px] border-2 border-stone-200 shadow-xs overflow-hidden">
+        <div class="bg-primary-50 px-6 py-5 border-b-2 border-primary-200">
+          <h2 class="text-[16px] font-bold text-primary-800">Daftar Siswa</h2>
+        </div>
         <div class="overflow-x-auto">
           <table class="w-full">
-            <thead class="border-b border-border bg-surface-50">
+            <thead class="border-b-2 border-stone-200">
               <tr>
-                <th class="px-4 py-3 text-left font-medium text-text-secondary text-xs">No</th>
-                <th class="px-4 py-3 text-left font-medium text-text-secondary text-xs">
+                <th
+                  class="px-5 py-4 text-left text-[13px] font-bold uppercase tracking-[0.04em] text-text-secondary bg-surface-warm"
+                >
+                  No
+                </th>
+                <th
+                  class="px-5 py-4 text-left text-[13px] font-bold uppercase tracking-[0.04em] text-text-secondary bg-surface-warm"
+                >
                   Nama Siswa
                 </th>
-                <th class="px-4 py-3 text-left font-medium text-text-secondary text-xs">NISN</th>
-                <th class="px-4 py-3 text-left font-medium text-text-secondary text-xs">
+                <th
+                  class="px-5 py-4 text-left text-[13px] font-bold uppercase tracking-[0.04em] text-text-secondary bg-surface-warm"
+                >
+                  NISN
+                </th>
+                <th
+                  class="px-5 py-4 text-left text-[13px] font-bold uppercase tracking-[0.04em] text-text-secondary bg-surface-warm"
+                >
                   Rata-rata
                 </th>
-                <th class="px-4 py-3 text-left font-medium text-text-secondary text-xs">
+                <th
+                  class="px-5 py-4 text-left text-[13px] font-bold uppercase tracking-[0.04em] text-text-secondary bg-surface-warm"
+                >
                   Peringkat
                 </th>
-                <th class="px-4 py-3 text-left font-medium text-text-secondary text-xs">Status</th>
-                <th class="px-4 py-3 text-left font-medium text-text-secondary text-xs">Detail</th>
+                <th
+                  class="px-5 py-4 text-left text-[13px] font-bold uppercase tracking-[0.04em] text-text-secondary bg-surface-warm"
+                >
+                  Status
+                </th>
+                <th
+                  class="px-5 py-4 text-left text-[13px] font-bold uppercase tracking-[0.04em] text-text-secondary bg-surface-warm"
+                >
+                  Detail
+                </th>
               </tr>
             </thead>
-            <tbody class="divide-y divide-border">
+            <tbody class="divide-y divide-stone-200">
               <tr
                 v-for="(siswa, idx) in siswaRapors"
                 :key="siswa.siswa_id"
-                class="hover:bg-surface-50 transition-colors"
+                class="hover:bg-primary-50 transition-colors"
               >
-                <td class="px-4 py-3 text-sm">{{ idx + 1 }}</td>
-                <td class="px-4 py-3 text-sm text-text-primary font-medium">
+                <td class="px-5 py-4 text-[15px]">{{ idx + 1 }}</td>
+                <td class="px-5 py-4 text-[15px] text-text-primary font-medium">
                   {{ siswa.siswa_nama }}
                 </td>
-                <td class="px-4 py-3 text-sm text-text-secondary">{{ siswa.nisn || '-' }}</td>
-                <td class="px-4 py-3 text-sm">
+                <td class="px-5 py-4 text-[15px] text-text-secondary">{{ siswa.nisn || '-' }}</td>
+                <td class="px-5 py-4 text-[15px]">
                   {{
                     siswa.rata_rata !== null && siswa.rata_rata !== undefined
                       ? Number(siswa.rata_rata).toFixed(1)
                       : '-'
                   }}
                 </td>
-                <td class="px-4 py-3 text-sm">{{ siswa.peringkat ?? '-' }}</td>
-                <td class="px-4 py-3">
+                <td class="px-5 py-4 text-[15px]">{{ siswa.peringkat ?? '-' }}</td>
+                <td class="px-5 py-4">
                   <span
-                    class="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium"
+                    class="inline-flex items-center px-2.5 py-1 rounded-[8px] text-[13px] font-semibold"
                     :class="
                       raporOverview && raporOverview.status === 'final'
                         ? 'bg-success-50 text-success-700'
@@ -332,10 +358,10 @@ onMounted(() => {
                     {{ raporOverview && raporOverview.status === 'final' ? 'Final' : 'Draft' }}
                   </span>
                 </td>
-                <td class="px-4 py-3">
-                  <ActionButton variant="primary" icon="view" @click="viewDetail(siswa)"
-                    >Lihat</ActionButton
-                  >
+                <td class="px-5 py-4">
+                  <ActionButton variant="primary" icon="view" @click="viewDetail(siswa)">
+                    Lihat
+                  </ActionButton>
                 </td>
               </tr>
             </tbody>
@@ -346,13 +372,13 @@ onMounted(() => {
 
     <div
       v-else-if="selectedKelas && selectedPeriode && !loading"
-      class="text-center text-text-secondary py-8 text-sm"
+      class="text-center text-text-secondary py-8 text-[15px]"
     >
       Tidak ada data rapor untuk kelas dan periode ini.
     </div>
     <div
       v-else-if="!selectedKelas || !selectedPeriode"
-      class="text-center text-text-secondary py-8 text-sm"
+      class="text-center text-text-secondary py-8 text-[15px]"
     >
       Pilih tahun ajaran, kelas, dan periode untuk melihat rapor.
     </div>
@@ -366,10 +392,12 @@ onMounted(() => {
     >
       <template v-if="detailSiswa">
         <!-- Summary cards -->
-        <div class="flex gap-6 mb-6 p-3 bg-surface-50 rounded-lg">
+        <div class="flex gap-6 mb-6 p-4 bg-surface-warm rounded-[12px] border-2 border-stone-200">
           <div class="flex flex-col">
-            <span class="text-xs text-text-secondary uppercase tracking-wide">Rata-rata</span>
-            <span class="text-xl font-bold text-text-primary">
+            <span class="text-[13px] text-text-secondary uppercase tracking-[0.04em] font-bold"
+              >Rata-rata</span
+            >
+            <span class="text-[24px] font-bold text-text-primary">
               {{
                 detailSiswa.rata_rata !== null && detailSiswa.rata_rata !== undefined
                   ? Number(detailSiswa.rata_rata).toFixed(1)
@@ -378,8 +406,10 @@ onMounted(() => {
             </span>
           </div>
           <div class="flex flex-col">
-            <span class="text-xs text-text-secondary uppercase tracking-wide">Peringkat</span>
-            <span class="text-xl font-bold text-text-primary">{{
+            <span class="text-[13px] text-text-secondary uppercase tracking-[0.04em] font-bold"
+              >Peringkat</span
+            >
+            <span class="text-[24px] font-bold text-text-primary">{{
               detailSiswa.peringkat ?? '-'
             }}</span>
           </div>
@@ -387,38 +417,48 @@ onMounted(() => {
 
         <!-- Nilai per mapel -->
         <div class="mb-6">
-          <h3 class="text-sm font-semibold text-text-primary mb-3">Nilai per Mata Pelajaran</h3>
-          <div class="bg-white border border-border rounded-lg overflow-hidden">
+          <h3 class="text-[15px] font-bold text-text-primary mb-3">Nilai per Mata Pelajaran</h3>
+          <div class="bg-white border-2 border-stone-200 rounded-[12px] overflow-hidden">
             <table class="w-full">
-              <thead class="border-b border-border bg-surface-50">
+              <thead class="border-b-2 border-stone-200">
                 <tr>
-                  <th class="px-4 py-2 text-left font-medium text-text-secondary text-xs">
+                  <th
+                    class="px-5 py-4 text-left text-[13px] font-bold uppercase tracking-[0.04em] text-text-secondary bg-surface-warm"
+                  >
                     Mata Pelajaran
                   </th>
-                  <th class="px-4 py-2 text-left font-medium text-text-secondary text-xs">
+                  <th
+                    class="px-5 py-4 text-left text-[13px] font-bold uppercase tracking-[0.04em] text-text-secondary bg-surface-warm"
+                  >
                     Komponen
                   </th>
-                  <th class="px-4 py-2 text-left font-medium text-text-secondary text-xs">
+                  <th
+                    class="px-5 py-4 text-left text-[13px] font-bold uppercase tracking-[0.04em] text-text-secondary bg-surface-warm"
+                  >
                     Capaian Pembelajaran
                   </th>
                 </tr>
               </thead>
-              <tbody class="divide-y divide-border">
-                <tr v-for="mapel in detailSiswa.nilai_per_mapel" :key="mapel.mata_pelajaran_nama">
-                  <td class="px-4 py-2 text-xs text-text-primary">
+              <tbody class="divide-y divide-stone-200">
+                <tr
+                  v-for="mapel in detailSiswa.nilai_per_mapel"
+                  :key="mapel.mata_pelajaran_nama"
+                  class="hover:bg-primary-50 transition-colors"
+                >
+                  <td class="px-5 py-4 text-[15px] text-text-primary">
                     {{ mapel.mata_pelajaran_nama }}
                   </td>
-                  <td class="px-4 py-2">
+                  <td class="px-5 py-4">
                     <div
                       v-for="k in mapel.komponen_nilai"
                       :key="k.komponen_nama"
-                      class="flex gap-1 text-xs"
+                      class="flex gap-1 text-[13px]"
                     >
                       <span class="text-text-secondary">{{ k.komponen_nama }}:</span>
-                      <span class="font-medium text-text-primary">{{ k.nilai }}</span>
+                      <span class="font-semibold text-text-primary">{{ k.nilai }}</span>
                     </div>
                   </td>
-                  <td class="px-4 py-2 text-xs text-text-secondary">
+                  <td class="px-5 py-4 text-[15px] text-text-secondary">
                     {{ mapel.capaian_pembelajaran || '-' }}
                   </td>
                 </tr>
@@ -429,37 +469,36 @@ onMounted(() => {
 
         <!-- P5 -->
         <div v-if="detailSiswa.p5_deskripsi && detailSiswa.p5_deskripsi.length > 0" class="mb-6">
-          <h3 class="text-sm font-semibold text-text-primary mb-3">
+          <h3 class="text-[15px] font-bold text-text-primary mb-3">
             P5 - Profil Pelajar Pancasila
           </h3>
           <div class="flex flex-col gap-2">
             <div
               v-for="item in detailSiswa.p5_deskripsi"
               :key="item.dimensi"
-              class="p-3 bg-purple-50 rounded-lg"
+              class="p-4 bg-purple-50 rounded-[12px] border-2 border-purple-200"
             >
-              <strong class="text-xs text-purple-700">{{ item.dimensi }}</strong>
-              <p class="text-xs text-text-primary mt-1">{{ item.deskripsi }}</p>
+              <strong class="text-[13px] text-purple-700 font-bold">{{ item.dimensi }}</strong>
+              <p class="text-[15px] text-text-primary mt-1">{{ item.deskripsi }}</p>
             </div>
           </div>
         </div>
 
         <!-- Catatan Wali Kelas -->
         <div v-if="detailSiswa.catatan_wali_kelas" class="mb-4">
-          <h3 class="text-sm font-semibold text-text-primary mb-3">Catatan Wali Kelas</h3>
-          <p class="p-3 bg-surface-50 rounded-lg text-sm text-text-primary leading-relaxed">
+          <h3 class="text-[15px] font-bold text-text-primary mb-3">Catatan Wali Kelas</h3>
+          <p
+            class="p-4 bg-surface-warm rounded-[12px] border-2 border-stone-200 text-[15px] text-text-primary leading-relaxed"
+          >
             {{ detailSiswa.catatan_wali_kelas }}
           </p>
         </div>
       </template>
 
       <template #footer>
-        <button
-          class="px-3 py-2 text-sm font-medium text-text-secondary bg-white border border-border rounded-lg hover:bg-surface-50 transition-colors"
-          @click="showDetailModal = false"
-        >
+        <ActionButton variant="neutral" icon="x" @click="showDetailModal = false">
           Tutup
-        </button>
+        </ActionButton>
       </template>
     </BaseModal>
   </div>

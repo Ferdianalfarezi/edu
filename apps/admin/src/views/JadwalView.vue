@@ -149,7 +149,6 @@ const gridData = computed(() => {
 // Data fetching
 async function fetchKelasList() {
   try {
-    // Filter kelas by selected/active tahun ajaran
     const params: Record<string, string> = {};
     if (selectedTahunAjaranId.value) {
       params.tahunAjaranId = selectedTahunAjaranId.value;
@@ -173,7 +172,6 @@ async function fetchDropdowns() {
     ]);
     mataPelajaranList.value = mapelRes.data.data;
     guruList.value = guruRes.data.data;
-    // Populate tahun ajaran list and auto-select active one
     const taList = taRes.data;
     tahunAjaranList.value = taList;
     const aktif = taList.find((ta) => ta.status === 'aktif');
@@ -292,7 +290,6 @@ function openEditForm(entry: JadwalEntry, hari: string, jamKe: number) {
 async function saveJadwal() {
   formError.value = '';
 
-  // Validate: if not istirahat, guru and mapel are required
   if (!form.value.is_istirahat && (!form.value.mata_pelajaran_id || !form.value.guru_id)) {
     formError.value = 'Mata pelajaran dan guru wajib dipilih untuk jam pelajaran.';
     return;
@@ -303,7 +300,6 @@ async function saveJadwal() {
     return;
   }
 
-  // Determine semester based on current month (Jul-Dec = 1, Jan-Jun = 2)
   const currentMonth = new Date().getMonth() + 1;
   const semester = currentMonth >= 7 ? 1 : 2;
 
@@ -427,27 +423,44 @@ onMounted(async () => {
 </script>
 
 <template>
-  <div class="p-4 lg:p-6 max-w-7xl mx-auto">
+  <div class="p-8">
     <PageHeader title="Manajemen Jadwal Pelajaran" />
 
     <!-- Filter: Tahun Ajaran & Kelas -->
-    <div class="flex items-center gap-3 mb-4">
-      <SearchSelect
-        v-model="selectedTahunAjaranId"
-        label="Tahun Ajaran"
-        :options="tahunAjaranSelectOptions"
-        placeholder="Pilih Tahun Ajaran"
-      />
-      <SearchSelect
-        v-model="selectedKelasId"
-        label="Kelas"
-        :options="kelasSelectOptions"
-        placeholder="Pilih Kelas"
-      />
+    <div class="flex flex-wrap items-end gap-4 mb-6">
+      <div class="w-56">
+        <SearchSelect
+          v-model="selectedTahunAjaranId"
+          label="Tahun Ajaran"
+          :options="tahunAjaranSelectOptions"
+          placeholder="Pilih Tahun Ajaran"
+        />
+      </div>
+      <div class="w-48">
+        <SearchSelect
+          v-model="selectedKelasId"
+          label="Kelas"
+          :options="kelasSelectOptions"
+          placeholder="Pilih Kelas"
+        />
+      </div>
     </div>
 
-    <!-- Schedule Grid -->
-    <div v-if="selectedKelasId" class="bg-white border border-border rounded-xl overflow-hidden">
+    <!-- Schedule Grid Card -->
+    <div
+      v-if="selectedKelasId"
+      class="bg-white border-2 border-stone-200 rounded-[16px] shadow-xs overflow-hidden"
+    >
+      <!-- Section Header -->
+      <div
+        class="flex items-center justify-between px-6 py-5 bg-primary-50 border-b-2 border-primary-200"
+      >
+        <h3 class="text-[16px] font-bold text-primary-800">Jadwal Pelajaran</h3>
+        <span class="text-[13px] font-semibold text-text-secondary">
+          {{ kelasList.find((k) => k.id === selectedKelasId)?.nama || '' }}
+        </span>
+      </div>
+
       <div v-if="loading" class="py-12 text-center">
         <svg
           class="w-6 h-6 animate-spin text-primary-500 mx-auto"
@@ -469,28 +482,30 @@ onMounted(async () => {
             d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
           ></path>
         </svg>
-        <p class="text-sm text-text-tertiary mt-2">Memuat jadwal...</p>
+        <p class="text-[15px] text-text-tertiary mt-2">Memuat jadwal...</p>
       </div>
       <div v-else class="overflow-x-auto">
         <table class="w-full table-fixed">
           <thead>
-            <tr class="border-b border-border bg-surface-50">
-              <th class="px-4 py-3 text-center font-medium text-text-secondary text-xs w-16">
-                Jam Ke
+            <tr class="border-b-2 border-stone-200">
+              <th
+                class="px-5 py-4 text-center text-[13px] font-bold uppercase tracking-[0.04em] text-text-secondary bg-surface-warm w-16"
+              >
+                Jam
               </th>
               <th
                 v-for="hari in HARI_LIST"
                 :key="hari"
-                class="px-4 py-3 text-center font-medium text-text-secondary text-xs"
+                class="px-5 py-4 text-center text-[13px] font-bold uppercase tracking-[0.04em] text-text-secondary bg-surface-warm"
               >
                 {{ HARI_LABELS[hari] }}
               </th>
             </tr>
           </thead>
-          <tbody class="divide-y divide-border">
+          <tbody class="divide-y divide-stone-200">
             <tr v-for="jam in JAM_KE_LIST" :key="jam">
               <td
-                class="px-4 py-3 text-sm font-semibold text-text-primary bg-surface-50 text-center"
+                class="px-5 py-4 text-[15px] font-semibold text-text-primary bg-surface-warm text-center"
               >
                 {{ jam }}
               </td>
@@ -498,9 +513,8 @@ onMounted(async () => {
                 v-for="hari in HARI_LIST"
                 :key="`${jam}-${hari}`"
                 :class="[
-                  'p-2 border border-border text-center text-xs cursor-pointer hover:bg-primary-50 transition-colors align-top min-h-[60px]',
-                  isIstirahat(gridData[jam][hari]) ? 'bg-amber-50' : '',
-                  isVacant(gridData[jam][hari]) && gridData[jam][hari] === null ? '' : '',
+                  'p-3 border border-stone-200 text-center cursor-pointer hover:bg-primary-50 transition-colors duration-200 align-top min-h-15',
+                  isIstirahat(gridData[jam][hari]) ? 'bg-accent-50' : '',
                   isVacant(gridData[jam][hari]) &&
                   gridData[jam][hari] !== null &&
                   !isIstirahat(gridData[jam][hari])
@@ -512,25 +526,25 @@ onMounted(async () => {
               >
                 <template v-if="gridData[jam][hari]">
                   <template v-if="isIstirahat(gridData[jam][hari])">
-                    <div class="font-semibold text-amber-700">☕ Istirahat</div>
+                    <div class="text-[13px] font-semibold text-accent-700">☕ Istirahat</div>
                   </template>
                   <template v-else>
-                    <div class="font-semibold text-text-primary mb-0.5">
+                    <div class="text-[13px] font-semibold text-text-primary mb-0.5">
                       {{ getCellMapel(gridData[jam][hari]) }}
                     </div>
-                    <div class="text-text-tertiary text-[10px]">
+                    <div class="text-text-tertiary text-[11px]">
                       {{ getCellGuru(gridData[jam][hari]) }}
                     </div>
                     <div
                       v-if="hasPengganti(gridData[jam][hari])"
-                      class="mt-1 text-[10px] text-primary-700 font-medium"
+                      class="mt-1 text-[11px] text-primary-700 font-semibold"
                     >
                       🔄 {{ getCellPenggantiNama(gridData[jam][hari]) }}
                     </div>
                   </template>
                 </template>
                 <template v-else>
-                  <div class="text-warning-700 font-medium italic">Kosong</div>
+                  <div class="text-[13px] text-warning-700 font-medium italic">Kosong</div>
                 </template>
               </td>
             </tr>
@@ -538,8 +552,13 @@ onMounted(async () => {
         </table>
       </div>
     </div>
-    <div v-else class="py-12 text-center">
-      <p class="text-sm text-text-tertiary">Pilih kelas untuk melihat jadwal.</p>
+
+    <!-- Empty state -->
+    <div
+      v-else
+      class="bg-white border-2 border-stone-200 rounded-[16px] shadow-xs py-12 text-center"
+    >
+      <p class="text-[15px] text-text-tertiary">Pilih kelas untuk melihat jadwal.</p>
     </div>
 
     <!-- Create/Edit Jadwal Modal -->
@@ -549,7 +568,7 @@ onMounted(async () => {
       size="lg"
       @close="showFormModal = false"
     >
-      <p class="text-sm text-text-secondary mb-4">
+      <p class="text-[15px] text-text-secondary mb-4">
         {{ HARI_LABELS[selectedHari] }} — Jam ke-{{ selectedJamKe }}
       </p>
       <form @submit.prevent="saveJadwal">
@@ -559,11 +578,11 @@ onMounted(async () => {
             <input
               v-model="form.is_istirahat"
               type="checkbox"
-              class="w-4 h-4 rounded border-border text-primary-600 focus:ring-primary-500/20"
+              class="w-4 h-4 rounded border-stone-300 text-primary-600 focus:ring-primary-500/20"
             />
-            <span class="text-sm font-medium text-text-primary">Jam Istirahat</span>
+            <span class="text-[15px] font-medium text-text-primary">Jam Istirahat</span>
           </label>
-          <p class="text-xs text-text-tertiary mt-1">
+          <p class="text-[13px] text-text-tertiary mt-1">
             Centang jika slot ini adalah jam istirahat (tidak perlu guru & mata pelajaran)
           </p>
         </div>
@@ -590,7 +609,7 @@ onMounted(async () => {
           </div>
         </template>
 
-        <p v-if="formError" class="text-xs text-danger-500 mt-1">{{ formError }}</p>
+        <p v-if="formError" class="text-[13px] text-danger-600 mt-1">{{ formError }}</p>
       </form>
       <template #footer>
         <div class="flex items-center gap-2 w-full">
@@ -609,28 +628,21 @@ onMounted(async () => {
             >Assign Pengganti</ActionButton
           >
           <div class="flex-1"></div>
-          <button
-            type="button"
-            class="px-3 py-2 text-sm font-medium text-text-secondary bg-white border border-border rounded-lg hover:bg-surface-50 transition-colors"
-            @click="showFormModal = false"
-          >
-            Batal
-          </button>
-          <button
-            type="button"
-            class="px-3 py-2 text-sm font-medium text-white bg-primary-600 rounded-lg hover:bg-primary-700 transition-colors"
-            @click="saveJadwal"
-          >
-            Simpan
-          </button>
+          <ActionButton variant="neutral" @click="showFormModal = false">Batal</ActionButton>
+          <ActionButton variant="primary" @click="saveJadwal">Simpan</ActionButton>
         </div>
       </template>
     </BaseModal>
 
     <!-- Delete Confirmation Modal -->
     <BaseModal :show="showDeleteModal" title="Konfirmasi Hapus" @close="showDeleteModal = false">
-      <p class="text-sm text-text-primary mb-3">Apakah Anda yakin ingin menghapus jadwal ini?</p>
-      <div v-if="deletingEntry" class="bg-surface-50 rounded-lg p-3 text-sm space-y-1">
+      <p class="text-[15px] text-text-primary mb-3">
+        Apakah Anda yakin ingin menghapus jadwal ini?
+      </p>
+      <div
+        v-if="deletingEntry"
+        class="bg-surface-warm rounded-xs p-4 text-[15px] space-y-1"
+      >
         <p><strong>Hari:</strong> {{ HARI_LABELS[deletingEntry.hari] }}</p>
         <p v-if="deletingEntry.is_istirahat"><strong>Tipe:</strong> Jam Istirahat</p>
         <template v-else>
@@ -648,18 +660,8 @@ onMounted(async () => {
         </template>
       </div>
       <template #footer>
-        <button
-          class="px-3 py-2 text-sm font-medium text-text-secondary bg-white border border-border rounded-lg hover:bg-surface-50 transition-colors"
-          @click="showDeleteModal = false"
-        >
-          Batal
-        </button>
-        <button
-          class="px-4 py-2 text-sm font-medium text-white bg-danger-500 rounded-lg hover:bg-danger-700 transition-colors"
-          @click="deleteJadwal"
-        >
-          Hapus
-        </button>
+        <ActionButton variant="neutral" @click="showDeleteModal = false">Batal</ActionButton>
+        <ActionButton variant="danger" icon="delete" @click="deleteJadwal">Hapus</ActionButton>
       </template>
     </BaseModal>
 
@@ -670,7 +672,7 @@ onMounted(async () => {
       size="lg"
       @close="showPenggantiModal = false"
     >
-      <p v-if="penggantiTarget" class="text-sm text-text-secondary mb-4">
+      <p v-if="penggantiTarget" class="text-[15px] text-text-secondary mb-4">
         {{
           penggantiTarget.mata_pelajaran?.nama ||
           getMapelNama(penggantiTarget.mata_pelajaran_id || '')
@@ -679,7 +681,7 @@ onMounted(async () => {
       </p>
       <div
         v-if="penggantiTarget?.guru_pengganti_aktif"
-        class="flex items-center justify-between p-3 bg-primary-50 border border-primary-500/20 rounded-lg mb-4 text-sm"
+        class="flex items-center justify-between p-4 bg-primary-50 border-2 border-primary-200 rounded-xs mb-4 text-[15px]"
       >
         <p class="text-primary-700">
           <strong>Guru Pengganti Aktif:</strong>
@@ -700,54 +702,44 @@ onMounted(async () => {
           />
         </div>
         <div class="mb-4">
-          <label class="block text-sm font-medium text-text-primary mb-1.5">Alasan</label>
+          <label class="block text-[15px] font-medium text-text-primary mb-1.5">Alasan</label>
           <input
             v-model="penggantiForm.alasan"
             type="text"
-            class="w-full px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
+            class="w-full px-4 py-2.5 text-[15px] border-2 border-stone-200 rounded-xs focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-colors"
             required
             placeholder="Guru utama berhalangan, sakit, dll"
           />
         </div>
         <div class="flex gap-4">
           <div class="flex-1 mb-4">
-            <label class="block text-sm font-medium text-text-primary mb-1.5">Tanggal Mulai</label>
+            <label class="block text-[15px] font-medium text-text-primary mb-1.5"
+              >Tanggal Mulai</label
+            >
             <input
               v-model="penggantiForm.tanggal_mulai"
               type="date"
-              class="w-full px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
+              class="w-full px-4 py-2.5 text-[15px] border-2 border-stone-200 rounded-xs focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-colors"
               required
             />
           </div>
           <div class="flex-1 mb-4">
-            <label class="block text-sm font-medium text-text-primary mb-1.5"
+            <label class="block text-[15px] font-medium text-text-primary mb-1.5"
               >Tanggal Selesai</label
             >
             <input
               v-model="penggantiForm.tanggal_selesai"
               type="date"
-              class="w-full px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
+              class="w-full px-4 py-2.5 text-[15px] border-2 border-stone-200 rounded-xs focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-colors"
               required
             />
           </div>
         </div>
-        <p v-if="penggantiError" class="text-xs text-danger-500 mt-1">{{ penggantiError }}</p>
+        <p v-if="penggantiError" class="text-[13px] text-danger-600 mt-1">{{ penggantiError }}</p>
       </form>
       <template #footer>
-        <button
-          type="button"
-          class="px-3 py-2 text-sm font-medium text-text-secondary bg-white border border-border rounded-lg hover:bg-surface-50 transition-colors"
-          @click="showPenggantiModal = false"
-        >
-          Batal
-        </button>
-        <button
-          type="button"
-          class="px-3 py-2 text-sm font-medium text-white bg-primary-600 rounded-lg hover:bg-primary-700 transition-colors"
-          @click="savePengganti"
-        >
-          Simpan
-        </button>
+        <ActionButton variant="neutral" @click="showPenggantiModal = false">Batal</ActionButton>
+        <ActionButton variant="primary" @click="savePengganti">Simpan</ActionButton>
       </template>
     </BaseModal>
   </div>

@@ -350,7 +350,7 @@ function getStatusClass(status: StatusTagihan): string {
     case 'belum_bayar':
       return 'bg-danger-50 text-danger-700';
     case 'dibatalkan':
-      return 'bg-surface-100 text-text-tertiary';
+      return 'bg-stone-100 text-stone-500';
     default:
       return '';
   }
@@ -698,13 +698,13 @@ onMounted(async () => {
 </script>
 
 <template>
-  <div class="p-4 lg:p-6 max-w-7xl mx-auto">
-    <PageHeader title="Manajemen Tagihan" description=""> </PageHeader>
+  <div class="p-8">
+    <PageHeader title="Manajemen Tagihan" description="" />
 
     <!-- Tabs -->
     <div class="tagihan-tabs mb-6">
       <nav
-        class="flex gap-0.5 overflow-x-auto scrollbar-hide border-b border-border"
+        class="flex gap-0.5 overflow-x-auto scrollbar-hide border-b-2 border-stone-200"
         role="tablist"
       >
         <button
@@ -713,10 +713,8 @@ onMounted(async () => {
           role="tab"
           :aria-selected="activeTab === tab.key"
           :class="[
-            'tagihan-tab group relative flex items-center gap-2 px-4 py-3 text-sm font-medium whitespace-nowrap transition-all duration-200 outline-none',
-            activeTab === tab.key
-              ? 'text-primary-600'
-              : 'text-text-tertiary hover:text-text-secondary',
+            'tagihan-tab group relative flex items-center gap-2 px-4 py-3 text-[15px] font-semibold whitespace-nowrap transition-all duration-200 outline-none',
+            activeTab === tab.key ? 'text-primary-600' : 'text-stone-500 hover:text-stone-700',
           ]"
           @click="filters['tab'].value = tab.key"
         >
@@ -737,7 +735,7 @@ onMounted(async () => {
           <!-- Active indicator bar -->
           <span
             :class="[
-              'absolute bottom-0 left-2 right-2 h-[2px] rounded-full transition-all duration-300 ease-out',
+              'absolute bottom-0 left-2 right-2 h-[2.5px] rounded-full transition-all duration-300 ease-out',
               activeTab === tab.key
                 ? 'bg-primary-600 scale-x-100 opacity-100'
                 : 'bg-transparent scale-x-0 opacity-0',
@@ -749,138 +747,139 @@ onMounted(async () => {
 
     <!-- ===== Generate Tab ===== -->
     <div v-if="activeTab === 'generate'" class="min-h-[400px]">
-      <div class="bg-white border border-border rounded-xl overflow-hidden p-6">
-        <h2 class="text-lg font-semibold text-text-primary mb-1">Generate Tagihan</h2>
-        <p class="text-sm text-text-secondary mb-4">
-          Buat tagihan SPP untuk seluruh siswa aktif. Tagihan yang sudah ada akan dilewatkan (tidak
-          duplikat).
-        </p>
+      <div class="bg-white rounded-[16px] border-2 border-stone-200 shadow-xs overflow-hidden">
+        <div class="bg-primary-50 px-6 py-5 border-b-2 border-primary-200">
+          <h2 class="text-[16px] font-bold text-primary-800">Generate Tagihan</h2>
+        </div>
+        <div class="p-6">
+          <p class="text-[15px] text-stone-600 mb-5">
+            Buat tagihan SPP untuk seluruh siswa aktif. Tagihan yang sudah ada akan dilewatkan
+            (tidak duplikat).
+          </p>
 
-        <div class="mb-4">
-          <label class="block text-sm font-medium text-text-primary mb-1.5">Mode Generate</label>
-          <div class="flex gap-4 mt-1">
-            <label class="flex items-center gap-2 text-sm cursor-pointer">
-              <input
-                v-model="generateForm.mode"
-                type="radio"
-                value="bulan"
-                class="text-primary-600"
-              />
-              Per Bulan
-            </label>
-            <label class="flex items-center gap-2 text-sm cursor-pointer">
-              <input
-                v-model="generateForm.mode"
-                type="radio"
-                value="tahun_ajaran"
-                class="text-primary-600"
-              />
-              Per Tahun Ajaran
-            </label>
+          <div class="mb-5">
+            <label class="block text-[15px] font-semibold text-stone-800 mb-2">Mode Generate</label>
+            <div class="flex gap-4 mt-1">
+              <label class="flex items-center gap-2 text-[15px] cursor-pointer">
+                <input
+                  v-model="generateForm.mode"
+                  type="radio"
+                  value="bulan"
+                  class="text-primary-600"
+                />
+                Per Bulan
+              </label>
+              <label class="flex items-center gap-2 text-[15px] cursor-pointer">
+                <input
+                  v-model="generateForm.mode"
+                  type="radio"
+                  value="tahun_ajaran"
+                  class="text-primary-600"
+                />
+                Per Tahun Ajaran
+              </label>
+            </div>
           </div>
-        </div>
 
-        <div
-          v-if="generateForm.mode === 'bulan'"
-          class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4"
-        >
-          <div>
-            <SearchSelect
-              v-model="generateForm.bulan"
-              label="Bulan"
-              :options="bulanSelectOptions"
-              placeholder="Pilih Bulan"
-            />
-          </div>
-          <div>
-            <label class="block text-sm font-medium text-text-primary mb-1.5">Tahun</label>
-            <input
-              v-model.number="generateForm.tahun"
-              type="number"
-              class="w-full px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
-            />
-          </div>
-        </div>
-
-        <div v-if="generateForm.mode === 'tahun_ajaran'" class="mb-4">
-          <SearchSelect
-            v-model="generateForm.tahun_ajaran_id"
-            label="Tahun Ajaran"
-            :options="tahunAjaranSelectOptions"
-            placeholder="Pilih Tahun Ajaran"
-          />
-        </div>
-
-        <div class="mb-4">
-          <SearchSelect
-            v-model="generateForm.kelas_id"
-            label="Kelas (opsional — kosong = semua kelas)"
-            :options="kelasSelectOptions"
-            placeholder="Semua Kelas"
-            clearable
-          />
-        </div>
-
-        <div
-          v-if="generateError"
-          class="p-3 bg-danger-50 border border-danger-500/20 rounded-lg text-sm text-danger-700 mb-4"
-        >
-          {{ generateError }}
-        </div>
-
-        <button
-          class="px-3 py-2 text-sm font-medium text-white bg-primary-600 rounded-lg hover:bg-primary-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed inline-flex items-center gap-2"
-          :disabled="generating"
-          @click="generateTagihan"
-        >
-          <svg
-            v-if="generating"
-            class="animate-spin h-4 w-4 text-white"
-            xmlns="http://www.w3.org/2000/svg"
-            fill="none"
-            viewBox="0 0 24 24"
+          <div
+            v-if="generateForm.mode === 'bulan'"
+            class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-5"
           >
-            <circle
-              class="opacity-25"
-              cx="12"
-              cy="12"
-              r="10"
-              stroke="currentColor"
-              stroke-width="4"
-            />
-            <path
-              class="opacity-75"
-              fill="currentColor"
-              d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
-            />
-          </svg>
-          {{ generating ? 'Sedang men-generate...' : 'Generate Tagihan' }}
-        </button>
+            <div>
+              <SearchSelect
+                v-model="generateForm.bulan"
+                label="Bulan"
+                :options="bulanSelectOptions"
+                placeholder="Pilih Bulan"
+              />
+            </div>
+            <div>
+              <label class="block text-[15px] font-semibold text-stone-800 mb-2">Tahun</label>
+              <input
+                v-model.number="generateForm.tahun"
+                type="number"
+                class="w-full px-4 py-2.5 text-[15px] border-2 border-stone-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
+              />
+            </div>
+          </div>
 
-        <div v-if="generateResult" class="mt-6 p-4 bg-surface-50 border border-border rounded-xl">
-          <h3 class="text-sm font-semibold text-text-primary mb-3">Hasil Generate</h3>
-          <div class="flex flex-wrap gap-4">
-            <div
-              class="flex flex-col items-center px-4 py-3 bg-success-50 rounded-lg min-w-[100px]"
+          <div v-if="generateForm.mode === 'tahun_ajaran'" class="mb-5">
+            <SearchSelect
+              v-model="generateForm.tahun_ajaran_id"
+              label="Tahun Ajaran"
+              :options="tahunAjaranSelectOptions"
+              placeholder="Pilih Tahun Ajaran"
+            />
+          </div>
+
+          <div class="mb-5">
+            <SearchSelect
+              v-model="generateForm.kelas_id"
+              label="Kelas (opsional — kosong = semua kelas)"
+              :options="kelasSelectOptions"
+              placeholder="Semua Kelas"
+              clearable
+            />
+          </div>
+
+          <div
+            v-if="generateError"
+            class="p-3 bg-danger-50 border-2 border-danger-200 rounded-lg text-[15px] text-danger-700 mb-5"
+          >
+            {{ generateError }}
+          </div>
+
+          <ActionButton variant="primary" :disabled="generating" @click="generateTagihan">
+            <svg
+              v-if="generating"
+              class="animate-spin h-4 w-4 text-white"
+              xmlns="http://www.w3.org/2000/svg"
+              fill="none"
+              viewBox="0 0 24 24"
             >
-              <span class="text-xl font-bold text-success-700">{{ generateResult.created }}</span>
-              <span class="text-xs text-text-tertiary mt-1">Dibuat</span>
-            </div>
-            <div
-              class="flex flex-col items-center px-4 py-3 bg-surface-100 rounded-lg min-w-[100px]"
-            >
-              <span class="text-xl font-bold text-text-secondary">{{
-                generateResult.skipped
-              }}</span>
-              <span class="text-xs text-text-tertiary mt-1">Dilewati</span>
-            </div>
-            <div
-              class="flex flex-col items-center px-4 py-3 bg-primary-50 rounded-lg min-w-[100px]"
-            >
-              <span class="text-xl font-bold text-primary-600">{{
-                formatCurrency(generateResult.total_nominal)
-              }}</span>
-              <span class="text-xs text-text-tertiary mt-1">Total Nominal</span>
+              <circle
+                class="opacity-25"
+                cx="12"
+                cy="12"
+                r="10"
+                stroke="currentColor"
+                stroke-width="4"
+              />
+              <path
+                class="opacity-75"
+                fill="currentColor"
+                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
+              />
+            </svg>
+            {{ generating ? 'Sedang men-generate...' : 'Generate Tagihan' }}
+          </ActionButton>
+
+          <div
+            v-if="generateResult"
+            class="mt-6 p-5 bg-surface-warm border-2 border-stone-200 rounded-[12px]"
+          >
+            <h3 class="text-[15px] font-bold text-stone-800 mb-3">Hasil Generate</h3>
+            <div class="flex flex-wrap gap-4">
+              <div
+                class="flex flex-col items-center px-5 py-4 bg-success-50 rounded-[12px] min-w-[100px]"
+              >
+                <span class="text-xl font-bold text-success-700">{{ generateResult.created }}</span>
+                <span class="text-[13px] font-semibold text-stone-500 mt-1">Dibuat</span>
+              </div>
+              <div
+                class="flex flex-col items-center px-5 py-4 bg-stone-100 rounded-[12px] min-w-[100px]"
+              >
+                <span class="text-xl font-bold text-stone-600">{{ generateResult.skipped }}</span>
+                <span class="text-[13px] font-semibold text-stone-500 mt-1">Dilewati</span>
+              </div>
+              <div
+                class="flex flex-col items-center px-5 py-4 bg-primary-50 rounded-[12px] min-w-[100px]"
+              >
+                <span class="text-xl font-bold text-primary-600">{{
+                  formatCurrency(generateResult.total_nominal)
+                }}</span>
+                <span class="text-[13px] font-semibold text-stone-500 mt-1">Total Nominal</span>
+              </div>
             </div>
           </div>
         </div>
@@ -889,13 +888,13 @@ onMounted(async () => {
 
     <!-- ===== List Tab ===== -->
     <div v-if="activeTab === 'list'" class="min-h-[400px]">
-      <div class="flex flex-wrap items-end gap-2 mb-4">
+      <div class="flex flex-wrap items-end gap-3 mb-5">
         <div class="relative w-48 min-w-[150px]">
           <input
             v-model="search"
             type="text"
             placeholder="Cari nama siswa..."
-            class="w-full px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
+            class="w-full px-4 py-2.5 text-[15px] border-2 border-stone-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
           />
         </div>
         <div class="w-40">
@@ -925,62 +924,98 @@ onMounted(async () => {
         <input
           v-model.number="listFilterTahun"
           type="number"
-          class="w-20 px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
+          class="w-20 px-4 py-2.5 text-[15px] border-2 border-stone-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
           placeholder="Tahun"
         />
       </div>
 
-      <div class="bg-white border border-border rounded-xl overflow-hidden">
+      <div class="bg-white rounded-[16px] border-2 border-stone-200 shadow-xs overflow-hidden">
+        <div
+          class="bg-primary-50 px-6 py-5 border-b-2 border-primary-200 flex items-center justify-between"
+        >
+          <h3 class="text-[16px] font-bold text-primary-800">Daftar Tagihan</h3>
+          <span class="text-[13px] font-semibold text-stone-500">{{ totalCount }} data</span>
+        </div>
         <div class="overflow-x-auto">
           <table v-if="!loading && tagihanList.length > 0" class="w-full">
-            <thead class="border-b border-border bg-surface-50">
-              <tr>
-                <th class="px-4 py-3 text-left font-medium text-text-secondary text-xs">Siswa</th>
-                <th class="px-4 py-3 text-left font-medium text-text-secondary text-xs">Kelas</th>
-                <th class="px-4 py-3 text-left font-medium text-text-secondary text-xs">
-                  Bulan/Tahun
+            <thead>
+              <tr class="border-b-2 border-stone-200">
+                <th
+                  class="text-left px-5 py-4 text-[13px] font-bold uppercase tracking-[0.04em] text-text-secondary bg-surface-warm"
+                >
+                  Siswa
                 </th>
-                <th class="px-4 py-3 text-left font-medium text-text-secondary text-xs">Nominal</th>
-                <th class="px-4 py-3 text-left font-medium text-text-secondary text-xs">Dibayar</th>
-                <th class="px-4 py-3 text-left font-medium text-text-secondary text-xs">Status</th>
-                <th class="px-4 py-3 text-left font-medium text-text-secondary text-xs">
+                <th
+                  class="text-left px-5 py-4 text-[13px] font-bold uppercase tracking-[0.04em] text-text-secondary bg-surface-warm"
+                >
+                  Kelas
+                </th>
+                <th
+                  class="text-left px-5 py-4 text-[13px] font-bold uppercase tracking-[0.04em] text-text-secondary bg-surface-warm"
+                >
+                  Periode
+                </th>
+                <th
+                  class="text-left px-5 py-4 text-[13px] font-bold uppercase tracking-[0.04em] text-text-secondary bg-surface-warm"
+                >
+                  Nominal
+                </th>
+                <th
+                  class="text-left px-5 py-4 text-[13px] font-bold uppercase tracking-[0.04em] text-text-secondary bg-surface-warm"
+                >
+                  Dibayar
+                </th>
+                <th
+                  class="text-left px-5 py-4 text-[13px] font-bold uppercase tracking-[0.04em] text-text-secondary bg-surface-warm"
+                >
+                  Status
+                </th>
+                <th
+                  class="text-left px-5 py-4 text-[13px] font-bold uppercase tracking-[0.04em] text-text-secondary bg-surface-warm"
+                >
                   Jatuh Tempo
                 </th>
-                <th class="px-4 py-3 text-left font-medium text-text-secondary text-xs">Aksi</th>
+                <th
+                  class="text-left px-5 py-4 text-[13px] font-bold uppercase tracking-[0.04em] text-text-secondary bg-surface-warm"
+                >
+                  Aksi
+                </th>
               </tr>
             </thead>
-            <tbody class="divide-y divide-border">
+            <tbody class="divide-y divide-stone-100">
               <tr
                 v-for="tagihan in tagihanList"
                 :key="tagihan.id"
-                class="hover:bg-surface-50 transition-colors"
+                class="hover:bg-primary-50 transition-colors duration-200"
               >
-                <td class="px-4 py-3 text-sm text-text-primary">{{ tagihan.siswa_nama }}</td>
-                <td class="px-4 py-3 text-sm text-text-secondary">{{ tagihan.kelas_nama }}</td>
-                <td class="px-4 py-3 text-sm text-text-secondary">
+                <td class="px-5 py-4 text-[15px] text-stone-800 font-medium">
+                  {{ tagihan.siswa_nama }}
+                </td>
+                <td class="px-5 py-4 text-[15px] text-stone-600">{{ tagihan.kelas_nama }}</td>
+                <td class="px-5 py-4 text-[15px] text-stone-600">
                   {{ getBulanLabel(tagihan.bulan) }} {{ tagihan.tahun }}
                 </td>
-                <td class="px-4 py-3 text-sm text-text-primary">
+                <td class="px-5 py-4 text-[15px] text-stone-800 font-medium">
                   {{ formatCurrency(tagihan.nominal) }}
                 </td>
-                <td class="px-4 py-3 text-sm text-text-secondary">
+                <td class="px-5 py-4 text-[15px] text-stone-600">
                   {{ formatCurrency(tagihan.total_dibayar) }}
                 </td>
-                <td class="px-4 py-3">
+                <td class="px-5 py-4">
                   <span
                     :class="[
-                      'inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium',
+                      'inline-flex items-center px-2.5 py-1 rounded-md text-[13px] font-semibold',
                       getStatusClass(tagihan.status),
                     ]"
                   >
                     {{ getStatusLabel(tagihan.status) }}
                   </span>
                 </td>
-                <td class="px-4 py-3 text-sm text-text-secondary">
+                <td class="px-5 py-4 text-[15px] text-stone-600">
                   {{ formatDate(tagihan.tanggal_jatuh_tempo) }}
                 </td>
-                <td class="px-4 py-3">
-                  <div class="flex flex-wrap gap-1">
+                <td class="px-5 py-4">
+                  <div class="flex flex-wrap gap-1.5">
                     <ActionButton
                       v-if="tagihan.status === 'belum_bayar' || tagihan.status === 'cicilan'"
                       variant="success"
@@ -1008,10 +1043,10 @@ onMounted(async () => {
             </tbody>
           </table>
         </div>
-        <p v-if="loading" class="text-center text-text-secondary py-8">Memuat data...</p>
+        <p v-if="loading" class="text-center text-stone-500 text-[15px] py-8">Memuat data...</p>
         <p
           v-else-if="tagihanList.length === 0 && !loading"
-          class="text-center text-text-secondary py-8"
+          class="text-center text-stone-500 text-[15px] py-8"
         >
           Tidak ada tagihan ditemukan.
         </p>
@@ -1031,50 +1066,76 @@ onMounted(async () => {
 
     <!-- ===== Verifikasi Tab ===== -->
     <div v-if="activeTab === 'verifikasi'" class="min-h-[400px]">
-      <h2 class="text-lg font-semibold text-text-primary mb-1">Antrian Verifikasi Pembayaran</h2>
-      <p class="text-sm text-text-secondary mb-4">
-        Bukti transfer yang menunggu verifikasi dari bendahara.
-      </p>
+      <div class="bg-white rounded-[16px] border-2 border-stone-200 shadow-xs overflow-hidden">
+        <div class="bg-primary-50 px-6 py-5 border-b-2 border-primary-200">
+          <h2 class="text-[16px] font-bold text-primary-800">Antrian Verifikasi Pembayaran</h2>
+          <p class="text-[13px] text-stone-500 mt-1">
+            Bukti transfer yang menunggu verifikasi dari bendahara.
+          </p>
+        </div>
 
-      <div class="bg-white border border-border rounded-xl overflow-hidden">
         <div class="overflow-x-auto">
           <table v-if="!verifikasiLoading && verifikasiList.length > 0" class="w-full">
-            <thead class="border-b border-border bg-surface-50">
-              <tr>
-                <th class="px-4 py-3 text-left font-medium text-text-secondary text-xs">Siswa</th>
-                <th class="px-4 py-3 text-left font-medium text-text-secondary text-xs">Kelas</th>
-                <th class="px-4 py-3 text-left font-medium text-text-secondary text-xs">Tagihan</th>
-                <th class="px-4 py-3 text-left font-medium text-text-secondary text-xs">
+            <thead>
+              <tr class="border-b-2 border-stone-200">
+                <th
+                  class="text-left px-5 py-4 text-[13px] font-bold uppercase tracking-[0.04em] text-text-secondary bg-surface-warm"
+                >
+                  Siswa
+                </th>
+                <th
+                  class="text-left px-5 py-4 text-[13px] font-bold uppercase tracking-[0.04em] text-text-secondary bg-surface-warm"
+                >
+                  Kelas
+                </th>
+                <th
+                  class="text-left px-5 py-4 text-[13px] font-bold uppercase tracking-[0.04em] text-text-secondary bg-surface-warm"
+                >
+                  Tagihan
+                </th>
+                <th
+                  class="text-left px-5 py-4 text-[13px] font-bold uppercase tracking-[0.04em] text-text-secondary bg-surface-warm"
+                >
                   Nominal Bayar
                 </th>
-                <th class="px-4 py-3 text-left font-medium text-text-secondary text-xs">
+                <th
+                  class="text-left px-5 py-4 text-[13px] font-bold uppercase tracking-[0.04em] text-text-secondary bg-surface-warm"
+                >
                   Pengirim
                 </th>
-                <th class="px-4 py-3 text-left font-medium text-text-secondary text-xs">
+                <th
+                  class="text-left px-5 py-4 text-[13px] font-bold uppercase tracking-[0.04em] text-text-secondary bg-surface-warm"
+                >
                   Tanggal Upload
                 </th>
-                <th class="px-4 py-3 text-left font-medium text-text-secondary text-xs">Aksi</th>
+                <th
+                  class="text-left px-5 py-4 text-[13px] font-bold uppercase tracking-[0.04em] text-text-secondary bg-surface-warm"
+                >
+                  Aksi
+                </th>
               </tr>
             </thead>
-            <tbody class="divide-y divide-border">
+            <tbody class="divide-y divide-stone-100">
               <tr
                 v-for="tx in verifikasiList"
                 :key="tx.id"
-                class="hover:bg-surface-50 transition-colors"
+                class="hover:bg-primary-50 transition-colors duration-200"
               >
-                <td class="px-4 py-3 text-sm text-text-primary">{{ tx.siswa_nama }}</td>
-                <td class="px-4 py-3 text-sm text-text-secondary">{{ tx.kelas_nama }}</td>
-                <td class="px-4 py-3 text-sm text-text-secondary">
+                <td class="px-5 py-4 text-[15px] text-stone-800 font-medium">
+                  {{ tx.siswa_nama }}
+                </td>
+                <td class="px-5 py-4 text-[15px] text-stone-600">{{ tx.kelas_nama }}</td>
+                <td class="px-5 py-4 text-[15px] text-stone-600">
                   {{ getBulanLabel(tx.bulan) }} {{ tx.tahun }}
                 </td>
-                <td class="px-4 py-3 text-sm text-text-primary">
+                <td class="px-5 py-4 text-[15px] text-stone-800 font-medium">
                   {{ formatCurrency(tx.jumlah_bayar) }}
                 </td>
-                <td class="px-4 py-3 text-sm text-text-secondary">{{ tx.uploaded_by_nama }}</td>
-                <td class="px-4 py-3 text-sm text-text-secondary">
+                <td class="px-5 py-4 text-[15px] text-stone-600">{{ tx.uploaded_by_nama }}</td>
+                <td class="px-5 py-4 text-[15px] text-stone-600">
                   {{ formatDate(tx.created_at) }}
                 </td>
-                <td class="px-4 py-3">
+                <td class="px-5 py-4">
                   <ActionButton variant="primary" icon="view" @click="openBuktiPreview(tx)"
                     >Lihat Bukti</ActionButton
                   >
@@ -1083,10 +1144,12 @@ onMounted(async () => {
             </tbody>
           </table>
         </div>
-        <p v-if="verifikasiLoading" class="text-center text-text-secondary py-8">Memuat data...</p>
+        <p v-if="verifikasiLoading" class="text-center text-stone-500 text-[15px] py-8">
+          Memuat data...
+        </p>
         <p
           v-else-if="verifikasiList.length === 0 && !verifikasiLoading"
-          class="text-center text-text-secondary py-8"
+          class="text-center text-stone-500 text-[15px] py-8"
         >
           Tidak ada bukti yang menunggu verifikasi.
         </p>
@@ -1095,24 +1158,20 @@ onMounted(async () => {
 
     <!-- ===== Tunggakan Tab ===== -->
     <div v-if="activeTab === 'tunggakan'" class="min-h-[400px]">
-      <div class="flex flex-wrap justify-between items-start gap-4 mb-4">
+      <div class="flex flex-wrap justify-between items-start gap-4 mb-5">
         <div>
-          <h2 class="text-lg font-semibold text-text-primary">Dashboard Tunggakan</h2>
-          <p class="text-sm text-text-secondary mt-0.5">
+          <h2 class="text-[16px] font-bold text-stone-800">Dashboard Tunggakan</h2>
+          <p class="text-[15px] text-stone-600 mt-1">
             Total Tunggakan:
             <strong class="text-danger-700">{{ formatCurrency(tunggakanTotal) }}</strong>
           </p>
         </div>
-        <button
-          class="px-3 py-2 text-sm font-medium text-text-secondary bg-white border border-border rounded-lg hover:bg-surface-50 transition-colors disabled:opacity-50"
-          :disabled="exporting"
-          @click="exportTunggakan"
-        >
+        <ActionButton variant="neutral" :disabled="exporting" @click="exportTunggakan">
           {{ exporting ? 'Mengekspor...' : 'Export CSV' }}
-        </button>
+        </ActionButton>
       </div>
 
-      <div class="flex flex-wrap items-end gap-2 mb-4">
+      <div class="flex flex-wrap items-end gap-3 mb-5">
         <div class="w-40">
           <SearchSelect
             v-model="tunggakanFilter.kelas_id"
@@ -1132,71 +1191,104 @@ onMounted(async () => {
         <input
           v-model.number="tunggakanFilter.tahun"
           type="number"
-          class="w-20 px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
+          class="w-20 px-4 py-2.5 text-[15px] border-2 border-stone-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
           placeholder="Tahun"
         />
       </div>
 
-      <div class="bg-white border border-border rounded-xl overflow-hidden">
+      <div class="bg-white rounded-[16px] border-2 border-stone-200 shadow-xs overflow-hidden">
+        <div class="bg-primary-50 px-6 py-5 border-b-2 border-primary-200">
+          <h3 class="text-[16px] font-bold text-primary-800">Daftar Tunggakan</h3>
+        </div>
         <div class="overflow-x-auto">
           <table v-if="!loading && tunggakanList.length > 0" class="w-full">
-            <thead class="border-b border-border bg-surface-50">
-              <tr>
-                <th class="px-4 py-3 text-left font-medium text-text-secondary text-xs">Siswa</th>
-                <th class="px-4 py-3 text-left font-medium text-text-secondary text-xs">Kelas</th>
-                <th class="px-4 py-3 text-left font-medium text-text-secondary text-xs">
+            <thead>
+              <tr class="border-b-2 border-stone-200">
+                <th
+                  class="text-left px-5 py-4 text-[13px] font-bold uppercase tracking-[0.04em] text-text-secondary bg-surface-warm"
+                >
+                  Siswa
+                </th>
+                <th
+                  class="text-left px-5 py-4 text-[13px] font-bold uppercase tracking-[0.04em] text-text-secondary bg-surface-warm"
+                >
+                  Kelas
+                </th>
+                <th
+                  class="text-left px-5 py-4 text-[13px] font-bold uppercase tracking-[0.04em] text-text-secondary bg-surface-warm"
+                >
                   Bulan/Tahun
                 </th>
-                <th class="px-4 py-3 text-left font-medium text-text-secondary text-xs">Nominal</th>
-                <th class="px-4 py-3 text-left font-medium text-text-secondary text-xs">Dibayar</th>
-                <th class="px-4 py-3 text-left font-medium text-text-secondary text-xs">Sisa</th>
-                <th class="px-4 py-3 text-left font-medium text-text-secondary text-xs">Status</th>
-                <th class="px-4 py-3 text-left font-medium text-text-secondary text-xs">
+                <th
+                  class="text-left px-5 py-4 text-[13px] font-bold uppercase tracking-[0.04em] text-text-secondary bg-surface-warm"
+                >
+                  Nominal
+                </th>
+                <th
+                  class="text-left px-5 py-4 text-[13px] font-bold uppercase tracking-[0.04em] text-text-secondary bg-surface-warm"
+                >
+                  Dibayar
+                </th>
+                <th
+                  class="text-left px-5 py-4 text-[13px] font-bold uppercase tracking-[0.04em] text-text-secondary bg-surface-warm"
+                >
+                  Sisa
+                </th>
+                <th
+                  class="text-left px-5 py-4 text-[13px] font-bold uppercase tracking-[0.04em] text-text-secondary bg-surface-warm"
+                >
+                  Status
+                </th>
+                <th
+                  class="text-left px-5 py-4 text-[13px] font-bold uppercase tracking-[0.04em] text-text-secondary bg-surface-warm"
+                >
                   Jatuh Tempo
                 </th>
               </tr>
             </thead>
-            <tbody class="divide-y divide-border">
+            <tbody class="divide-y divide-stone-100">
               <tr
                 v-for="item in tunggakanList"
                 :key="item.id"
-                class="hover:bg-surface-50 transition-colors"
+                class="hover:bg-primary-50 transition-colors duration-200"
               >
-                <td class="px-4 py-3 text-sm text-text-primary">{{ item.siswa_nama }}</td>
-                <td class="px-4 py-3 text-sm text-text-secondary">{{ item.kelas_nama }}</td>
-                <td class="px-4 py-3 text-sm text-text-secondary">
+                <td class="px-5 py-4 text-[15px] text-stone-800 font-medium">
+                  {{ item.siswa_nama }}
+                </td>
+                <td class="px-5 py-4 text-[15px] text-stone-600">{{ item.kelas_nama }}</td>
+                <td class="px-5 py-4 text-[15px] text-stone-600">
                   {{ getBulanLabel(item.bulan) }} {{ item.tahun }}
                 </td>
-                <td class="px-4 py-3 text-sm text-text-primary">
+                <td class="px-5 py-4 text-[15px] text-stone-800 font-medium">
                   {{ formatCurrency(item.nominal) }}
                 </td>
-                <td class="px-4 py-3 text-sm text-text-secondary">
+                <td class="px-5 py-4 text-[15px] text-stone-600">
                   {{ formatCurrency(item.total_dibayar) }}
                 </td>
-                <td class="px-4 py-3 text-sm font-semibold text-danger-700">
+                <td class="px-5 py-4 text-[15px] font-bold text-danger-700">
                   {{ formatCurrency(item.sisa) }}
                 </td>
-                <td class="px-4 py-3">
+                <td class="px-5 py-4">
                   <span
                     :class="[
-                      'inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium',
+                      'inline-flex items-center px-2.5 py-1 rounded-md text-[13px] font-semibold',
                       getStatusClass(item.status),
                     ]"
                   >
                     {{ getStatusLabel(item.status) }}
                   </span>
                 </td>
-                <td class="px-4 py-3 text-sm text-text-secondary">
+                <td class="px-5 py-4 text-[15px] text-stone-600">
                   {{ formatDate(item.tanggal_jatuh_tempo) }}
                 </td>
               </tr>
             </tbody>
           </table>
         </div>
-        <p v-if="loading" class="text-center text-text-secondary py-8">Memuat data...</p>
+        <p v-if="loading" class="text-center text-stone-500 text-[15px] py-8">Memuat data...</p>
         <p
           v-else-if="tunggakanList.length === 0 && !loading"
-          class="text-center text-text-secondary py-8"
+          class="text-center text-stone-500 text-[15px] py-8"
         >
           Tidak ada tunggakan.
         </p>
@@ -1205,69 +1297,93 @@ onMounted(async () => {
 
     <!-- ===== Audit Trail Tab ===== -->
     <div v-if="activeTab === 'audit'" class="min-h-[400px]">
-      <h2 class="text-lg font-semibold text-text-primary mb-4">Audit Trail Tagihan</h2>
-      <div class="flex gap-3 mb-4 items-center">
+      <div class="flex gap-3 mb-5 items-center">
         <input
           v-model="auditTagihanId"
           type="text"
           placeholder="Masukkan ID Tagihan..."
-          class="w-full px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 sm:w-auto sm:min-w-[250px]"
+          class="w-full px-4 py-2.5 text-[15px] border-2 border-stone-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 sm:w-auto sm:min-w-[250px]"
         />
-        <button
-          class="px-3 py-2 text-sm font-medium text-white bg-primary-600 rounded-lg hover:bg-primary-700 transition-colors disabled:opacity-50"
-          :disabled="auditLoading"
-          @click="fetchAuditLogs"
-        >
+        <ActionButton variant="primary" :disabled="auditLoading" @click="fetchAuditLogs">
           {{ auditLoading ? 'Memuat...' : 'Cari' }}
-        </button>
+        </ActionButton>
       </div>
 
-      <div class="bg-white border border-border rounded-xl overflow-hidden">
+      <div class="bg-white rounded-[16px] border-2 border-stone-200 shadow-xs overflow-hidden">
+        <div class="bg-primary-50 px-6 py-5 border-b-2 border-primary-200">
+          <h3 class="text-[16px] font-bold text-primary-800">Audit Trail Tagihan</h3>
+        </div>
         <div class="overflow-x-auto">
           <table v-if="auditLogs.length > 0" class="w-full">
-            <thead class="border-b border-border bg-surface-50">
-              <tr>
-                <th class="px-4 py-3 text-left font-medium text-text-secondary text-xs">Waktu</th>
-                <th class="px-4 py-3 text-left font-medium text-text-secondary text-xs">User</th>
-                <th class="px-4 py-3 text-left font-medium text-text-secondary text-xs">Aksi</th>
-                <th class="px-4 py-3 text-left font-medium text-text-secondary text-xs">Sebelum</th>
-                <th class="px-4 py-3 text-left font-medium text-text-secondary text-xs">Sesudah</th>
-                <th class="px-4 py-3 text-left font-medium text-text-secondary text-xs">Alasan</th>
+            <thead>
+              <tr class="border-b-2 border-stone-200">
+                <th
+                  class="text-left px-5 py-4 text-[13px] font-bold uppercase tracking-[0.04em] text-text-secondary bg-surface-warm"
+                >
+                  Waktu
+                </th>
+                <th
+                  class="text-left px-5 py-4 text-[13px] font-bold uppercase tracking-[0.04em] text-text-secondary bg-surface-warm"
+                >
+                  User
+                </th>
+                <th
+                  class="text-left px-5 py-4 text-[13px] font-bold uppercase tracking-[0.04em] text-text-secondary bg-surface-warm"
+                >
+                  Aksi
+                </th>
+                <th
+                  class="text-left px-5 py-4 text-[13px] font-bold uppercase tracking-[0.04em] text-text-secondary bg-surface-warm"
+                >
+                  Sebelum
+                </th>
+                <th
+                  class="text-left px-5 py-4 text-[13px] font-bold uppercase tracking-[0.04em] text-text-secondary bg-surface-warm"
+                >
+                  Sesudah
+                </th>
+                <th
+                  class="text-left px-5 py-4 text-[13px] font-bold uppercase tracking-[0.04em] text-text-secondary bg-surface-warm"
+                >
+                  Alasan
+                </th>
               </tr>
             </thead>
-            <tbody class="divide-y divide-border">
+            <tbody class="divide-y divide-stone-100">
               <tr
                 v-for="log in auditLogs"
                 :key="log.id"
-                class="hover:bg-surface-50 transition-colors"
+                class="hover:bg-primary-50 transition-colors duration-200"
               >
-                <td class="px-4 py-3 text-sm text-text-secondary">
+                <td class="px-5 py-4 text-[15px] text-stone-600">
                   {{ formatDate(log.created_at) }}
                 </td>
-                <td class="px-4 py-3 text-sm text-text-primary">{{ log.user_nama }}</td>
-                <td class="px-4 py-3 text-sm text-text-primary">{{ log.jenis_aksi }}</td>
-                <td class="px-4 py-3">
+                <td class="px-5 py-4 text-[15px] text-stone-800 font-medium">
+                  {{ log.user_nama }}
+                </td>
+                <td class="px-5 py-4 text-[15px] text-stone-800">{{ log.jenis_aksi }}</td>
+                <td class="px-5 py-4">
                   <pre
                     v-if="log.nilai_sebelum"
-                    class="text-xs max-w-[200px] overflow-auto whitespace-pre-wrap text-text-secondary"
+                    class="text-[13px] max-w-[200px] overflow-auto whitespace-pre-wrap text-stone-600"
                     >{{ JSON.stringify(log.nilai_sebelum, null, 2) }}</pre>
-                  <span v-else class="text-sm text-text-tertiary">-</span>
+                  <span v-else class="text-[15px] text-stone-400">-</span>
                 </td>
-                <td class="px-4 py-3">
+                <td class="px-5 py-4">
                   <pre
                     v-if="log.nilai_sesudah"
-                    class="text-xs max-w-[200px] overflow-auto whitespace-pre-wrap text-text-secondary"
+                    class="text-[13px] max-w-[200px] overflow-auto whitespace-pre-wrap text-stone-600"
                     >{{ JSON.stringify(log.nilai_sesudah, null, 2) }}</pre>
-                  <span v-else class="text-sm text-text-tertiary">-</span>
+                  <span v-else class="text-[15px] text-stone-400">-</span>
                 </td>
-                <td class="px-4 py-3 text-sm text-text-secondary">{{ log.alasan || '-' }}</td>
+                <td class="px-5 py-4 text-[15px] text-stone-600">{{ log.alasan || '-' }}</td>
               </tr>
             </tbody>
           </table>
         </div>
         <p
           v-if="!auditLoading && auditLogs.length === 0"
-          class="text-center text-text-secondary py-8"
+          class="text-center text-stone-500 text-[15px] py-8"
         >
           Masukkan ID tagihan dan klik Cari untuk melihat audit trail.
         </p>
@@ -1282,68 +1398,73 @@ onMounted(async () => {
       @close="showBuktiModal = false"
     >
       <div v-if="selectedTransaksi">
-        <div class="grid grid-cols-2 gap-2 text-sm mb-4">
-          <div><strong>Siswa:</strong> {{ selectedTransaksi.siswa_nama }}</div>
-          <div><strong>Kelas:</strong> {{ selectedTransaksi.kelas_nama }}</div>
+        <div class="grid grid-cols-2 gap-3 text-[15px] mb-5">
           <div>
-            <strong>Tagihan:</strong> {{ getBulanLabel(selectedTransaksi.bulan) }}
-            {{ selectedTransaksi.tahun }}
+            <strong class="text-stone-800">Siswa:</strong>
+            <span class="text-stone-600">{{ selectedTransaksi.siswa_nama }}</span>
           </div>
           <div>
-            <strong>Nominal Tagihan:</strong>
-            {{ formatCurrency(selectedTransaksi.nominal_tagihan) }}
+            <strong class="text-stone-800">Kelas:</strong>
+            <span class="text-stone-600">{{ selectedTransaksi.kelas_nama }}</span>
           </div>
           <div>
-            <strong>Nominal Bayar:</strong> {{ formatCurrency(selectedTransaksi.jumlah_bayar) }}
+            <strong class="text-stone-800">Tagihan:</strong>
+            <span class="text-stone-600"
+              >{{ getBulanLabel(selectedTransaksi.bulan) }} {{ selectedTransaksi.tahun }}</span
+            >
           </div>
-          <div><strong>Pengirim:</strong> {{ selectedTransaksi.uploaded_by_nama }}</div>
+          <div>
+            <strong class="text-stone-800">Nominal Tagihan:</strong>
+            <span class="text-stone-600">{{
+              formatCurrency(selectedTransaksi.nominal_tagihan)
+            }}</span>
+          </div>
+          <div>
+            <strong class="text-stone-800">Nominal Bayar:</strong>
+            <span class="text-stone-600">{{ formatCurrency(selectedTransaksi.jumlah_bayar) }}</span>
+          </div>
+          <div>
+            <strong class="text-stone-800">Pengirim:</strong>
+            <span class="text-stone-600">{{ selectedTransaksi.uploaded_by_nama }}</span>
+          </div>
         </div>
 
-        <div v-if="selectedTransaksi.bukti_transfer_url" class="my-4 text-center">
+        <div v-if="selectedTransaksi.bukti_transfer_url" class="my-5 text-center">
           <img
             :src="selectedTransaksi.bukti_transfer_url"
             alt="Bukti Transfer"
-            class="max-w-full max-h-[400px] rounded-lg border border-border mx-auto cursor-zoom-in hover:opacity-90 transition-opacity"
+            class="max-w-full max-h-[400px] rounded-[12px] border-2 border-stone-200 mx-auto cursor-zoom-in hover:opacity-90 transition-opacity"
             @click="showLightbox = true"
           />
-          <p class="text-xs text-text-secondary mt-1.5">Klik gambar untuk memperbesar</p>
+          <p class="text-[13px] text-stone-500 mt-2">Klik gambar untuk memperbesar</p>
         </div>
-        <p v-else class="text-center text-text-secondary py-4">
+        <p v-else class="text-center text-stone-500 text-[15px] py-4">
           Tidak ada bukti transfer tersedia.
         </p>
 
-        <div class="mt-4">
-          <label class="block text-sm font-medium text-text-primary mb-1.5"
+        <div class="mt-5">
+          <label class="block text-[15px] font-semibold text-stone-800 mb-2"
             >Alasan Penolakan (wajib jika ditolak)</label
           >
           <textarea
             v-model="rejectReason"
-            class="w-full px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 min-h-[60px] resize-y"
+            class="w-full px-4 py-3 text-[15px] border-2 border-stone-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 min-h-[60px] resize-y"
             placeholder="Alasan penolakan..."
           />
         </div>
       </div>
       <template #footer>
-        <button
-          class="px-3 py-2 text-sm font-medium text-text-secondary bg-white border border-border rounded-lg hover:bg-surface-50 transition-colors"
-          @click="showBuktiModal = false"
-        >
-          Tutup
-        </button>
-        <button
-          class="px-4 py-2 text-sm font-medium text-white bg-danger-500 rounded-lg hover:bg-danger-700 transition-colors disabled:opacity-50"
-          :disabled="!!verifyingId"
-          @click="verifyTransaksi('reject')"
-        >
+        <ActionButton variant="neutral" @click="showBuktiModal = false"> Tutup </ActionButton>
+        <ActionButton variant="danger" :disabled="!!verifyingId" @click="verifyTransaksi('reject')">
           Tolak
-        </button>
-        <button
-          class="px-3 py-2 text-sm font-medium text-white bg-primary-600 rounded-lg hover:bg-primary-700 transition-colors disabled:opacity-50"
+        </ActionButton>
+        <ActionButton
+          variant="primary"
           :disabled="!!verifyingId"
           @click="verifyTransaksi('approve')"
         >
           Setujui
-        </button>
+        </ActionButton>
       </template>
     </BaseModal>
 
@@ -1354,37 +1475,54 @@ onMounted(async () => {
       size="lg"
       @close="showManualPaymentModal = false"
     >
-      <div v-if="manualPaymentTagihan" class="grid grid-cols-2 gap-2 text-sm mb-4">
-        <div><strong>Siswa:</strong> {{ manualPaymentTagihan.siswa_nama }}</div>
-        <div><strong>Kelas:</strong> {{ manualPaymentTagihan.kelas_nama }}</div>
+      <div v-if="manualPaymentTagihan" class="grid grid-cols-2 gap-3 text-[15px] mb-5">
         <div>
-          <strong>Tagihan:</strong> {{ getBulanLabel(manualPaymentTagihan.bulan) }}
-          {{ manualPaymentTagihan.tahun }}
+          <strong class="text-stone-800">Siswa:</strong>
+          <span class="text-stone-600">{{ manualPaymentTagihan.siswa_nama }}</span>
         </div>
-        <div><strong>Nominal:</strong> {{ formatCurrency(manualPaymentTagihan.nominal) }}</div>
         <div>
-          <strong>Sudah Dibayar:</strong> {{ formatCurrency(manualPaymentTagihan.total_dibayar) }}
+          <strong class="text-stone-800">Kelas:</strong>
+          <span class="text-stone-600">{{ manualPaymentTagihan.kelas_nama }}</span>
         </div>
-        <div><strong>Sisa:</strong> {{ formatCurrency(sisaTagihanManual) }}</div>
+        <div>
+          <strong class="text-stone-800">Tagihan:</strong>
+          <span class="text-stone-600"
+            >{{ getBulanLabel(manualPaymentTagihan.bulan) }} {{ manualPaymentTagihan.tahun }}</span
+          >
+        </div>
+        <div>
+          <strong class="text-stone-800">Nominal:</strong>
+          <span class="text-stone-600">{{ formatCurrency(manualPaymentTagihan.nominal) }}</span>
+        </div>
+        <div>
+          <strong class="text-stone-800">Sudah Dibayar:</strong>
+          <span class="text-stone-600">{{
+            formatCurrency(manualPaymentTagihan.total_dibayar)
+          }}</span>
+        </div>
+        <div>
+          <strong class="text-stone-800">Sisa:</strong>
+          <span class="text-stone-600">{{ formatCurrency(sisaTagihanManual) }}</span>
+        </div>
       </div>
 
-      <hr class="border-border my-4" />
+      <hr class="border-stone-200 my-5" />
 
       <form @submit.prevent="saveManualPayment">
-        <div class="mb-4">
-          <label class="block text-sm font-medium text-text-primary mb-1.5"
+        <div class="mb-5">
+          <label class="block text-[15px] font-semibold text-stone-800 mb-2"
             >Jumlah Bayar <span class="text-danger-500">*</span></label
           >
           <input
             v-model.number="manualPaymentForm.jumlah_bayar"
             type="number"
-            class="w-full px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
+            class="w-full px-4 py-2.5 text-[15px] border-2 border-stone-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
             min="1"
             :max="sisaTagihanManual"
           />
         </div>
 
-        <div class="mb-4">
+        <div class="mb-5">
           <SearchSelect
             v-model="manualPaymentForm.metode"
             label="Metode Pembayaran"
@@ -1393,94 +1531,81 @@ onMounted(async () => {
           />
         </div>
 
-        <div class="mb-4">
-          <label class="block text-sm font-medium text-text-primary mb-1.5"
+        <div class="mb-5">
+          <label class="block text-[15px] font-semibold text-stone-800 mb-2"
             >Catatan (opsional)</label
           >
           <textarea
             v-model="manualPaymentForm.catatan"
-            class="w-full px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 min-h-[60px] resize-y"
+            class="w-full px-4 py-3 text-[15px] border-2 border-stone-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 min-h-[60px] resize-y"
             placeholder="Catatan tambahan..."
           />
         </div>
 
-        <div v-if="manualPaymentError" class="text-xs text-danger-500 mt-1 mb-2">
+        <div v-if="manualPaymentError" class="text-[13px] text-danger-600 font-medium mt-1 mb-2">
           {{ manualPaymentError }}
         </div>
       </form>
       <template #footer>
-        <button
-          type="button"
-          class="px-3 py-2 text-sm font-medium text-text-secondary bg-white border border-border rounded-lg hover:bg-surface-50 transition-colors"
-          @click="showManualPaymentModal = false"
-        >
+        <ActionButton variant="neutral" @click="showManualPaymentModal = false">
           Batal
-        </button>
-        <button
-          type="button"
-          class="px-3 py-2 text-sm font-medium text-white bg-primary-600 rounded-lg hover:bg-primary-700 transition-colors disabled:opacity-50"
-          :disabled="savingManualPayment"
-          @click="saveManualPayment"
-        >
+        </ActionButton>
+        <ActionButton variant="primary" :disabled="savingManualPayment" @click="saveManualPayment">
           {{ savingManualPayment ? 'Menyimpan...' : 'Simpan Pembayaran' }}
-        </button>
+        </ActionButton>
       </template>
     </BaseModal>
 
     <!-- ===== Edit Tagihan Modal ===== -->
     <BaseModal :show="showEditModal" title="Edit Tagihan" size="lg" @close="showEditModal = false">
-      <div v-if="editingTagihan" class="grid grid-cols-2 gap-2 text-sm mb-4">
-        <div><strong>Siswa:</strong> {{ editingTagihan.siswa_nama }}</div>
+      <div v-if="editingTagihan" class="grid grid-cols-2 gap-3 text-[15px] mb-5">
         <div>
-          <strong>Tagihan:</strong> {{ getBulanLabel(editingTagihan.bulan) }}
-          {{ editingTagihan.tahun }}
+          <strong class="text-stone-800">Siswa:</strong>
+          <span class="text-stone-600">{{ editingTagihan.siswa_nama }}</span>
+        </div>
+        <div>
+          <strong class="text-stone-800">Tagihan:</strong>
+          <span class="text-stone-600"
+            >{{ getBulanLabel(editingTagihan.bulan) }} {{ editingTagihan.tahun }}</span
+          >
         </div>
       </div>
 
-      <hr class="border-border my-4" />
+      <hr class="border-stone-200 my-5" />
 
       <form @submit.prevent="saveEditTagihan">
-        <div class="mb-4">
-          <label class="block text-sm font-medium text-text-primary mb-1.5"
+        <div class="mb-5">
+          <label class="block text-[15px] font-semibold text-stone-800 mb-2"
             >Nominal <span class="text-danger-500">*</span></label
           >
           <input
             v-model.number="editForm.nominal"
             type="number"
-            class="w-full px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
+            class="w-full px-4 py-2.5 text-[15px] border-2 border-stone-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
             min="1"
           />
         </div>
 
-        <div class="mb-4">
-          <label class="block text-sm font-medium text-text-primary mb-1.5"
+        <div class="mb-5">
+          <label class="block text-[15px] font-semibold text-stone-800 mb-2"
             >Tanggal Jatuh Tempo</label
           >
           <input
             v-model="editForm.tanggal_jatuh_tempo"
             type="date"
-            class="w-full px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
+            class="w-full px-4 py-2.5 text-[15px] border-2 border-stone-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
           />
         </div>
 
-        <div v-if="editError" class="text-xs text-danger-500 mt-1 mb-2">{{ editError }}</div>
+        <div v-if="editError" class="text-[13px] text-danger-600 font-medium mt-1 mb-2">
+          {{ editError }}
+        </div>
       </form>
       <template #footer>
-        <button
-          type="button"
-          class="px-3 py-2 text-sm font-medium text-text-secondary bg-white border border-border rounded-lg hover:bg-surface-50 transition-colors"
-          @click="showEditModal = false"
-        >
-          Batal
-        </button>
-        <button
-          type="button"
-          class="px-3 py-2 text-sm font-medium text-white bg-primary-600 rounded-lg hover:bg-primary-700 transition-colors disabled:opacity-50"
-          :disabled="savingEdit"
-          @click="saveEditTagihan"
-        >
+        <ActionButton variant="neutral" @click="showEditModal = false"> Batal </ActionButton>
+        <ActionButton variant="primary" :disabled="savingEdit" @click="saveEditTagihan">
           {{ savingEdit ? 'Menyimpan...' : 'Simpan' }}
-        </button>
+        </ActionButton>
       </template>
     </BaseModal>
 
@@ -1491,38 +1616,29 @@ onMounted(async () => {
       size="lg"
       @close="showCancelModal = false"
     >
-      <p class="text-sm text-text-secondary mb-4">
+      <p class="text-[15px] text-stone-600 mb-5">
         Anda akan membatalkan tagihan
-        <strong v-if="cancellingTagihan">
+        <strong v-if="cancellingTagihan" class="text-stone-800">
           {{ cancellingTagihan.siswa_nama }} — {{ getBulanLabel(cancellingTagihan.bulan) }}
           {{ cancellingTagihan.tahun }} </strong
         >.
       </p>
 
-      <div class="mb-4">
-        <label class="block text-sm font-medium text-text-primary mb-1.5"
+      <div class="mb-5">
+        <label class="block text-[15px] font-semibold text-stone-800 mb-2"
           >Alasan Pembatalan <span class="text-danger-500">*</span></label
         >
         <textarea
           v-model="cancelReason"
-          class="w-full px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 min-h-[60px] resize-y"
+          class="w-full px-4 py-3 text-[15px] border-2 border-stone-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 min-h-[60px] resize-y"
           placeholder="Contoh: Mendapat beasiswa penuh"
         />
       </div>
       <template #footer>
-        <button
-          class="px-3 py-2 text-sm font-medium text-text-secondary bg-white border border-border rounded-lg hover:bg-surface-50 transition-colors"
-          @click="showCancelModal = false"
-        >
-          Batal
-        </button>
-        <button
-          class="px-4 py-2 text-sm font-medium text-white bg-danger-500 rounded-lg hover:bg-danger-700 transition-colors disabled:opacity-50"
-          :disabled="cancelling"
-          @click="confirmCancelTagihan"
-        >
+        <ActionButton variant="neutral" @click="showCancelModal = false"> Batal </ActionButton>
+        <ActionButton variant="danger" :disabled="cancelling" @click="confirmCancelTagihan">
           {{ cancelling ? 'Membatalkan...' : 'Batalkan Tagihan' }}
-        </button>
+        </ActionButton>
       </template>
     </BaseModal>
 
@@ -1550,7 +1666,7 @@ onMounted(async () => {
           <img
             :src="selectedTransaksi.bukti_transfer_url"
             alt="Bukti Transfer"
-            class="max-w-[90vw] max-h-[90vh] object-contain rounded-lg shadow-2xl"
+            class="max-w-[90vw] max-h-[90vh] object-contain rounded-[16px] shadow-2xl"
             @click.stop
           />
         </div>

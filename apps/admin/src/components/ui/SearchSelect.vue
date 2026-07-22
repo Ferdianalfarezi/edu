@@ -168,7 +168,7 @@ onUnmounted(() => {
 <template>
   <div ref="containerRef" class="relative w-full">
     <!-- Label -->
-    <label v-if="label" class="block text-sm font-medium text-text-primary mb-1.5">
+    <label v-if="label" class="block text-[15px] font-medium text-text-primary mb-1.5">
       {{ label }}
       <span v-if="required" class="text-danger-500">*</span>
     </label>
@@ -178,15 +178,15 @@ onUnmounted(() => {
       type="button"
       :disabled="disabled"
       :class="[
-        'w-full flex items-center justify-between gap-2 border rounded-lg text-left transition-colors',
-        size === 'sm' ? 'px-2.5 py-1.5 text-xs' : 'px-3 py-2 text-sm',
+        'search-select-trigger w-full flex items-center justify-between gap-2 border bg-white text-left',
+        size === 'sm' ? 'px-2.5 py-1.5 text-[13px]' : 'px-3 py-2.5 text-[15px]',
         disabled
           ? 'bg-surface-100 text-text-tertiary cursor-not-allowed border-border'
           : error
-            ? 'border-danger-500 bg-white focus:outline-none focus:ring-2 focus:ring-danger-500/20'
+            ? 'border-danger-500 focus:outline-2 focus:outline-primary-500 focus:outline-offset-2'
             : isOpen
-              ? 'border-primary-500 bg-white ring-2 ring-primary-500/20'
-              : 'border-border bg-white hover:border-border-hover focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500',
+              ? 'border-primary-500 outline-2 outline-primary-500 outline-offset-2'
+              : 'border-border hover:border-border-hover focus:outline-2 focus:outline-primary-500 focus:outline-offset-2',
       ]"
       @click="toggle"
       @keydown="handleKeydown"
@@ -239,7 +239,7 @@ onUnmounted(() => {
     >
       <div
         v-if="isOpen"
-        class="absolute z-50 w-full mt-1 bg-white border border-border rounded-lg shadow-lg overflow-hidden"
+        class="search-select-dropdown absolute z-50 w-full mt-1 bg-white border border-border shadow-lg overflow-hidden"
       >
         <!-- Search input -->
         <div v-if="searchable" class="p-2 border-b border-border">
@@ -261,7 +261,7 @@ onUnmounted(() => {
               ref="inputRef"
               v-model="searchQuery"
               type="text"
-              class="w-full pl-8 pr-3 py-1.5 text-sm border border-border rounded-md focus:outline-none focus:ring-1 focus:ring-primary-500/30 focus:border-primary-500 placeholder:text-text-tertiary"
+              class="search-select-input w-full pl-8 pr-3 py-1.5 text-[15px] border border-border bg-white placeholder:text-text-tertiary focus:outline-2 focus:outline-primary-500 focus:outline-offset-2"
               placeholder="Cari..."
               @keydown="handleKeydown"
             />
@@ -276,14 +276,14 @@ onUnmounted(() => {
             role="option"
             :aria-selected="option.value === modelValue"
             :class="[
-              'px-3 py-2 text-sm cursor-pointer transition-colors',
+              'px-3 py-2 text-[15px] cursor-pointer transition-colors',
               option.disabled
                 ? 'text-text-tertiary cursor-not-allowed'
                 : option.value === modelValue
                   ? 'bg-primary-50 text-primary-700 font-medium'
                   : highlightedIndex === index
-                    ? 'bg-surface-100 text-text-primary'
-                    : 'text-text-primary hover:bg-surface-50',
+                    ? 'bg-primary-50 text-text-primary'
+                    : 'text-text-primary hover:bg-primary-50',
             ]"
             @click="!option.disabled && selectOption(option)"
             @mouseenter="highlightedIndex = index"
@@ -305,15 +305,31 @@ onUnmounted(() => {
 
           <!-- Empty state -->
           <li v-if="filteredOptions.length === 0" class="px-3 py-4 text-center">
-            <p class="text-sm text-text-tertiary">{{ emptyText }}</p>
+            <p class="text-[15px] text-text-tertiary">{{ emptyText }}</p>
           </li>
         </ul>
       </div>
     </Transition>
 
     <!-- Error message -->
-    <p v-if="error && errorMessage" class="mt-1 text-xs text-danger-500">
+    <p v-if="error && errorMessage" class="mt-1 text-[13px] text-danger-500">
       {{ errorMessage }}
     </p>
   </div>
 </template>
+
+<style scoped>
+.search-select-trigger {
+  border-radius: var(--radius-xs);
+  transition: border-color 200ms ease;
+}
+
+.search-select-dropdown {
+  border-radius: var(--radius-xs);
+}
+
+.search-select-input {
+  border-radius: var(--radius-xs);
+  transition: border-color 200ms ease;
+}
+</style>

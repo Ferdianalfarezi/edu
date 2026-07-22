@@ -2,7 +2,7 @@
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue';
 import { api } from '@/api/client';
 import { PeriodeRapor } from '@edu/shared';
-import { PageHeader, SearchSelect } from '@/components/ui';
+import { PageHeader, SearchSelect, ActionButton } from '@/components/ui';
 import type { SelectOption } from '@/components/ui';
 
 interface MapelOption {
@@ -314,11 +314,11 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div class="p-4 lg:p-6 max-w-7xl mx-auto">
+  <div class="p-8 max-w-7xl mx-auto">
     <PageHeader title="Input Nilai Rapor" />
 
     <!-- Filters -->
-    <div class="flex flex-wrap items-center gap-3 mb-4">
+    <div class="flex flex-wrap items-center gap-3 mb-6">
       <div class="min-w-[200px]">
         <SearchSelect
           v-model="selectedMapel"
@@ -353,13 +353,13 @@ onUnmounted(() => {
 
     <div
       v-if="error"
-      class="p-3 bg-danger-50 border border-danger-500/20 rounded-lg text-sm text-danger-700 mb-4"
+      class="p-3 bg-danger-50 border-2 border-danger-200 rounded-[8px] text-[15px] text-danger-700 mb-4"
     >
       {{ error }}
     </div>
     <div
       v-if="successMessage"
-      class="p-3 bg-success-50 border border-success-500/20 rounded-lg text-sm text-success-700 mb-4"
+      class="p-3 bg-success-50 border-2 border-success-200 rounded-[8px] text-[15px] text-success-700 mb-4"
     >
       {{ successMessage }}
     </div>
@@ -374,41 +374,44 @@ onUnmounted(() => {
           d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
         />
       </svg>
-      <p class="text-sm text-text-secondary mt-2">Memuat data nilai...</p>
+      <p class="text-[15px] text-text-secondary mt-2">Memuat data nilai...</p>
     </div>
 
     <div v-else-if="nilaiData.length > 0 && komponenList.length > 0">
       <div
         v-if="isRaporFinalized"
-        class="p-3 bg-primary-50 border border-primary-500/20 rounded-lg text-sm text-primary-700 mb-4"
+        class="p-3 bg-primary-50 border-2 border-primary-200 rounded-[8px] text-[15px] text-primary-700 mb-4"
       >
         Rapor sudah difinalkan. Nilai tidak dapat diedit.
       </div>
 
-      <div class="bg-white border border-border rounded-xl overflow-hidden">
+      <div class="bg-white rounded-[16px] border-2 border-stone-200 shadow-xs overflow-hidden">
+        <div class="bg-primary-50 px-6 py-5 border-b-2 border-primary-200">
+          <h2 class="text-[16px] font-bold text-primary-800">Tabel Input Nilai</h2>
+        </div>
         <div class="overflow-x-auto">
           <table class="w-full min-w-[800px]">
-            <thead class="border-b border-border bg-surface-50">
+            <thead class="border-b-2 border-stone-200">
               <tr>
                 <th
-                  class="px-4 py-3 text-left font-medium text-text-secondary text-xs sticky left-0 bg-surface-50 z-10 w-[40px]"
+                  class="px-5 py-4 text-left text-[13px] font-bold uppercase tracking-[0.04em] text-text-secondary bg-surface-warm sticky left-0 z-10 w-[40px]"
                 >
                   No
                 </th>
                 <th
-                  class="px-4 py-3 text-left font-medium text-text-secondary text-xs sticky left-[40px] bg-surface-50 z-10 min-w-[150px]"
+                  class="px-5 py-4 text-left text-[13px] font-bold uppercase tracking-[0.04em] text-text-secondary bg-surface-warm sticky left-[40px] z-10 min-w-[150px]"
                 >
                   Nama Siswa
                 </th>
                 <th
                   v-for="k in komponenList"
                   :key="k.id"
-                  class="px-4 py-3 text-left font-medium text-text-secondary text-xs whitespace-nowrap"
+                  class="px-5 py-4 text-left text-[13px] font-bold uppercase tracking-[0.04em] text-text-secondary bg-surface-warm whitespace-nowrap"
                 >
                   {{ k.nama }}
                   <span v-if="k.is_wajib" class="text-danger-500">*</span>
                   <br />
-                  <small class="text-text-tertiary font-normal">
+                  <small class="text-text-tertiary font-normal normal-case tracking-normal">
                     <template v-if="k.tipe === 'angka'"
                       >({{ k.skala_min }}-{{ k.skala_max }})</template
                     >
@@ -418,28 +421,34 @@ onUnmounted(() => {
                 </th>
                 <th
                   v-if="!isUTS"
-                  class="px-4 py-3 text-left font-medium text-text-secondary text-xs"
+                  class="px-5 py-4 text-left text-[13px] font-bold uppercase tracking-[0.04em] text-text-secondary bg-surface-warm"
                 >
                   Capaian Pembelajaran
                 </th>
-                <th class="px-4 py-3 text-left font-medium text-text-secondary text-xs">Status</th>
+                <th
+                  class="px-5 py-4 text-left text-[13px] font-bold uppercase tracking-[0.04em] text-text-secondary bg-surface-warm"
+                >
+                  Status
+                </th>
               </tr>
             </thead>
-            <tbody class="divide-y divide-border">
+            <tbody class="divide-y divide-stone-200">
               <tr
                 v-for="(siswa, sIdx) in nilaiData"
                 :key="siswa.siswa_id"
-                class="hover:bg-surface-50 transition-colors"
+                class="hover:bg-primary-50 transition-colors"
               >
-                <td class="px-4 py-3 text-sm sticky left-0 bg-white z-1">{{ sIdx + 1 }}</td>
-                <td class="px-4 py-3 text-sm text-text-primary sticky left-[40px] bg-white z-1">
+                <td class="px-5 py-4 text-[15px] sticky left-0 bg-white z-[1]">{{ sIdx + 1 }}</td>
+                <td
+                  class="px-5 py-4 text-[15px] text-text-primary sticky left-[40px] bg-white z-[1]"
+                >
                   {{ siswa.siswa_nama }}
                 </td>
-                <td v-for="(komponen, kIdx) in komponenList" :key="komponen.id" class="px-4 py-3">
+                <td v-for="(komponen, kIdx) in komponenList" :key="komponen.id" class="px-5 py-4">
                   <template v-if="komponen.tipe === 'deskripsi'">
                     <textarea
                       v-model="siswa.komponen[kIdx].nilai"
-                      class="w-full min-w-[150px] px-2 py-1.5 text-xs border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 resize-y"
+                      class="w-full min-w-[150px] px-3 py-2 text-[15px] border-2 border-stone-200 rounded-xs focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 resize-y"
                       :disabled="isRaporFinalized"
                       rows="2"
                       :placeholder="isUTS ? 'Opsional' : 'Deskripsi'"
@@ -448,7 +457,7 @@ onUnmounted(() => {
                   <template v-else-if="komponen.tipe === 'huruf'">
                     <select
                       v-model="siswa.komponen[kIdx].nilai"
-                      class="w-full min-w-[80px] px-2 py-1.5 text-xs border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
+                      class="w-full min-w-[80px] px-3 py-2 text-[15px] border-2 border-stone-200 rounded-xs focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
                       :disabled="isRaporFinalized"
                     >
                       <option value="">-</option>
@@ -463,7 +472,7 @@ onUnmounted(() => {
                     <input
                       v-model.number="siswa.komponen[kIdx].nilai"
                       :type="getInputType(komponen)"
-                      class="w-full min-w-[80px] px-2 py-1.5 text-xs border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
+                      class="w-full min-w-[80px] px-3 py-2 text-[15px] border-2 border-stone-200 rounded-xs focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
                       :disabled="isRaporFinalized"
                       :min="komponen.skala_min ?? undefined"
                       :max="komponen.skala_max ?? undefined"
@@ -471,18 +480,18 @@ onUnmounted(() => {
                     />
                   </template>
                 </td>
-                <td v-if="!isUTS" class="px-4 py-3">
+                <td v-if="!isUTS" class="px-5 py-4">
                   <textarea
                     v-model="siswa.capaian_pembelajaran"
-                    class="w-full min-w-[150px] px-2 py-1.5 text-xs border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 resize-y"
+                    class="w-full min-w-[150px] px-3 py-2 text-[15px] border-2 border-stone-200 rounded-xs focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 resize-y"
                     :disabled="isRaporFinalized"
                     rows="2"
                     placeholder="Deskripsi capaian"
                   />
                 </td>
-                <td class="px-4 py-3">
+                <td class="px-5 py-4">
                   <span
-                    class="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium"
+                    class="inline-flex items-center px-2.5 py-1 rounded-[8px] text-[13px] font-semibold"
                     :class="
                       siswa.status === 'submitted'
                         ? 'bg-success-50 text-success-700'
@@ -499,49 +508,50 @@ onUnmounted(() => {
       </div>
 
       <!-- Action buttons -->
-      <div v-if="canUnsubmit" class="flex justify-end gap-3 mt-4 pt-4 border-t border-border">
-        <button
-          class="px-3 py-2 text-sm font-medium text-warning-700 bg-warning-50 border border-warning-200 rounded-lg hover:bg-warning-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+      <div v-if="canUnsubmit" class="flex justify-end gap-3 mt-6 pt-4 border-t-2 border-stone-200">
+        <ActionButton
+          variant="warning"
+          icon="revert"
           :disabled="unsubmitting"
           @click="unsubmitNilai"
         >
           {{ unsubmitting ? 'Menarik kembali...' : 'Tarik Kembali' }}
-        </button>
+        </ActionButton>
       </div>
       <div
         v-if="!isRaporFinalized"
-        class="flex items-center justify-end gap-3 mt-4 pt-4 border-t border-border"
+        class="flex items-center justify-end gap-3 mt-6 pt-4 border-t-2 border-stone-200"
       >
-        <span v-if="nilaiData.length > 0 && !isRaporFinalized" class="text-xs text-text-tertiary">
+        <span
+          v-if="nilaiData.length > 0 && !isRaporFinalized"
+          class="text-[13px] text-text-tertiary"
+        >
           Auto-save aktif (30 detik)
         </span>
-        <button
-          class="px-3 py-2 text-sm font-medium text-text-secondary bg-white border border-border rounded-lg hover:bg-surface-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-          :disabled="saving"
-          @click="saveNilai('draft')"
-        >
+        <ActionButton variant="neutral" icon="check" :disabled="saving" @click="saveNilai('draft')">
           {{ saving ? 'Menyimpan...' : 'Simpan Draft' }}
-        </button>
-        <button
-          class="px-3 py-2 text-sm font-medium text-white bg-primary-600 rounded-lg hover:bg-primary-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+        </ActionButton>
+        <ActionButton
+          variant="primary"
+          icon="check"
           :disabled="saving || !canSubmit"
           @click="saveNilai('submitted')"
         >
           {{ saving ? 'Menyimpan...' : 'Submit ke Wali Kelas' }}
-        </button>
+        </ActionButton>
       </div>
     </div>
 
     <div
       v-else-if="selectedMapel && selectedKelas && selectedPeriode && !loadingNilai"
-      class="text-center text-text-secondary py-8 text-sm"
+      class="text-center text-text-secondary py-8 text-[15px]"
     >
       Tidak ada data siswa untuk kelas dan periode ini.
     </div>
 
     <div
       v-else-if="!selectedMapel || !selectedKelas || !selectedPeriode"
-      class="text-center text-text-secondary py-8 text-sm"
+      class="text-center text-text-secondary py-8 text-[15px]"
     >
       Pilih mata pelajaran, kelas, dan periode untuk mulai input nilai.
     </div>

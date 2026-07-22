@@ -219,35 +219,25 @@ onMounted(fetchUsers);
 </script>
 
 <template>
-  <div class="p-4 lg:p-6 max-w-7xl mx-auto">
-    <PageHeader title="Manajemen User" description="">
+  <div class="p-8 max-w-7xl mx-auto">
+    <PageHeader title="Manajemen User">
       <template #actions>
-        <button
-          class="px-3 py-2 text-sm font-medium text-text-secondary bg-white border border-border rounded-lg hover:bg-surface-50 transition-colors"
-          @click="openImportModal"
-        >
-          Import Guru (CSV)
-        </button>
-        <button
-          class="px-3 py-2 text-sm font-medium text-white bg-primary-600 rounded-lg hover:bg-primary-700 transition-colors"
-          @click="openCreateForm"
-        >
-          Tambah User
-        </button>
+        <ActionButton variant="neutral" @click="openImportModal"> Import Guru (CSV) </ActionButton>
+        <ActionButton variant="primary" @click="openCreateForm"> Tambah User </ActionButton>
       </template>
     </PageHeader>
 
     <!-- Filters -->
-    <div class="flex flex-wrap items-end gap-2 mb-4">
-      <div class="relative w-48 min-w-[150px]">
+    <div class="flex flex-wrap items-end gap-3 mb-6">
+      <div class="relative min-w-[200px]">
         <input
           v-model="search"
           type="text"
           placeholder="Cari nama atau email..."
-          class="w-full px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
+          class="w-full px-3 py-2.5 text-[15px] border-2 border-stone-200 rounded-xs focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
         />
       </div>
-      <div class="w-40">
+      <div class="w-44">
         <SearchSelect
           v-model="filterRole"
           :options="roleFilterOptions"
@@ -255,7 +245,7 @@ onMounted(fetchUsers);
           clearable
         />
       </div>
-      <div class="w-40">
+      <div class="w-44">
         <SearchSelect
           v-model="filterStatus"
           :options="statusFilterOptions"
@@ -265,37 +255,63 @@ onMounted(fetchUsers);
       </div>
     </div>
 
-    <!-- Table -->
-    <div class="bg-white border border-border rounded-xl overflow-hidden">
+    <!-- Table Card -->
+    <div class="bg-white rounded-[16px] border-2 border-stone-200 shadow-xs overflow-hidden">
+      <!-- Section Header -->
+      <div class="bg-primary-50 px-6 py-5 border-b-2 border-primary-200">
+        <h3 class="text-[16px] font-bold text-primary-800">Daftar User</h3>
+      </div>
+
       <div class="overflow-x-auto">
         <table v-if="!loading && filteredUsers.length > 0" class="w-full">
-          <thead class="border-b border-border bg-surface-50">
+          <thead class="border-b-2 border-stone-200">
             <tr>
-              <th class="px-4 py-3 text-left font-medium text-text-secondary text-xs">Nama</th>
-              <th class="px-4 py-3 text-left font-medium text-text-secondary text-xs">Email</th>
-              <th class="px-4 py-3 text-left font-medium text-text-secondary text-xs">Role</th>
-              <th class="px-4 py-3 text-left font-medium text-text-secondary text-xs">Status</th>
-              <th class="px-4 py-3 text-left font-medium text-text-secondary text-xs">Aksi</th>
+              <th
+                class="px-5 py-4 text-left font-bold text-text-secondary text-[13px] uppercase tracking-[0.04em] bg-surface-warm"
+              >
+                Nama
+              </th>
+              <th
+                class="px-5 py-4 text-left font-bold text-text-secondary text-[13px] uppercase tracking-[0.04em] bg-surface-warm"
+              >
+                Email
+              </th>
+              <th
+                class="px-5 py-4 text-left font-bold text-text-secondary text-[13px] uppercase tracking-[0.04em] bg-surface-warm"
+              >
+                Role
+              </th>
+              <th
+                class="px-5 py-4 text-left font-bold text-text-secondary text-[13px] uppercase tracking-[0.04em] bg-surface-warm"
+              >
+                Status
+              </th>
+              <th
+                class="px-5 py-4 text-left font-bold text-text-secondary text-[13px] uppercase tracking-[0.04em] bg-surface-warm"
+              >
+                Aksi
+              </th>
             </tr>
           </thead>
-          <tbody class="divide-y divide-border">
+          <tbody class="divide-y divide-stone-200">
             <tr
               v-for="user in filteredUsers"
               :key="user.id"
-              class="hover:bg-surface-50 transition-colors"
+              class="hover:bg-primary-50 transition-colors"
             >
-              <td class="px-4 py-3 text-sm text-text-primary">{{ user.nama }}</td>
-              <td class="px-4 py-3 text-sm text-text-secondary">{{ user.email }}</td>
-              <td class="px-4 py-3">
+              <td class="px-5 py-4 text-[15px] text-stone-800 font-medium">{{ user.nama }}</td>
+              <td class="px-5 py-4 text-[15px] text-stone-600">{{ user.email }}</td>
+              <td class="px-5 py-4">
                 <span
-                  class="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-primary-50 text-primary-600"
-                  >{{ user.role }}</span
+                  class="inline-flex items-center px-2.5 py-1 rounded-md text-[13px] font-semibold bg-primary-50 text-primary-600"
                 >
+                  {{ user.role }}
+                </span>
               </td>
-              <td class="px-4 py-3">
+              <td class="px-5 py-4">
                 <span
                   :class="[
-                    'inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium',
+                    'inline-flex items-center px-2.5 py-1 rounded-md text-[13px] font-semibold',
                     user.is_active
                       ? 'bg-success-50 text-success-700'
                       : 'bg-danger-50 text-danger-700',
@@ -304,24 +320,43 @@ onMounted(fetchUsers);
                   {{ user.is_active ? 'Aktif' : 'Nonaktif' }}
                 </span>
               </td>
-              <td class="px-4 py-3">
+              <td class="px-5 py-4">
                 <div class="flex gap-2">
-                  <ActionButton variant="warning" icon="edit" @click="openEditForm(user)"
-                    >Edit</ActionButton
-                  >
-                  <ActionButton variant="danger" icon="delete" @click="openDeleteConfirm(user)"
-                    >Hapus</ActionButton
-                  >
+                  <ActionButton variant="warning" icon="edit" @click="openEditForm(user)">
+                    Edit
+                  </ActionButton>
+                  <ActionButton variant="danger" icon="delete" @click="openDeleteConfirm(user)">
+                    Hapus
+                  </ActionButton>
                 </div>
               </td>
             </tr>
           </tbody>
         </table>
       </div>
-      <p v-if="loading" class="text-center text-text-secondary py-8">Memuat data...</p>
+
+      <div v-if="loading" class="py-12 text-center">
+        <svg class="w-7 h-7 animate-spin text-primary-500 mx-auto" fill="none" viewBox="0 0 24 24">
+          <circle
+            class="opacity-25"
+            cx="12"
+            cy="12"
+            r="10"
+            stroke="currentColor"
+            stroke-width="4"
+          />
+          <path
+            class="opacity-75"
+            fill="currentColor"
+            d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
+          />
+        </svg>
+        <p class="mt-3 text-[15px] text-text-secondary">Memuat data...</p>
+      </div>
+
       <p
         v-else-if="filteredUsers.length === 0 && !loading"
-        class="text-center text-text-secondary py-8"
+        class="text-center text-[15px] text-stone-500 py-12"
       >
         Tidak ada user ditemukan.
       </p>
@@ -336,29 +371,29 @@ onMounted(fetchUsers);
     >
       <form @submit.prevent="saveUser">
         <div class="mb-4">
-          <label class="block text-sm font-medium text-text-primary mb-1.5">Nama</label>
+          <label class="block text-[15px] font-medium text-stone-800 mb-1.5">Nama</label>
           <input
             v-model="form.nama"
             type="text"
             required
-            class="w-full px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
+            class="w-full px-3 py-2.5 text-[15px] border-2 border-stone-200 rounded-xs focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
           />
         </div>
         <div class="mb-4">
-          <label class="block text-sm font-medium text-text-primary mb-1.5">Email</label>
+          <label class="block text-[15px] font-medium text-stone-800 mb-1.5">Email</label>
           <input
             v-model="form.email"
             type="email"
             required
-            class="w-full px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
+            class="w-full px-3 py-2.5 text-[15px] border-2 border-stone-200 rounded-xs focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
           />
         </div>
         <div class="mb-4">
-          <label class="block text-sm font-medium text-text-primary mb-1.5">Telepon</label>
+          <label class="block text-[15px] font-medium text-stone-800 mb-1.5">Telepon</label>
           <input
             v-model="form.phone"
             type="text"
-            class="w-full px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
+            class="w-full px-3 py-2.5 text-[15px] border-2 border-stone-200 rounded-xs focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
           />
         </div>
         <div class="mb-4">
@@ -372,28 +407,16 @@ onMounted(fetchUsers);
         </div>
         <div class="mb-4">
           <label
-            class="flex items-center gap-2 text-sm font-medium text-text-primary cursor-pointer"
+            class="flex items-center gap-2 text-[15px] font-medium text-stone-800 cursor-pointer"
           >
-            <input v-model="form.is_active" type="checkbox" class="rounded border-border" />
+            <input v-model="form.is_active" type="checkbox" class="rounded border-stone-300" />
             Aktif
           </label>
         </div>
       </form>
       <template #footer>
-        <button
-          type="button"
-          class="px-3 py-2 text-sm font-medium text-text-secondary bg-white border border-border rounded-lg hover:bg-surface-50 transition-colors"
-          @click="showFormModal = false"
-        >
-          Batal
-        </button>
-        <button
-          type="button"
-          class="px-3 py-2 text-sm font-medium text-white bg-primary-600 rounded-lg hover:bg-primary-700 transition-colors"
-          @click="saveUser"
-        >
-          Simpan
-        </button>
+        <ActionButton variant="neutral" @click="showFormModal = false"> Batal </ActionButton>
+        <ActionButton variant="primary" @click="saveUser"> Simpan </ActionButton>
       </template>
     </BaseModal>
 
@@ -404,23 +427,14 @@ onMounted(fetchUsers);
       size="lg"
       @close="showDeleteModal = false"
     >
-      <p class="text-sm text-text-secondary">
-        Apakah Anda yakin ingin menghapus user <strong>{{ deletingUser?.nama }}</strong
+      <p class="text-[15px] text-stone-600">
+        Apakah Anda yakin ingin menghapus user
+        <strong class="text-stone-800">{{ deletingUser?.nama }}</strong
         >?
       </p>
       <template #footer>
-        <button
-          class="px-3 py-2 text-sm font-medium text-text-secondary bg-white border border-border rounded-lg hover:bg-surface-50 transition-colors"
-          @click="showDeleteModal = false"
-        >
-          Batal
-        </button>
-        <button
-          class="px-4 py-2 text-sm font-medium text-white bg-danger-500 rounded-lg hover:bg-danger-700 transition-colors"
-          @click="deleteUser"
-        >
-          Hapus
-        </button>
+        <ActionButton variant="neutral" @click="showDeleteModal = false"> Batal </ActionButton>
+        <ActionButton variant="danger" @click="deleteUser"> Hapus </ActionButton>
       </template>
     </BaseModal>
 
@@ -431,71 +445,80 @@ onMounted(fetchUsers);
       size="lg"
       @close="showImportModal = false"
     >
-      <p class="text-sm text-text-secondary mb-4">
+      <p class="text-[15px] text-stone-600 mb-4">
         Format CSV: kolom wajib
-        <code class="px-1 py-0.5 bg-surface-100 rounded text-xs">nama</code>,
-        <code class="px-1 py-0.5 bg-surface-100 rounded text-xs">email</code>, dan
-        <code class="px-1 py-0.5 bg-surface-100 rounded text-xs">mata_pelajaran</code> (opsional).
+        <code class="px-1.5 py-0.5 bg-surface-warm rounded text-[13px] font-semibold">nama</code>,
+        <code class="px-1.5 py-0.5 bg-surface-warm rounded text-[13px] font-semibold">email</code>,
+        dan
+        <code class="px-1.5 py-0.5 bg-surface-warm rounded text-[13px] font-semibold"
+          >mata_pelajaran</code
+        >
+        (opsional).
       </p>
 
       <div class="mb-4">
-        <label class="block text-sm font-medium text-text-primary mb-1.5">Pilih File CSV</label>
+        <label class="block text-[15px] font-medium text-stone-800 mb-1.5">Pilih File CSV</label>
         <input
           type="file"
           accept=".csv"
-          class="w-full px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
+          class="w-full px-3 py-2.5 text-[15px] border-2 border-stone-200 rounded-xs focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
           @change="handleFileSelect"
         />
       </div>
 
       <div
         v-if="importErrors.length > 0"
-        class="p-3 bg-danger-50 border border-danger-500/20 rounded-lg text-sm text-danger-700 mb-4"
+        class="p-4 bg-danger-50 border-2 border-danger-500/20 rounded-xs text-[15px] text-danger-700 mb-4"
       >
         <p v-for="(err, i) in importErrors" :key="i">{{ err }}</p>
       </div>
 
       <div v-if="importPreview.length > 0" class="mt-4">
-        <h3 class="text-sm font-medium text-text-primary mb-2">Preview (maks 10 baris pertama)</h3>
-        <div class="overflow-x-auto border border-border rounded-lg">
+        <h3 class="text-[15px] font-bold text-stone-800 mb-3">Preview (maks 10 baris pertama)</h3>
+        <div class="overflow-x-auto border-2 border-stone-200 rounded-xs">
           <table class="w-full">
-            <thead class="border-b border-border bg-surface-50">
+            <thead class="border-b-2 border-stone-200">
               <tr>
-                <th class="px-4 py-3 text-left font-medium text-text-secondary text-xs">Nama</th>
-                <th class="px-4 py-3 text-left font-medium text-text-secondary text-xs">Email</th>
-                <th class="px-4 py-3 text-left font-medium text-text-secondary text-xs">
+                <th
+                  class="px-5 py-4 text-left font-bold text-text-secondary text-[13px] uppercase tracking-[0.04em] bg-surface-warm"
+                >
+                  Nama
+                </th>
+                <th
+                  class="px-5 py-4 text-left font-bold text-text-secondary text-[13px] uppercase tracking-[0.04em] bg-surface-warm"
+                >
+                  Email
+                </th>
+                <th
+                  class="px-5 py-4 text-left font-bold text-text-secondary text-[13px] uppercase tracking-[0.04em] bg-surface-warm"
+                >
                   Mata Pelajaran
                 </th>
               </tr>
             </thead>
-            <tbody class="divide-y divide-border">
+            <tbody class="divide-y divide-stone-200">
               <tr
                 v-for="(row, i) in importPreview"
                 :key="i"
-                class="hover:bg-surface-50 transition-colors"
+                class="hover:bg-primary-50 transition-colors"
               >
-                <td class="px-4 py-3 text-sm">{{ row.nama }}</td>
-                <td class="px-4 py-3 text-sm">{{ row.email }}</td>
-                <td class="px-4 py-3 text-sm">{{ row.mata_pelajaran }}</td>
+                <td class="px-5 py-4 text-[15px] text-stone-800">{{ row.nama }}</td>
+                <td class="px-5 py-4 text-[15px] text-stone-600">{{ row.email }}</td>
+                <td class="px-5 py-4 text-[15px] text-stone-600">{{ row.mata_pelajaran }}</td>
               </tr>
             </tbody>
           </table>
         </div>
       </div>
       <template #footer>
-        <button
-          class="px-3 py-2 text-sm font-medium text-text-secondary bg-white border border-border rounded-lg hover:bg-surface-50 transition-colors"
-          @click="showImportModal = false"
-        >
-          Batal
-        </button>
-        <button
-          class="px-3 py-2 text-sm font-medium text-white bg-primary-600 rounded-lg hover:bg-primary-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+        <ActionButton variant="neutral" @click="showImportModal = false"> Batal </ActionButton>
+        <ActionButton
+          variant="primary"
           :disabled="!importFile || importErrors.length > 0 || importing"
           @click="importCsv"
         >
           {{ importing ? 'Mengimport...' : 'Import' }}
-        </button>
+        </ActionButton>
       </template>
     </BaseModal>
   </div>

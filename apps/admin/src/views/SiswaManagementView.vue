@@ -383,6 +383,32 @@ function getStatusLabel(status: StatusSiswa): string {
   return statusOptions.find((o) => o.value === status)?.label || status;
 }
 
+// Avatar helper functions for Data_Table name column
+const AVATAR_GRADIENTS = [
+  '#2563EB, #1D4ED8',
+  '#16A34A, #15803D',
+  '#D97706, #B45309',
+  '#9333EA, #7E22CE',
+  '#DC2626, #B91C1C',
+  '#0891B2, #0E7490',
+  '#4F46E5, #4338CA',
+  '#EA580C, #C2410C',
+];
+
+function getInitials(nama: string): string {
+  const parts = nama.trim().split(/\s+/);
+  if (parts.length === 1) return parts[0].charAt(0).toUpperCase();
+  return (parts[0].charAt(0) + parts[parts.length - 1].charAt(0)).toUpperCase();
+}
+
+function getAvatarColor(nama: string): string {
+  let hash = 0;
+  for (let i = 0; i < nama.length; i++) {
+    hash = nama.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  return AVATAR_GRADIENTS[Math.abs(hash) % AVATAR_GRADIENTS.length];
+}
+
 onMounted(() => {
   fetchSiswa();
   fetchKelas();
@@ -391,20 +417,20 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="p-4 lg:p-6 max-w-7xl mx-auto">
+  <div class="p-8">
     <PageHeader
       title="Manajemen Siswa"
       description="Kelola data siswa, import CSV, dan status kesiswaan."
     >
       <template #actions>
         <button
-          class="px-3 py-2 text-sm font-medium text-text-secondary bg-white border border-border rounded-lg hover:bg-surface-50 transition-colors"
+          class="px-[18px] py-[10px] text-[14px] font-semibold text-text-secondary bg-white border-2 border-stone-200 rounded-[8px] hover:bg-surface-warm hover:border-primary-300 hover:text-primary-700 transition-all duration-200"
           @click="openImportModal"
         >
           Import CSV
         </button>
         <button
-          class="px-3 py-2 text-sm font-medium text-white bg-primary-600 rounded-lg hover:bg-primary-700 transition-colors"
+          class="px-[18px] py-[10px] text-[14px] font-semibold text-white bg-primary-600 rounded-[8px] shadow-[0_2px_8px_rgba(37,99,235,0.3)] hover:-translate-y-[1px] hover:shadow-[0_4px_12px_rgba(37,99,235,0.4)] transition-all duration-200"
           @click="openCreateForm"
         >
           Tambah Siswa
@@ -413,8 +439,8 @@ onMounted(() => {
     </PageHeader>
 
     <!-- Filters -->
-    <div class="flex flex-wrap items-end gap-2 mb-4">
-      <div class="relative w-48 min-w-[150px]">
+    <div class="flex flex-wrap items-end gap-3 mb-6">
+      <div class="relative w-52 min-w-[160px]">
         <svg
           class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text-tertiary"
           fill="none"
@@ -432,10 +458,10 @@ onMounted(() => {
           v-model="search"
           type="text"
           placeholder="Cari nama atau NISN..."
-          class="w-full pl-9 pr-3 py-2 text-sm border border-border rounded-lg bg-white placeholder:text-text-tertiary focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-colors"
+          class="w-full pl-9 pr-3 py-2.5 text-[15px] border-2 border-stone-200 rounded-[8px] bg-white placeholder:text-text-tertiary focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-colors"
         />
       </div>
-      <div class="w-40">
+      <div class="w-44">
         <SearchSelect
           v-model="filterKelas"
           :options="kelasSelectOptions"
@@ -443,7 +469,7 @@ onMounted(() => {
           clearable
         />
       </div>
-      <div class="w-40">
+      <div class="w-44">
         <SearchSelect
           v-model="filterStatus"
           :options="statusOptions"
@@ -452,7 +478,7 @@ onMounted(() => {
           :searchable="false"
         />
       </div>
-      <div class="w-48">
+      <div class="w-52">
         <SearchSelect
           v-model="filterTahunAjaran"
           :options="tahunAjaranSelectOptions"
@@ -462,56 +488,95 @@ onMounted(() => {
       </div>
     </div>
 
-    <!-- Table -->
-    <div class="bg-white border border-border rounded-xl overflow-hidden">
+    <!-- Card Container with Section Header + Data Table -->
+    <div class="bg-white border-2 border-stone-200 rounded-[16px] shadow-xs overflow-hidden">
+      <!-- Section Header -->
+      <div
+        class="flex items-center justify-between px-6 py-5 bg-primary-50 border-b-2 border-primary-200"
+      >
+        <h3 class="text-[16px] font-bold text-primary-800">Daftar Siswa</h3>
+        <span class="text-[13px] font-semibold text-text-secondary"> {{ totalCount }} siswa </span>
+      </div>
+
       <div class="overflow-x-auto">
-        <table v-if="!loading && siswaList.length > 0" class="w-full text-sm">
+        <table v-if="!loading && siswaList.length > 0" class="w-full">
           <thead>
-            <tr class="border-b border-border">
-              <th class="text-left px-4 py-3 font-medium text-text-secondary bg-surface-50">
+            <tr class="border-b-2 border-stone-200">
+              <th
+                class="text-left px-5 py-4 text-[13px] font-bold uppercase tracking-[0.04em] text-text-secondary bg-surface-warm"
+              >
                 Nama
               </th>
-              <th class="text-left px-4 py-3 font-medium text-text-secondary bg-surface-50">
+              <th
+                class="text-left px-5 py-4 text-[13px] font-bold uppercase tracking-[0.04em] text-text-secondary bg-surface-warm"
+              >
                 NISN
               </th>
-              <th class="text-left px-4 py-3 font-medium text-text-secondary bg-surface-50">
+              <th
+                class="text-left px-5 py-4 text-[13px] font-bold uppercase tracking-[0.04em] text-text-secondary bg-surface-warm"
+              >
                 Kelas
               </th>
-              <th class="text-left px-4 py-3 font-medium text-text-secondary bg-surface-50">JK</th>
-              <th class="text-left px-4 py-3 font-medium text-text-secondary bg-surface-50">
+              <th
+                class="text-left px-5 py-4 text-[13px] font-bold uppercase tracking-[0.04em] text-text-secondary bg-surface-warm"
+              >
+                JK
+              </th>
+              <th
+                class="text-left px-5 py-4 text-[13px] font-bold uppercase tracking-[0.04em] text-text-secondary bg-surface-warm"
+              >
                 Wali / No. Telp
               </th>
-              <th class="text-left px-4 py-3 font-medium text-text-secondary bg-surface-50">
+              <th
+                class="text-left px-5 py-4 text-[13px] font-bold uppercase tracking-[0.04em] text-text-secondary bg-surface-warm"
+              >
                 Status
               </th>
-              <th class="text-right px-4 py-3 font-medium text-text-secondary bg-surface-50">
+              <th
+                class="text-right px-5 py-4 text-[13px] font-bold uppercase tracking-[0.04em] text-text-secondary bg-surface-warm"
+              >
                 Aksi
               </th>
             </tr>
           </thead>
-          <tbody class="divide-y divide-border">
+          <tbody class="divide-y divide-stone-200">
             <tr
               v-for="siswa in siswaList"
               :key="siswa.id"
-              class="hover:bg-surface-50 transition-colors"
+              class="hover:bg-primary-50 transition-colors duration-200"
             >
-              <td class="px-4 py-3 font-medium text-text-primary">
-                <router-link :to="'/siswa/' + siswa.id" class="text-primary-600 hover:underline">{{
-                  siswa.nama
-                }}</router-link>
+              <td class="px-5 py-4 text-[15px] text-text-primary">
+                <div class="flex items-center gap-3">
+                  <div
+                    class="w-[38px] h-[38px] rounded-full flex items-center justify-center text-white text-[14px] font-bold shrink-0"
+                    :style="{
+                      background: `linear-gradient(135deg, ${getAvatarColor(siswa.nama)})`,
+                    }"
+                  >
+                    {{ getInitials(siswa.nama) }}
+                  </div>
+                  <router-link
+                    :to="'/siswa/' + siswa.id"
+                    class="font-semibold text-primary-600 hover:text-primary-700 hover:underline"
+                  >
+                    {{ siswa.nama }}
+                  </router-link>
+                </div>
               </td>
-              <td class="px-4 py-3 text-text-secondary font-mono text-xs">{{ siswa.nisn }}</td>
-              <td class="px-4 py-3 text-text-secondary">{{ siswa.kelas_nama || '-' }}</td>
-              <td class="px-4 py-3 text-text-secondary">
+              <td class="px-5 py-4 text-[15px] text-text-secondary font-mono">{{ siswa.nisn }}</td>
+              <td class="px-5 py-4 text-[15px] text-text-secondary">
+                {{ siswa.kelas_nama || '-' }}
+              </td>
+              <td class="px-5 py-4 text-[15px] text-text-secondary">
                 {{ siswa.jenis_kelamin === 'L' ? 'L' : siswa.jenis_kelamin === 'P' ? 'P' : '-' }}
               </td>
-              <td class="px-4 py-3 text-text-secondary">
+              <td class="px-5 py-4 text-[15px] text-text-secondary">
                 {{ siswa.orang_tua_nama || '-' }} / {{ siswa.orang_tua_phone || '-' }}
               </td>
-              <td class="px-4 py-3">
+              <td class="px-5 py-4">
                 <span
                   :class="[
-                    'inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium',
+                    'inline-flex items-center px-2.5 py-1 rounded-md text-[13px] font-semibold',
                     siswa.status === 'aktif' ? 'bg-success-50 text-success-700' : '',
                     siswa.status === 'pindah_sekolah' || siswa.status === 'keluar'
                       ? 'bg-danger-50 text-danger-700'
@@ -522,7 +587,7 @@ onMounted(() => {
                   {{ getStatusLabel(siswa.status) }}
                 </span>
               </td>
-              <td class="px-4 py-3 text-right">
+              <td class="px-5 py-4 text-right">
                 <div class="flex items-center justify-end gap-1">
                   <ActionButton variant="warning" icon="edit" @click="openEditForm(siswa)"
                     >Edit</ActionButton
@@ -561,7 +626,7 @@ onMounted(() => {
               d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
             />
           </svg>
-          <p class="text-sm text-text-tertiary mt-2">Memuat data...</p>
+          <p class="text-[15px] text-text-tertiary mt-2">Memuat data...</p>
         </div>
 
         <!-- Empty -->
@@ -579,7 +644,7 @@ onMounted(() => {
               d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"
             />
           </svg>
-          <p class="text-sm text-text-tertiary">Tidak ada siswa ditemukan.</p>
+          <p class="text-[15px] text-text-tertiary">Tidak ada siswa ditemukan.</p>
         </div>
       </div>
     </div>

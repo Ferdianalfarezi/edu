@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, reactive, onMounted, watch, computed } from 'vue';
 import { api } from '@/api/client';
-import { PageHeader, BaseModal, TablePagination } from '@/components/ui';
+import { PageHeader, BaseModal, ActionButton, TablePagination } from '@/components/ui';
 import { useTableUrlState } from '@/composables/useTableUrlState';
 import { useToast } from '@/composables/useToast';
 
@@ -205,54 +205,71 @@ onMounted(fetchPengumuman);
 </script>
 
 <template>
-  <div class="p-4 lg:p-6 max-w-7xl mx-auto">
+  <div class="p-8">
     <PageHeader title="Pengumuman" description="Buat dan kirim pengumuman ke orang tua siswa.">
       <template #actions>
-        <button
-          class="px-3 py-2 text-sm font-medium text-white bg-primary-600 rounded-lg hover:bg-primary-700 transition-colors"
-          @click="openCreateModal"
-        >
+        <ActionButton variant="primary" size="sm" @click="openCreateModal">
           Buat Pengumuman
-        </button>
+        </ActionButton>
       </template>
     </PageHeader>
 
-    <!-- Table -->
-    <div class="bg-white border border-border rounded-xl overflow-hidden">
+    <!-- Card Container -->
+    <div class="bg-white border-2 border-stone-200 rounded-[16px] shadow-xs overflow-hidden">
+      <!-- Section Header -->
+      <div
+        class="flex items-center justify-between px-6 py-5 bg-primary-50 border-b-2 border-primary-200"
+      >
+        <h3 class="text-[16px] font-bold text-primary-800">Daftar Pengumuman</h3>
+        <span class="text-[13px] font-semibold text-text-secondary">
+          {{ totalCount }} pengumuman
+        </span>
+      </div>
+
       <div class="overflow-x-auto">
-        <table v-if="!loading && !error && pengumumanList.length > 0" class="w-full text-sm">
+        <table v-if="!loading && !error && pengumumanList.length > 0" class="w-full">
           <thead>
-            <tr class="border-b border-border">
-              <th class="text-left px-4 py-3 font-medium text-text-secondary bg-surface-50">
+            <tr class="border-b-2 border-stone-200">
+              <th
+                class="text-left px-5 py-4 text-[13px] font-bold uppercase tracking-[0.04em] text-text-secondary bg-surface-warm"
+              >
                 Judul
               </th>
-              <th class="text-left px-4 py-3 font-medium text-text-secondary bg-surface-50">
+              <th
+                class="text-left px-5 py-4 text-[13px] font-bold uppercase tracking-[0.04em] text-text-secondary bg-surface-warm"
+              >
                 Mode
               </th>
-              <th class="text-left px-4 py-3 font-medium text-text-secondary bg-surface-50">
+              <th
+                class="text-left px-5 py-4 text-[13px] font-bold uppercase tracking-[0.04em] text-text-secondary bg-surface-warm"
+              >
                 Penerima
               </th>
-              <th class="text-left px-4 py-3 font-medium text-text-secondary bg-surface-50">
+              <th
+                class="text-left px-5 py-4 text-[13px] font-bold uppercase tracking-[0.04em] text-text-secondary bg-surface-warm"
+              >
                 Tanggal
               </th>
-              <th class="text-left px-4 py-3 font-medium text-text-secondary bg-surface-50">
+              <th
+                class="text-left px-5 py-4 text-[13px] font-bold uppercase tracking-[0.04em] text-text-secondary bg-surface-warm"
+              >
                 Status
               </th>
             </tr>
           </thead>
-          <tbody class="divide-y divide-border">
+          <tbody class="divide-y divide-stone-200">
             <tr
               v-for="item in pengumumanList"
               :key="item.id"
-              class="hover:bg-surface-50 transition-colors"
+              class="hover:bg-primary-50 transition-colors duration-200"
             >
-              <td class="px-4 py-3 font-medium text-text-primary max-w-xs truncate">
+              <td class="px-5 py-4 text-[15px] font-medium text-text-primary max-w-xs truncate">
                 {{ item.judul }}
               </td>
-              <td class="px-4 py-3">
+              <td class="px-5 py-4">
                 <span
                   :class="[
-                    'inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium',
+                    'inline-flex items-center px-2.5 py-1 rounded-xs text-[13px] font-semibold',
                     item.mode === 'broadcast'
                       ? 'bg-primary-50 text-primary-700'
                       : 'bg-warning-50 text-warning-700',
@@ -261,18 +278,18 @@ onMounted(fetchPengumuman);
                   {{ item.mode === 'broadcast' ? 'Broadcast' : 'Targeted' }}
                 </span>
               </td>
-              <td class="px-4 py-3 text-text-secondary">
+              <td class="px-5 py-4 text-[15px] text-text-secondary">
                 {{ item.jumlah_penerima }}
               </td>
-              <td class="px-4 py-3 text-text-secondary">
+              <td class="px-5 py-4 text-[15px] text-text-secondary">
                 {{ formatDate(item.created_at) }}
               </td>
-              <td class="px-4 py-3">
+              <td class="px-5 py-4">
                 <span
                   :class="[
-                    'inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium',
+                    'inline-flex items-center px-2.5 py-1 rounded-xs text-[13px] font-semibold',
                     item.status === 'terkirim' ? 'bg-success-50 text-success-700' : '',
-                    item.status === 'draft' ? 'bg-surface-100 text-text-secondary' : '',
+                    item.status === 'draft' ? 'bg-stone-100 text-text-secondary' : '',
                     item.status === 'gagal' ? 'bg-danger-50 text-danger-700' : '',
                   ]"
                 >
@@ -310,7 +327,7 @@ onMounted(fetchPengumuman);
               d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
             />
           </svg>
-          <p class="text-sm text-text-tertiary mt-2">Memuat data...</p>
+          <p class="text-[15px] text-text-tertiary mt-2">Memuat data...</p>
         </div>
 
         <!-- Error -->
@@ -328,19 +345,16 @@ onMounted(fetchPengumuman);
               d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z"
             />
           </svg>
-          <p class="text-sm text-text-secondary mb-3">Gagal memuat data pengumuman.</p>
-          <button
-            class="px-4 py-2 text-sm font-medium text-primary-600 border border-primary-300 rounded-lg hover:bg-primary-50 transition-colors"
-            @click="fetchPengumuman"
-          >
+          <p class="text-[15px] text-text-secondary mb-3">Gagal memuat data pengumuman.</p>
+          <ActionButton variant="neutral" size="sm" @click="fetchPengumuman">
             Coba Lagi
-          </button>
+          </ActionButton>
         </div>
 
         <!-- Empty -->
         <div v-else class="p-12 text-center">
           <svg
-            class="w-10 h-10 text-surface-300 mx-auto mb-3"
+            class="w-10 h-10 text-stone-300 mx-auto mb-3"
             fill="none"
             viewBox="0 0 24 24"
             stroke="currentColor"
@@ -352,7 +366,7 @@ onMounted(fetchPengumuman);
               d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z"
             />
           </svg>
-          <p class="text-sm text-text-tertiary">Belum ada pengumuman.</p>
+          <p class="text-[15px] text-text-tertiary">Belum ada pengumuman.</p>
         </div>
       </div>
     </div>
@@ -376,10 +390,10 @@ onMounted(fetchPengumuman);
       size="lg"
       @close="showCreateModal = false"
     >
-      <form class="space-y-4" @submit.prevent="submitPengumuman">
+      <form class="space-y-5" @submit.prevent="submitPengumuman">
         <!-- Judul -->
         <div>
-          <label class="block text-sm font-medium text-text-primary mb-1.5">
+          <label class="block text-[15px] font-semibold text-text-primary mb-2">
             Judul <span class="text-danger-500">*</span>
           </label>
           <input
@@ -387,18 +401,20 @@ onMounted(fetchPengumuman);
             type="text"
             maxlength="255"
             placeholder="Judul pengumuman..."
-            class="w-full px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
+            class="w-full px-4 py-3 text-[15px] border-2 border-stone-200 rounded-xs bg-white placeholder:text-text-tertiary focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-colors"
           />
-          <div class="flex items-center justify-between mt-1">
-            <p v-if="formErrors.judul" class="text-xs text-danger-500">{{ formErrors.judul }}</p>
+          <div class="flex items-center justify-between mt-1.5">
+            <p v-if="formErrors.judul" class="text-[13px] text-danger-500">
+              {{ formErrors.judul }}
+            </p>
             <span v-else />
-            <span class="text-xs text-text-tertiary">{{ form.judul.length }}/255</span>
+            <span class="text-[13px] text-text-tertiary">{{ form.judul.length }}/255</span>
           </div>
         </div>
 
         <!-- Deskripsi -->
         <div>
-          <label class="block text-sm font-medium text-text-primary mb-1.5">
+          <label class="block text-[15px] font-semibold text-text-primary mb-2">
             Deskripsi <span class="text-danger-500">*</span>
           </label>
           <textarea
@@ -406,55 +422,55 @@ onMounted(fetchPengumuman);
             rows="5"
             maxlength="5000"
             placeholder="Isi pengumuman..."
-            class="w-full px-3 py-2 text-sm border border-border rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
+            class="w-full px-4 py-3 text-[15px] border-2 border-stone-200 rounded-xs resize-none bg-white placeholder:text-text-tertiary focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-colors"
           />
-          <div class="flex items-center justify-between mt-1">
-            <p v-if="formErrors.deskripsi" class="text-xs text-danger-500">
+          <div class="flex items-center justify-between mt-1.5">
+            <p v-if="formErrors.deskripsi" class="text-[13px] text-danger-500">
               {{ formErrors.deskripsi }}
             </p>
             <span v-else />
-            <span class="text-xs text-text-tertiary">{{ deskripsiCharCount }}/5000</span>
+            <span class="text-[13px] text-text-tertiary">{{ deskripsiCharCount }}/5000</span>
           </div>
         </div>
 
         <!-- Mode -->
         <div>
-          <label class="block text-sm font-medium text-text-primary mb-1.5">
+          <label class="block text-[15px] font-semibold text-text-primary mb-2">
             Mode Pengiriman <span class="text-danger-500">*</span>
           </label>
-          <div class="flex items-center gap-4">
+          <div class="flex items-center gap-5">
             <label class="flex items-center gap-2 cursor-pointer">
               <input
                 v-model="form.mode"
                 type="radio"
                 value="broadcast"
-                class="w-4 h-4 text-primary-600 border-border focus:ring-primary-500"
+                class="w-4 h-4 text-primary-600 border-stone-200 focus:ring-primary-500"
               />
-              <span class="text-sm text-text-primary">Broadcast (Semua orang tua)</span>
+              <span class="text-[15px] text-text-primary">Broadcast (Semua orang tua)</span>
             </label>
             <label class="flex items-center gap-2 cursor-pointer">
               <input
                 v-model="form.mode"
                 type="radio"
                 value="targeted"
-                class="w-4 h-4 text-primary-600 border-border focus:ring-primary-500"
+                class="w-4 h-4 text-primary-600 border-stone-200 focus:ring-primary-500"
               />
-              <span class="text-sm text-text-primary">Targeted (Siswa tertentu)</span>
+              <span class="text-[15px] text-text-primary">Targeted (Siswa tertentu)</span>
             </label>
           </div>
         </div>
 
         <!-- Siswa Selector (shown only for targeted) -->
         <div v-if="form.mode === 'targeted'">
-          <label class="block text-sm font-medium text-text-primary mb-1.5">
+          <label class="block text-[15px] font-semibold text-text-primary mb-2">
             Pilih Siswa <span class="text-danger-500">*</span>
-            <span class="text-xs text-text-tertiary font-normal ml-1">(maks. 100)</span>
+            <span class="text-[13px] text-text-tertiary font-normal ml-1">(maks. 100)</span>
           </label>
 
           <!-- Search input -->
           <div class="relative">
             <svg
-              class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text-tertiary"
+              class="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-text-tertiary"
               fill="none"
               viewBox="0 0 24 24"
               stroke="currentColor"
@@ -470,12 +486,12 @@ onMounted(fetchPengumuman);
               v-model="siswaSearchQuery"
               type="text"
               placeholder="Cari siswa berdasarkan nama atau NISN..."
-              class="w-full pl-9 pr-3 py-2 text-sm border border-border rounded-lg bg-white placeholder:text-text-tertiary focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
+              class="w-full pl-10 pr-4 py-3 text-[15px] border-2 border-stone-200 rounded-xs bg-white placeholder:text-text-tertiary focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-colors"
               @input="onSiswaSearchInput"
             />
             <svg
               v-if="siswaSearchLoading"
-              class="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 animate-spin text-primary-500"
+              class="absolute right-3.5 top-1/2 -translate-y-1/2 w-4 h-4 animate-spin text-primary-500"
               viewBox="0 0 24 24"
               fill="none"
             >
@@ -498,38 +514,38 @@ onMounted(fetchPengumuman);
           <!-- Search results dropdown -->
           <div
             v-if="siswaSearchResults.length > 0"
-            class="mt-1 border border-border rounded-lg bg-white shadow-lg max-h-[160px] overflow-y-auto"
+            class="mt-1.5 border-2 border-stone-200 rounded-xs bg-white shadow-lg max-h-40 overflow-y-auto"
           >
             <button
               v-for="siswa in siswaSearchResults"
               :key="siswa.id"
               type="button"
-              class="w-full text-left px-3 py-2 text-sm hover:bg-surface-50 transition-colors border-b border-border last:border-b-0"
+              class="w-full text-left px-4 py-3 text-[15px] hover:bg-primary-50 transition-colors duration-200 border-b border-stone-100 last:border-b-0"
               @click="addSiswa(siswa)"
             >
               <span class="font-medium text-text-primary">{{ siswa.nama }}</span>
-              <span class="text-text-tertiary ml-2 text-xs">{{ siswa.nisn }}</span>
-              <span v-if="siswa.kelas_nama" class="text-text-tertiary ml-1 text-xs"
+              <span class="text-text-tertiary ml-2 text-[13px]">{{ siswa.nisn }}</span>
+              <span v-if="siswa.kelas_nama" class="text-text-tertiary ml-1 text-[13px]"
                 >· {{ siswa.kelas_nama }}</span
               >
             </button>
           </div>
 
           <!-- Selected siswa tags -->
-          <div v-if="selectedSiswa.length > 0" class="flex flex-wrap gap-1.5 mt-2">
+          <div v-if="selectedSiswa.length > 0" class="flex flex-wrap gap-2 mt-3">
             <span
               v-for="siswa in selectedSiswa"
               :key="siswa.id"
-              class="inline-flex items-center gap-1 px-2 py-1 bg-primary-50 text-primary-700 rounded-md text-xs font-medium"
+              class="inline-flex items-center gap-1.5 px-2.5 py-1.5 bg-primary-50 text-primary-700 rounded-xs text-[13px] font-semibold"
             >
               {{ siswa.nama }}
               <button
                 type="button"
-                class="p-0.5 rounded hover:bg-primary-100 transition-colors"
+                class="p-0.5 rounded hover:bg-primary-100 transition-colors duration-200"
                 @click="removeSiswa(siswa.id)"
               >
                 <svg
-                  class="w-3 h-3"
+                  class="w-3.5 h-3.5"
                   fill="none"
                   viewBox="0 0 24 24"
                   stroke="currentColor"
@@ -540,29 +556,22 @@ onMounted(fetchPengumuman);
               </button>
             </span>
           </div>
-          <p class="text-xs text-text-tertiary mt-1">
+          <p class="text-[13px] text-text-tertiary mt-1.5">
             {{ selectedSiswa.length }}/100 siswa dipilih
           </p>
-          <p v-if="formErrors.siswa_ids" class="text-xs text-danger-500 mt-1">
+          <p v-if="formErrors.siswa_ids" class="text-[13px] text-danger-500 mt-1">
             {{ formErrors.siswa_ids }}
           </p>
         </div>
       </form>
 
       <template #footer>
-        <button
-          class="px-4 py-2 text-sm font-medium text-text-secondary bg-white border border-border rounded-lg hover:bg-surface-50 transition-colors"
-          @click="showCreateModal = false"
-        >
+        <ActionButton variant="neutral" size="sm" @click="showCreateModal = false">
           Batal
-        </button>
-        <button
-          :disabled="saving"
-          class="px-4 py-2 text-sm font-medium text-white bg-primary-600 rounded-lg hover:bg-primary-700 disabled:opacity-50 transition-colors"
-          @click="submitPengumuman"
-        >
+        </ActionButton>
+        <ActionButton variant="primary" size="sm" :disabled="saving" @click="submitPengumuman">
           {{ saving ? 'Mengirim...' : 'Kirim Pengumuman' }}
-        </button>
+        </ActionButton>
       </template>
     </BaseModal>
   </div>
