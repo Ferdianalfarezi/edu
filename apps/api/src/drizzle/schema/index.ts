@@ -31,6 +31,9 @@ export * from './notifikasi';
 // Pengumuman
 export * from './pengumuman';
 
+// Barang (Inventaris)
+export * from './barang';
+
 // Konfigurasi & Utility
 export * from './konfigurasi';
 
