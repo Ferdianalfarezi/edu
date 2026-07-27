@@ -40,6 +40,7 @@ const pageTitle = computed(() => {
     '/rpp/favorites': 'Favorit RPP',
     '/tagihan': 'Tagihan',
     '/pengumuman': 'Pengumuman',
+    '/barang': 'Inventaris Barang',
     '/tahun-ajaran': 'Tahun Ajaran',
     '/konfigurasi': 'Konfigurasi',
     '/users': 'Pengguna',

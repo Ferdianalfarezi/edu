@@ -39,6 +39,7 @@ const SUB_NAV_CONFIG: SubNavConfig = {
   ],
   keuangan: [{ label: 'Tagihan', path: '/tagihan' }],
   pengumuman: [{ label: 'Pengumuman', path: '/pengumuman' }],
+  barang: [{ label: 'Inventaris Barang', path: '/barang' }],
   pengaturan: [
     { label: 'Tahun Ajaran', path: '/tahun-ajaran' },
     { label: 'Konfigurasi', path: '/konfigurasi' },
@@ -61,6 +62,7 @@ export function useSubNavigation() {
     if (path.startsWith('/rpp')) return 'rpp';
     if (path.startsWith('/tagihan')) return 'keuangan';
     if (path.startsWith('/pengumuman')) return 'pengumuman';
+    if (path.startsWith('/barang')) return 'barang';
 
     // Academic routes under dashboard section
     if (
