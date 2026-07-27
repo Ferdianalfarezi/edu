@@ -207,3 +207,19 @@ table tbody tr:hover {
 .animate-pulse-badge {
   animation: pulse-badge 2s ease-in-out infinite;
 }
+
+/* ===== iOS Safari Auto-Zoom Prevention ===== */
+/* Safari zooms on focus when input font-size < 16px. Enforce min 16px on touch devices. */
+@media screen and (max-width: 768px) {
+  input,
+  select,
+  textarea,
+  input[type='text'],
+  input[type='email'],
+  input[type='password'],
+  input[type='number'],
+  input[type='tel'],
+  input[type='search'] {
+    font-size: 16px !important;
+  }
+}
