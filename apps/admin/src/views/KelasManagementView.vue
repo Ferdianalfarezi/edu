@@ -156,12 +156,12 @@ async function saveKelas() {
   const payload: Record<string, unknown> = {
     nama: form.value.nama,
     tingkat: Number(form.value.tingkat),
-    tahun_ajaran_id: selectedTahunAjaran.value,
+    tahunAjaranId: selectedTahunAjaran.value,
   };
   if (form.value.wali_kelas_id) {
-    payload.wali_kelas_id = form.value.wali_kelas_id;
+    payload.waliKelasId = form.value.wali_kelas_id;
   } else {
-    payload.wali_kelas_id = null;
+    payload.waliKelasId = null;
   }
   if (form.value.kapasitas) {
     payload.kapasitas = Number(form.value.kapasitas);
