@@ -118,13 +118,17 @@ function openDeleteConfirm(user: User) {
 }
 
 async function saveUser() {
-  const payload = {
+  const payload: Record<string, unknown> = {
     nama: form.nama,
     email: form.email,
     phone: form.phone || undefined,
     role: form.role,
-    is_active: form.is_active,
   };
+
+  // is_active only relevant when editing existing user
+  if (editingUser.value) {
+    payload.is_active = form.is_active;
+  }
 
   try {
     if (editingUser.value) {
