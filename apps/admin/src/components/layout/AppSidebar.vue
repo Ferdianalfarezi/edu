@@ -67,6 +67,13 @@ const SIDEBAR_ITEMS: SidebarItem[] = [
     roles: [Role.ADMIN, Role.KEPALA_SEKOLAH],
   },
   {
+    key: 'barang',
+    icon: 'cube',
+    label: 'Inventaris',
+    basePath: '/barang',
+    roles: [Role.ADMIN, Role.GURU, Role.KEPALA_SEKOLAH],
+  },
+  {
     key: 'pengaturan',
     icon: 'cog',
     label: 'Pengaturan',
@@ -94,6 +101,7 @@ function isActive(item: SidebarItem): boolean {
     rpp: ['/rpp'],
     keuangan: ['/tagihan'],
     pengumuman: ['/pengumuman'],
+    barang: ['/barang'],
     pengaturan: ['/tahun-ajaran', '/konfigurasi', '/users', '/audit-logs', '/tenants'],
   };
 
@@ -114,6 +122,7 @@ function navigateTo(item: SidebarItem) {
     rpp: ['/rpp/portal', '/rpp/create', '/rpp/favorites'],
     keuangan: ['/tagihan'],
     pengumuman: ['/pengumuman'],
+    barang: ['/barang'],
     pengaturan: ['/tahun-ajaran', '/konfigurasi', '/users', '/audit-logs', '/tenants'],
   };
 
@@ -232,6 +241,13 @@ const userInitial = computed(() => {
                 stroke-linecap="round"
                 stroke-linejoin="round"
                 d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z"
+              />
+            </template>
+            <template v-else-if="item.icon === 'cube'">
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"
               />
             </template>
             <template v-else-if="item.icon === 'cog'">
