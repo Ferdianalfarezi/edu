@@ -2,7 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { Processor, Process } from '@nestjs/bull';
 import { ConfigService } from '@nestjs/config';
 import { Job } from 'bull';
-import * as nodemailer from 'nodemailer';
+import { google } from 'googleapis';
 import { QUEUE_NAMES } from '@/modules/queue/queue.constants';
 import { BaseProcessor } from './base.processor';
 
@@ -125,27 +125,123 @@ export const emailTemplates = {
   buildTenantCredentialsHtml,
 };
 
+// ─── Gmail API Helper ───────────────────────────────────────────────────────
+
+/**
+ * Build a raw RFC 2822 email message encoded in base64url format.
+ * Gmail API requires this format for sending messages.
+ */
+function buildRawEmail(options: {
+  from: string;
+  to: string;
+  subject: string;
+  html: string;
+}): string {
+  const boundary = `boundary_${Date.now()}`;
+  const messageParts = [
+    `From: ${options.from}`,
+    `To: ${options.to}`,
+    `Subject: =?UTF-8?B?${Buffer.from(options.subject).toString('base64')}?=`,
+    'MIME-Version: 1.0',
+    `Content-Type: multipart/alternative; boundary="${boundary}"`,
+    '',
+    `--${boundary}`,
+    'Content-Type: text/html; charset="UTF-8"',
+    'Content-Transfer-Encoding: base64',
+    '',
+    Buffer.from(options.html).toString('base64'),
+    '',
+    `--${boundary}--`,
+  ];
+
+  const rawMessage = messageParts.join('\r\n');
+  // Gmail API expects base64url encoding (no padding, URL-safe chars)
+  return Buffer.from(rawMessage)
+    .toString('base64')
+    .replace(/\+/g, '-')
+    .replace(/\//g, '_')
+    .replace(/=+$/, '');
+}
+
 // ─── Processor ──────────────────────────────────────────────────────────────
 
 @Processor(QUEUE_NAMES.EMAIL)
 @Injectable()
 export class EmailProcessor extends BaseProcessor {
   private readonly processorLogger = new Logger(EmailProcessor.name);
-  private transporter: nodemailer.Transporter;
-  private fromAddress: string;
+  private gmail: ReturnType<typeof google.gmail> | null = null;
+  private senderEmail: string;
 
   constructor(private readonly configService: ConfigService) {
     super('EmailProcessor', { concurrency: 3, maxAttempts: 3 });
 
-    this.fromAddress = this.configService.get<string>('SMTP_FROM', 'noreply@example.com');
-    this.transporter = nodemailer.createTransport({
-      host: this.configService.get<string>('SMTP_HOST'),
-      port: this.configService.get<number>('SMTP_PORT'),
-      secure: this.configService.get<number>('SMTP_PORT') === 465,
-      auth: {
-        user: this.configService.get<string>('SMTP_USER'),
-        pass: this.configService.get<string>('SMTP_PASSWORD'),
-      },
+    this.senderEmail = this.configService.get<string>('GMAIL_SENDER_EMAIL', 'noreply@example.com');
+
+    this.initializeGmailClient();
+  }
+
+  /**
+   * Initialize Gmail API client with Service Account + domain-wide delegation.
+   * The service account impersonates GMAIL_SENDER_EMAIL to send emails via HTTPS.
+   */
+  private initializeGmailClient(): void {
+    const serviceAccountEmail = this.configService.get<string>('GMAIL_SERVICE_ACCOUNT_EMAIL');
+    const serviceAccountKeyRaw = this.configService.get<string>('GMAIL_SERVICE_ACCOUNT_KEY');
+
+    if (!serviceAccountEmail || !serviceAccountKeyRaw) {
+      this.processorLogger.warn(
+        'Gmail Service Account credentials not configured. Email sending will fail.',
+      );
+      return;
+    }
+
+    try {
+      // Parse the private key from the service account JSON
+      let privateKey: string;
+      try {
+        const keyData = JSON.parse(serviceAccountKeyRaw);
+        privateKey = keyData.private_key;
+      } catch {
+        // If it's not a full JSON, treat it as the private key directly
+        privateKey = serviceAccountKeyRaw;
+      }
+
+      const auth = new google.auth.JWT({
+        email: serviceAccountEmail,
+        key: privateKey,
+        scopes: ['https://www.googleapis.com/auth/gmail.send'],
+        subject: this.senderEmail, // Impersonate this user
+      });
+
+      this.gmail = google.gmail({ version: 'v1', auth });
+      this.processorLogger.log(`Gmail API client initialized (sender: ${this.senderEmail})`);
+    } catch (error) {
+      this.processorLogger.error(
+        `Failed to initialize Gmail API client: ${error instanceof Error ? error.message : error}`,
+      );
+    }
+  }
+
+  /**
+   * Send an email using Gmail API (HTTPS, no SMTP port needed).
+   */
+  private async sendEmail(to: string, subject: string, html: string): Promise<void> {
+    if (!this.gmail) {
+      throw new Error(
+        'Gmail API client not initialized. Check GMAIL_SERVICE_ACCOUNT_EMAIL and GMAIL_SERVICE_ACCOUNT_KEY env vars.',
+      );
+    }
+
+    const raw = buildRawEmail({
+      from: `Teman Sekolah <${this.senderEmail}>`,
+      to,
+      subject,
+      html,
+    });
+
+    await this.gmail.users.messages.send({
+      userId: 'me',
+      requestBody: { raw },
     });
   }
 
@@ -153,12 +249,11 @@ export class EmailProcessor extends BaseProcessor {
   async handlePasswordReset(job: Job<PasswordResetJobData>): Promise<void> {
     const { to, name, resetUrl } = job.data;
 
-    await this.transporter.sendMail({
-      from: this.fromAddress,
+    await this.sendEmail(
       to,
-      subject: 'Reset Password - Sistem Manajemen Sekolah',
-      html: buildPasswordResetHtml(name, resetUrl),
-    });
+      'Reset Password - Sistem Manajemen Sekolah',
+      buildPasswordResetHtml(name, resetUrl),
+    );
 
     this.processorLogger.log(`Password reset email sent to ${to}`);
   }
@@ -169,12 +264,11 @@ export class EmailProcessor extends BaseProcessor {
   ): Promise<void> {
     const { to, name } = job.data;
 
-    await this.transporter.sendMail({
-      from: this.fromAddress,
+    await this.sendEmail(
       to,
-      subject: 'Password Berhasil Diubah - Sistem Manajemen Sekolah',
-      html: buildPasswordChangedHtml(name),
-    });
+      'Password Berhasil Diubah - Sistem Manajemen Sekolah',
+      buildPasswordChangedHtml(name),
+    );
 
     this.processorLogger.log(`Password changed confirmation email sent to ${to}`);
   }
@@ -183,12 +277,11 @@ export class EmailProcessor extends BaseProcessor {
   async handleUserCredentials(job: Job<UserCredentialsJobData>): Promise<void> {
     const { to, name, password, role } = job.data;
 
-    await this.transporter.sendMail({
-      from: this.fromAddress,
+    await this.sendEmail(
       to,
-      subject: 'Akun Baru Anda - Sistem Manajemen Sekolah',
-      html: buildUserCredentialsHtml(name, password, role),
-    });
+      'Akun Baru Anda - Sistem Manajemen Sekolah',
+      buildUserCredentialsHtml(name, password, role),
+    );
 
     this.processorLogger.log(`User credentials email sent to ${to} (role: ${role})`);
   }
@@ -197,12 +290,11 @@ export class EmailProcessor extends BaseProcessor {
   async handleTenantCredentials(job: Job<TenantCredentialsJobData>): Promise<void> {
     const { to, tenantName, adminName, email, password } = job.data;
 
-    await this.transporter.sendMail({
-      from: this.fromAddress,
+    await this.sendEmail(
       to,
-      subject: `Selamat Datang - ${tenantName} - Sistem Manajemen Sekolah`,
-      html: buildTenantCredentialsHtml(tenantName, adminName, email, password),
-    });
+      `Selamat Datang - ${tenantName} - Sistem Manajemen Sekolah`,
+      buildTenantCredentialsHtml(tenantName, adminName, email, password),
+    );
 
     this.processorLogger.log(`Tenant credentials email sent to ${to} for ${tenantName}`);
   }
