@@ -234,13 +234,7 @@ onMounted(fetchItems);
         <ActionButton variant="neutral" icon="none" @click="showFormModal = false">
           Batal
         </ActionButton>
-        <ActionButton
-          variant="primary"
-          icon="none"
-          type="submit"
-          form="form-mapel"
-          @click="saveItem"
-        >
+        <ActionButton variant="primary" icon="none" type="submit" form="form-mapel">
           Simpan
         </ActionButton>
       </template>
