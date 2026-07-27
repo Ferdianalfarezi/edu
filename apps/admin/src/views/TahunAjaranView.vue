@@ -324,12 +324,7 @@ onMounted(fetchItems);
       </form>
       <template #footer>
         <ActionButton variant="neutral" @click="showFormModal = false"> Batal </ActionButton>
-        <ActionButton
-          variant="primary"
-          type="submit"
-          form="form-tahun-ajaran"
-          @click="saveTahunAjaran"
-        >
+        <ActionButton variant="primary" type="submit" form="form-tahun-ajaran">
           Simpan
         </ActionButton>
       </template>
