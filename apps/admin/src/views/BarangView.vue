@@ -2,7 +2,7 @@
 import { ref, reactive, onMounted, watch } from 'vue';
 import { Role } from '@edu/shared';
 import { api } from '@/api/client';
-import { PageHeader, BaseModal, TablePagination } from '@/components/ui';
+import { PageHeader, BaseModal, ActionButton, TablePagination } from '@/components/ui';
 import { useTableUrlState } from '@/composables/useTableUrlState';
 import { useToast } from '@/composables/useToast';
 import { useAuthStore } from '@/stores/auth';
@@ -34,95 +34,48 @@ interface PaginatedResponse {
 
 const authStore = useAuthStore();
 const toast = useToast();
-
 const isAdmin = authStore.hasRole(Role.ADMIN);
 
-// Table state with URL sync (search has built-in 300ms debounce)
 const { page, pageSize, search, queryParams } = useTableUrlState({
   searchKey: 'search',
   defaultPageSize: 15,
 });
 
-// Data
 const barangList = ref<Barang[]>([]);
 const loading = ref(false);
 const totalCount = ref(0);
 const totalPages = ref(0);
-const errorMessage = ref('');
 
-// Modal state
 const showFormModal = ref(false);
 const showDeleteModal = ref(false);
 const editingBarang = ref<Barang | null>(null);
 const deletingBarang = ref<Barang | null>(null);
 const saving = ref(false);
 const deleting = ref(false);
+const formError = ref('');
 
-const form = reactive<BarangForm>({
-  nama: '',
-  deskripsi: '',
-  jumlah: 0,
-});
-const formErrors = ref<Record<string, string>>({});
+const form = reactive<BarangForm>({ nama: '', deskripsi: '', jumlah: 0 });
 
-// Fetch data
 async function fetchBarang() {
   loading.value = true;
-  errorMessage.value = '';
-
   try {
-    const params = { ...queryParams.value };
-    const { data } = await api.get<PaginatedResponse>('/barang', { params });
+    const { data } = await api.get<PaginatedResponse>('/barang', { params: queryParams.value });
     barangList.value = data.data;
     totalCount.value = data.meta.total_count;
     totalPages.value = data.meta.total_pages;
-  } catch (err) {
-    const error = err as { response?: { data?: { message?: string } } };
-    errorMessage.value = error.response?.data?.message || 'Gagal memuat data barang.';
+  } catch {
     barangList.value = [];
   } finally {
     loading.value = false;
   }
 }
 
-// Watch state changes to trigger fetch
 watch([page, pageSize, search], fetchBarang);
 
-// Form validation
-function validateForm(): boolean {
-  formErrors.value = {};
-
-  const nama = form.nama.trim();
-  if (!nama) {
-    formErrors.value.nama = 'Nama barang wajib diisi';
-  } else if (nama.length > 255) {
-    formErrors.value.nama = 'Nama barang maksimal 255 karakter';
-  }
-
-  const jumlah = Number(form.jumlah);
-  if (form.jumlah === '' || isNaN(jumlah)) {
-    formErrors.value.jumlah = 'Jumlah wajib diisi';
-  } else if (!Number.isInteger(jumlah)) {
-    formErrors.value.jumlah = 'Jumlah harus bilangan bulat';
-  } else if (jumlah < 0) {
-    formErrors.value.jumlah = 'Jumlah minimal 0';
-  } else if (jumlah > 999999999) {
-    formErrors.value.jumlah = 'Jumlah maksimal 999.999.999';
-  }
-
-  const deskripsi = form.deskripsi.trim();
-  if (deskripsi.length > 1000) {
-    formErrors.value.deskripsi = 'Deskripsi maksimal 1000 karakter';
-  }
-
-  return Object.keys(formErrors.value).length === 0;
-}
-
-// CRUD operations
 function openCreateForm() {
   editingBarang.value = null;
   Object.assign(form, { nama: '', deskripsi: '', jumlah: 0 });
-  formErrors.value = {};
+  formError.value = '';
   showFormModal.value = true;
 }
 
@@ -133,7 +86,7 @@ function openEditForm(barang: Barang) {
     deskripsi: barang.deskripsi || '',
     jumlah: barang.jumlah,
   });
-  formErrors.value = {};
+  formError.value = '';
   showFormModal.value = true;
 }
 
@@ -143,15 +96,14 @@ function openDeleteConfirm(barang: Barang) {
 }
 
 async function saveBarang() {
-  if (!validateForm()) return;
-
-  saving.value = true;
+  formError.value = '';
   const payload = {
     nama: form.nama.trim(),
     deskripsi: form.deskripsi.trim() || undefined,
     jumlah: Number(form.jumlah),
   };
 
+  saving.value = true;
   try {
     if (editingBarang.value) {
       await api.patch(`/barang/${editingBarang.value.id}`, payload);
@@ -162,14 +114,10 @@ async function saveBarang() {
     }
     showFormModal.value = false;
     await fetchBarang();
-  } catch (err) {
-    const error = err as { response?: { data?: { message?: string | string[] } } };
-    const msg = error.response?.data?.message;
-    if (Array.isArray(msg)) {
-      toast.error(msg[0]);
-    } else {
-      toast.error(msg || 'Gagal menyimpan data barang');
-    }
+  } catch (err: any) {
+    const msg = err.response?.data?.message;
+    formError.value = Array.isArray(msg) ? msg.join(', ') : msg || 'Gagal menyimpan barang.';
+    toast.error(formError.value);
   } finally {
     saving.value = false;
   }
@@ -177,7 +125,6 @@ async function saveBarang() {
 
 async function deleteBarang() {
   if (!deletingBarang.value) return;
-
   deleting.value = true;
   try {
     await api.delete(`/barang/${deletingBarang.value.id}`);
@@ -185,24 +132,15 @@ async function deleteBarang() {
     showDeleteModal.value = false;
     deletingBarang.value = null;
     await fetchBarang();
-  } catch (err) {
-    const error = err as { response?: { data?: { message?: string } } };
-    toast.error(error.response?.data?.message || 'Gagal menghapus barang');
+  } catch (err: any) {
+    toast.error(err.response?.data?.message || 'Gagal menghapus barang');
   } finally {
     deleting.value = false;
   }
 }
 
-// Helpers
-function truncateText(text: string | null, maxLength: number): string {
-  if (!text) return '-';
-  if (text.length <= maxLength) return text;
-  return text.slice(0, maxLength) + '...';
-}
-
 function formatDate(dateStr: string): string {
-  const date = new Date(dateStr);
-  return date.toLocaleDateString('id-ID', {
+  return new Date(dateStr).toLocaleDateString('id-ID', {
     day: 'numeric',
     month: 'long',
     year: 'numeric',
@@ -213,28 +151,22 @@ function formatNumber(num: number): string {
   return num.toLocaleString('id-ID');
 }
 
-onMounted(() => {
-  fetchBarang();
-});
+onMounted(fetchBarang);
 </script>
 
 <template>
-  <div class="p-4 lg:p-6 max-w-7xl mx-auto">
-    <PageHeader title="Pencatatan Barang" description="Kelola inventaris barang sekolah.">
+  <div class="p-8 max-w-7xl mx-auto">
+    <PageHeader title="Inventaris Barang">
       <template #actions>
-        <button
-          v-if="isAdmin"
-          class="px-3 py-2 text-sm font-medium text-white bg-primary-600 rounded-lg hover:bg-primary-700 transition-colors"
-          @click="openCreateForm"
-        >
+        <ActionButton v-if="isAdmin" variant="primary" icon="none" @click="openCreateForm">
           Tambah Barang
-        </button>
+        </ActionButton>
       </template>
     </PageHeader>
 
     <!-- Search -->
-    <div class="flex flex-wrap items-end gap-2 mb-4">
-      <div class="relative w-64">
+    <div class="flex items-center gap-3 mb-5">
+      <div class="relative w-72">
         <svg
           class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text-tertiary"
           fill="none"
@@ -252,59 +184,49 @@ onMounted(() => {
           v-model="search"
           type="text"
           placeholder="Cari nama barang..."
-          class="w-full pl-9 pr-3 py-2 text-sm border border-border rounded-lg bg-white placeholder:text-text-tertiary focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-colors"
+          class="w-full pl-9 pr-3 py-2.5 text-[15px] border-2 border-border rounded-xs focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-colors"
         />
       </div>
     </div>
 
-    <!-- Error State -->
-    <div
-      v-if="errorMessage && !loading"
-      class="p-6 text-center bg-white border border-border rounded-xl"
-    >
-      <svg
-        class="w-10 h-10 text-danger-400 mx-auto mb-3"
-        fill="none"
-        viewBox="0 0 24 24"
-        stroke="currentColor"
-        stroke-width="1"
+    <!-- Card + Section Header + Table -->
+    <div class="bg-white rounded-(--radius-md) border-2 border-border shadow-xs overflow-hidden">
+      <div
+        class="flex items-center justify-between bg-primary-50 p-5 px-6 border-b-2 border-primary-200"
       >
-        <path
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z"
-        />
-      </svg>
-      <p class="text-sm text-text-secondary mb-3">{{ errorMessage }}</p>
-      <button
-        class="px-4 py-2 text-sm font-medium text-white bg-primary-600 rounded-lg hover:bg-primary-700 transition-colors"
-        @click="fetchBarang"
-      >
-        Coba Lagi
-      </button>
-    </div>
+        <h2 class="text-[16px] font-bold text-primary-800">Daftar Barang</h2>
+        <span v-if="!loading" class="text-[13px] font-semibold text-primary-600">
+          {{ totalCount }} barang
+        </span>
+      </div>
 
-    <!-- Table -->
-    <div v-else class="bg-white border border-border rounded-xl overflow-hidden">
-      <div class="overflow-x-auto">
-        <table v-if="!loading && barangList.length > 0" class="w-full text-sm">
+      <div v-if="!loading && barangList.length > 0" class="overflow-x-auto">
+        <table class="w-full">
           <thead>
-            <tr class="border-b border-border">
-              <th class="text-left px-4 py-3 font-medium text-text-secondary bg-surface-50">
+            <tr class="border-b-2 border-border bg-surface-warm">
+              <th
+                class="px-5 py-3.5 text-left text-[13px] font-bold uppercase tracking-[0.04em] text-text-secondary"
+              >
                 Nama
               </th>
-              <th class="text-left px-4 py-3 font-medium text-text-secondary bg-surface-50">
+              <th
+                class="px-5 py-3.5 text-left text-[13px] font-bold uppercase tracking-[0.04em] text-text-secondary"
+              >
                 Deskripsi
               </th>
-              <th class="text-right px-4 py-3 font-medium text-text-secondary bg-surface-50">
+              <th
+                class="px-5 py-3.5 text-right text-[13px] font-bold uppercase tracking-[0.04em] text-text-secondary"
+              >
                 Jumlah
               </th>
-              <th class="text-left px-4 py-3 font-medium text-text-secondary bg-surface-50">
-                Tanggal Ditambahkan
+              <th
+                class="px-5 py-3.5 text-left text-[13px] font-bold uppercase tracking-[0.04em] text-text-secondary"
+              >
+                Ditambahkan
               </th>
               <th
                 v-if="isAdmin"
-                class="text-right px-4 py-3 font-medium text-text-secondary bg-surface-50"
+                class="px-5 py-3.5 text-left text-[13px] font-bold uppercase tracking-[0.04em] text-text-secondary"
               >
                 Aksi
               </th>
@@ -314,81 +236,73 @@ onMounted(() => {
             <tr
               v-for="barang in barangList"
               :key="barang.id"
-              class="hover:bg-surface-50 transition-colors"
+              class="hover:bg-primary-50 transition-colors"
             >
-              <td class="px-4 py-3 font-medium text-text-primary">{{ barang.nama }}</td>
-              <td class="px-4 py-3 text-text-secondary">
-                {{ truncateText(barang.deskripsi, 100) }}
+              <td class="px-5 py-4 text-[15px] text-text-primary font-medium">{{ barang.nama }}</td>
+              <td class="px-5 py-4 text-[15px] text-text-secondary max-w-xs truncate">
+                {{ barang.deskripsi || '-' }}
               </td>
-              <td class="px-4 py-3 text-right text-text-primary tabular-nums">
+              <td
+                class="px-5 py-4 text-[15px] text-text-primary text-right tabular-nums font-medium"
+              >
                 {{ formatNumber(barang.jumlah) }}
               </td>
-              <td class="px-4 py-3 text-text-secondary">{{ formatDate(barang.createdAt) }}</td>
-              <td v-if="isAdmin" class="px-4 py-3 text-right">
-                <div class="flex items-center justify-end gap-1">
-                  <button
-                    class="px-2 py-1 text-xs font-medium text-primary-600 bg-primary-50 rounded-md hover:bg-primary-100 transition-colors"
-                    @click="openEditForm(barang)"
+              <td class="px-5 py-4 text-[15px] text-text-secondary">
+                {{ formatDate(barang.createdAt) }}
+              </td>
+              <td v-if="isAdmin" class="px-5 py-4">
+                <div class="flex items-center gap-2">
+                  <ActionButton variant="warning" icon="edit" @click="openEditForm(barang)"
+                    >Edit</ActionButton
                   >
-                    Edit
-                  </button>
-                  <button
-                    class="px-2 py-1 text-xs font-medium text-danger-600 bg-danger-50 rounded-md hover:bg-danger-100 transition-colors"
-                    @click="openDeleteConfirm(barang)"
+                  <ActionButton variant="danger" icon="delete" @click="openDeleteConfirm(barang)"
+                    >Hapus</ActionButton
                   >
-                    Hapus
-                  </button>
                 </div>
               </td>
             </tr>
           </tbody>
         </table>
+      </div>
 
-        <!-- Loading -->
-        <div v-else-if="loading" class="p-12 text-center">
-          <svg
-            class="w-6 h-6 animate-spin text-primary-500 mx-auto"
-            viewBox="0 0 24 24"
-            fill="none"
-          >
-            <circle
-              class="opacity-25"
-              cx="12"
-              cy="12"
-              r="10"
-              stroke="currentColor"
-              stroke-width="4"
-            />
-            <path
-              class="opacity-75"
-              fill="currentColor"
-              d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
-            />
-          </svg>
-          <p class="text-sm text-text-tertiary mt-2">Memuat data...</p>
-        </div>
-
-        <!-- Empty State -->
-        <div v-else class="p-12 text-center">
-          <svg
-            class="w-10 h-10 text-surface-300 mx-auto mb-3"
-            fill="none"
-            viewBox="0 0 24 24"
+      <!-- Loading -->
+      <div v-else-if="loading" class="py-16 text-center">
+        <svg class="w-7 h-7 animate-spin text-primary-500 mx-auto" fill="none" viewBox="0 0 24 24">
+          <circle
+            class="opacity-25"
+            cx="12"
+            cy="12"
+            r="10"
             stroke="currentColor"
-            stroke-width="1"
-          >
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"
-            />
-          </svg>
-          <p class="text-sm text-text-tertiary">
-            {{
-              search ? 'Tidak ada barang yang sesuai dengan pencarian.' : 'Belum ada data barang.'
-            }}
-          </p>
-        </div>
+            stroke-width="4"
+          />
+          <path
+            class="opacity-75"
+            fill="currentColor"
+            d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
+          />
+        </svg>
+        <p class="mt-3 text-[15px] text-text-secondary">Memuat data...</p>
+      </div>
+
+      <!-- Empty -->
+      <div v-else class="py-16 text-center">
+        <svg
+          class="w-12 h-12 text-stone-300 mx-auto mb-3"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+          stroke-width="1.5"
+        >
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"
+          />
+        </svg>
+        <p class="text-[15px] text-text-secondary">
+          {{ search ? 'Tidak ada barang yang sesuai pencarian.' : 'Belum ada data barang.' }}
+        </p>
       </div>
     </div>
 
@@ -409,100 +323,72 @@ onMounted(() => {
       :title="editingBarang ? 'Edit Barang' : 'Tambah Barang'"
       @close="showFormModal = false"
     >
-      <form class="space-y-4" @submit.prevent="saveBarang">
+      <form id="form-barang" class="space-y-4" @submit.prevent="saveBarang">
         <div>
-          <label class="block text-sm font-medium text-text-primary mb-1.5">
-            Nama Barang <span class="text-danger-500">*</span>
-          </label>
+          <label class="block text-[15px] font-medium text-text-primary mb-1.5">Nama Barang</label>
           <input
             v-model="form.nama"
             type="text"
+            required
             maxlength="255"
             placeholder="Masukkan nama barang"
-            class="w-full px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
+            class="w-full px-3 py-2.5 text-[15px] border-2 border-border rounded-xs focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-colors"
           />
-          <p v-if="formErrors.nama" class="text-xs text-danger-500 mt-1">{{ formErrors.nama }}</p>
         </div>
-
         <div>
-          <label class="block text-sm font-medium text-text-primary mb-1.5">Deskripsi</label>
+          <label class="block text-[15px] font-medium text-text-primary mb-1.5">
+            Deskripsi <span class="text-text-tertiary font-normal">(opsional)</span>
+          </label>
           <textarea
             v-model="form.deskripsi"
             rows="3"
             maxlength="1000"
-            placeholder="Masukkan deskripsi barang (opsional)"
-            class="w-full px-3 py-2 text-sm border border-border rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
+            placeholder="Masukkan deskripsi barang"
+            class="w-full px-3 py-2.5 text-[15px] border-2 border-border rounded-xs resize-none focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-colors"
           />
-          <div class="flex justify-between mt-1">
-            <p v-if="formErrors.deskripsi" class="text-xs text-danger-500">
-              {{ formErrors.deskripsi }}
-            </p>
-            <p class="text-xs text-text-tertiary ml-auto">{{ form.deskripsi.length }}/1000</p>
-          </div>
         </div>
-
         <div>
-          <label class="block text-sm font-medium text-text-primary mb-1.5">
-            Jumlah <span class="text-danger-500">*</span>
-          </label>
+          <label class="block text-[15px] font-medium text-text-primary mb-1.5">Jumlah</label>
           <input
             v-model="form.jumlah"
             type="number"
+            required
             min="0"
-            max="999999999"
-            step="1"
             placeholder="0"
-            class="w-full px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
+            class="w-full px-3 py-2.5 text-[15px] border-2 border-border rounded-xs focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-colors"
           />
-          <p v-if="formErrors.jumlah" class="text-xs text-danger-500 mt-1">
-            {{ formErrors.jumlah }}
-          </p>
         </div>
+        <p v-if="formError" class="text-[13px] text-danger-500 mt-1">{{ formError }}</p>
       </form>
-
       <template #footer>
-        <button
-          class="px-4 py-2 text-sm font-medium text-text-secondary bg-white border border-border rounded-lg hover:bg-surface-50 transition-colors"
-          @click="showFormModal = false"
+        <ActionButton variant="neutral" icon="none" @click="showFormModal = false"
+          >Batal</ActionButton
         >
-          Batal
-        </button>
-        <button
+        <ActionButton
+          variant="primary"
+          icon="none"
+          type="submit"
+          form="form-barang"
           :disabled="saving"
-          class="px-4 py-2 text-sm font-medium text-white bg-primary-600 rounded-lg hover:bg-primary-700 disabled:opacity-50 transition-colors"
-          @click="saveBarang"
         >
           {{ saving ? 'Menyimpan...' : 'Simpan' }}
-        </button>
+        </ActionButton>
       </template>
     </BaseModal>
 
-    <!-- Delete Confirmation Modal -->
-    <BaseModal :show="showDeleteModal" title="Hapus Barang" @close="showDeleteModal = false">
-      <div class="space-y-3">
-        <p class="text-sm text-text-secondary">
-          Anda yakin ingin menghapus barang
-          <strong class="text-text-primary">{{ deletingBarang?.nama }}</strong
-          >?
-        </p>
-        <p class="text-xs text-text-tertiary">
-          Data yang dihapus tidak akan ditampilkan lagi dalam daftar.
-        </p>
-      </div>
+    <!-- Delete Modal -->
+    <BaseModal :show="showDeleteModal" title="Konfirmasi Hapus" @close="showDeleteModal = false">
+      <p class="text-[15px] text-text-primary">
+        Apakah Anda yakin ingin menghapus barang <strong>{{ deletingBarang?.nama }}</strong
+        >?
+      </p>
       <template #footer>
-        <button
-          class="px-4 py-2 text-sm font-medium text-text-secondary bg-white border border-border rounded-lg hover:bg-surface-50 transition-colors"
-          @click="showDeleteModal = false"
+        <ActionButton variant="neutral" icon="none" @click="showDeleteModal = false"
+          >Batal</ActionButton
         >
-          Batal
-        </button>
-        <button
-          :disabled="deleting"
-          class="px-4 py-2 text-sm font-medium text-white bg-danger-500 rounded-lg hover:bg-danger-700 disabled:opacity-50 transition-colors"
-          @click="deleteBarang"
-        >
+        <ActionButton variant="danger" icon="delete" :disabled="deleting" @click="deleteBarang">
           {{ deleting ? 'Menghapus...' : 'Hapus' }}
-        </button>
+        </ActionButton>
       </template>
     </BaseModal>
   </div>
