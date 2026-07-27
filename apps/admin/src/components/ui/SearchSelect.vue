@@ -239,7 +239,7 @@ onUnmounted(() => {
     >
       <div
         v-if="isOpen"
-        class="search-select-dropdown absolute z-50 w-full mt-1 bg-white border border-border shadow-lg overflow-hidden"
+        class="search-select-dropdown absolute z-9999 w-full mt-1 bg-white border border-border shadow-lg overflow-hidden"
       >
         <!-- Search input -->
         <div v-if="searchable" class="p-2 border-b border-border">
