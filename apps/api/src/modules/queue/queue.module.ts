@@ -2,6 +2,7 @@ import { Global, Module } from '@nestjs/common';
 import { BullModule } from '@nestjs/bull';
 import { ConfigService } from '@nestjs/config';
 import { QUEUE_NAMES } from './queue.constants';
+import { EmailProcessor } from '@/jobs/email.processor';
 
 const DEFAULT_JOB_OPTIONS = {
   attempts: 3,
@@ -58,5 +59,6 @@ const DEFAULT_JOB_OPTIONS = {
     ),
   ],
   exports: [BullModule],
+  providers: [EmailProcessor],
 })
 export class QueueModule {}
