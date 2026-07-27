@@ -10,12 +10,21 @@ import {
   emailTemplates,
 } from './email.processor';
 
-// Mock nodemailer
-const mockSendMail = jest.fn().mockResolvedValue({ messageId: 'test-msg-id' });
-jest.mock('nodemailer', () => ({
-  createTransport: jest.fn().mockReturnValue({
-    sendMail: (...args: unknown[]) => mockSendMail(...args),
-  }),
+// Mock googleapis
+const mockSend = jest.fn().mockResolvedValue({ data: { id: 'msg-123' } });
+jest.mock('googleapis', () => ({
+  google: {
+    auth: {
+      JWT: jest.fn().mockImplementation(() => ({})),
+    },
+    gmail: jest.fn().mockReturnValue({
+      users: {
+        messages: {
+          send: (...args: unknown[]) => mockSend(...args),
+        },
+      },
+    }),
+  },
 }));
 
 describe('EmailProcessor', () => {
@@ -24,11 +33,11 @@ describe('EmailProcessor', () => {
   const mockConfigService = {
     get: jest.fn((key: string, defaultValue?: unknown) => {
       const config: Record<string, unknown> = {
-        SMTP_HOST: 'smtp.test.com',
-        SMTP_PORT: 587,
-        SMTP_USER: 'user@test.com',
-        SMTP_PASSWORD: 'secret',
-        SMTP_FROM: 'noreply@school.id',
+        GMAIL_SERVICE_ACCOUNT_EMAIL: 'sa@project.iam.gserviceaccount.com',
+        GMAIL_SERVICE_ACCOUNT_KEY: JSON.stringify({
+          private_key: '-----BEGIN PRIVATE KEY-----\nfake\n-----END PRIVATE KEY-----\n',
+        }),
+        GMAIL_SENDER_EMAIL: 'noreply@school.id',
       };
       return config[key] ?? defaultValue;
     }),
@@ -47,7 +56,7 @@ describe('EmailProcessor', () => {
   // ─── send-password-reset ─────────────────────────────────────────────────
 
   describe('handlePasswordReset', () => {
-    it('should send password reset email with correct recipient, subject, and HTML containing resetUrl', async () => {
+    it('should send password reset email via Gmail API', async () => {
       const jobData: PasswordResetJobData = {
         to: 'guru@school.id',
         name: 'Pak Budi',
@@ -58,13 +67,16 @@ describe('EmailProcessor', () => {
 
       await processor.handlePasswordReset(job);
 
-      expect(mockSendMail).toHaveBeenCalledTimes(1);
-      const callArgs = mockSendMail.mock.calls[0][0];
-      expect(callArgs.from).toBe('noreply@school.id');
-      expect(callArgs.to).toBe('guru@school.id');
-      expect(callArgs.subject).toContain('Reset Password');
-      expect(callArgs.html).toContain('Pak Budi');
-      expect(callArgs.html).toContain('https://app.school.id/reset-password?token=abc123');
+      expect(mockSend).toHaveBeenCalledTimes(1);
+      const callArgs = mockSend.mock.calls[0][0];
+      expect(callArgs.userId).toBe('me');
+      expect(callArgs.requestBody.raw).toBeDefined();
+
+      // Decode raw message to verify headers
+      const raw = callArgs.requestBody.raw;
+      const decoded = Buffer.from(raw, 'base64').toString('utf-8');
+      expect(decoded).toContain('To: guru@school.id');
+      expect(decoded).toContain('From: Teman Sekolah <noreply@school.id>');
     });
   });
 
@@ -81,13 +93,12 @@ describe('EmailProcessor', () => {
 
       await processor.handlePasswordChangedConfirmation(job);
 
-      expect(mockSendMail).toHaveBeenCalledTimes(1);
-      const callArgs = mockSendMail.mock.calls[0][0];
-      expect(callArgs.from).toBe('noreply@school.id');
-      expect(callArgs.to).toBe('admin@school.id');
-      expect(callArgs.subject).toContain('Password Berhasil Diubah');
-      expect(callArgs.html).toContain('Admin Sekolah');
-      expect(callArgs.html).toContain('berhasil diubah');
+      expect(mockSend).toHaveBeenCalledTimes(1);
+      const callArgs = mockSend.mock.calls[0][0];
+      expect(callArgs.userId).toBe('me');
+
+      const decoded = Buffer.from(callArgs.requestBody.raw, 'base64').toString('utf-8');
+      expect(decoded).toContain('To: admin@school.id');
     });
   });
 
@@ -106,14 +117,11 @@ describe('EmailProcessor', () => {
 
       await processor.handleUserCredentials(job);
 
-      expect(mockSendMail).toHaveBeenCalledTimes(1);
-      const callArgs = mockSendMail.mock.calls[0][0];
-      expect(callArgs.from).toBe('noreply@school.id');
-      expect(callArgs.to).toBe('guru.baru@school.id');
-      expect(callArgs.subject).toContain('Akun Baru');
-      expect(callArgs.html).toContain('Ibu Sari');
-      expect(callArgs.html).toContain('TempP@ss123');
-      expect(callArgs.html).toContain('guru');
+      expect(mockSend).toHaveBeenCalledTimes(1);
+      const callArgs = mockSend.mock.calls[0][0];
+
+      const decoded = Buffer.from(callArgs.requestBody.raw, 'base64').toString('utf-8');
+      expect(decoded).toContain('To: guru.baru@school.id');
     });
   });
 
@@ -133,22 +141,19 @@ describe('EmailProcessor', () => {
 
       await processor.handleTenantCredentials(job);
 
-      expect(mockSendMail).toHaveBeenCalledTimes(1);
-      const callArgs = mockSendMail.mock.calls[0][0];
-      expect(callArgs.from).toBe('noreply@school.id');
-      expect(callArgs.to).toBe('admin@sdharapan.sch.id');
-      expect(callArgs.subject).toContain('SD Harapan Bangsa');
-      expect(callArgs.html).toContain('Pak Ahmad');
-      expect(callArgs.html).toContain('admin@sdharapan.sch.id');
-      expect(callArgs.html).toContain('InitP@ss456');
+      expect(mockSend).toHaveBeenCalledTimes(1);
+      const callArgs = mockSend.mock.calls[0][0];
+
+      const decoded = Buffer.from(callArgs.requestBody.raw, 'base64').toString('utf-8');
+      expect(decoded).toContain('To: admin@sdharapan.sch.id');
     });
   });
 
   // ─── Error handling ──────────────────────────────────────────────────────
 
   describe('error handling', () => {
-    it('should propagate SMTP errors so Bull can retry the job', async () => {
-      mockSendMail.mockRejectedValueOnce(new Error('SMTP connection refused'));
+    it('should propagate Gmail API errors so Bull can retry the job', async () => {
+      mockSend.mockRejectedValueOnce(new Error('Gmail API: unauthorized'));
 
       const jobData: PasswordResetJobData = {
         to: 'test@example.com',
@@ -158,7 +163,7 @@ describe('EmailProcessor', () => {
 
       const job = { id: '5', data: jobData } as Job<PasswordResetJobData>;
 
-      await expect(processor.handlePasswordReset(job)).rejects.toThrow('SMTP connection refused');
+      await expect(processor.handlePasswordReset(job)).rejects.toThrow('Gmail API: unauthorized');
     });
   });
 

@@ -106,21 +106,15 @@ export class EnvironmentVariables {
   @IsOptional()
   THROTTLE_LIMIT: number = 60;
 
-  // SMTP
+  // Gmail API (Service Account with domain-wide delegation)
   @IsString()
-  SMTP_HOST: string;
-
-  @IsNumber()
-  SMTP_PORT: number;
+  GMAIL_SERVICE_ACCOUNT_EMAIL: string;
 
   @IsString()
-  SMTP_USER: string;
+  GMAIL_SERVICE_ACCOUNT_KEY: string;
 
   @IsString()
-  SMTP_PASSWORD: string;
-
-  @IsString()
-  SMTP_FROM: string;
+  GMAIL_SENDER_EMAIL: string;
 
   // App Version (ADR-004)
   @IsString()
