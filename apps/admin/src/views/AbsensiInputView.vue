@@ -19,15 +19,15 @@ interface Siswa {
 }
 
 interface AbsensiRecord {
-  siswa_id: string;
+  siswaId: string;
   status: 'hadir' | 'izin' | 'sakit' | 'alpa' | '';
 }
 
 interface ExistingAbsensi {
   id: string;
-  siswa_id: string;
+  siswaId: string;
   status: 'hadir' | 'izin' | 'sakit' | 'alpa';
-  guru_id: string;
+  guruId: string;
 }
 
 const STATUS_OPTIONS = ['hadir', 'izin', 'sakit', 'alpa'] as const;
@@ -72,7 +72,7 @@ const unfilledStudents = computed(() => {
   return records.value
     .filter((r) => !r.status)
     .map((r) => {
-      const siswa = siswaList.value.find((s) => s.id === r.siswa_id);
+      const siswa = siswaList.value.find((s) => s.id === r.siswaId);
       return siswa?.nama || 'Unknown';
     });
 });
@@ -118,26 +118,26 @@ async function fetchStudentsAndAbsensi() {
 
   try {
     const { data: siswaData } = await api.get<{ data: Siswa[] }>('/siswa', {
-      params: { kelas_id: selectedKelasId.value, status: 'aktif' },
+      params: { kelasId: selectedKelasId.value, status: 'aktif' },
     });
     siswaList.value = siswaData.data;
 
     const { data: absensiData } = await api.get<{
       data: ExistingAbsensi[];
-      is_read_only?: boolean;
-      holiday_warning?: string;
+      isReadOnly?: boolean;
+      holidayWarning?: string;
     }>('/absensi', {
-      params: { kelas_id: selectedKelasId.value, tanggal: selectedTanggal.value },
+      params: { kelasId: selectedKelasId.value, tanggal: selectedTanggal.value },
     });
 
     existingAbsensi.value = absensiData.data || [];
-    isReadOnly.value = absensiData.is_read_only || false;
-    holidayWarning.value = absensiData.holiday_warning || '';
+    isReadOnly.value = absensiData.isReadOnly || false;
+    holidayWarning.value = absensiData.holidayWarning || '';
 
     records.value = siswaList.value.map((siswa) => {
-      const existing = existingAbsensi.value.find((a) => a.siswa_id === siswa.id);
+      const existing = existingAbsensi.value.find((a) => a.siswaId === siswa.id);
       return {
-        siswa_id: siswa.id,
+        siswaId: siswa.id,
         status: existing?.status || '',
       };
     });
@@ -163,7 +163,7 @@ async function submitAbsensi() {
     await api.post(`/absensi/kelas/${selectedKelasId.value}`, {
       tanggal: selectedTanggal.value,
       records: records.value.map((r) => ({
-        siswa_id: r.siswa_id,
+        siswaId: r.siswaId,
         status: r.status,
       })),
     });
@@ -346,15 +346,15 @@ onMounted(() => {
             <tbody class="divide-y divide-stone-200">
               <tr
                 v-for="(record, index) in records"
-                :key="record.siswa_id"
+                :key="record.siswaId"
                 class="hover:bg-primary-50 transition-colors"
               >
                 <td class="px-5 py-4 text-[15px] text-center text-stone-600">{{ index + 1 }}</td>
                 <td class="px-5 py-4 text-[15px] text-stone-800 font-medium">
-                  {{ getSiswaName(record.siswa_id) }}
+                  {{ getSiswaName(record.siswaId) }}
                 </td>
                 <td class="px-5 py-4 text-[15px] text-stone-500">
-                  {{ getSiswaNisn(record.siswa_id) }}
+                  {{ getSiswaNisn(record.siswaId) }}
                 </td>
                 <td class="px-5 py-4">
                   <div class="flex gap-2">
@@ -373,7 +373,7 @@ onMounted(() => {
                       <input
                         v-model="record.status"
                         type="radio"
-                        :name="`status-${record.siswa_id}`"
+                        :name="`status-${record.siswaId}`"
                         :value="status"
                         :disabled="isReadOnly"
                         class="sr-only"

@@ -2,6 +2,7 @@ import axios, { type AxiosError, type AxiosInstance, type InternalAxiosRequestCo
 import type { LoginResponse } from '@edu/shared';
 import { useToast } from '@/composables/useToast';
 import { useTenantContextStore } from '@/stores/tenant-context';
+import { keysToCamel, keysToSnake } from './case-transform';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api/v1';
 
@@ -99,6 +100,34 @@ api.interceptors.request.use(
       config.headers['X-Tenant-Context'] = tenantStore.activeTenant.id;
     }
     return config;
+  },
+  (error) => Promise.reject(error),
+);
+
+// Request interceptor: convert outgoing request body and query params to snake_case.
+// This lets Vue views use camelCase when building payloads/params; the API receives snake_case.
+// FormData (file uploads) is passed through untouched.
+api.interceptors.request.use(
+  (config: InternalAxiosRequestConfig) => {
+    if (config.data) {
+      config.data = keysToSnake(config.data);
+    }
+    if (config.params) {
+      config.params = keysToSnake(config.params);
+    }
+    return config;
+  },
+  (error) => Promise.reject(error),
+);
+
+// Response interceptor: convert all incoming response data keys to camelCase.
+// Vue views can access response.data with camelCase regardless of what the API sends.
+api.interceptors.response.use(
+  (response) => {
+    if (response.data) {
+      response.data = keysToCamel(response.data);
+    }
+    return response;
   },
   (error) => Promise.reject(error),
 );

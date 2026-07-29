@@ -4,11 +4,11 @@ import { api } from '@/api/client';
 import { StatCard, QuickActionCard } from '@/components/ui';
 
 interface TenantStats {
-  total_users: number;
-  total_students: number;
-  total_classes: number;
-  total_teachers: number;
-  active_tahun_ajaran: string | null;
+  totalUsers: number;
+  totalStudents: number;
+  totalClasses: number;
+  totalTeachers: number;
+  activeTahunAjaran: string | null;
 }
 
 const loading = ref(true);
@@ -79,25 +79,25 @@ onMounted(fetchStats);
       <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4.5 mb-8">
         <StatCard
           label="Total Pengguna"
-          :value="stats.total_users"
+          :value="stats.totalUsers"
           variant="blue"
           icon="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"
         />
         <StatCard
           label="Total Siswa"
-          :value="stats.total_students"
+          :value="stats.totalStudents"
           variant="green"
           icon="M12 14l9-5-9-5-9 5 9 5zm0 0l6.16-3.422a12.083 12.083 0 01.665 6.479A11.952 11.952 0 0012 20.055a11.952 11.952 0 00-6.824-2.998 12.078 12.078 0 01.665-6.479L12 14z"
         />
         <StatCard
           label="Total Kelas"
-          :value="stats.total_classes"
+          :value="stats.totalClasses"
           variant="amber"
           icon="M4 5a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM4 13a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H5a1 1 0 01-1-1v-6zM16 13a1 1 0 011-1h2a1 1 0 011 1v6a1 1 0 01-1 1h-2a1 1 0 01-1-1v-6z"
         />
         <StatCard
           label="Total Guru"
-          :value="stats.total_teachers"
+          :value="stats.totalTeachers"
           variant="purple"
           icon="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
         />
@@ -130,15 +130,13 @@ onMounted(fetchStats);
 
       <!-- Active tahun ajaran -->
       <div
-        v-if="stats.active_tahun_ajaran"
+        v-if="stats.activeTahunAjaran"
         class="bg-white border-2 border-stone-200 rounded-2xl p-5"
       >
         <div class="flex items-center gap-3">
           <div class="w-2.5 h-2.5 rounded-full bg-success-500 animate-pulse" />
           <span class="text-[14px] text-text-secondary">Tahun Ajaran Aktif:</span>
-          <span class="text-[15px] font-bold text-text-primary">{{
-            stats.active_tahun_ajaran
-          }}</span>
+          <span class="text-[15px] font-bold text-text-primary">{{ stats.activeTahunAjaran }}</span>
         </div>
       </div>
     </template>

@@ -11,14 +11,14 @@ import { Role } from '@edu/shared';
 interface RppItem {
   id: string;
   judul: string;
-  guru_nama: string;
-  mata_pelajaran_nama: string;
-  kategori_nama: string;
-  tahun_terbit: number;
-  konten_type: 'richtext' | 'file';
-  tanggal_publish: string;
-  updated_at: string;
-  is_favorited: boolean;
+  guruNama: string;
+  mataPelajaranNama: string;
+  kategoriNama: string;
+  tahunTerbit: number;
+  kontenType: 'richtext' | 'file';
+  tanggalPublish: string;
+  updatedAt: string;
+  isFavorited: boolean;
 }
 
 interface MataPelajaran {
@@ -35,9 +35,9 @@ interface OffsetPaginatedResponse {
   data: RppItem[];
   meta: {
     page: number;
-    page_size: number;
-    total_count: number;
-    total_pages: number;
+    pageSize: number;
+    totalCount: number;
+    totalPages: number;
   };
 }
 
@@ -113,8 +113,8 @@ async function fetchRpp() {
 
     const { data } = await api.get<OffsetPaginatedResponse>('/rpp', { params });
     items.value = data.data;
-    totalCount.value = data.meta.total_count;
-    totalPages.value = data.meta.total_pages;
+    totalCount.value = data.meta.totalCount;
+    totalPages.value = data.meta.totalPages;
   } catch (e) {
     console.error('Failed to fetch RPP:', e);
     errorMessage.value = 'Gagal memuat data RPP. Silakan coba lagi.';
@@ -126,7 +126,7 @@ async function fetchRpp() {
 async function toggleFavorite(item: RppItem) {
   try {
     await api.post(`/rpp/${item.id}/favorite`);
-    item.is_favorited = !item.is_favorited;
+    item.isFavorited = !item.isFavorited;
   } catch (e) {
     console.error('Failed to toggle favorite:', e);
   }
@@ -244,22 +244,22 @@ onMounted(async () => {
           <span
             :class="[
               'inline-flex items-center px-2.5 py-1 rounded-xs text-[13px] font-semibold',
-              item.konten_type === 'file'
+              item.kontenType === 'file'
                 ? 'bg-warning-50 text-warning-700'
                 : 'bg-primary-50 text-primary-600',
             ]"
           >
-            {{ item.konten_type === 'file' ? '📄 File' : '📝 Teks' }}
+            {{ item.kontenType === 'file' ? '📄 File' : '📝 Teks' }}
           </span>
           <button
             :class="[
               'text-xl leading-none transition-colors',
-              item.is_favorited ? 'text-amber-500' : 'text-text-tertiary hover:text-amber-500',
+              item.isFavorited ? 'text-amber-500' : 'text-text-tertiary hover:text-amber-500',
             ]"
-            :title="item.is_favorited ? 'Hapus dari favorit' : 'Tambah ke favorit'"
+            :title="item.isFavorited ? 'Hapus dari favorit' : 'Tambah ke favorit'"
             @click.stop="toggleFavorite(item)"
           >
-            {{ item.is_favorited ? '★' : '☆' }}
+            {{ item.isFavorited ? '★' : '☆' }}
           </button>
         </div>
         <h3
@@ -269,17 +269,15 @@ onMounted(async () => {
           {{ item.judul }}
         </h3>
         <div class="flex flex-wrap gap-2 mb-4">
-          <span class="text-[13px] font-medium text-text-tertiary">👤 {{ item.guru_nama }}</span>
+          <span class="text-[13px] font-medium text-text-tertiary">👤 {{ item.guruNama }}</span>
           <span class="text-[13px] font-medium text-text-tertiary"
-            >📚 {{ item.mata_pelajaran_nama }}</span
+            >📚 {{ item.mataPelajaranNama }}</span
           >
-          <span class="text-[13px] font-medium text-text-tertiary"
-            >🏷️ {{ item.kategori_nama }}</span
-          >
+          <span class="text-[13px] font-medium text-text-tertiary">🏷️ {{ item.kategoriNama }}</span>
         </div>
         <div class="flex justify-between items-center pt-4 border-t-2 border-stone-200">
           <span class="text-[13px] font-medium text-text-tertiary">{{
-            formatDate(item.tanggal_publish)
+            formatDate(item.tanggalPublish)
           }}</span>
           <div class="flex gap-2">
             <ActionButton variant="primary" icon="view" @click="viewRpp(item)">Lihat</ActionButton>

@@ -19,18 +19,18 @@ interface Kelas {
   id: string;
   nama: string;
   tingkat: number;
-  wali_kelas_id: string | null;
-  wali_kelas_nama: string | null;
-  tahun_ajaran_id: string;
-  tahun_ajaran_nama: string;
+  waliKelasId: string | null;
+  waliKelasNama: string | null;
+  tahunAjaranId: string;
+  tahunAjaranNama: string;
   kapasitas: number | null;
-  jumlah_siswa: number;
+  jumlahSiswa: number;
 }
 
 interface KelasForm {
   nama: string;
   tingkat: number | '';
-  wali_kelas_id: string;
+  waliKelasId: string;
   kapasitas: string;
 }
 
@@ -52,14 +52,14 @@ const formError = ref('');
 const form = ref<KelasForm>({
   nama: '',
   tingkat: '',
-  wali_kelas_id: '',
+  waliKelasId: '',
   kapasitas: '',
 });
 
 const filteredKelas = computed(() => {
   let result = kelasList.value;
   if (selectedTahunAjaran.value) {
-    result = result.filter((k) => k.tahun_ajaran_id === selectedTahunAjaran.value);
+    result = result.filter((k) => k.tahunAjaranId === selectedTahunAjaran.value);
   }
   if (selectedTingkat.value) {
     result = result.filter((k) => k.tingkat === Number(selectedTingkat.value));
@@ -129,7 +129,7 @@ async function fetchGuru() {
 function openCreateForm() {
   editingKelas.value = null;
   formError.value = '';
-  form.value = { nama: '', tingkat: '', wali_kelas_id: '', kapasitas: '' };
+  form.value = { nama: '', tingkat: '', waliKelasId: '', kapasitas: '' };
   showFormModal.value = true;
 }
 
@@ -139,7 +139,7 @@ function openEditForm(kelas: Kelas) {
   form.value = {
     nama: kelas.nama,
     tingkat: kelas.tingkat,
-    wali_kelas_id: kelas.wali_kelas_id || '',
+    waliKelasId: kelas.waliKelasId || '',
     kapasitas: kelas.kapasitas ? String(kelas.kapasitas) : '',
   };
   showFormModal.value = true;
@@ -158,8 +158,8 @@ async function saveKelas() {
     tingkat: Number(form.value.tingkat),
     tahunAjaranId: selectedTahunAjaran.value,
   };
-  if (form.value.wali_kelas_id) {
-    payload.waliKelasId = form.value.wali_kelas_id;
+  if (form.value.waliKelasId) {
+    payload.waliKelasId = form.value.waliKelasId;
   } else {
     payload.waliKelasId = null;
   }
@@ -300,9 +300,9 @@ onMounted(async () => {
               <td class="px-5 py-4 text-[15px] text-text-primary font-medium">{{ kelas.nama }}</td>
               <td class="px-5 py-4 text-[15px] text-text-primary">{{ kelas.tingkat }}</td>
               <td class="px-5 py-4 text-[15px] text-text-primary">
-                {{ kelas.wali_kelas_nama || '-' }}
+                {{ kelas.waliKelasNama || '-' }}
               </td>
-              <td class="px-5 py-4 text-[15px] text-text-primary">{{ kelas.jumlah_siswa }}</td>
+              <td class="px-5 py-4 text-[15px] text-text-primary">{{ kelas.jumlahSiswa }}</td>
               <td class="px-5 py-4 text-[15px] text-text-primary">{{ kelas.kapasitas || '-' }}</td>
               <td class="px-5 py-4">
                 <div class="flex items-center gap-2">
@@ -394,7 +394,7 @@ onMounted(async () => {
         </div>
         <div class="mb-4">
           <SearchSelect
-            v-model="form.wali_kelas_id"
+            v-model="form.waliKelasId"
             :options="guruSelectOptions"
             label="Wali Kelas (opsional)"
             placeholder="-- Tidak Ada --"

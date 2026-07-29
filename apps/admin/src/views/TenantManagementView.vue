@@ -9,11 +9,11 @@ interface Tenant {
   alamat: string | null;
   telepon: string | null;
   email: string | null;
-  jumlah_tingkat: number;
-  hari_kerja?: '5_hari' | '6_hari';
-  is_active: boolean;
-  user_count?: number;
-  created_at: string;
+  jumlahTingkat: number;
+  hariKerja?: '5_hari' | '6_hari';
+  isActive: boolean;
+  userCount?: number;
+  createdAt: string;
 }
 
 interface TenantForm {
@@ -21,10 +21,10 @@ interface TenantForm {
   alamat: string;
   telepon: string;
   email: string;
-  jumlah_tingkat: number;
-  hari_kerja: '5_hari' | '6_hari';
-  admin_nama: string;
-  admin_email: string;
+  jumlahTingkat: number;
+  hariKerja: '5_hari' | '6_hari';
+  adminNama: string;
+  adminEmail: string;
 }
 
 const tenants = ref<Tenant[]>([]);
@@ -37,10 +37,10 @@ const form = ref<TenantForm>({
   alamat: '',
   telepon: '',
   email: '',
-  jumlah_tingkat: 3,
-  hari_kerja: '6_hari',
-  admin_nama: '',
-  admin_email: '',
+  jumlahTingkat: 3,
+  hariKerja: '6_hari',
+  adminNama: '',
+  adminEmail: '',
 });
 
 async function fetchTenants() {
@@ -62,10 +62,10 @@ function openCreateForm() {
     alamat: '',
     telepon: '',
     email: '',
-    jumlah_tingkat: 3,
-    hari_kerja: '6_hari',
-    admin_nama: '',
-    admin_email: '',
+    jumlahTingkat: 3,
+    hariKerja: '6_hari',
+    adminNama: '',
+    adminEmail: '',
   };
   showFormModal.value = true;
 }
@@ -77,10 +77,10 @@ function openEditForm(tenant: Tenant) {
     alamat: tenant.alamat || '',
     telepon: tenant.telepon || '',
     email: tenant.email || '',
-    jumlah_tingkat: tenant.jumlah_tingkat,
-    hari_kerja: '6_hari',
-    admin_nama: '',
-    admin_email: '',
+    jumlahTingkat: tenant.jumlahTingkat,
+    hariKerja: '6_hari',
+    adminNama: '',
+    adminEmail: '',
   };
   showFormModal.value = true;
 }
@@ -101,10 +101,10 @@ async function saveTenant() {
         alamat: form.value.alamat || undefined,
         telepon: form.value.telepon || undefined,
         email: form.value.email || undefined,
-        jumlah_tingkat: form.value.jumlah_tingkat,
-        hari_kerja: form.value.hari_kerja,
-        admin_nama: form.value.admin_nama,
-        admin_email: form.value.admin_email,
+        jumlahTingkat: form.value.jumlahTingkat,
+        hariKerja: form.value.hariKerja,
+        adminNama: form.value.adminNama,
+        adminEmail: form.value.adminEmail,
       };
       await api.post('/tenants', payload);
     }
@@ -116,8 +116,8 @@ async function saveTenant() {
 }
 
 async function toggleTenantStatus(tenant: Tenant) {
-  const action = tenant.is_active ? 'deactivate' : 'activate';
-  const confirmMsg = tenant.is_active
+  const action = tenant.isActive ? 'deactivate' : 'activate';
+  const confirmMsg = tenant.isActive
     ? `Menonaktifkan ${tenant.nama} akan memblokir seluruh user di sekolah ini. Lanjutkan?`
     : `Mengaktifkan kembali ${tenant.nama}. Lanjutkan?`;
 
@@ -212,24 +212,24 @@ onMounted(fetchTenants);
               <td class="px-5 py-4 text-[15px] text-stone-800 font-medium">{{ tenant.nama }}</td>
               <td class="px-5 py-4 text-[15px] text-stone-500">{{ tenant.email || '-' }}</td>
               <td class="px-5 py-4 text-[15px] text-stone-500">{{ tenant.telepon || '-' }}</td>
-              <td class="px-5 py-4 text-[15px] text-stone-500">{{ tenant.user_count ?? '-' }}</td>
+              <td class="px-5 py-4 text-[15px] text-stone-500">{{ tenant.userCount ?? '-' }}</td>
               <td class="px-5 py-4 text-[15px] text-stone-500">
-                {{ tenant.hari_kerja === '5_hari' ? '5 Hari' : '6 Hari' }}
+                {{ tenant.hariKerja === '5_hari' ? '5 Hari' : '6 Hari' }}
               </td>
               <td class="px-5 py-4">
                 <span
                   :class="[
                     'inline-flex items-center px-2.5 py-1 rounded-[8px] text-[13px] font-semibold',
-                    tenant.is_active
+                    tenant.isActive
                       ? 'bg-success-50 text-success-700'
                       : 'bg-danger-50 text-danger-700',
                   ]"
                 >
-                  {{ tenant.is_active ? 'Aktif' : 'Nonaktif' }}
+                  {{ tenant.isActive ? 'Aktif' : 'Nonaktif' }}
                 </span>
               </td>
               <td class="px-5 py-4 text-[15px] text-stone-500">
-                {{ formatDate(tenant.created_at) }}
+                {{ formatDate(tenant.createdAt) }}
               </td>
               <td class="px-5 py-4">
                 <div class="flex gap-2">
@@ -237,11 +237,11 @@ onMounted(fetchTenants);
                     Edit
                   </ActionButton>
                   <ActionButton
-                    :variant="tenant.is_active ? 'danger' : 'success'"
-                    :icon="tenant.is_active ? 'cancel' : 'activate'"
+                    :variant="tenant.isActive ? 'danger' : 'success'"
+                    :icon="tenant.isActive ? 'cancel' : 'activate'"
                     @click="toggleTenantStatus(tenant)"
                   >
-                    {{ tenant.is_active ? 'Nonaktifkan' : 'Aktifkan' }}
+                    {{ tenant.isActive ? 'Nonaktifkan' : 'Aktifkan' }}
                   </ActionButton>
                 </div>
               </td>
@@ -308,7 +308,7 @@ onMounted(fetchTenants);
           >
           <input
             v-if="!editingTenant"
-            v-model.number="form.jumlah_tingkat"
+            v-model.number="form.jumlahTingkat"
             type="number"
             min="1"
             max="13"
@@ -319,7 +319,7 @@ onMounted(fetchTenants);
             v-else
             class="w-full px-4 py-2.5 text-[15px] border-2 border-stone-200 rounded-[8px] bg-surface-warm text-stone-500"
           >
-            {{ form.jumlah_tingkat }}
+            {{ form.jumlahTingkat }}
           </div>
           <p class="mt-1 text-[13px] text-stone-400">SD = 6, SMP/SMA = 3</p>
         </div>
@@ -327,7 +327,7 @@ onMounted(fetchTenants);
         <div v-if="!editingTenant" class="mb-4">
           <label class="block text-[14px] font-semibold text-stone-800 mb-1.5">Hari Kerja</label>
           <select
-            v-model="form.hari_kerja"
+            v-model="form.hariKerja"
             class="w-full px-4 py-2.5 text-[15px] border-2 border-stone-200 rounded-[8px] focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-colors"
           >
             <option value="6_hari">6 Hari (Senin-Sabtu)</option>
@@ -339,7 +339,7 @@ onMounted(fetchTenants);
           <div class="mb-4">
             <label class="block text-[14px] font-semibold text-stone-800 mb-1.5">Nama Admin</label>
             <input
-              v-model="form.admin_nama"
+              v-model="form.adminNama"
               type="text"
               required
               class="w-full px-4 py-2.5 text-[15px] border-2 border-stone-200 rounded-[8px] focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-colors"
@@ -349,7 +349,7 @@ onMounted(fetchTenants);
           <div class="mb-4">
             <label class="block text-[14px] font-semibold text-stone-800 mb-1.5">Email Admin</label>
             <input
-              v-model="form.admin_email"
+              v-model="form.adminEmail"
               type="email"
               required
               class="w-full px-4 py-2.5 text-[15px] border-2 border-stone-200 rounded-[8px] focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-colors"

@@ -23,9 +23,9 @@ interface AuditLogEntry {
 
 interface PaginationMeta {
   page: number;
-  page_size: number;
-  total_count: number;
-  total_pages: number;
+  pageSize: number;
+  totalCount: number;
+  totalPages: number;
 }
 
 interface AuditLogResponse {
@@ -119,8 +119,8 @@ async function fetchAuditLogs() {
 
     const { data } = await api.get<AuditLogResponse>('/audit-logs', { params });
     entries.value = data.data;
-    totalCount.value = data.meta.total_count;
-    totalPages.value = data.meta.total_pages;
+    totalCount.value = data.meta.totalCount;
+    totalPages.value = data.meta.totalPages;
   } catch (error) {
     console.error('Failed to fetch audit logs:', error);
     entries.value = [];

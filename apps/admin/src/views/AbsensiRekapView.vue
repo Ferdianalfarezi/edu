@@ -11,25 +11,25 @@ interface Kelas {
 }
 
 interface RekapSiswa {
-  siswa_id: string;
-  siswa_nama: string;
-  siswa_nisn: string | null;
+  siswaId: string;
+  siswaNama: string;
+  siswaNisn: string | null;
   hadir: number;
   izin: number;
   sakit: number;
   alpa: number;
-  persentase_kehadiran: number | null;
+  persentaseKehadiran: number | null;
 }
 
 interface RekapResponse {
-  kelas_id: string;
-  kelas_nama: string;
+  kelasId: string;
+  kelasNama: string;
   bulan: number;
   tahun: number;
-  total_hari_efektif: number | null;
+  totalHariEfektif: number | null;
   periode: 'bulanan' | 'semester';
   data: RekapSiswa[];
-  hari_efektif_source?: 'manual' | 'otomatis' | null;
+  hariEfektifSource?: 'manual' | 'otomatis' | null;
 }
 
 const BULAN_LABELS = [
@@ -81,9 +81,9 @@ const totals = computed(() => {
 
 const averagePercentage = computed(() => {
   if (!rekapData.value?.data || rekapData.value.data.length === 0) return null;
-  const validEntries = rekapData.value.data.filter((s) => s.persentase_kehadiran !== null);
+  const validEntries = rekapData.value.data.filter((s) => s.persentaseKehadiran !== null);
   if (validEntries.length === 0) return null;
-  const sum = validEntries.reduce((acc, s) => acc + (s.persentase_kehadiran || 0), 0);
+  const sum = validEntries.reduce((acc, s) => acc + (s.persentaseKehadiran || 0), 0);
   return Math.round((sum / validEntries.length) * 100) / 100;
 });
 
@@ -313,15 +313,13 @@ onMounted(() => {
           <span class="text-stone-500">Total Hari Efektif:</span>
           <span class="font-bold text-stone-800">
             {{
-              rekapData.total_hari_efektif !== null
-                ? rekapData.total_hari_efektif + ' hari'
+              rekapData.totalHariEfektif !== null
+                ? rekapData.totalHariEfektif + ' hari'
                 : 'Belum tersedia'
             }}
           </span>
-          <span v-if="rekapData.hari_efektif_source" class="text-[13px] text-stone-400">
-            ({{
-              rekapData.hari_efektif_source === 'manual' ? 'input manual' : 'kalkulasi otomatis'
-            }})
+          <span v-if="rekapData.hariEfektifSource" class="text-[13px] text-stone-400">
+            ({{ rekapData.hariEfektifSource === 'manual' ? 'input manual' : 'kalkulasi otomatis' }})
           </span>
         </div>
         <div v-if="averagePercentage !== null" class="flex items-center gap-2">
@@ -334,7 +332,7 @@ onMounted(() => {
 
       <!-- Hari efektif warning -->
       <div
-        v-if="rekapData.total_hari_efektif === null"
+        v-if="rekapData.totalHariEfektif === null"
         class="p-4 bg-warning-50 border-2 border-warning-500/20 rounded-xs text-[15px] text-warning-700 mb-4"
       >
         ⚠️ Data hari efektif belum tersedia. Persentase kehadiran tidak dapat dihitung.
@@ -399,23 +397,23 @@ onMounted(() => {
             <tbody class="divide-y divide-stone-200">
               <tr
                 v-for="(siswa, index) in rekapData.data"
-                :key="siswa.siswa_id"
+                :key="siswa.siswaId"
                 class="hover:bg-primary-50 transition-colors"
               >
                 <td class="px-5 py-4 text-[15px] text-center text-stone-600">{{ index + 1 }}</td>
                 <td class="px-5 py-4 text-[15px] text-stone-800 font-medium">
-                  {{ siswa.siswa_nama }}
+                  {{ siswa.siswaNama }}
                 </td>
-                <td class="px-5 py-4 text-[15px] text-stone-500">{{ siswa.siswa_nisn || '-' }}</td>
+                <td class="px-5 py-4 text-[15px] text-stone-500">{{ siswa.siswaNisn || '-' }}</td>
                 <td class="px-5 py-4 text-[15px] text-center">{{ siswa.hadir }}</td>
                 <td class="px-5 py-4 text-[15px] text-center">{{ siswa.izin }}</td>
                 <td class="px-5 py-4 text-[15px] text-center">{{ siswa.sakit }}</td>
                 <td class="px-5 py-4 text-[15px] text-center">{{ siswa.alpa }}</td>
                 <td
                   class="px-5 py-4 text-[15px] text-center"
-                  :class="getPercentageClass(siswa.persentase_kehadiran)"
+                  :class="getPercentageClass(siswa.persentaseKehadiran)"
                 >
-                  {{ siswa.persentase_kehadiran !== null ? siswa.persentase_kehadiran + '%' : '-' }}
+                  {{ siswa.persentaseKehadiran !== null ? siswa.persentaseKehadiran + '%' : '-' }}
                 </td>
               </tr>
             </tbody>

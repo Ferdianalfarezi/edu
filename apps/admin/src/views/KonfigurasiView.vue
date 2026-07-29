@@ -5,9 +5,9 @@ import { PageHeader, ActionButton } from '@/components/ui';
 import { useToast } from '@/composables/useToast';
 
 interface KonfigurasiData {
-  batas_ketidakhadiran_notifikasi: number;
-  nominal_spp: Record<string, number>;
-  tanggal_jatuh_tempo: number;
+  batasKetidakhadiranNotifikasi: number;
+  nominalSpp: Record<string, number>;
+  tanggalJatuhTempo: number;
 }
 
 interface HariLibur {
@@ -19,8 +19,8 @@ interface HariLibur {
 interface TenantProfile {
   id: string;
   nama: string;
-  jumlah_tingkat: number;
-  hari_kerja?: '5_hari' | '6_hari';
+  jumlahTingkat: number;
+  hariKerja?: '5_hari' | '6_hari';
 }
 
 const toast = useToast();
@@ -38,9 +38,9 @@ const jumlahTingkat = ref(0);
 
 // Configuration form
 const config = ref<KonfigurasiData>({
-  batas_ketidakhadiran_notifikasi: 3,
-  nominal_spp: {},
-  tanggal_jatuh_tempo: 10,
+  batasKetidakhadiranNotifikasi: 3,
+  nominalSpp: {},
+  tanggalJatuhTempo: 10,
 });
 
 // Nominal SPP per tingkat - fixed entries based on jumlah_tingkat
@@ -70,8 +70,8 @@ async function fetchKonfigurasi() {
   // Fetch tenant profile to get jumlah_tingkat
   try {
     const { data } = await api.get<TenantProfile>('/tenants/profile');
-    jumlahTingkat.value = data.jumlah_tingkat;
-    hariKerja.value = data.hari_kerja ?? '6_hari';
+    jumlahTingkat.value = data.jumlahTingkat;
+    hariKerja.value = data.hariKerja ?? '6_hari';
   } catch (error) {
     console.error('Failed to fetch tenant profile:', error);
   }
@@ -80,7 +80,7 @@ async function fetchKonfigurasi() {
     const { data } = await api.get<{ data: KonfigurasiData }>('/konfigurasi');
     config.value = data.data;
     // Initialize fixed SPP entries based on jumlah_tingkat
-    initSppEntries(data.data.nominal_spp || {}, jumlahTingkat.value);
+    initSppEntries(data.data.nominalSpp || {}, jumlahTingkat.value);
   } catch (error) {
     console.error('Failed to fetch konfigurasi:', error);
   }
@@ -99,16 +99,15 @@ async function saveKonfigurasi() {
   saving.value = true;
   saveSuccess.value = false;
 
-  // Construct nominal_spp with keys tingkat_1 through tingkat_N
-  const nominal_spp: Record<string, number> = {};
+  const nominalSpp: Record<string, number> = {};
   sppEntries.value.forEach((entry) => {
-    nominal_spp[`tingkat_${entry.tingkat}`] = entry.nominal;
+    nominalSpp[`tingkat_${entry.tingkat}`] = entry.nominal;
   });
 
   const payload = {
-    batas_ketidakhadiran_notifikasi: config.value.batas_ketidakhadiran_notifikasi,
-    nominal_spp,
-    tanggal_jatuh_tempo: config.value.tanggal_jatuh_tempo,
+    batasKetidakhadiranNotifikasi: config.value.batasKetidakhadiranNotifikasi,
+    nominalSpp,
+    tanggalJatuhTempo: config.value.tanggalJatuhTempo,
   };
 
   try {
@@ -173,7 +172,7 @@ async function updateHariKerja() {
 
   savingHariKerja.value = true;
   try {
-    await api.patch('/tenants/hari-kerja', { hari_kerja: hariKerja.value });
+    await api.patch('/tenants/hari-kerja', { hariKerja: hariKerja.value });
     toast.success('Hari kerja berhasil diperbarui');
   } catch (error) {
     console.error('Failed to update hari kerja:', error);
@@ -244,7 +243,7 @@ onMounted(fetchKonfigurasi);
               Batas Ketidakhadiran untuk Notifikasi (hari/bulan)
             </label>
             <input
-              v-model.number="config.batas_ketidakhadiran_notifikasi"
+              v-model.number="config.batasKetidakhadiranNotifikasi"
               type="number"
               min="1"
               max="30"
@@ -260,7 +259,7 @@ onMounted(fetchKonfigurasi);
               Tanggal Jatuh Tempo Tagihan (tanggal per bulan)
             </label>
             <input
-              v-model.number="config.tanggal_jatuh_tempo"
+              v-model.number="config.tanggalJatuhTempo"
               type="number"
               min="1"
               max="28"

@@ -16,28 +16,28 @@ interface Siswa {
   id: string;
   nama: string;
   nisn: string;
-  kelas_id: string;
-  kelas_nama?: string;
-  tahun_ajaran_id: string;
-  tahun_ajaran_nama?: string;
-  jenis_kelamin: 'L' | 'P' | null;
-  tanggal_lahir: string | null;
+  kelasId: string;
+  kelasNama?: string;
+  tahunAjaranId: string;
+  tahunAjaranNama?: string;
+  jenisKelamin: 'L' | 'P' | null;
+  tanggalLahir: string | null;
   alamat: string | null;
-  orang_tua_nama?: string;
-  orang_tua_phone?: string;
+  orangTuaNama?: string;
+  orangTuaPhone?: string;
   status: StatusSiswa;
-  created_at: string;
+  createdAt: string;
 }
 
 interface SiswaForm {
   nama: string;
   nisn: string;
-  kelas_id: string;
-  jenis_kelamin: 'L' | 'P' | '';
-  tanggal_lahir: string;
+  kelasId: string;
+  jenisKelamin: 'L' | 'P' | '';
+  tanggalLahir: string;
   alamat: string;
-  nama_wali: string;
-  telepon_wali: string;
+  namaWali: string;
+  teleponWali: string;
 }
 
 interface Kelas {
@@ -54,15 +54,15 @@ interface ImportConflict {
   row: number;
   nisn: string;
   nama: string;
-  existing_nama: string;
+  existingNama: string;
   action: 'update' | 'skip';
 }
 interface ImportPreviewRow {
   nama: string;
   nisn: string;
   kelas: string;
-  nama_wali: string;
-  telepon_wali: string;
+  namaWali: string;
+  teleponWali: string;
 }
 
 const siswaList = ref<Siswa[]>([]);
@@ -96,12 +96,12 @@ const deletingSiswa = ref<Siswa | null>(null);
 const form = reactive<SiswaForm>({
   nama: '',
   nisn: '',
-  kelas_id: '',
-  jenis_kelamin: '',
-  tanggal_lahir: '',
+  kelasId: '',
+  jenisKelamin: '',
+  tanggalLahir: '',
   alamat: '',
-  nama_wali: '',
-  telepon_wali: '',
+  namaWali: '',
+  teleponWali: '',
 });
 const formErrors = ref<Record<string, string>>({});
 const saving = ref(false);
@@ -148,11 +148,11 @@ async function fetchSiswa() {
     const params = { ...queryParams.value };
     const { data } = await api.get<{
       data: Siswa[];
-      meta: { page: number; page_size: number; total_count: number; total_pages: number };
+      meta: { page: number; pageSize: number; totalCount: number; totalPages: number };
     }>('/siswa', { params });
     siswaList.value = data.data;
-    totalCount.value = data.meta.total_count;
-    totalPages.value = data.meta.total_pages;
+    totalCount.value = data.meta.totalCount;
+    totalPages.value = data.meta.totalPages;
   } catch (error) {
     console.error('Failed to fetch siswa:', error);
   } finally {
@@ -186,11 +186,11 @@ function validateForm(): boolean {
   if (!form.nama.trim()) formErrors.value.nama = 'Nama wajib diisi';
   if (!form.nisn.trim()) formErrors.value.nisn = 'NISN wajib diisi';
   else if (!/^\d+$/.test(form.nisn.trim())) formErrors.value.nisn = 'NISN hanya boleh berisi angka';
-  if (!form.kelas_id) formErrors.value.kelas_id = 'Kelas wajib dipilih';
-  if (!form.telepon_wali.trim()) formErrors.value.telepon_wali = 'Telepon wali wajib diisi';
-  else if (!/^[\d+\-\s]+$/.test(form.telepon_wali.trim()))
-    formErrors.value.telepon_wali = 'Format telepon tidak valid';
-  if (!form.nama_wali.trim()) formErrors.value.nama_wali = 'Nama wali wajib diisi';
+  if (!form.kelasId) formErrors.value.kelasId = 'Kelas wajib dipilih';
+  if (!form.teleponWali.trim()) formErrors.value.teleponWali = 'Telepon wali wajib diisi';
+  else if (!/^[\d+\-\s]+$/.test(form.teleponWali.trim()))
+    formErrors.value.teleponWali = 'Format telepon tidak valid';
+  if (!form.namaWali.trim()) formErrors.value.namaWali = 'Nama wali wajib diisi';
   return Object.keys(formErrors.value).length === 0;
 }
 
@@ -199,12 +199,12 @@ function openCreateForm() {
   Object.assign(form, {
     nama: '',
     nisn: '',
-    kelas_id: '',
-    jenis_kelamin: '',
-    tanggal_lahir: '',
+    kelasId: '',
+    jenisKelamin: '',
+    tanggalLahir: '',
     alamat: '',
-    nama_wali: '',
-    telepon_wali: '',
+    namaWali: '',
+    teleponWali: '',
   });
   formErrors.value = {};
   showFormModal.value = true;
@@ -215,12 +215,12 @@ function openEditForm(siswa: Siswa) {
   Object.assign(form, {
     nama: siswa.nama,
     nisn: siswa.nisn,
-    kelas_id: siswa.kelas_id,
-    jenis_kelamin: siswa.jenis_kelamin || '',
-    tanggal_lahir: siswa.tanggal_lahir || '',
+    kelasId: siswa.kelasId,
+    jenisKelamin: siswa.jenisKelamin || '',
+    tanggalLahir: siswa.tanggalLahir || '',
     alamat: siswa.alamat || '',
-    nama_wali: siswa.orang_tua_nama || '',
-    telepon_wali: siswa.orang_tua_phone || '',
+    namaWali: siswa.orangTuaNama || '',
+    teleponWali: siswa.orangTuaPhone || '',
   });
   formErrors.value = {};
   showFormModal.value = true;
@@ -239,12 +239,12 @@ async function saveSiswa() {
   const payload = {
     nama: form.nama.trim(),
     nisn: form.nisn.trim(),
-    kelas_id: form.kelas_id,
-    jenis_kelamin: form.jenis_kelamin || undefined,
-    tanggal_lahir: form.tanggal_lahir || undefined,
+    kelasId: form.kelasId,
+    jenisKelamin: form.jenisKelamin || undefined,
+    tanggalLahir: form.tanggalLahir || undefined,
     alamat: form.alamat.trim() || undefined,
-    nama_wali: form.nama_wali.trim(),
-    telepon_wali: form.telepon_wali.trim(),
+    orangTuaNama: form.namaWali.trim(),
+    orangTuaPhone: form.teleponWali.trim(),
   };
   try {
     if (editingSiswa.value) await api.patch(`/siswa/${editingSiswa.value.id}`, payload);
@@ -320,8 +320,8 @@ function handleFileSelect(event: Event) {
         nama: cols[namaIdx] || '',
         nisn: cols[nisnIdx] || '',
         kelas: kelasIdx !== -1 ? cols[kelasIdx] || '' : '',
-        nama_wali: namaWaliIdx !== -1 ? cols[namaWaliIdx] || '' : '',
-        telepon_wali: teleponWaliIdx !== -1 ? cols[teleponWaliIdx] || '' : '',
+        namaWali: namaWaliIdx !== -1 ? cols[namaWaliIdx] || '' : '',
+        teleponWali: teleponWaliIdx !== -1 ? cols[teleponWaliIdx] || '' : '',
       };
     });
     importStep.value = 'preview';
@@ -565,13 +565,13 @@ onMounted(() => {
               </td>
               <td class="px-5 py-4 text-[15px] text-text-secondary font-mono">{{ siswa.nisn }}</td>
               <td class="px-5 py-4 text-[15px] text-text-secondary">
-                {{ siswa.kelas_nama || '-' }}
+                {{ siswa.kelasNama || '-' }}
               </td>
               <td class="px-5 py-4 text-[15px] text-text-secondary">
-                {{ siswa.jenis_kelamin === 'L' ? 'L' : siswa.jenis_kelamin === 'P' ? 'P' : '-' }}
+                {{ siswa.jenisKelamin === 'L' ? 'L' : siswa.jenisKelamin === 'P' ? 'P' : '-' }}
               </td>
               <td class="px-5 py-4 text-[15px] text-text-secondary">
-                {{ siswa.orang_tua_nama || '-' }} / {{ siswa.orang_tua_phone || '-' }}
+                {{ siswa.orangTuaNama || '-' }} / {{ siswa.orangTuaPhone || '-' }}
               </td>
               <td class="px-5 py-4">
                 <span
@@ -695,18 +695,18 @@ onMounted(() => {
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <SearchSelect
-              v-model="form.kelas_id"
+              v-model="form.kelasId"
               :options="kelasSelectOptions"
               label="Kelas"
               placeholder="Pilih Kelas"
               :required="true"
-              :error="!!formErrors.kelas_id"
-              :error-message="formErrors.kelas_id"
+              :error="!!formErrors.kelasId"
+              :error-message="formErrors.kelasId"
             />
           </div>
           <div>
             <SearchSelect
-              v-model="form.jenis_kelamin"
+              v-model="form.jenisKelamin"
               :options="jenisKelaminOptions"
               label="Jenis Kelamin"
               placeholder="Pilih"
@@ -719,7 +719,7 @@ onMounted(() => {
           <div>
             <label class="block text-sm font-medium text-text-primary mb-1.5">Tanggal Lahir</label>
             <input
-              v-model="form.tanggal_lahir"
+              v-model="form.tanggalLahir"
               type="date"
               class="w-full px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
             />
@@ -742,12 +742,12 @@ onMounted(() => {
                 >Nama Wali <span class="text-danger-500">*</span></label
               >
               <input
-                v-model="form.nama_wali"
+                v-model="form.namaWali"
                 type="text"
                 class="w-full px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
               />
-              <p v-if="formErrors.nama_wali" class="text-xs text-danger-500 mt-1">
-                {{ formErrors.nama_wali }}
+              <p v-if="formErrors.namaWali" class="text-xs text-danger-500 mt-1">
+                {{ formErrors.namaWali }}
               </p>
             </div>
             <div>
@@ -755,13 +755,13 @@ onMounted(() => {
                 >Telepon Wali <span class="text-danger-500">*</span></label
               >
               <input
-                v-model="form.telepon_wali"
+                v-model="form.teleponWali"
                 type="text"
                 placeholder="08xxxxxxxxxx"
                 class="w-full px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
               />
-              <p v-if="formErrors.telepon_wali" class="text-xs text-danger-500 mt-1">
-                {{ formErrors.telepon_wali }}
+              <p v-if="formErrors.teleponWali" class="text-xs text-danger-500 mt-1">
+                {{ formErrors.teleponWali }}
               </p>
             </div>
           </div>
@@ -877,8 +877,8 @@ onMounted(() => {
                 <td class="px-3 py-2">{{ row.nama }}</td>
                 <td class="px-3 py-2 font-mono text-xs">{{ row.nisn }}</td>
                 <td class="px-3 py-2">{{ row.kelas }}</td>
-                <td class="px-3 py-2">{{ row.nama_wali }}</td>
-                <td class="px-3 py-2">{{ row.telepon_wali }}</td>
+                <td class="px-3 py-2">{{ row.namaWali }}</td>
+                <td class="px-3 py-2">{{ row.teleponWali }}</td>
               </tr>
             </tbody>
           </table>
@@ -920,7 +920,7 @@ onMounted(() => {
                 <td class="px-3 py-2">{{ conflict.row }}</td>
                 <td class="px-3 py-2 font-mono text-xs">{{ conflict.nisn }}</td>
                 <td class="px-3 py-2">{{ conflict.nama }}</td>
-                <td class="px-3 py-2">{{ conflict.existing_nama }}</td>
+                <td class="px-3 py-2">{{ conflict.existingNama }}</td>
                 <td class="px-3 py-2">
                   <select
                     v-model="conflict.action"

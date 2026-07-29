@@ -4,22 +4,22 @@ import { api } from '@/api/client';
 import { StatCard, QuickActionCard } from '@/components/ui';
 
 interface TunggakanSiswa {
-  siswa_id: string;
-  siswa_nama: string;
-  kelas_nama: string;
+  siswaId: string;
+  siswaNama: string;
+  kelasNama: string;
   bulan: number;
   tahun: number;
   nominal: number;
-  total_dibayar: number;
+  totalDibayar: number;
   sisa: number;
   status: string;
-  tanggal_jatuh_tempo: string;
+  tanggalJatuhTempo: string;
 }
 interface TunggakanSummaryResponse {
-  total_tunggakan: number;
-  total_siswa_nunggak: number;
-  total_tagihan_nunggak: number;
-  tunggakan_list: TunggakanSiswa[];
+  totalTunggakan: number;
+  totalSiswaNunggak: number;
+  totalTagihanNunggak: number;
+  tunggakanList: TunggakanSiswa[];
 }
 
 const loading = ref(true);
@@ -102,19 +102,19 @@ onMounted(fetchTunggakan);
       <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4.5 mb-8">
         <StatCard
           label="Total Tunggakan"
-          :value="formatRupiah(summaryData.total_tunggakan)"
+          :value="formatRupiah(summaryData.totalTunggakan)"
           variant="amber"
           icon="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
         />
         <StatCard
           label="Siswa Menunggak"
-          :value="summaryData.total_siswa_nunggak"
+          :value="summaryData.totalSiswaNunggak"
           variant="purple"
           icon="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"
         />
         <StatCard
           label="Tagihan Tertunggak"
-          :value="summaryData.total_tagihan_nunggak"
+          :value="summaryData.totalTagihanNunggak"
           variant="blue"
           icon="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
         />
@@ -150,7 +150,7 @@ onMounted(fetchTunggakan);
         <div class="bg-primary-50 px-6 py-5 border-b-2 border-primary-200">
           <h3 class="text-[16px] font-bold text-text-primary">Daftar Tunggakan</h3>
         </div>
-        <div v-if="summaryData.tunggakan_list.length === 0" class="p-8 text-center">
+        <div v-if="summaryData.tunggakanList.length === 0" class="p-8 text-center">
           <p class="text-[15px] text-text-tertiary">Tidak ada tunggakan.</p>
         </div>
         <div v-else class="overflow-x-auto">
@@ -191,14 +191,14 @@ onMounted(fetchTunggakan);
             </thead>
             <tbody class="divide-y divide-stone-100">
               <tr
-                v-for="item in summaryData.tunggakan_list"
-                :key="`${item.siswa_id}-${item.bulan}-${item.tahun}`"
+                v-for="item in summaryData.tunggakanList"
+                :key="`${item.siswaId}-${item.bulan}-${item.tahun}`"
                 class="hover:bg-primary-50 transition-colors"
               >
                 <td class="px-5 py-4 font-semibold text-text-primary text-[15px]">
-                  {{ item.siswa_nama }}
+                  {{ item.siswaNama }}
                 </td>
-                <td class="px-5 py-4 text-text-secondary text-[15px]">{{ item.kelas_nama }}</td>
+                <td class="px-5 py-4 text-text-secondary text-[15px]">{{ item.kelasNama }}</td>
                 <td class="px-5 py-4 text-text-secondary text-[15px]">
                   {{ item.bulan }}/{{ item.tahun }}
                 </td>
@@ -206,7 +206,7 @@ onMounted(fetchTunggakan);
                   {{ formatRupiah(item.sisa) }}
                 </td>
                 <td class="px-5 py-4 text-text-secondary text-[15px]">
-                  {{ formatDate(item.tanggal_jatuh_tempo) }}
+                  {{ formatDate(item.tanggalJatuhTempo) }}
                 </td>
                 <td class="px-5 py-4">
                   <span

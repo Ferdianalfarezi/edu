@@ -33,12 +33,21 @@ export const useAuthStore = defineStore('auth', () => {
 
     const { data } = await api.post<LoginResponse>('/auth/login', payload);
 
-    localStorage.setItem('access_token', data.access_token);
-    localStorage.setItem('refresh_token', data.refresh_token);
-    localStorage.setItem('user', JSON.stringify(data.user));
-    setAccessToken(data.access_token);
+    // Response interceptor converts keys to camelCase at runtime;
+    // cast to access camelCase fields while LoginResponse type is still snake_case in @edu/shared.
+    const loginData = data as unknown as {
+      accessToken: string;
+      refreshToken: string;
+      mustChangePassword: boolean;
+      user: AuthUser;
+    };
 
-    if (data.must_change_password) {
+    localStorage.setItem('access_token', loginData.accessToken);
+    localStorage.setItem('refresh_token', loginData.refreshToken);
+    localStorage.setItem('user', JSON.stringify(loginData.user));
+    setAccessToken(loginData.accessToken);
+
+    if (loginData.mustChangePassword) {
       localStorage.setItem('must_change_password', 'true');
       mustChangePassword.value = true;
     } else {
@@ -46,7 +55,7 @@ export const useAuthStore = defineStore('auth', () => {
       mustChangePassword.value = false;
     }
 
-    user.value = data.user;
+    user.value = loginData.user;
   }
 
   async function changePassword(oldPassword: string, newPassword: string): Promise<void> {
