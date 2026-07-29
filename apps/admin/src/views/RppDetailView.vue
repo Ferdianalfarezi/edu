@@ -8,19 +8,19 @@ import { BaseModal, ActionButton } from '@/components/ui';
 interface RppDetail {
   id: string;
   judul: string;
-  guru_id: string;
-  guru_nama: string;
-  mata_pelajaran_nama: string;
-  kategori_nama: string;
-  tahun_terbit: number;
-  konten_type: 'richtext' | 'file';
+  guruId: string;
+  guruNama: string;
+  mataPelajaranNama: string;
+  kategoriNama: string;
+  tahunTerbit: number;
+  kontenType: 'richtext' | 'file';
   konten: string | null;
-  file_nama: string | null;
-  file_size: number | null;
+  fileNama: string | null;
+  fileSize: number | null;
   status: 'draft' | 'published';
-  tanggal_publish: string | null;
-  updated_at: string;
-  is_favorited: boolean;
+  tanggalPublish: string | null;
+  updatedAt: string;
+  isFavorited: boolean;
 }
 
 const router = useRouter();
@@ -33,7 +33,7 @@ const loading = ref(false);
 const error = ref('');
 const showDeleteModal = ref(false);
 
-const isOwner = computed(() => rpp.value?.guru_id === authStore.user?.id);
+const isOwner = computed(() => rpp.value?.guruId === authStore.user?.id);
 
 async function fetchDetail() {
   loading.value = true;
@@ -51,7 +51,7 @@ async function toggleFavorite() {
   if (!rpp.value) return;
   try {
     await api.post(`/rpp/${rpp.value.id}/favorite`);
-    rpp.value.is_favorited = !rpp.value.is_favorited;
+    rpp.value.isFavorited = !rpp.value.isFavorited;
   } catch (e) {
     console.error('Failed to toggle favorite:', e);
   }
@@ -138,11 +138,11 @@ onMounted(fetchDetail);
             </div>
             <div class="flex flex-wrap gap-2">
               <ActionButton
-                :variant="rpp.is_favorited ? 'warning' : 'neutral'"
+                :variant="rpp.isFavorited ? 'warning' : 'neutral'"
                 size="sm"
                 @click="toggleFavorite"
               >
-                {{ rpp.is_favorited ? '★ Favorit' : '☆ Favorit' }}
+                {{ rpp.isFavorited ? '★ Favorit' : '☆ Favorit' }}
               </ActionButton>
               <ActionButton variant="primary" icon="download" size="sm" @click="downloadRpp">
                 Download
@@ -181,14 +181,14 @@ onMounted(fetchDetail);
               <span class="text-[13px] font-semibold text-text-tertiary uppercase tracking-wide"
                 >Guru Pembuat</span
               >
-              <span class="text-[15px] font-semibold text-text-primary">{{ rpp.guru_nama }}</span>
+              <span class="text-[15px] font-semibold text-text-primary">{{ rpp.guruNama }}</span>
             </div>
             <div class="flex flex-col gap-1">
               <span class="text-[13px] font-semibold text-text-tertiary uppercase tracking-wide"
                 >Mata Pelajaran</span
               >
               <span class="text-[15px] font-semibold text-text-primary">{{
-                rpp.mata_pelajaran_nama
+                rpp.mataPelajaranNama
               }}</span>
             </div>
             <div class="flex flex-col gap-1">
@@ -196,23 +196,21 @@ onMounted(fetchDetail);
                 >Kategori</span
               >
               <span class="text-[15px] font-semibold text-text-primary">{{
-                rpp.kategori_nama
+                rpp.kategoriNama
               }}</span>
             </div>
             <div class="flex flex-col gap-1">
               <span class="text-[13px] font-semibold text-text-tertiary uppercase tracking-wide"
                 >Tahun Terbit</span
               >
-              <span class="text-[15px] font-semibold text-text-primary">{{
-                rpp.tahun_terbit
-              }}</span>
+              <span class="text-[15px] font-semibold text-text-primary">{{ rpp.tahunTerbit }}</span>
             </div>
             <div class="flex flex-col gap-1">
               <span class="text-[13px] font-semibold text-text-tertiary uppercase tracking-wide"
                 >Tanggal Publish</span
               >
               <span class="text-[15px] font-semibold text-text-primary">{{
-                formatDate(rpp.tanggal_publish)
+                formatDate(rpp.tanggalPublish)
               }}</span>
             </div>
             <div class="flex flex-col gap-1">
@@ -220,15 +218,15 @@ onMounted(fetchDetail);
                 >Terakhir Diperbarui</span
               >
               <span class="text-[15px] font-semibold text-text-primary">{{
-                formatDate(rpp.updated_at)
+                formatDate(rpp.updatedAt)
               }}</span>
             </div>
-            <div v-if="rpp.konten_type === 'file'" class="flex flex-col gap-1">
+            <div v-if="rpp.kontenType === 'file'" class="flex flex-col gap-1">
               <span class="text-[13px] font-semibold text-text-tertiary uppercase tracking-wide"
                 >File</span
               >
               <span class="text-[15px] font-semibold text-text-primary"
-                >{{ rpp.file_nama }} ({{ formatFileSize(rpp.file_size) }})</span
+                >{{ rpp.fileNama }} ({{ formatFileSize(rpp.fileSize) }})</span
               >
             </div>
           </div>
@@ -237,7 +235,7 @@ onMounted(fetchDetail);
 
       <!-- Content Card -->
       <div
-        v-if="rpp.konten_type === 'richtext' && rpp.konten"
+        v-if="rpp.kontenType === 'richtext' && rpp.konten"
         class="bg-white border-2 border-stone-200 rounded-[16px] shadow-xs overflow-hidden"
       >
         <div class="px-6 py-5 bg-primary-50 border-b-2 border-primary-200">
@@ -248,7 +246,7 @@ onMounted(fetchDetail);
 
       <!-- File Card -->
       <div
-        v-else-if="rpp.konten_type === 'file'"
+        v-else-if="rpp.kontenType === 'file'"
         class="bg-white border-2 border-stone-200 rounded-[16px] shadow-xs overflow-hidden"
       >
         <div class="px-6 py-5 bg-primary-50 border-b-2 border-primary-200">
@@ -261,8 +259,8 @@ onMounted(fetchDetail);
           >
             <span class="text-3xl">📄</span>
             <div>
-              <p class="text-[15px] font-semibold text-text-primary">{{ rpp.file_nama }}</p>
-              <p class="text-[13px] text-text-tertiary">{{ formatFileSize(rpp.file_size) }}</p>
+              <p class="text-[15px] font-semibold text-text-primary">{{ rpp.fileNama }}</p>
+              <p class="text-[13px] text-text-tertiary">{{ formatFileSize(rpp.fileSize) }}</p>
             </div>
             <span class="ml-auto text-lg text-text-tertiary">⬇</span>
           </div>

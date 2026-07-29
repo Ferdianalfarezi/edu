@@ -26,9 +26,9 @@ interface PaginatedResponse {
   data: Barang[];
   meta: {
     page: number;
-    page_size: number;
-    total_count: number;
-    total_pages: number;
+    pageSize: number;
+    totalCount: number;
+    totalPages: number;
   };
 }
 
@@ -61,8 +61,8 @@ async function fetchBarang() {
   try {
     const { data } = await api.get<PaginatedResponse>('/barang', { params: queryParams.value });
     barangList.value = data.data;
-    totalCount.value = data.meta.total_count;
-    totalPages.value = data.meta.total_pages;
+    totalCount.value = data.meta.totalCount;
+    totalPages.value = data.meta.totalPages;
   } catch {
     barangList.value = [];
   } finally {

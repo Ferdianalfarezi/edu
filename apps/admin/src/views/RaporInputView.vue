@@ -19,16 +19,16 @@ interface KomponenPenilaian {
   id: string;
   nama: string;
   tipe: 'angka' | 'huruf' | 'deskripsi';
-  skala_min: number | null;
-  skala_max: number | null;
-  is_wajib: boolean;
+  skalaMin: number | null;
+  skalaMax: number | null;
+  isWajib: boolean;
 }
 
 interface SiswaNilai {
-  siswa_id: string;
-  siswa_nama: string;
-  komponen: { komponen_id: string; nilai: string | number | null }[];
-  capaian_pembelajaran: string;
+  siswaId: string;
+  siswaNama: string;
+  komponen: { komponenId: string; nilai: string | number | null }[];
+  capaianPembelajaran: string;
   status: 'draft' | 'submitted';
 }
 
@@ -76,9 +76,9 @@ const canSubmit = computed(() => {
   if (!nilaiData.value.length) return false;
   return nilaiData.value.every((siswa) => {
     return siswa.komponen.every((k) => {
-      const komponen = komponenList.value.find((kp) => kp.id === k.komponen_id);
+      const komponen = komponenList.value.find((kp) => kp.id === k.komponenId);
       if (!komponen) return true;
-      if (!komponen.is_wajib) return true;
+      if (!komponen.isWajib) return true;
       if (isUTS.value && komponen.tipe === 'deskripsi') return true;
       return k.nilai !== null && k.nilai !== '';
     });
@@ -97,12 +97,12 @@ async function fetchMapel() {
   try {
     const { data } = await api.get<{
       data: {
-        mapel_id: string;
-        mapel_nama: string;
-        kelas: { kelas_id: string; kelas_nama: string }[];
+        mapelId: string;
+        mapelNama: string;
+        kelas: { kelasId: string; kelasNama: string }[];
       }[];
     }>('/rapor/mata-pelajaran');
-    mapelOptions.value = data.data.map((m) => ({ id: m.mapel_id, nama: m.mapel_nama }));
+    mapelOptions.value = data.data.map((m) => ({ id: m.mapelId, nama: m.mapelNama }));
   } catch (err) {
     console.error('Failed to fetch mata pelajaran:', err);
   }
@@ -115,7 +115,7 @@ async function fetchKelas() {
   }
   try {
     const { data } = await api.get<{ data: KelasOption[] }>(
-      `/rapor/kelas?mapel_id=${selectedMapel.value}`,
+      `/rapor/kelas?mapelId=${selectedMapel.value}`,
     );
     kelasOptions.value = data.data;
   } catch (err) {
@@ -135,40 +135,40 @@ async function fetchNilai() {
 
   try {
     const params = new URLSearchParams({
-      kelas_id: selectedKelas.value,
-      periode_id: selectedPeriode.value,
-      mapel_id: selectedMapel.value,
+      kelasId: selectedKelas.value,
+      periodeId: selectedPeriode.value,
+      mapelId: selectedMapel.value,
     });
 
     const { data } = await api.get<{
       data: {
-        kelas_id: string;
-        kelas_nama: string;
-        mapel_id: string;
-        mapel_nama: string;
+        kelasId: string;
+        kelasNama: string;
+        mapelId: string;
+        mapelNama: string;
         periode: string;
-        komponen_penilaian: KomponenPenilaian[];
+        komponenPenilaian: KomponenPenilaian[];
         students: {
-          siswa_id: string;
-          siswa_nama: string;
-          komponen_nilai: { komponen_id: string; nilai: string | number }[] | null;
-          capaian_pembelajaran: string | null;
+          siswaId: string;
+          siswaNama: string;
+          komponenNilai: { komponenId: string; nilai: string | number }[] | null;
+          capaianPembelajaran: string | null;
           status: 'draft' | 'submitted' | null;
         }[];
       };
     }>(`/rapor/nilai?${params.toString()}`);
 
-    komponenList.value = data.data.komponen_penilaian;
+    komponenList.value = data.data.komponenPenilaian;
     nilaiData.value = data.data.students.map((s) => ({
-      siswa_id: s.siswa_id,
-      siswa_nama: s.siswa_nama,
+      siswaId: s.siswaId,
+      siswaNama: s.siswaNama,
       komponen:
-        s.komponen_nilai ??
-        data.data.komponen_penilaian.map((k) => ({
-          komponen_id: k.id,
+        s.komponenNilai ??
+        data.data.komponenPenilaian.map((k) => ({
+          komponenId: k.id,
           nilai: k.tipe === 'angka' ? 0 : '-',
         })),
-      capaian_pembelajaran: s.capaian_pembelajaran ?? '-',
+      capaianPembelajaran: s.capaianPembelajaran ?? '-',
       status: s.status ?? 'draft',
     }));
   } catch (err) {
@@ -190,16 +190,16 @@ async function saveNilai(status: 'draft' | 'submitted') {
 
   try {
     await api.post('/rapor/nilai', {
-      kelas_id: selectedKelas.value,
-      mata_pelajaran_id: selectedMapel.value,
-      periode_rapor_id: selectedPeriode.value,
+      kelasId: selectedKelas.value,
+      mataPelajaranId: selectedMapel.value,
+      periodeRaporId: selectedPeriode.value,
       nilai: nilaiData.value.map((siswa) => ({
-        siswa_id: siswa.siswa_id,
+        siswaId: siswa.siswaId,
         komponen: siswa.komponen.map((k) => ({
-          komponen_id: k.komponen_id,
+          komponenId: k.komponenId,
           nilai: k.nilai,
         })),
-        capaian_pembelajaran: siswa.capaian_pembelajaran || undefined,
+        capaianPembelajaran: siswa.capaianPembelajaran || undefined,
       })),
       status,
     });
@@ -252,11 +252,11 @@ function validateNilaiAngka(siswaIdx: number, komponenIdx: number) {
   if (val === null || val === '') return;
 
   const num = Number(val);
-  if (komponen.skala_min !== null && num < komponen.skala_min) {
-    nilaiData.value[siswaIdx].komponen[komponenIdx].nilai = komponen.skala_min;
+  if (komponen.skalaMin !== null && num < komponen.skalaMin) {
+    nilaiData.value[siswaIdx].komponen[komponenIdx].nilai = komponen.skalaMin;
   }
-  if (komponen.skala_max !== null && num > komponen.skala_max) {
-    nilaiData.value[siswaIdx].komponen[komponenIdx].nilai = komponen.skala_max;
+  if (komponen.skalaMax !== null && num > komponen.skalaMax) {
+    nilaiData.value[siswaIdx].komponen[komponenIdx].nilai = komponen.skalaMax;
   }
 }
 
@@ -284,16 +284,16 @@ onMounted(() => {
     if (isDirty.value && nilaiData.value.length > 0 && !saving.value && !isRaporFinalized.value) {
       try {
         await api.post('/rapor/nilai', {
-          kelas_id: selectedKelas.value,
-          mata_pelajaran_id: selectedMapel.value,
-          periode_rapor_id: selectedPeriode.value,
+          kelasId: selectedKelas.value,
+          mataPelajaranId: selectedMapel.value,
+          periodeRaporId: selectedPeriode.value,
           nilai: nilaiData.value.map((siswa) => ({
-            siswa_id: siswa.siswa_id,
+            siswaId: siswa.siswaId,
             komponen: siswa.komponen.map((k) => ({
-              komponen_id: k.komponen_id,
+              komponenId: k.komponenId,
               nilai: k.nilai,
             })),
-            capaian_pembelajaran: siswa.capaian_pembelajaran || undefined,
+            capaianPembelajaran: siswa.capaianPembelajaran || undefined,
           })),
           status: 'draft',
         });
@@ -409,11 +409,11 @@ onUnmounted(() => {
                   class="px-5 py-4 text-left text-[13px] font-bold uppercase tracking-[0.04em] text-text-secondary bg-surface-warm whitespace-nowrap"
                 >
                   {{ k.nama }}
-                  <span v-if="k.is_wajib" class="text-danger-500">*</span>
+                  <span v-if="k.isWajib" class="text-danger-500">*</span>
                   <br />
                   <small class="text-text-tertiary font-normal normal-case tracking-normal">
                     <template v-if="k.tipe === 'angka'"
-                      >({{ k.skala_min }}-{{ k.skala_max }})</template
+                      >({{ k.skalaMin }}-{{ k.skalaMax }})</template
                     >
                     <template v-else-if="k.tipe === 'huruf'">(A/B/C/D/E)</template>
                     <template v-else>(Deskripsi)</template>
@@ -435,14 +435,14 @@ onUnmounted(() => {
             <tbody class="divide-y divide-stone-200">
               <tr
                 v-for="(siswa, sIdx) in nilaiData"
-                :key="siswa.siswa_id"
+                :key="siswa.siswaId"
                 class="hover:bg-primary-50 transition-colors"
               >
                 <td class="px-5 py-4 text-[15px] sticky left-0 bg-white z-[1]">{{ sIdx + 1 }}</td>
                 <td
                   class="px-5 py-4 text-[15px] text-text-primary sticky left-[40px] bg-white z-[1]"
                 >
-                  {{ siswa.siswa_nama }}
+                  {{ siswa.siswaNama }}
                 </td>
                 <td v-for="(komponen, kIdx) in komponenList" :key="komponen.id" class="px-5 py-4">
                   <template v-if="komponen.tipe === 'deskripsi'">
@@ -474,15 +474,15 @@ onUnmounted(() => {
                       :type="getInputType(komponen)"
                       class="w-full min-w-[80px] px-3 py-2 text-[15px] border-2 border-stone-200 rounded-xs focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
                       :disabled="isRaporFinalized"
-                      :min="komponen.skala_min ?? undefined"
-                      :max="komponen.skala_max ?? undefined"
+                      :min="komponen.skalaMin ?? undefined"
+                      :max="komponen.skalaMax ?? undefined"
                       @blur="validateNilaiAngka(sIdx, kIdx)"
                     />
                   </template>
                 </td>
                 <td v-if="!isUTS" class="px-5 py-4">
                   <textarea
-                    v-model="siswa.capaian_pembelajaran"
+                    v-model="siswa.capaianPembelajaran"
                     class="w-full min-w-[150px] px-3 py-2 text-[15px] border-2 border-stone-200 rounded-xs focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 resize-y"
                     :disabled="isRaporFinalized"
                     rows="2"

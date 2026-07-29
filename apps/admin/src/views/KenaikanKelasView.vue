@@ -14,21 +14,21 @@ interface Kelas {
   id: string;
   nama: string;
   tingkat: number;
-  tahun_ajaran_id: string;
+  tahunAjaranId: string;
 }
 
 interface Siswa {
   id: string;
-  siswa_id?: string;
+  siswaId?: string;
   nama: string;
   nisn: string | null;
 }
 
 interface PreviewResult {
-  students: { siswa_id: string; nama: string; nisn: string | null }[];
-  source_kelas: { id: string; nama: string; tingkat: number };
-  target_kelas: { id: string; nama: string; tingkat: number } | null;
-  is_highest_grade: boolean;
+  students: { siswaId: string; nama: string; nisn: string | null }[];
+  sourceKelas: { id: string; nama: string; tingkat: number };
+  targetKelas: { id: string; nama: string; tingkat: number } | null;
+  isHighestGrade: boolean;
 }
 
 // Wizard steps
@@ -158,24 +158,24 @@ async function goToPreview() {
 
   try {
     const payload: Record<string, string> = {
-      source_kelas_id: sourceKelasId.value,
-      target_tahun_ajaran_id: targetTahunAjaranId.value,
+      sourceKelasId: sourceKelasId.value,
+      targetTahunAjaranId: targetTahunAjaranId.value,
     };
     if (targetKelasId.value) {
-      payload.target_kelas_id = targetKelasId.value;
+      payload.targetKelasId = targetKelasId.value;
     }
 
     const { data } = await api.post<PreviewResult>('/kenaikan-kelas/preview', payload);
     previewStudents.value = data.students.map((s) => ({
-      id: s.siswa_id,
+      id: s.siswaId,
       nama: s.nama,
       nisn: s.nisn,
     }));
-    isHighestGrade.value = data.is_highest_grade;
+    isHighestGrade.value = data.isHighestGrade;
     excludedStudentIds.value = new Set();
 
-    if (!targetKelasId.value && data.target_kelas) {
-      targetKelasId.value = data.target_kelas.id;
+    if (!targetKelasId.value && data.targetKelas) {
+      targetKelasId.value = data.targetKelas.id;
     }
 
     currentStep.value = 2;
@@ -224,10 +224,10 @@ async function executePromotion() {
 
   try {
     const payload = {
-      source_kelas_id: sourceKelasId.value,
-      target_kelas_id: targetKelasId.value || undefined,
-      target_tahun_ajaran_id: targetTahunAjaranId.value,
-      excluded_siswa_ids: Array.from(excludedStudentIds.value),
+      sourceKelasId: sourceKelasId.value,
+      targetKelasId: targetKelasId.value || undefined,
+      targetTahunAjaranId: targetTahunAjaranId.value,
+      excludedSiswaIds: Array.from(excludedStudentIds.value),
     };
 
     const { data } = await api.post<{

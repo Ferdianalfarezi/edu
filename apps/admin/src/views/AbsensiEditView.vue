@@ -14,24 +14,24 @@ interface Kelas {
 
 interface AbsensiItem {
   id: string;
-  siswa_id: string;
-  siswa_nama: string;
-  siswa_nisn: string | null;
+  siswaId: string;
+  siswaNama: string;
+  siswaNisn: string | null;
   status: 'hadir' | 'izin' | 'sakit' | 'alpa';
-  guru_id: string;
-  guru_nama: string;
-  updated_at: string;
+  guruId: string;
+  guruNama: string;
+  updatedAt: string;
 }
 
 interface AuditLogEntry {
   id: string;
-  absensi_id: string;
-  user_id: string;
-  user_nama: string;
+  absensiId: string;
+  userId: string;
+  userNama: string;
   role: string;
-  status_sebelum: string;
-  status_sesudah: string;
-  created_at: string;
+  statusSebelum: string;
+  statusSesudah: string;
+  createdAt: string;
 }
 
 const STATUS_OPTIONS = ['hadir', 'izin', 'sakit', 'alpa'] as const;
@@ -98,7 +98,7 @@ async function fetchAbsensi() {
   loading.value = true;
   try {
     const { data } = await api.get<{ data: AbsensiItem[] }>('/absensi', {
-      params: { kelas_id: selectedKelasId.value, tanggal: selectedTanggal.value },
+      params: { kelasId: selectedKelasId.value, tanggal: selectedTanggal.value },
     });
     absensiList.value = data.data || [];
   } catch (error) {
@@ -113,7 +113,7 @@ async function fetchAuditLog(absensiId: string) {
   loadingAudit.value = true;
   try {
     const { data } = await api.get<{ data: AuditLogEntry[] }>('/absensi/audit-log', {
-      params: { absensi_id: absensiId },
+      params: { absensiId: absensiId },
     });
     auditLog.value = data.data || [];
   } catch (error) {
@@ -168,7 +168,7 @@ async function saveEdit() {
 // Audit log actions
 function openAuditModal(item: AbsensiItem) {
   auditAbsensiId.value = item.id;
-  auditSiswaName.value = item.siswa_nama;
+  auditSiswaName.value = item.siswaNama;
   auditLog.value = [];
   showAuditModal.value = true;
   fetchAuditLog(item.id);
@@ -289,9 +289,9 @@ onMounted(() => {
             >
               <td class="px-5 py-4 text-[15px] text-center text-stone-600">{{ index + 1 }}</td>
               <td class="px-5 py-4 text-[15px] text-stone-800 font-medium">
-                {{ item.siswa_nama }}
+                {{ item.siswaNama }}
               </td>
-              <td class="px-5 py-4 text-[15px] text-stone-500">{{ item.siswa_nisn || '-' }}</td>
+              <td class="px-5 py-4 text-[15px] text-stone-500">{{ item.siswaNisn || '-' }}</td>
               <td class="px-5 py-4">
                 <span
                   class="inline-flex items-center px-2.5 py-1 rounded-xs text-[13px] font-semibold"
@@ -300,7 +300,7 @@ onMounted(() => {
                   {{ STATUS_LABELS[item.status] }}
                 </span>
               </td>
-              <td class="px-5 py-4 text-[15px] text-stone-500">{{ item.guru_nama }}</td>
+              <td class="px-5 py-4 text-[15px] text-stone-500">{{ item.guruNama }}</td>
               <td class="px-5 py-4">
                 <div class="flex gap-2">
                   <ActionButton
@@ -335,7 +335,7 @@ onMounted(() => {
     <!-- Edit Modal -->
     <BaseModal :show="showEditModal" title="Edit Status Absensi" @close="showEditModal = false">
       <p v-if="editingItem" class="text-[15px] text-stone-500 mb-5">
-        {{ editingItem.siswa_nama }} — {{ selectedTanggal }}
+        {{ editingItem.siswaNama }} — {{ selectedTanggal }}
       </p>
 
       <div class="mb-5">
@@ -403,23 +403,23 @@ onMounted(() => {
           class="p-4 bg-surface-warm rounded-xs border-l-4 border-primary-500 mb-2"
         >
           <div class="flex items-center gap-2 mb-2 text-[13px]">
-            <span class="font-bold text-stone-800">{{ entry.user_nama }}</span>
+            <span class="font-bold text-stone-800">{{ entry.userNama }}</span>
             <span class="text-stone-400">({{ entry.role }})</span>
-            <span class="ml-auto text-stone-400">{{ formatDateTime(entry.created_at) }}</span>
+            <span class="ml-auto text-stone-400">{{ formatDateTime(entry.createdAt) }}</span>
           </div>
           <div class="flex items-center gap-2">
             <span
               class="inline-flex items-center px-2.5 py-1 rounded-xs text-[13px] font-semibold"
-              :style="{ background: STATUS_COLORS[entry.status_sebelum] }"
+              :style="{ background: STATUS_COLORS[entry.statusSebelum] }"
             >
-              {{ STATUS_LABELS[entry.status_sebelum] || entry.status_sebelum }}
+              {{ STATUS_LABELS[entry.statusSebelum] || entry.statusSebelum }}
             </span>
             <span class="text-stone-400 font-bold">→</span>
             <span
               class="inline-flex items-center px-2.5 py-1 rounded-xs text-[13px] font-semibold"
-              :style="{ background: STATUS_COLORS[entry.status_sesudah] }"
+              :style="{ background: STATUS_COLORS[entry.statusSesudah] }"
             >
-              {{ STATUS_LABELS[entry.status_sesudah] || entry.status_sesudah }}
+              {{ STATUS_LABELS[entry.statusSesudah] || entry.statusSesudah }}
             </span>
           </div>
         </div>

@@ -17,25 +17,25 @@ interface TahunAjaranOption {
 }
 
 interface SiswaRaporView {
-  siswa_id: string;
-  siswa_nama: string;
+  siswaId: string;
+  siswaNama: string;
   nisn: string | null;
-  rata_rata: number | null;
+  rataRata: number | null;
   peringkat: number | null;
-  catatan_wali_kelas: string | null;
-  p5_deskripsi: { dimensi: string; deskripsi: string }[] | null;
-  nilai_per_mapel: {
-    mata_pelajaran_nama: string;
-    komponen_nilai: { komponen_nama: string; nilai: string | number }[];
-    capaian_pembelajaran: string | null;
+  catatanWaliKelas: string | null;
+  p5Deskripsi: { dimensi: string; deskripsi: string }[] | null;
+  nilaiPerMapel: {
+    mataPelajaranNama: string;
+    komponenNilai: { komponenNama: string; nilai: string | number }[];
+    capaianPembelajaran: string | null;
   }[];
 }
 
 interface RaporOverview {
   status: 'draft' | 'final';
-  finalized_by: string | null;
-  finalized_at: string | null;
-  kelas_nama: string;
+  finalizedBy: string | null;
+  finalizedAt: string | null;
+  kelasNama: string;
   periode: string;
 }
 
@@ -269,15 +269,15 @@ onMounted(() => {
             {{ raporOverview.status === 'final' ? 'Final' : 'Draft' }}
           </span>
           <span class="text-[15px] font-medium text-text-primary">
-            {{ raporOverview.kelas_nama }} —
+            {{ raporOverview.kelasNama }} —
             {{
               periodeOptions.find((p) => p.value === (raporOverview ? raporOverview.periode : ''))
                 ?.label || (raporOverview ? raporOverview.periode : '')
             }}
           </span>
         </div>
-        <div v-if="raporOverview.finalized_at" class="text-[13px] text-text-secondary">
-          Difinalkan: {{ new Date(raporOverview.finalized_at).toLocaleString('id-ID') }}
+        <div v-if="raporOverview.finalizedAt" class="text-[13px] text-text-secondary">
+          Difinalkan: {{ new Date(raporOverview.finalizedAt).toLocaleString('id-ID') }}
         </div>
       </div>
 
@@ -330,18 +330,18 @@ onMounted(() => {
             <tbody class="divide-y divide-stone-200">
               <tr
                 v-for="(siswa, idx) in siswaRapors"
-                :key="siswa.siswa_id"
+                :key="siswa.siswaId"
                 class="hover:bg-primary-50 transition-colors"
               >
                 <td class="px-5 py-4 text-[15px]">{{ idx + 1 }}</td>
                 <td class="px-5 py-4 text-[15px] text-text-primary font-medium">
-                  {{ siswa.siswa_nama }}
+                  {{ siswa.siswaNama }}
                 </td>
                 <td class="px-5 py-4 text-[15px] text-text-secondary">{{ siswa.nisn || '-' }}</td>
                 <td class="px-5 py-4 text-[15px]">
                   {{
-                    siswa.rata_rata !== null && siswa.rata_rata !== undefined
-                      ? Number(siswa.rata_rata).toFixed(1)
+                    siswa.rataRata !== null && siswa.rataRata !== undefined
+                      ? Number(siswa.rataRata).toFixed(1)
                       : '-'
                   }}
                 </td>
@@ -386,7 +386,7 @@ onMounted(() => {
     <!-- Detail Modal -->
     <BaseModal
       :show="showDetailModal && !!detailSiswa"
-      :title="'Rapor: ' + (detailSiswa?.siswa_nama || '')"
+      :title="'Rapor: ' + (detailSiswa?.siswaNama || '')"
       size="xl"
       @close="showDetailModal = false"
     >
@@ -399,8 +399,8 @@ onMounted(() => {
             >
             <span class="text-[24px] font-bold text-text-primary">
               {{
-                detailSiswa.rata_rata !== null && detailSiswa.rata_rata !== undefined
-                  ? Number(detailSiswa.rata_rata).toFixed(1)
+                detailSiswa.rataRata !== null && detailSiswa.rataRata !== undefined
+                  ? Number(detailSiswa.rataRata).toFixed(1)
                   : '-'
               }}
             </span>
@@ -441,25 +441,25 @@ onMounted(() => {
               </thead>
               <tbody class="divide-y divide-stone-200">
                 <tr
-                  v-for="mapel in detailSiswa.nilai_per_mapel"
-                  :key="mapel.mata_pelajaran_nama"
+                  v-for="mapel in detailSiswa.nilaiPerMapel"
+                  :key="mapel.mataPelajaranNama"
                   class="hover:bg-primary-50 transition-colors"
                 >
                   <td class="px-5 py-4 text-[15px] text-text-primary">
-                    {{ mapel.mata_pelajaran_nama }}
+                    {{ mapel.mataPelajaranNama }}
                   </td>
                   <td class="px-5 py-4">
                     <div
-                      v-for="k in mapel.komponen_nilai"
-                      :key="k.komponen_nama"
+                      v-for="k in mapel.komponenNilai"
+                      :key="k.komponenNama"
                       class="flex gap-1 text-[13px]"
                     >
-                      <span class="text-text-secondary">{{ k.komponen_nama }}:</span>
+                      <span class="text-text-secondary">{{ k.komponenNama }}:</span>
                       <span class="font-semibold text-text-primary">{{ k.nilai }}</span>
                     </div>
                   </td>
                   <td class="px-5 py-4 text-[15px] text-text-secondary">
-                    {{ mapel.capaian_pembelajaran || '-' }}
+                    {{ mapel.capaianPembelajaran || '-' }}
                   </td>
                 </tr>
               </tbody>
@@ -468,13 +468,13 @@ onMounted(() => {
         </div>
 
         <!-- P5 -->
-        <div v-if="detailSiswa.p5_deskripsi && detailSiswa.p5_deskripsi.length > 0" class="mb-6">
+        <div v-if="detailSiswa.p5Deskripsi && detailSiswa.p5Deskripsi.length > 0" class="mb-6">
           <h3 class="text-[15px] font-bold text-text-primary mb-3">
             P5 - Profil Pelajar Pancasila
           </h3>
           <div class="flex flex-col gap-2">
             <div
-              v-for="item in detailSiswa.p5_deskripsi"
+              v-for="item in detailSiswa.p5Deskripsi"
               :key="item.dimensi"
               class="p-4 bg-purple-50 rounded-[12px] border-2 border-purple-200"
             >
@@ -485,12 +485,12 @@ onMounted(() => {
         </div>
 
         <!-- Catatan Wali Kelas -->
-        <div v-if="detailSiswa.catatan_wali_kelas" class="mb-4">
+        <div v-if="detailSiswa.catatanWaliKelas" class="mb-4">
           <h3 class="text-[15px] font-bold text-text-primary mb-3">Catatan Wali Kelas</h3>
           <p
             class="p-4 bg-surface-warm rounded-[12px] border-2 border-stone-200 text-[15px] text-text-primary leading-relaxed"
           >
-            {{ detailSiswa.catatan_wali_kelas }}
+            {{ detailSiswa.catatanWaliKelas }}
           </p>
         </div>
       </template>

@@ -11,8 +11,8 @@ interface User {
   email: string;
   phone?: string;
   role: Role;
-  is_active: boolean;
-  created_at: string;
+  isActive: boolean;
+  createdAt: string;
 }
 
 interface UserForm {
@@ -20,7 +20,7 @@ interface UserForm {
   email: string;
   phone: string;
   role: Role | '';
-  is_active: boolean;
+  isActive: boolean;
 }
 
 const users = ref<User[]>([]);
@@ -41,7 +41,7 @@ const form = reactive<UserForm>({
   email: '',
   phone: '',
   role: '',
-  is_active: true,
+  isActive: true,
 });
 
 // CSV import state
@@ -74,8 +74,8 @@ const filteredUsers = computed(() => {
     const matchRole = !filterRole.value || u.role === filterRole.value;
     const matchStatus =
       !filterStatus.value ||
-      (filterStatus.value === 'active' && u.is_active) ||
-      (filterStatus.value === 'inactive' && !u.is_active);
+      (filterStatus.value === 'active' && u.isActive) ||
+      (filterStatus.value === 'inactive' && !u.isActive);
     return matchSearch && matchRole && matchStatus;
   });
 });
@@ -98,7 +98,7 @@ function openCreateForm() {
   form.email = '';
   form.phone = '';
   form.role = '';
-  form.is_active = true;
+  form.isActive = true;
   showFormModal.value = true;
 }
 
@@ -108,7 +108,7 @@ function openEditForm(user: User) {
   form.email = user.email;
   form.phone = user.phone || '';
   form.role = user.role;
-  form.is_active = user.is_active;
+  form.isActive = user.isActive;
   showFormModal.value = true;
 }
 
@@ -125,9 +125,9 @@ async function saveUser() {
     role: form.role,
   };
 
-  // is_active only relevant when editing existing user
+  // isActive only relevant when editing existing user
   if (editingUser.value) {
-    payload.is_active = form.is_active;
+    payload.isActive = form.isActive;
   }
 
   try {
@@ -316,12 +316,12 @@ onMounted(fetchUsers);
                 <span
                   :class="[
                     'inline-flex items-center px-2.5 py-1 rounded-md text-[13px] font-semibold',
-                    user.is_active
+                    user.isActive
                       ? 'bg-success-50 text-success-700'
                       : 'bg-danger-50 text-danger-700',
                   ]"
                 >
-                  {{ user.is_active ? 'Aktif' : 'Nonaktif' }}
+                  {{ user.isActive ? 'Aktif' : 'Nonaktif' }}
                 </span>
               </td>
               <td class="px-5 py-4">
@@ -413,7 +413,7 @@ onMounted(fetchUsers);
           <label
             class="flex items-center gap-2 text-[15px] font-medium text-stone-800 cursor-pointer"
           >
-            <input v-model="form.is_active" type="checkbox" class="rounded border-stone-300" />
+            <input v-model="form.isActive" type="checkbox" class="rounded border-stone-300" />
             Aktif
           </label>
         </div>

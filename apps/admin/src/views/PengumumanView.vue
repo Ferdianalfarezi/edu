@@ -9,28 +9,28 @@ interface Pengumuman {
   id: string;
   judul: string;
   mode: 'broadcast' | 'targeted';
-  jumlah_penerima: number;
+  jumlahPenerima: number;
   status: 'draft' | 'terkirim' | 'gagal';
-  created_at: string;
+  createdAt: string;
 }
 
 interface PengumumanListResponse {
   data: Pengumuman[];
-  meta: { page: number; page_size: number; total_count: number; total_pages: number };
+  meta: { page: number; pageSize: number; totalCount: number; totalPages: number };
 }
 
 interface SiswaOption {
   id: string;
   nama: string;
   nisn: string;
-  kelas_nama?: string;
+  kelasNama?: string;
 }
 
 interface PengumumanForm {
   judul: string;
   deskripsi: string;
   mode: 'broadcast' | 'targeted';
-  siswa_ids: string[];
+  siswaIds: string[];
 }
 
 const toast = useToast();
@@ -53,7 +53,7 @@ const form = reactive<PengumumanForm>({
   judul: '',
   deskripsi: '',
   mode: 'broadcast',
-  siswa_ids: [],
+  siswaIds: [],
 });
 const formErrors = ref<Record<string, string>>({});
 
@@ -72,8 +72,8 @@ async function fetchPengumuman() {
     const params = { ...queryParams.value };
     const { data } = await api.get<PengumumanListResponse>('/pengumuman', { params });
     pengumumanList.value = data.data;
-    totalCount.value = data.meta.total_count;
-    totalPages.value = data.meta.total_pages;
+    totalCount.value = data.meta.totalCount;
+    totalPages.value = data.meta.totalPages;
   } catch {
     error.value = true;
     pengumumanList.value = [];
@@ -119,7 +119,7 @@ function addSiswa(siswa: SiswaOption) {
     return;
   }
   selectedSiswa.value.push(siswa);
-  form.siswa_ids.push(siswa.id);
+  form.siswaIds.push(siswa.id);
   // Remove from search results
   siswaSearchResults.value = siswaSearchResults.value.filter((s) => s.id !== siswa.id);
   siswaSearchQuery.value = '';
@@ -128,7 +128,7 @@ function addSiswa(siswa: SiswaOption) {
 
 function removeSiswa(siswaId: string) {
   selectedSiswa.value = selectedSiswa.value.filter((s) => s.id !== siswaId);
-  form.siswa_ids = form.siswa_ids.filter((id) => id !== siswaId);
+  form.siswaIds = form.siswaIds.filter((id) => id !== siswaId);
 }
 
 // Form
@@ -137,7 +137,7 @@ function openCreateModal() {
     judul: '',
     deskripsi: '',
     mode: 'broadcast',
-    siswa_ids: [],
+    siswaIds: [],
   });
   selectedSiswa.value = [];
   siswaSearchQuery.value = '';
@@ -158,8 +158,8 @@ function validateForm(): boolean {
   } else if (form.deskripsi.trim().length > 5000) {
     formErrors.value.deskripsi = 'Deskripsi maksimal 5000 karakter';
   }
-  if (form.mode === 'targeted' && form.siswa_ids.length === 0) {
-    formErrors.value.siswa_ids = 'Minimal satu siswa harus dipilih';
+  if (form.mode === 'targeted' && form.siswaIds.length === 0) {
+    formErrors.value.siswaIds = 'Minimal satu siswa harus dipilih';
   }
   return Object.keys(formErrors.value).length === 0;
 }
@@ -174,10 +174,10 @@ async function submitPengumuman() {
       mode: form.mode,
     };
     if (form.mode === 'targeted') {
-      payload.siswa_ids = form.siswa_ids;
+      payload.siswaIds = form.siswaIds;
     }
-    const { data } = await api.post<{ jumlah_penerima: number }>('/pengumuman', payload);
-    toast.success(`Pengumuman berhasil dikirim ke ${data.jumlah_penerima} penerima`);
+    const { data } = await api.post<{ jumlahPenerima: number }>('/pengumuman', payload);
+    toast.success(`Pengumuman berhasil dikirim ke ${data.jumlahPenerima} penerima`);
     showCreateModal.value = false;
     await fetchPengumuman();
   } catch {
@@ -279,10 +279,10 @@ onMounted(fetchPengumuman);
                 </span>
               </td>
               <td class="px-5 py-4 text-[15px] text-text-secondary">
-                {{ item.jumlah_penerima }}
+                {{ item.jumlahPenerima }}
               </td>
               <td class="px-5 py-4 text-[15px] text-text-secondary">
-                {{ formatDate(item.created_at) }}
+                {{ formatDate(item.createdAt) }}
               </td>
               <td class="px-5 py-4">
                 <span
@@ -525,8 +525,8 @@ onMounted(fetchPengumuman);
             >
               <span class="font-medium text-text-primary">{{ siswa.nama }}</span>
               <span class="text-text-tertiary ml-2 text-[13px]">{{ siswa.nisn }}</span>
-              <span v-if="siswa.kelas_nama" class="text-text-tertiary ml-1 text-[13px]"
-                >· {{ siswa.kelas_nama }}</span
+              <span v-if="siswa.kelasNama" class="text-text-tertiary ml-1 text-[13px]"
+                >· {{ siswa.kelasNama }}</span
               >
             </button>
           </div>
@@ -559,8 +559,8 @@ onMounted(fetchPengumuman);
           <p class="text-[13px] text-text-tertiary mt-1.5">
             {{ selectedSiswa.length }}/100 siswa dipilih
           </p>
-          <p v-if="formErrors.siswa_ids" class="text-[13px] text-danger-500 mt-1">
-            {{ formErrors.siswa_ids }}
+          <p v-if="formErrors.siswaIds" class="text-[13px] text-danger-500 mt-1">
+            {{ formErrors.siswaIds }}
           </p>
         </div>
       </form>

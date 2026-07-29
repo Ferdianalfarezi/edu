@@ -7,13 +7,13 @@ import { PageHeader, ActionButton } from '@/components/ui';
 interface RppFavoriteItem {
   id: string;
   judul: string;
-  guru_nama: string;
-  mata_pelajaran_nama: string;
-  kategori_nama: string;
-  tahun_terbit: number;
-  konten_type: 'richtext' | 'file';
-  tanggal_publish: string;
-  updated_at: string;
+  guruNama: string;
+  mataPelajaranNama: string;
+  kategoriNama: string;
+  tahunTerbit: number;
+  kontenType: 'richtext' | 'file';
+  tanggalPublish: string;
+  updatedAt: string;
 }
 
 const router = useRouter();
@@ -104,12 +104,12 @@ onMounted(fetchFavorites);
           <span
             :class="[
               'inline-flex items-center px-2.5 py-1 rounded-xs text-[13px] font-semibold',
-              item.konten_type === 'file'
+              item.kontenType === 'file'
                 ? 'bg-warning-50 text-warning-700'
                 : 'bg-primary-50 text-primary-600',
             ]"
           >
-            {{ item.konten_type === 'file' ? '📄 File' : '📝 Teks' }}
+            {{ item.kontenType === 'file' ? '📄 File' : '📝 Teks' }}
           </span>
           <button
             class="text-xl leading-none text-amber-500 hover:text-danger-500 transition-colors"
@@ -126,18 +126,16 @@ onMounted(fetchFavorites);
           {{ item.judul }}
         </h3>
         <div class="flex flex-wrap gap-2 mb-4">
-          <span class="text-[13px] font-medium text-text-tertiary">👤 {{ item.guru_nama }}</span>
+          <span class="text-[13px] font-medium text-text-tertiary">👤 {{ item.guruNama }}</span>
           <span class="text-[13px] font-medium text-text-tertiary"
-            >📚 {{ item.mata_pelajaran_nama }}</span
+            >📚 {{ item.mataPelajaranNama }}</span
           >
-          <span class="text-[13px] font-medium text-text-tertiary"
-            >🏷️ {{ item.kategori_nama }}</span
-          >
-          <span class="text-[13px] font-medium text-text-tertiary">📅 {{ item.tahun_terbit }}</span>
+          <span class="text-[13px] font-medium text-text-tertiary">🏷️ {{ item.kategoriNama }}</span>
+          <span class="text-[13px] font-medium text-text-tertiary">📅 {{ item.tahunTerbit }}</span>
         </div>
         <div class="flex justify-between items-center pt-4 border-t-2 border-stone-200">
           <span class="text-[13px] font-medium text-text-tertiary"
-            >Dipublish: {{ formatDate(item.tanggal_publish) }}</span
+            >Dipublish: {{ formatDate(item.tanggalPublish) }}</span
           >
           <div class="flex gap-2">
             <ActionButton variant="primary" icon="view" @click="viewRpp(item)">Lihat</ActionButton>

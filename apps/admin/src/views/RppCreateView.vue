@@ -18,14 +18,14 @@ interface KategoriRpp {
 interface RppDetail {
   id: string;
   judul: string;
-  mata_pelajaran_id: string;
-  kategori_id: string;
-  kategori_nama: string;
-  tahun_terbit: number;
-  konten_type: 'richtext' | 'file';
+  mataPelajaranId: string;
+  kategoriId: string;
+  kategoriNama: string;
+  tahunTerbit: number;
+  kontenType: 'richtext' | 'file';
   konten: string | null;
-  file_nama: string | null;
-  file_size: number | null;
+  fileNama: string | null;
+  fileSize: number | null;
   status: 'draft' | 'published';
 }
 
@@ -112,14 +112,14 @@ async function fetchRppDetail() {
     const { data } = await api.get<{ data: RppDetail }>(`/rpp/${rppId.value}`);
     const rpp = data.data;
     judul.value = rpp.judul;
-    mataPelajaranId.value = rpp.mata_pelajaran_id;
-    kategoriId.value = rpp.kategori_id;
-    kategoriSearch.value = rpp.kategori_nama;
-    tahunTerbit.value = rpp.tahun_terbit;
-    kontenType.value = rpp.konten_type;
+    mataPelajaranId.value = rpp.mataPelajaranId;
+    kategoriId.value = rpp.kategoriId;
+    kategoriSearch.value = rpp.kategoriNama;
+    tahunTerbit.value = rpp.tahunTerbit;
+    kontenType.value = rpp.kontenType;
     konten.value = rpp.konten || '';
     status.value = rpp.status;
-    existingFileName.value = rpp.file_nama || '';
+    existingFileName.value = rpp.fileNama || '';
   } catch (e) {
     error.value = 'Gagal memuat data RPP.';
     console.error('Failed to fetch RPP detail:', e);

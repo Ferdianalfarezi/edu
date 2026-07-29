@@ -99,56 +99,56 @@ type StatusTransaksi = 'menunggu_verifikasi' | 'diterima' | 'ditolak';
 
 interface Tagihan {
   id: string;
-  siswa_id: string;
-  siswa_nama: string;
-  kelas_nama: string;
+  siswaId: string;
+  siswaNama: string;
+  kelasNama: string;
   bulan: number;
   tahun: number;
   nominal: number;
-  total_dibayar: number;
+  totalDibayar: number;
   status: StatusTagihan;
-  tanggal_jatuh_tempo: string | null;
-  created_at: string;
+  tanggalJatuhTempo: string | null;
+  createdAt: string;
 }
 
 interface TransaksiVerifikasi {
   id: string;
-  tagihan_id: string;
-  siswa_nama: string;
-  kelas_nama: string;
+  tagihanId: string;
+  siswaNama: string;
+  kelasNama: string;
   bulan: number;
   tahun: number;
-  nominal_tagihan: number;
-  jumlah_bayar: number;
-  bukti_transfer_url: string | null;
+  nominalTagihan: number;
+  jumlahBayar: number;
+  buktiTransferUrl: string | null;
   metode: string;
   status: StatusTransaksi;
-  uploaded_by_nama: string;
-  created_at: string;
+  uploadedByNama: string;
+  createdAt: string;
 }
 
 interface Tunggakan {
   id: string;
-  siswa_id: string;
-  siswa_nama: string;
-  kelas_nama: string;
+  siswaId: string;
+  siswaNama: string;
+  kelasNama: string;
   bulan: number;
   tahun: number;
   nominal: number;
-  total_dibayar: number;
+  totalDibayar: number;
   sisa: number;
   status: StatusTagihan;
-  tanggal_jatuh_tempo: string | null;
+  tanggalJatuhTempo: string | null;
 }
 
 interface AuditLog {
   id: string;
-  user_nama: string;
-  jenis_aksi: string;
-  nilai_sebelum: Record<string, unknown> | null;
-  nilai_sesudah: Record<string, unknown> | null;
+  userNama: string;
+  jenisAksi: string;
+  nilaiSebelum: Record<string, unknown> | null;
+  nilaiSesudah: Record<string, unknown> | null;
   alasan: string | null;
-  created_at: string;
+  createdAt: string;
 }
 
 interface Kelas {
@@ -193,8 +193,8 @@ const generateForm = reactive({
   mode: 'bulan' as 'bulan' | 'tahun_ajaran',
   bulan: new Date().getMonth() + 1,
   tahun: new Date().getFullYear(),
-  tahun_ajaran_id: '',
-  kelas_id: '', // empty = all classes
+  tahunAjaranId: '',
+  kelasId: '', // empty = all classes
 });
 const generateResult = ref<{
   created: number;
@@ -222,7 +222,7 @@ const showLightbox = ref(false);
 // ===== Tunggakan Tab =====
 const tunggakanList = ref<Tunggakan[]>([]);
 const tunggakanFilter = reactive({
-  kelas_id: '',
+  kelasId: '',
   bulan: '' as number | '',
   tahun: 0,
 });
@@ -233,7 +233,7 @@ const exporting = ref(false);
 const showManualPaymentModal = ref(false);
 const manualPaymentTagihan = ref<Tagihan | null>(null);
 const manualPaymentForm = reactive({
-  jumlah_bayar: 0,
+  jumlahBayar: 0,
   metode: 'tunai' as 'tunai' | 'transfer_manual',
   catatan: '',
 });
@@ -245,7 +245,7 @@ const showEditModal = ref(false);
 const editingTagihan = ref<Tagihan | null>(null);
 const editForm = reactive({
   nominal: 0,
-  tanggal_jatuh_tempo: '',
+  tanggalJatuhTempo: '',
 });
 const editError = ref('');
 const savingEdit = ref(false);
@@ -307,7 +307,7 @@ const statusFilterOptions = computed<SelectOption[]>(() =>
 
 const sisaTagihanManual = computed(() => {
   if (!manualPaymentTagihan.value) return 0;
-  return manualPaymentTagihan.value.nominal - manualPaymentTagihan.value.total_dibayar;
+  return manualPaymentTagihan.value.nominal - manualPaymentTagihan.value.totalDibayar;
 });
 
 // ===== Tab Items =====
@@ -367,7 +367,7 @@ async function fetchKelas() {
     const activeTa = tahunAjaranList.value.find((ta) => ta.status === 'aktif');
     const params: Record<string, string> = {};
     if (activeTa) {
-      params.tahun_ajaran_id = activeTa.id;
+      params.tahunAjaranId = activeTa.id;
     }
     const { data } = await api.get<{ data: Kelas[] }>('/kelas', { params });
     kelasList.value = data.data;
@@ -398,10 +398,10 @@ async function generateTagihan() {
       payload.bulan = generateForm.bulan;
       payload.tahun = generateForm.tahun;
     } else {
-      payload.tahun_ajaran_id = generateForm.tahun_ajaran_id;
+      payload.tahunAjaranId = generateForm.tahunAjaranId;
     }
-    if (generateForm.kelas_id) {
-      payload.kelas_id = generateForm.kelas_id;
+    if (generateForm.kelasId) {
+      payload.kelasId = generateForm.kelasId;
     }
 
     const { data } = await api.post<{
@@ -434,19 +434,19 @@ async function fetchTagihanList() {
       page_size: pageSize.value,
     };
     if (filters['status'].value) params.status = filters['status'].value;
-    if (filters['kelas_id'].value) params.kelas_id = filters['kelas_id'].value;
+    if (filters['kelas_id'].value) params.kelasId = filters['kelas_id'].value;
     if (filters['bulan'].value) params.bulan = filters['bulan'].value;
     if (listFilterTahun.value) params.tahun = listFilterTahun.value;
     if (search.value) params.search = search.value;
 
     const { data } = await api.get<{
       data: Tagihan[];
-      meta: { page: number; page_size: number; total_count: number; total_pages: number };
+      meta: { page: number; pageSize: number; totalCount: number; totalPages: number };
     }>('/tagihan', { params });
 
     tagihanList.value = data.data;
-    totalCount.value = data.meta.total_count;
-    totalPages.value = data.meta.total_pages;
+    totalCount.value = data.meta.totalCount;
+    totalPages.value = data.meta.totalPages;
   } catch (error) {
     console.error('Failed to fetch tagihan:', error);
   } finally {
@@ -482,9 +482,9 @@ async function verifyTransaksi(action: 'approve' | 'reject') {
 
   verifyingId.value = selectedTransaksi.value.id;
   try {
-    const { data } = await api.patch(`/tagihan/${selectedTransaksi.value.tagihan_id}/verify`, {
+    const { data } = await api.patch(`/tagihan/${selectedTransaksi.value.tagihanId}/verify`, {
       action,
-      alasan_penolakan: action === 'reject' ? rejectReason.value.trim() : undefined,
+      alasanPenolakan: action === 'reject' ? rejectReason.value.trim() : undefined,
     });
     showBuktiModal.value = false;
     toast.success(
@@ -503,17 +503,17 @@ async function fetchTunggakan() {
   loading.value = true;
   try {
     const params: Record<string, string | number> = {};
-    if (tunggakanFilter.kelas_id) params.kelas_id = tunggakanFilter.kelas_id;
+    if (tunggakanFilter.kelasId) params.kelasId = tunggakanFilter.kelasId;
     if (tunggakanFilter.bulan) params.bulan = tunggakanFilter.bulan;
     if (tunggakanFilter.tahun) params.tahun = tunggakanFilter.tahun;
 
     const { data } = await api.get<{
       data: Tunggakan[];
-      total_tunggakan: number;
+      totalTunggakan: number;
     }>('/tagihan/tunggakan', { params });
 
     tunggakanList.value = data.data;
-    tunggakanTotal.value = data.total_tunggakan;
+    tunggakanTotal.value = data.totalTunggakan;
   } catch (error) {
     console.error('Failed to fetch tunggakan:', error);
   } finally {
@@ -525,7 +525,7 @@ async function exportTunggakan() {
   exporting.value = true;
   try {
     const params: Record<string, string | number> = { format: 'csv' };
-    if (tunggakanFilter.kelas_id) params.kelas_id = tunggakanFilter.kelas_id;
+    if (tunggakanFilter.kelasId) params.kelasId = tunggakanFilter.kelasId;
 
     const response = await api.get('/tagihan/export', {
       params,
@@ -551,7 +551,7 @@ async function exportTunggakan() {
 // --- Manual Payment ---
 function openManualPayment(tagihan: Tagihan) {
   manualPaymentTagihan.value = tagihan;
-  manualPaymentForm.jumlah_bayar = tagihan.nominal - tagihan.total_dibayar;
+  manualPaymentForm.jumlahBayar = tagihan.nominal - tagihan.totalDibayar;
   manualPaymentForm.metode = 'tunai';
   manualPaymentForm.catatan = '';
   manualPaymentError.value = '';
@@ -560,11 +560,11 @@ function openManualPayment(tagihan: Tagihan) {
 
 async function saveManualPayment() {
   if (!manualPaymentTagihan.value) return;
-  if (manualPaymentForm.jumlah_bayar <= 0) {
+  if (manualPaymentForm.jumlahBayar <= 0) {
     manualPaymentError.value = 'Jumlah bayar harus lebih dari 0';
     return;
   }
-  if (manualPaymentForm.jumlah_bayar > sisaTagihanManual.value) {
+  if (manualPaymentForm.jumlahBayar > sisaTagihanManual.value) {
     manualPaymentError.value = 'Jumlah melebihi sisa tagihan';
     return;
   }
@@ -574,7 +574,7 @@ async function saveManualPayment() {
 
   try {
     await api.post(`/tagihan/${manualPaymentTagihan.value.id}/manual-payment`, {
-      jumlah_bayar: manualPaymentForm.jumlah_bayar,
+      jumlahBayar: manualPaymentForm.jumlahBayar,
       metode: manualPaymentForm.metode,
       catatan: manualPaymentForm.catatan.trim() || undefined,
     });
@@ -591,7 +591,7 @@ async function saveManualPayment() {
 function openEditTagihan(tagihan: Tagihan) {
   editingTagihan.value = tagihan;
   editForm.nominal = tagihan.nominal;
-  editForm.tanggal_jatuh_tempo = tagihan.tanggal_jatuh_tempo || '';
+  editForm.tanggalJatuhTempo = tagihan.tanggalJatuhTempo || '';
   editError.value = '';
   showEditModal.value = true;
 }
@@ -609,7 +609,7 @@ async function saveEditTagihan() {
   try {
     await api.patch(`/tagihan/${editingTagihan.value.id}`, {
       nominal: editForm.nominal,
-      tanggal_jatuh_tempo: editForm.tanggal_jatuh_tempo || undefined,
+      tanggalJatuhTempo: editForm.tanggalJatuhTempo || undefined,
     });
     showEditModal.value = false;
     await fetchTagihanList();
@@ -654,7 +654,7 @@ async function fetchAuditLogs() {
   auditLoading.value = true;
   try {
     const { data } = await api.get<{ data: AuditLog[] }>('/tagihan/audit-log', {
-      params: { tagihan_id: auditTagihanId.value.trim() },
+      params: { tagihanId: auditTagihanId.value.trim() },
     });
     auditLogs.value = data.data;
   } catch (error) {
@@ -683,7 +683,7 @@ watch(activeTab, (tab) => {
 });
 
 watch(
-  () => [tunggakanFilter.kelas_id, tunggakanFilter.bulan, tunggakanFilter.tahun],
+  () => [tunggakanFilter.kelasId, tunggakanFilter.bulan, tunggakanFilter.tahun],
   () => {
     if (activeTab.value === 'tunggakan') fetchTunggakan();
   },
@@ -805,7 +805,7 @@ onMounted(async () => {
 
           <div v-if="generateForm.mode === 'tahun_ajaran'" class="mb-5">
             <SearchSelect
-              v-model="generateForm.tahun_ajaran_id"
+              v-model="generateForm.tahunAjaranId"
               label="Tahun Ajaran"
               :options="tahunAjaranSelectOptions"
               placeholder="Pilih Tahun Ajaran"
@@ -814,7 +814,7 @@ onMounted(async () => {
 
           <div class="mb-5">
             <SearchSelect
-              v-model="generateForm.kelas_id"
+              v-model="generateForm.kelasId"
               label="Kelas (opsional — kosong = semua kelas)"
               :options="kelasSelectOptions"
               placeholder="Semua Kelas"
@@ -989,9 +989,9 @@ onMounted(async () => {
                 class="hover:bg-primary-50 transition-colors duration-200"
               >
                 <td class="px-5 py-4 text-[15px] text-stone-800 font-medium">
-                  {{ tagihan.siswa_nama }}
+                  {{ tagihan.siswaNama }}
                 </td>
-                <td class="px-5 py-4 text-[15px] text-stone-600">{{ tagihan.kelas_nama }}</td>
+                <td class="px-5 py-4 text-[15px] text-stone-600">{{ tagihan.kelasNama }}</td>
                 <td class="px-5 py-4 text-[15px] text-stone-600">
                   {{ getBulanLabel(tagihan.bulan) }} {{ tagihan.tahun }}
                 </td>
@@ -999,7 +999,7 @@ onMounted(async () => {
                   {{ formatCurrency(tagihan.nominal) }}
                 </td>
                 <td class="px-5 py-4 text-[15px] text-stone-600">
-                  {{ formatCurrency(tagihan.total_dibayar) }}
+                  {{ formatCurrency(tagihan.totalDibayar) }}
                 </td>
                 <td class="px-5 py-4">
                   <span
@@ -1012,7 +1012,7 @@ onMounted(async () => {
                   </span>
                 </td>
                 <td class="px-5 py-4 text-[15px] text-stone-600">
-                  {{ formatDate(tagihan.tanggal_jatuh_tempo) }}
+                  {{ formatDate(tagihan.tanggalJatuhTempo) }}
                 </td>
                 <td class="px-5 py-4">
                   <div class="flex flex-wrap gap-1.5">
@@ -1122,18 +1122,18 @@ onMounted(async () => {
                 class="hover:bg-primary-50 transition-colors duration-200"
               >
                 <td class="px-5 py-4 text-[15px] text-stone-800 font-medium">
-                  {{ tx.siswa_nama }}
+                  {{ tx.siswaNama }}
                 </td>
-                <td class="px-5 py-4 text-[15px] text-stone-600">{{ tx.kelas_nama }}</td>
+                <td class="px-5 py-4 text-[15px] text-stone-600">{{ tx.kelasNama }}</td>
                 <td class="px-5 py-4 text-[15px] text-stone-600">
                   {{ getBulanLabel(tx.bulan) }} {{ tx.tahun }}
                 </td>
                 <td class="px-5 py-4 text-[15px] text-stone-800 font-medium">
-                  {{ formatCurrency(tx.jumlah_bayar) }}
+                  {{ formatCurrency(tx.jumlahBayar) }}
                 </td>
-                <td class="px-5 py-4 text-[15px] text-stone-600">{{ tx.uploaded_by_nama }}</td>
+                <td class="px-5 py-4 text-[15px] text-stone-600">{{ tx.uploadedByNama }}</td>
                 <td class="px-5 py-4 text-[15px] text-stone-600">
-                  {{ formatDate(tx.created_at) }}
+                  {{ formatDate(tx.createdAt) }}
                 </td>
                 <td class="px-5 py-4">
                   <ActionButton variant="primary" icon="view" @click="openBuktiPreview(tx)"
@@ -1174,7 +1174,7 @@ onMounted(async () => {
       <div class="flex flex-wrap items-end gap-3 mb-5">
         <div class="w-40">
           <SearchSelect
-            v-model="tunggakanFilter.kelas_id"
+            v-model="tunggakanFilter.kelasId"
             :options="kelasSelectOptions"
             placeholder="Semua Kelas"
             clearable
@@ -1253,9 +1253,9 @@ onMounted(async () => {
                 class="hover:bg-primary-50 transition-colors duration-200"
               >
                 <td class="px-5 py-4 text-[15px] text-stone-800 font-medium">
-                  {{ item.siswa_nama }}
+                  {{ item.siswaNama }}
                 </td>
-                <td class="px-5 py-4 text-[15px] text-stone-600">{{ item.kelas_nama }}</td>
+                <td class="px-5 py-4 text-[15px] text-stone-600">{{ item.kelasNama }}</td>
                 <td class="px-5 py-4 text-[15px] text-stone-600">
                   {{ getBulanLabel(item.bulan) }} {{ item.tahun }}
                 </td>
@@ -1263,7 +1263,7 @@ onMounted(async () => {
                   {{ formatCurrency(item.nominal) }}
                 </td>
                 <td class="px-5 py-4 text-[15px] text-stone-600">
-                  {{ formatCurrency(item.total_dibayar) }}
+                  {{ formatCurrency(item.totalDibayar) }}
                 </td>
                 <td class="px-5 py-4 text-[15px] font-bold text-danger-700">
                   {{ formatCurrency(item.sisa) }}
@@ -1279,7 +1279,7 @@ onMounted(async () => {
                   </span>
                 </td>
                 <td class="px-5 py-4 text-[15px] text-stone-600">
-                  {{ formatDate(item.tanggal_jatuh_tempo) }}
+                  {{ formatDate(item.tanggalJatuhTempo) }}
                 </td>
               </tr>
             </tbody>
@@ -1356,24 +1356,24 @@ onMounted(async () => {
                 class="hover:bg-primary-50 transition-colors duration-200"
               >
                 <td class="px-5 py-4 text-[15px] text-stone-600">
-                  {{ formatDate(log.created_at) }}
+                  {{ formatDate(log.createdAt) }}
                 </td>
                 <td class="px-5 py-4 text-[15px] text-stone-800 font-medium">
-                  {{ log.user_nama }}
+                  {{ log.userNama }}
                 </td>
-                <td class="px-5 py-4 text-[15px] text-stone-800">{{ log.jenis_aksi }}</td>
+                <td class="px-5 py-4 text-[15px] text-stone-800">{{ log.jenisAksi }}</td>
                 <td class="px-5 py-4">
                   <pre
-                    v-if="log.nilai_sebelum"
+                    v-if="log.nilaiSebelum"
                     class="text-[13px] max-w-[200px] overflow-auto whitespace-pre-wrap text-stone-600"
-                    >{{ JSON.stringify(log.nilai_sebelum, null, 2) }}</pre>
+                    >{{ JSON.stringify(log.nilaiSebelum, null, 2) }}</pre>
                   <span v-else class="text-[15px] text-stone-400">-</span>
                 </td>
                 <td class="px-5 py-4">
                   <pre
-                    v-if="log.nilai_sesudah"
+                    v-if="log.nilaiSesudah"
                     class="text-[13px] max-w-[200px] overflow-auto whitespace-pre-wrap text-stone-600"
-                    >{{ JSON.stringify(log.nilai_sesudah, null, 2) }}</pre>
+                    >{{ JSON.stringify(log.nilaiSesudah, null, 2) }}</pre>
                   <span v-else class="text-[15px] text-stone-400">-</span>
                 </td>
                 <td class="px-5 py-4 text-[15px] text-stone-600">{{ log.alasan || '-' }}</td>
@@ -1401,11 +1401,11 @@ onMounted(async () => {
         <div class="grid grid-cols-2 gap-3 text-[15px] mb-5">
           <div>
             <strong class="text-stone-800">Siswa:</strong>
-            <span class="text-stone-600">{{ selectedTransaksi.siswa_nama }}</span>
+            <span class="text-stone-600">{{ selectedTransaksi.siswaNama }}</span>
           </div>
           <div>
             <strong class="text-stone-800">Kelas:</strong>
-            <span class="text-stone-600">{{ selectedTransaksi.kelas_nama }}</span>
+            <span class="text-stone-600">{{ selectedTransaksi.kelasNama }}</span>
           </div>
           <div>
             <strong class="text-stone-800">Tagihan:</strong>
@@ -1416,22 +1416,22 @@ onMounted(async () => {
           <div>
             <strong class="text-stone-800">Nominal Tagihan:</strong>
             <span class="text-stone-600">{{
-              formatCurrency(selectedTransaksi.nominal_tagihan)
+              formatCurrency(selectedTransaksi.nominalTagihan)
             }}</span>
           </div>
           <div>
             <strong class="text-stone-800">Nominal Bayar:</strong>
-            <span class="text-stone-600">{{ formatCurrency(selectedTransaksi.jumlah_bayar) }}</span>
+            <span class="text-stone-600">{{ formatCurrency(selectedTransaksi.jumlahBayar) }}</span>
           </div>
           <div>
             <strong class="text-stone-800">Pengirim:</strong>
-            <span class="text-stone-600">{{ selectedTransaksi.uploaded_by_nama }}</span>
+            <span class="text-stone-600">{{ selectedTransaksi.uploadedByNama }}</span>
           </div>
         </div>
 
-        <div v-if="selectedTransaksi.bukti_transfer_url" class="my-5 text-center">
+        <div v-if="selectedTransaksi.buktiTransferUrl" class="my-5 text-center">
           <img
-            :src="selectedTransaksi.bukti_transfer_url"
+            :src="selectedTransaksi.buktiTransferUrl"
             alt="Bukti Transfer"
             class="max-w-full max-h-[400px] rounded-[12px] border-2 border-stone-200 mx-auto cursor-zoom-in hover:opacity-90 transition-opacity"
             @click="showLightbox = true"
@@ -1478,11 +1478,11 @@ onMounted(async () => {
       <div v-if="manualPaymentTagihan" class="grid grid-cols-2 gap-3 text-[15px] mb-5">
         <div>
           <strong class="text-stone-800">Siswa:</strong>
-          <span class="text-stone-600">{{ manualPaymentTagihan.siswa_nama }}</span>
+          <span class="text-stone-600">{{ manualPaymentTagihan.siswaNama }}</span>
         </div>
         <div>
           <strong class="text-stone-800">Kelas:</strong>
-          <span class="text-stone-600">{{ manualPaymentTagihan.kelas_nama }}</span>
+          <span class="text-stone-600">{{ manualPaymentTagihan.kelasNama }}</span>
         </div>
         <div>
           <strong class="text-stone-800">Tagihan:</strong>
@@ -1497,7 +1497,7 @@ onMounted(async () => {
         <div>
           <strong class="text-stone-800">Sudah Dibayar:</strong>
           <span class="text-stone-600">{{
-            formatCurrency(manualPaymentTagihan.total_dibayar)
+            formatCurrency(manualPaymentTagihan.totalDibayar)
           }}</span>
         </div>
         <div>
@@ -1514,7 +1514,7 @@ onMounted(async () => {
             >Jumlah Bayar <span class="text-danger-500">*</span></label
           >
           <input
-            v-model.number="manualPaymentForm.jumlah_bayar"
+            v-model.number="manualPaymentForm.jumlahBayar"
             type="number"
             class="w-full px-4 py-2.5 text-[15px] border-2 border-stone-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
             min="1"
@@ -1561,7 +1561,7 @@ onMounted(async () => {
       <div v-if="editingTagihan" class="grid grid-cols-2 gap-3 text-[15px] mb-5">
         <div>
           <strong class="text-stone-800">Siswa:</strong>
-          <span class="text-stone-600">{{ editingTagihan.siswa_nama }}</span>
+          <span class="text-stone-600">{{ editingTagihan.siswaNama }}</span>
         </div>
         <div>
           <strong class="text-stone-800">Tagihan:</strong>
@@ -1591,7 +1591,7 @@ onMounted(async () => {
             >Tanggal Jatuh Tempo</label
           >
           <input
-            v-model="editForm.tanggal_jatuh_tempo"
+            v-model="editForm.tanggalJatuhTempo"
             type="date"
             class="w-full px-4 py-2.5 text-[15px] border-2 border-stone-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
           />
@@ -1619,7 +1619,7 @@ onMounted(async () => {
       <p class="text-[15px] text-stone-600 mb-5">
         Anda akan membatalkan tagihan
         <strong v-if="cancellingTagihan" class="text-stone-800">
-          {{ cancellingTagihan.siswa_nama }} — {{ getBulanLabel(cancellingTagihan.bulan) }}
+          {{ cancellingTagihan.siswaNama }} — {{ getBulanLabel(cancellingTagihan.bulan) }}
           {{ cancellingTagihan.tahun }} </strong
         >.
       </p>
@@ -1653,7 +1653,7 @@ onMounted(async () => {
         leave-to-class="opacity-0"
       >
         <div
-          v-if="showLightbox && selectedTransaksi?.bukti_transfer_url"
+          v-if="showLightbox && selectedTransaksi?.buktiTransferUrl"
           class="fixed inset-0 z-[10000] flex items-center justify-center bg-black/80 backdrop-blur-sm cursor-zoom-out"
           @click="showLightbox = false"
         >
@@ -1664,7 +1664,7 @@ onMounted(async () => {
             ×
           </button>
           <img
-            :src="selectedTransaksi.bukti_transfer_url"
+            :src="selectedTransaksi.buktiTransferUrl"
             alt="Bukti Transfer"
             class="max-w-[90vw] max-h-[90vh] object-contain rounded-[16px] shadow-2xl"
             @click.stop

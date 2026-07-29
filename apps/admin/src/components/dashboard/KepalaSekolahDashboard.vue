@@ -4,26 +4,26 @@ import { api } from '@/api/client';
 import { StatCard } from '@/components/ui';
 
 interface AbsensiSummaryPerKelas {
-  kelas_id: string;
-  kelas_nama: string;
+  kelasId: string;
+  kelasNama: string;
   hadir: number;
   izin: number;
   sakit: number;
   alpa: number;
-  total_siswa: number;
+  totalSiswa: number;
 }
 interface AlpaAlert {
-  siswa_id: string;
-  siswa_nama: string;
-  kelas_nama: string;
-  total_alpa: number;
+  siswaId: string;
+  siswaNama: string;
+  kelasNama: string;
+  totalAlpa: number;
   threshold: number;
 }
 interface AbsensiDashboardResponse {
   tanggal: string;
-  summary_per_kelas: AbsensiSummaryPerKelas[];
-  total: { hadir: number; izin: number; sakit: number; alpa: number; total_siswa: number };
-  alpa_alerts: AlpaAlert[];
+  summaryPerKelas: AbsensiSummaryPerKelas[];
+  total: { hadir: number; izin: number; sakit: number; alpa: number; totalSiswa: number };
+  alpaAlerts: AlpaAlert[];
 }
 
 const loading = ref(true);
@@ -42,9 +42,9 @@ const todayFormatted = computed(() => {
 
 const attendancePercentage = computed(() => {
   if (!dashboardData.value?.total) return 0;
-  const { hadir, total_siswa } = dashboardData.value.total;
-  if (total_siswa === 0) return 0;
-  return Math.round((hadir / total_siswa) * 100);
+  const { hadir, totalSiswa } = dashboardData.value.total;
+  if (totalSiswa === 0) return 0;
+  return Math.round((hadir / totalSiswa) * 100);
 });
 
 async function fetchDashboard() {
@@ -122,7 +122,7 @@ onMounted(fetchDashboard);
 
       <!-- Alpa Alerts -->
       <div
-        v-if="dashboardData.alpa_alerts.length > 0"
+        v-if="dashboardData.alpaAlerts.length > 0"
         class="bg-danger-50 border-2 border-danger-200 rounded-2xl p-5 mb-8"
       >
         <h3 class="text-[15px] font-bold text-danger-700 mb-4 flex items-center gap-2">
@@ -168,12 +168,12 @@ onMounted(fetchDashboard);
               </tr>
             </thead>
             <tbody class="divide-y divide-danger-200/50">
-              <tr v-for="alert in dashboardData.alpa_alerts" :key="alert.siswa_id">
+              <tr v-for="alert in dashboardData.alpaAlerts" :key="alert.siswaId">
                 <td class="py-3 text-[15px] text-danger-700 font-semibold">
-                  {{ alert.siswa_nama }}
+                  {{ alert.siswaNama }}
                 </td>
-                <td class="py-3 text-[15px] text-danger-700/70">{{ alert.kelas_nama }}</td>
-                <td class="py-3 text-[15px] font-bold text-danger-700">{{ alert.total_alpa }}</td>
+                <td class="py-3 text-[15px] text-danger-700/70">{{ alert.kelasNama }}</td>
+                <td class="py-3 text-[15px] font-bold text-danger-700">{{ alert.totalAlpa }}</td>
                 <td class="py-3 text-[15px] text-danger-700/70">{{ alert.threshold }}</td>
               </tr>
             </tbody>
@@ -224,12 +224,12 @@ onMounted(fetchDashboard);
             </thead>
             <tbody class="divide-y divide-stone-100">
               <tr
-                v-for="kelas in dashboardData.summary_per_kelas"
-                :key="kelas.kelas_id"
+                v-for="kelas in dashboardData.summaryPerKelas"
+                :key="kelas.kelasId"
                 class="hover:bg-primary-50 transition-colors"
               >
                 <td class="px-5 py-4 font-semibold text-text-primary text-[15px]">
-                  {{ kelas.kelas_nama }}
+                  {{ kelas.kelasNama }}
                 </td>
                 <td class="px-5 py-4 text-success-700 font-semibold text-[15px]">
                   {{ kelas.hadir }}
@@ -241,7 +241,7 @@ onMounted(fetchDashboard);
                   {{ kelas.sakit }}
                 </td>
                 <td class="px-5 py-4 text-danger-700 font-bold text-[15px]">{{ kelas.alpa }}</td>
-                <td class="px-5 py-4 text-text-secondary text-[15px]">{{ kelas.total_siswa }}</td>
+                <td class="px-5 py-4 text-text-secondary text-[15px]">{{ kelas.totalSiswa }}</td>
               </tr>
             </tbody>
           </table>

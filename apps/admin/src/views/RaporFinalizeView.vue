@@ -11,29 +11,29 @@ interface KelasOption {
 }
 
 interface MapelStatus {
-  mata_pelajaran_id: string;
-  mata_pelajaran_nama: string;
-  guru_nama: string;
+  mataPelajaranId: string;
+  mataPelajaranNama: string;
+  guruNama: string;
   status: 'draft' | 'submitted' | 'not_started';
 }
 
 interface SiswaRapor {
-  siswa_id: string;
-  siswa_nama: string;
-  rata_rata: number | null;
+  siswaId: string;
+  siswaNama: string;
+  rataRata: number | null;
   peringkat: number | null;
-  catatan_wali_kelas: string;
-  p5_deskripsi: { dimensi: string; deskripsi: string }[] | null;
-  nilai_per_mapel: {
-    mata_pelajaran_nama: string;
-    komponen_nilai: { komponen_nama: string; nilai: string | number }[];
+  catatanWaliKelas: string;
+  p5Deskripsi: { dimensi: string; deskripsi: string }[] | null;
+  nilaiPerMapel: {
+    mataPelajaranNama: string;
+    komponenNilai: { komponenNama: string; nilai: string | number }[];
   }[];
 }
 
 interface RaporStatus {
   status: 'draft' | 'final';
-  finalized_by: string | null;
-  finalized_at: string | null;
+  finalizedBy: string | null;
+  finalizedAt: string | null;
 }
 
 const selectedKelas = ref('');
@@ -95,19 +95,19 @@ async function fetchRaporOverview() {
 
   try {
     const params = new URLSearchParams({
-      kelas_id: selectedKelas.value,
-      periode_id: selectedPeriode.value,
+      kelasId: selectedKelas.value,
+      periodeId: selectedPeriode.value,
     });
 
     const { data } = await api.get<{
       data: {
-        mapel_status: MapelStatus[];
+        mapelStatus: MapelStatus[];
         siswa: SiswaRapor[];
         rapor: RaporStatus;
       };
     }>(`/rapor/finalize-overview?${params.toString()}`);
 
-    mapelStatuses.value = data.data.mapel_status;
+    mapelStatuses.value = data.data.mapelStatus;
     siswaRapors.value = data.data.siswa;
     raporStatus.value = data.data.rapor;
   } catch (err) {
@@ -119,7 +119,7 @@ async function fetchRaporOverview() {
 
 function openP5Modal(siswaIdx: number) {
   editingP5SiswaIdx.value = siswaIdx;
-  const current = siswaRapors.value[siswaIdx].p5_deskripsi;
+  const current = siswaRapors.value[siswaIdx].p5Deskripsi;
   p5Form.value = current
     ? current.map((d) => ({ ...d }))
     : [
@@ -135,7 +135,7 @@ function openP5Modal(siswaIdx: number) {
 
 function saveP5() {
   const filtered = p5Form.value.filter((d) => d.deskripsi.trim());
-  siswaRapors.value[editingP5SiswaIdx.value].p5_deskripsi = filtered.length ? filtered : null;
+  siswaRapors.value[editingP5SiswaIdx.value].p5Deskripsi = filtered.length ? filtered : null;
   showP5Modal.value = false;
 }
 
@@ -151,12 +151,12 @@ async function finalize() {
 
   try {
     await api.post('/rapor/nilai/catatan', {
-      kelas_id: selectedKelas.value,
-      periode_rapor_id: selectedPeriode.value,
+      kelasId: selectedKelas.value,
+      periodeRaporId: selectedPeriode.value,
       data: siswaRapors.value.map((s) => ({
-        siswa_id: s.siswa_id,
-        catatan_wali_kelas: s.catatan_wali_kelas || undefined,
-        p5_deskripsi: s.p5_deskripsi || undefined,
+        siswaId: s.siswaId,
+        catatanWaliKelas: s.catatanWaliKelas || undefined,
+        p5Deskripsi: s.p5Deskripsi || undefined,
       })),
     });
 
@@ -279,8 +279,8 @@ onMounted(fetchKelas);
       >
         <strong>Status: Final</strong> — Rapor sudah difinalkan pada
         {{
-          raporStatus && raporStatus.finalized_at
-            ? new Date(raporStatus.finalized_at).toLocaleString('id-ID')
+          raporStatus && raporStatus.finalizedAt
+            ? new Date(raporStatus.finalizedAt).toLocaleString('id-ID')
             : ''
         }}. Orang tua dapat melihat rapor ini.
       </div>
@@ -297,12 +297,12 @@ onMounted(fetchKelas);
             <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
               <div
                 v-for="m in mapelStatuses"
-                :key="m.mata_pelajaran_id"
+                :key="m.mataPelajaranId"
                 class="bg-white border-2 border-stone-200 rounded-[12px] p-4"
               >
                 <div class="flex justify-between items-center">
                   <span class="font-semibold text-[15px] text-text-primary">{{
-                    m.mata_pelajaran_nama
+                    m.mataPelajaranNama
                   }}</span>
                   <span
                     class="inline-flex items-center px-2.5 py-1 rounded-[8px] text-[13px] font-semibold"
@@ -311,7 +311,7 @@ onMounted(fetchKelas);
                     {{ getStatusLabel(m.status) }}
                   </span>
                 </div>
-                <p class="text-[13px] text-text-secondary mt-1">Guru: {{ m.guru_nama }}</p>
+                <p class="text-[13px] text-text-secondary mt-1">Guru: {{ m.guruNama }}</p>
               </div>
             </div>
           </div>
@@ -370,18 +370,18 @@ onMounted(fetchKelas);
               <tbody class="divide-y divide-stone-200">
                 <tr
                   v-for="(siswa, idx) in siswaRapors"
-                  :key="siswa.siswa_id"
+                  :key="siswa.siswaId"
                   class="hover:bg-primary-50 transition-colors"
                 >
                   <td class="px-5 py-4 text-[15px]">{{ idx + 1 }}</td>
-                  <td class="px-5 py-4 text-[15px] text-text-primary">{{ siswa.siswa_nama }}</td>
+                  <td class="px-5 py-4 text-[15px] text-text-primary">{{ siswa.siswaNama }}</td>
                   <td class="px-5 py-4 text-[15px]">
-                    {{ siswa.rata_rata !== null ? siswa.rata_rata.toFixed(1) : '-' }}
+                    {{ siswa.rataRata !== null ? siswa.rataRata.toFixed(1) : '-' }}
                   </td>
                   <td class="px-5 py-4 text-[15px]">{{ siswa.peringkat ?? '-' }}</td>
                   <td class="px-5 py-4">
                     <textarea
-                      v-model="siswa.catatan_wali_kelas"
+                      v-model="siswa.catatanWaliKelas"
                       class="w-full min-w-[150px] px-3 py-2 text-[15px] border-2 border-stone-200 rounded-xs focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 resize-y"
                       :disabled="isFinalized"
                       rows="2"
@@ -395,7 +395,7 @@ onMounted(fetchKelas);
                       :disabled="isFinalized"
                       @click="openP5Modal(idx)"
                     >
-                      {{ siswa.p5_deskripsi ? 'Edit P5' : 'Isi P5' }}
+                      {{ siswa.p5Deskripsi ? 'Edit P5' : 'Isi P5' }}
                     </ActionButton>
                   </td>
                 </tr>

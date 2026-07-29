@@ -8,42 +8,42 @@ interface SiswaDetailProfil {
   id: string;
   nama: string;
   nisn: string | null;
-  jenis_kelamin: 'L' | 'P' | null;
-  tanggal_lahir: string | null;
+  jenisKelamin: 'L' | 'P' | null;
+  tanggalLahir: string | null;
   alamat: string | null;
   status: 'aktif' | 'pindah_sekolah' | 'keluar' | 'lulus';
-  kelas_nama: string | null;
-  orang_tua_nama: string | null;
+  kelasNama: string | null;
+  orangTuaNama: string | null;
 }
 
 interface RiwayatKelasEntry {
-  kelas_nama: string;
+  kelasNama: string;
   tingkat: number;
-  tahun_ajaran_nama: string;
-  tanggal_mulai: string;
-  is_current: boolean;
+  tahunAjaranNama: string;
+  tanggalMulai: string;
+  isCurrent: boolean;
 }
 
 interface RaporRingkasanEntry {
-  tahun_ajaran_nama: string;
+  tahunAjaranNama: string;
   periode: string;
-  rapor_id: string;
-  rata_rata: number;
+  raporId: string;
+  rataRata: number;
   peringkat: number | null;
 }
 
 interface SiswaDetailResponse {
   profil: SiswaDetailProfil;
-  riwayat_kelas: RiwayatKelasEntry[];
-  rapor_ringkasan: RaporRingkasanEntry[];
+  riwayatKelas: RiwayatKelasEntry[];
+  raporRingkasan: RaporRingkasanEntry[];
 }
 
 interface RaporNilaiEntry {
-  mata_pelajaran_nama: string;
-  komponen_nilai: Array<{ komponen_nama: string | null; nilai: string | number }>;
-  rata_rata: string;
-  guru_nama: string;
-  capaian_pembelajaran: string | null;
+  mataPelajaranNama: string;
+  komponenNilai: Array<{ komponenNama: string | null; nilai: string | number }>;
+  rataRata: string;
+  guruNama: string;
+  capaianPembelajaran: string | null;
 }
 
 interface RaporDetailResponse {
@@ -69,14 +69,14 @@ const siswaId = computed(() => route.params.id as string);
 const raporGrouped = computed(() => {
   if (!detail.value) return [];
   const groups: Record<string, RaporRingkasanEntry[]> = {};
-  for (const entry of detail.value.rapor_ringkasan) {
-    if (!groups[entry.tahun_ajaran_nama]) {
-      groups[entry.tahun_ajaran_nama] = [];
+  for (const entry of detail.value.raporRingkasan) {
+    if (!groups[entry.tahunAjaranNama]) {
+      groups[entry.tahunAjaranNama] = [];
     }
-    groups[entry.tahun_ajaran_nama].push(entry);
+    groups[entry.tahunAjaranNama].push(entry);
   }
   return Object.entries(groups).map(([tahunAjaran, items]) => ({
-    tahun_ajaran_nama: tahunAjaran,
+    tahunAjaranNama: tahunAjaran,
     items,
   }));
 });
@@ -425,7 +425,7 @@ onMounted(() => {
                 Jenis Kelamin
               </dt>
               <dd class="text-[15px] text-text-primary mt-1">
-                {{ formatJenisKelamin(detail.profil.jenis_kelamin) }}
+                {{ formatJenisKelamin(detail.profil.jenisKelamin) }}
               </dd>
             </div>
             <div>
@@ -433,7 +433,7 @@ onMounted(() => {
                 Tanggal Lahir
               </dt>
               <dd class="text-[15px] text-text-primary mt-1">
-                {{ formatTanggalLahir(detail.profil.tanggal_lahir) }}
+                {{ formatTanggalLahir(detail.profil.tanggalLahir) }}
               </dd>
             </div>
             <div>
@@ -447,7 +447,7 @@ onMounted(() => {
                 Kelas
               </dt>
               <dd class="text-[15px] text-text-primary mt-1">
-                {{ detail.profil.kelas_nama || 'Belum ditempatkan' }}
+                {{ detail.profil.kelasNama || 'Belum ditempatkan' }}
               </dd>
             </div>
             <div>
@@ -455,7 +455,7 @@ onMounted(() => {
                 Orang Tua / Wali
               </dt>
               <dd class="text-[15px] text-text-primary mt-1">
-                {{ detail.profil.orang_tua_nama || '-' }}
+                {{ detail.profil.orangTuaNama || '-' }}
               </dd>
             </div>
           </div>
@@ -472,22 +472,22 @@ onMounted(() => {
         </div>
 
         <div class="p-6">
-          <div v-if="detail.riwayat_kelas.length === 0" class="text-[15px] text-text-tertiary">
+          <div v-if="detail.riwayatKelas.length === 0" class="text-[15px] text-text-tertiary">
             Belum ada riwayat kelas
           </div>
 
           <div v-else class="space-y-4">
-            <div v-for="(entry, idx) in detail.riwayat_kelas" :key="idx" class="relative pl-6">
+            <div v-for="(entry, idx) in detail.riwayatKelas" :key="idx" class="relative pl-6">
               <!-- Timeline line -->
               <div
-                v-if="idx < detail.riwayat_kelas.length - 1"
+                v-if="idx < detail.riwayatKelas.length - 1"
                 class="absolute left-[5px] top-4 bottom-[-16px] w-0.5 bg-stone-200"
               ></div>
               <!-- Timeline dot -->
               <div
                 :class="[
                   'absolute left-0 top-1 w-3 h-3 rounded-full border-2',
-                  entry.is_current
+                  entry.isCurrent
                     ? 'bg-success-500 border-success-200'
                     : 'bg-stone-200 border-stone-100',
                 ]"
@@ -496,18 +496,18 @@ onMounted(() => {
               <div class="flex items-start gap-2">
                 <div>
                   <p class="text-[15px] font-semibold text-text-primary">
-                    {{ entry.kelas_nama }}
+                    {{ entry.kelasNama }}
                     <span class="text-text-tertiary font-normal"
                       >(Tingkat {{ entry.tingkat }})</span
                     >
                   </p>
                   <p class="text-[13px] text-text-secondary mt-0.5">
-                    {{ entry.tahun_ajaran_nama }} &middot;
-                    {{ formatTanggalLahir(entry.tanggal_mulai) }}
+                    {{ entry.tahunAjaranNama }} &middot;
+                    {{ formatTanggalLahir(entry.tanggalMulai) }}
                   </p>
                 </div>
                 <span
-                  v-if="entry.is_current"
+                  v-if="entry.isCurrent"
                   class="inline-flex items-center px-2.5 py-1 rounded-md text-[13px] font-semibold bg-success-50 text-success-700 shrink-0"
                 >
                   Aktif
@@ -533,17 +533,17 @@ onMounted(() => {
           </div>
 
           <div v-else class="space-y-6">
-            <div v-for="group in raporGrouped" :key="group.tahun_ajaran_nama">
+            <div v-for="group in raporGrouped" :key="group.tahunAjaranNama">
               <h4 class="text-[14px] font-semibold text-text-secondary mb-3">
-                {{ group.tahun_ajaran_nama }}
+                {{ group.tahunAjaranNama }}
               </h4>
 
               <div class="space-y-2">
-                <div v-for="entry in group.items" :key="entry.rapor_id">
+                <div v-for="entry in group.items" :key="entry.raporId">
                   <!-- Accordion header -->
                   <button
                     class="w-full flex items-center justify-between px-5 py-3.5 bg-surface-warm hover:bg-surface-100 rounded-[8px] transition-colors duration-200 text-left border border-stone-200"
-                    @click="toggleRaporDetail(entry.rapor_id)"
+                    @click="toggleRaporDetail(entry.raporId)"
                   >
                     <div class="flex items-center gap-4">
                       <span class="text-[15px] font-semibold text-text-primary">{{
@@ -551,7 +551,7 @@ onMounted(() => {
                       }}</span>
                       <span class="text-[13px] text-text-secondary">
                         Rata-rata:
-                        <strong class="text-text-primary">{{ entry.rata_rata.toFixed(1) }}</strong>
+                        <strong class="text-text-primary">{{ entry.rataRata.toFixed(1) }}</strong>
                       </span>
                       <span v-if="entry.peringkat !== null" class="text-[13px] text-text-secondary">
                         Peringkat: <strong class="text-text-primary">{{ entry.peringkat }}</strong>
@@ -560,7 +560,7 @@ onMounted(() => {
                     <svg
                       :class="[
                         'w-4 h-4 text-text-tertiary transition-transform duration-200',
-                        expandedRaporId === entry.rapor_id ? 'rotate-180' : '',
+                        expandedRaporId === entry.raporId ? 'rotate-180' : '',
                       ]"
                       fill="none"
                       viewBox="0 0 24 24"
@@ -573,12 +573,12 @@ onMounted(() => {
 
                   <!-- Accordion content -->
                   <div
-                    v-if="expandedRaporId === entry.rapor_id"
+                    v-if="expandedRaporId === entry.raporId"
                     class="mt-2 bg-white border-2 border-stone-200 rounded-[12px] overflow-hidden"
                   >
                     <!-- Loading -->
                     <div
-                      v-if="raporDetailLoading && !raporDetailCache[entry.rapor_id]"
+                      v-if="raporDetailLoading && !raporDetailCache[entry.raporId]"
                       class="flex items-center justify-center py-6"
                     >
                       <svg
@@ -607,7 +607,7 @@ onMounted(() => {
 
                     <!-- Error -->
                     <div
-                      v-else-if="raporDetailError && !raporDetailCache[entry.rapor_id]"
+                      v-else-if="raporDetailError && !raporDetailCache[entry.raporId]"
                       class="text-center py-6"
                     >
                       <p class="text-[15px] text-danger-600 mb-2">{{ raporDetailError }}</p>
@@ -620,7 +620,7 @@ onMounted(() => {
                     </div>
 
                     <!-- Detail content with Data_Table styling -->
-                    <div v-else-if="raporDetailCache[entry.rapor_id]">
+                    <div v-else-if="raporDetailCache[entry.raporId]">
                       <div class="overflow-x-auto">
                         <table class="w-full">
                           <thead>
@@ -654,22 +654,22 @@ onMounted(() => {
                           </thead>
                           <tbody class="divide-y divide-stone-200">
                             <tr
-                              v-for="(nilai, nIdx) in raporDetailCache[entry.rapor_id]"
+                              v-for="(nilai, nIdx) in raporDetailCache[entry.raporId]"
                               :key="nIdx"
                               class="hover:bg-primary-50 transition-colors duration-200"
                             >
                               <td class="px-5 py-4 text-[15px] font-semibold text-text-primary">
-                                {{ nilai.mata_pelajaran_nama }}
+                                {{ nilai.mataPelajaranNama }}
                               </td>
                               <td class="px-5 py-4">
                                 <div class="space-y-1">
                                   <div
-                                    v-for="(komp, kIdx) in nilai.komponen_nilai"
+                                    v-for="(komp, kIdx) in nilai.komponenNilai"
                                     :key="kIdx"
                                     class="text-[13px] text-text-secondary"
                                   >
                                     <span class="text-text-tertiary"
-                                      >{{ komp.komponen_nama || '-' }}:</span
+                                      >{{ komp.komponenNama || '-' }}:</span
                                     >
                                     <span class="font-semibold text-text-primary ml-1">{{
                                       komp.nilai
@@ -683,29 +683,29 @@ onMounted(() => {
                                   <span
                                     :class="[
                                       'text-[15px] font-bold',
-                                      getRataRataColor(Number(nilai.rata_rata)),
+                                      getRataRataColor(Number(nilai.rataRata)),
                                     ]"
                                   >
-                                    {{ nilai.rata_rata }}
+                                    {{ nilai.rataRata }}
                                   </span>
                                   <div
                                     class="w-full max-w-[80px] h-[8px] bg-stone-200 rounded-full overflow-hidden"
                                   >
                                     <div
                                       class="h-full rounded-full transition-all duration-300"
-                                      :class="getRataRataBarColor(Number(nilai.rata_rata))"
+                                      :class="getRataRataBarColor(Number(nilai.rataRata))"
                                       :style="{
-                                        width: `${Math.min(Number(nilai.rata_rata), 100)}%`,
+                                        width: `${Math.min(Number(nilai.rataRata), 100)}%`,
                                       }"
                                     ></div>
                                   </div>
                                 </div>
                               </td>
                               <td class="px-5 py-4 text-[15px] text-text-secondary">
-                                {{ nilai.guru_nama }}
+                                {{ nilai.guruNama }}
                               </td>
                               <td class="px-5 py-4 text-[13px] text-text-secondary">
-                                {{ nilai.capaian_pembelajaran || '-' }}
+                                {{ nilai.capaianPembelajaran || '-' }}
                               </td>
                             </tr>
                           </tbody>

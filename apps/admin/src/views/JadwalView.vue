@@ -9,7 +9,7 @@ interface Kelas {
   id: string;
   nama: string;
   tingkat: number;
-  tahun_ajaran_id?: string;
+  tahunAjaranId?: string;
 }
 
 interface MataPelajaran {
@@ -25,36 +25,36 @@ interface Guru {
 
 interface JadwalEntry {
   id: string;
-  kelas_id: string;
-  mata_pelajaran_id: string | null;
-  guru_id: string | null;
+  kelasId: string;
+  mataPelajaranId: string | null;
+  guruId: string | null;
   hari: string;
-  jam_ke: number;
-  is_vacant: boolean;
-  is_istirahat: boolean;
-  mata_pelajaran?: MataPelajaran | null;
+  jamKe: number;
+  isVacant: boolean;
+  isIstirahat: boolean;
+  mataPelajaran?: MataPelajaran | null;
   guru?: Guru | null;
-  guru_pengganti_aktif?: GuruPenggantiInfo | null;
+  guruPenggantiAktif?: GuruPenggantiInfo | null;
 }
 
 interface GuruPenggantiInfo {
   id: string;
-  guru_pengganti_id: string;
-  guru_pengganti_nama: string;
+  guruPenggantiId: string;
+  guruPenggantiNama: string;
   tanggal: string;
 }
 
 interface JadwalForm {
-  mata_pelajaran_id: string;
-  guru_id: string;
-  is_istirahat: boolean;
+  mataPelajaranId: string;
+  guruId: string;
+  isIstirahat: boolean;
 }
 
 interface GuruPenggantiForm {
-  guru_pengganti_id: string;
+  guruPenggantiId: string;
   alasan: string;
-  tanggal_mulai: string;
-  tanggal_selesai: string;
+  tanggalMulai: string;
+  tanggalSelesai: string;
 }
 
 // Constants
@@ -86,9 +86,9 @@ const editingEntry = ref<JadwalEntry | null>(null);
 const selectedHari = ref('');
 const selectedJamKe = ref(0);
 const form = ref<JadwalForm>({
-  mata_pelajaran_id: '',
-  guru_id: '',
-  is_istirahat: false,
+  mataPelajaranId: '',
+  guruId: '',
+  isIstirahat: false,
 });
 const formError = ref('');
 
@@ -96,10 +96,10 @@ const formError = ref('');
 const showPenggantiModal = ref(false);
 const penggantiTarget = ref<JadwalEntry | null>(null);
 const penggantiForm = ref<GuruPenggantiForm>({
-  guru_pengganti_id: '',
+  guruPenggantiId: '',
   alasan: '',
-  tanggal_mulai: '',
-  tanggal_selesai: '',
+  tanggalMulai: '',
+  tanggalSelesai: '',
 });
 const penggantiError = ref('');
 
@@ -138,8 +138,8 @@ const gridData = computed(() => {
   }
 
   for (const entry of jadwalEntries.value) {
-    if (entry.jam_ke >= 1 && entry.jam_ke <= 10) {
-      grid[entry.jam_ke][entry.hari] = entry;
+    if (entry.jamKe >= 1 && entry.jamKe <= 10) {
+      grid[entry.jamKe][entry.hari] = entry;
     }
   }
 
@@ -224,18 +224,18 @@ function handleCellClick(jam: number, hari: string) {
 // Cell display helpers
 function getCellMapel(entry: JadwalEntry | null): string {
   if (!entry) return '';
-  if (entry.is_istirahat) return 'Istirahat';
-  return entry.mata_pelajaran?.nama || getMapelNama(entry.mata_pelajaran_id || '');
+  if (entry.isIstirahat) return 'Istirahat';
+  return entry.mataPelajaran?.nama || getMapelNama(entry.mataPelajaranId || '');
 }
 
 function getCellGuru(entry: JadwalEntry | null): string {
-  if (!entry || entry.is_istirahat) return '';
-  return entry.guru?.nama || getGuruNama(entry.guru_id || '');
+  if (!entry || entry.isIstirahat) return '';
+  return entry.guru?.nama || getGuruNama(entry.guruId || '');
 }
 
 function getCellPenggantiNama(entry: JadwalEntry | null): string {
-  if (!entry?.guru_pengganti_aktif) return '';
-  return entry.guru_pengganti_aktif.guru_pengganti_nama;
+  if (!entry?.guruPenggantiAktif) return '';
+  return entry.guruPenggantiAktif.guruPenggantiNama;
 }
 
 function getMapelNama(id: string): string {
@@ -247,17 +247,15 @@ function getGuruNama(id: string): string {
 }
 
 function isVacant(entry: JadwalEntry | null): boolean {
-  return (
-    !entry || (entry.is_vacant && !entry.is_istirahat) || (!entry.guru_id && !entry.is_istirahat)
-  );
+  return !entry || (entry.isVacant && !entry.isIstirahat) || (!entry.guruId && !entry.isIstirahat);
 }
 
 function isIstirahat(entry: JadwalEntry | null): boolean {
-  return !!entry?.is_istirahat;
+  return !!entry?.isIstirahat;
 }
 
 function hasPengganti(entry: JadwalEntry | null): boolean {
-  return !!entry?.guru_pengganti_aktif;
+  return !!entry?.guruPenggantiAktif;
 }
 
 // CRUD actions
@@ -266,9 +264,9 @@ function openCreateForm(hari: string, jamKe: number) {
   selectedHari.value = hari;
   selectedJamKe.value = jamKe;
   form.value = {
-    mata_pelajaran_id: '',
-    guru_id: '',
-    is_istirahat: false,
+    mataPelajaranId: '',
+    guruId: '',
+    isIstirahat: false,
   };
   formError.value = '';
   showFormModal.value = true;
@@ -279,9 +277,9 @@ function openEditForm(entry: JadwalEntry, hari: string, jamKe: number) {
   selectedHari.value = hari;
   selectedJamKe.value = jamKe;
   form.value = {
-    mata_pelajaran_id: entry.mata_pelajaran_id || '',
-    guru_id: entry.guru_id || '',
-    is_istirahat: entry.is_istirahat || false,
+    mataPelajaranId: entry.mataPelajaranId || '',
+    guruId: entry.guruId || '',
+    isIstirahat: entry.isIstirahat || false,
   };
   formError.value = '';
   showFormModal.value = true;
@@ -290,7 +288,7 @@ function openEditForm(entry: JadwalEntry, hari: string, jamKe: number) {
 async function saveJadwal() {
   formError.value = '';
 
-  if (!form.value.is_istirahat && (!form.value.mata_pelajaran_id || !form.value.guru_id)) {
+  if (!form.value.isIstirahat && (!form.value.mataPelajaranId || !form.value.guruId)) {
     formError.value = 'Mata pelajaran dan guru wajib dipilih untuk jam pelajaran.';
     return;
   }
@@ -313,12 +311,12 @@ async function saveJadwal() {
     jamKe: selectedJamKe.value,
     tanggalMulaiBerlaku: '2026-07-01',
     tanggalSelesaiBerlaku: '2027-06-30',
-    isIstirahat: form.value.is_istirahat,
+    isIstirahat: form.value.isIstirahat,
   };
 
-  if (!form.value.is_istirahat) {
-    payload.mataPelajaranId = form.value.mata_pelajaran_id;
-    payload.guruId = form.value.guru_id;
+  if (!form.value.isIstirahat) {
+    payload.mataPelajaranId = form.value.mataPelajaranId;
+    payload.guruId = form.value.guruId;
   }
 
   try {
@@ -355,10 +353,10 @@ async function deleteJadwal() {
 function openPenggantiModal(entry: JadwalEntry) {
   penggantiTarget.value = entry;
   penggantiForm.value = {
-    guru_pengganti_id: '',
+    guruPenggantiId: '',
     alasan: '',
-    tanggal_mulai: new Date().toISOString().split('T')[0],
-    tanggal_selesai: new Date().toISOString().split('T')[0],
+    tanggalMulai: new Date().toISOString().split('T')[0],
+    tanggalSelesai: new Date().toISOString().split('T')[0],
   };
   penggantiError.value = '';
   showPenggantiModal.value = true;
@@ -366,7 +364,7 @@ function openPenggantiModal(entry: JadwalEntry) {
 
 async function savePengganti() {
   penggantiError.value = '';
-  if (!penggantiForm.value.guru_pengganti_id || !penggantiForm.value.alasan) {
+  if (!penggantiForm.value.guruPenggantiId || !penggantiForm.value.alasan) {
     penggantiError.value = 'Guru pengganti dan alasan wajib diisi.';
     return;
   }
@@ -374,10 +372,10 @@ async function savePengganti() {
 
   try {
     await api.post('/jadwal/guru-pengganti', {
-      guruPenggantiId: penggantiForm.value.guru_pengganti_id,
-      kelasId: penggantiTarget.value.kelas_id,
-      mataPelajaranId: penggantiTarget.value.mata_pelajaran_id,
-      tanggal: penggantiForm.value.tanggal_mulai,
+      guruPenggantiId: penggantiForm.value.guruPenggantiId,
+      kelasId: penggantiTarget.value.kelasId,
+      mataPelajaranId: penggantiTarget.value.mataPelajaranId,
+      tanggal: penggantiForm.value.tanggalMulai,
     });
     showPenggantiModal.value = false;
     await fetchJadwal();
@@ -388,7 +386,7 @@ async function savePengganti() {
 
 async function removePengganti(entry: JadwalEntry) {
   try {
-    const penggantiId = entry.guru_pengganti_aktif?.id;
+    const penggantiId = entry.guruPenggantiAktif?.id;
     if (!penggantiId) return;
     await api.delete(`/jadwal/guru-pengganti/${penggantiId}`);
     await fetchJadwal();
@@ -576,7 +574,7 @@ onMounted(async () => {
         <div class="mb-4">
           <label class="flex items-center gap-2 cursor-pointer">
             <input
-              v-model="form.is_istirahat"
+              v-model="form.isIstirahat"
               type="checkbox"
               class="w-4 h-4 rounded border-stone-300 text-primary-600 focus:ring-primary-500/20"
             />
@@ -588,10 +586,10 @@ onMounted(async () => {
         </div>
 
         <!-- Mapel & Guru fields (hidden when istirahat) -->
-        <template v-if="!form.is_istirahat">
+        <template v-if="!form.isIstirahat">
           <div class="mb-4">
             <SearchSelect
-              v-model="form.mata_pelajaran_id"
+              v-model="form.mataPelajaranId"
               label="Mata Pelajaran"
               :options="mataPelajaranSelectOptions"
               placeholder="Pilih Mata Pelajaran"
@@ -600,7 +598,7 @@ onMounted(async () => {
           </div>
           <div class="mb-4">
             <SearchSelect
-              v-model="form.guru_id"
+              v-model="form.guruId"
               label="Guru"
               :options="guruSelectOptions"
               placeholder="Pilih Guru"
@@ -621,7 +619,7 @@ onMounted(async () => {
             >Hapus</ActionButton
           >
           <ActionButton
-            v-if="editingEntry && !form.is_istirahat"
+            v-if="editingEntry && !form.isIstirahat"
             variant="primary"
             icon="assign"
             @click="handleOpenPengganti"
@@ -639,23 +637,19 @@ onMounted(async () => {
       <p class="text-[15px] text-text-primary mb-3">
         Apakah Anda yakin ingin menghapus jadwal ini?
       </p>
-      <div
-        v-if="deletingEntry"
-        class="bg-surface-warm rounded-xs p-4 text-[15px] space-y-1"
-      >
+      <div v-if="deletingEntry" class="bg-surface-warm rounded-xs p-4 text-[15px] space-y-1">
         <p><strong>Hari:</strong> {{ HARI_LABELS[deletingEntry.hari] }}</p>
-        <p v-if="deletingEntry.is_istirahat"><strong>Tipe:</strong> Jam Istirahat</p>
+        <p v-if="deletingEntry.isIstirahat"><strong>Tipe:</strong> Jam Istirahat</p>
         <template v-else>
           <p>
             <strong>Mata Pelajaran:</strong>
             {{
-              deletingEntry.mata_pelajaran?.nama ||
-              getMapelNama(deletingEntry.mata_pelajaran_id || '')
+              deletingEntry.mataPelajaran?.nama || getMapelNama(deletingEntry.mataPelajaranId || '')
             }}
           </p>
           <p>
             <strong>Guru:</strong>
-            {{ deletingEntry.guru?.nama || getGuruNama(deletingEntry.guru_id || '') }}
+            {{ deletingEntry.guru?.nama || getGuruNama(deletingEntry.guruId || '') }}
           </p>
         </template>
       </div>
@@ -674,18 +668,17 @@ onMounted(async () => {
     >
       <p v-if="penggantiTarget" class="text-[15px] text-text-secondary mb-4">
         {{
-          penggantiTarget.mata_pelajaran?.nama ||
-          getMapelNama(penggantiTarget.mata_pelajaran_id || '')
+          penggantiTarget.mataPelajaran?.nama || getMapelNama(penggantiTarget.mataPelajaranId || '')
         }}
         — {{ HARI_LABELS[penggantiTarget.hari] }}
       </p>
       <div
-        v-if="penggantiTarget?.guru_pengganti_aktif"
+        v-if="penggantiTarget?.guruPenggantiAktif"
         class="flex items-center justify-between p-4 bg-primary-50 border-2 border-primary-200 rounded-xs mb-4 text-[15px]"
       >
         <p class="text-primary-700">
           <strong>Guru Pengganti Aktif:</strong>
-          {{ penggantiTarget.guru_pengganti_aktif.guru_pengganti_nama }}
+          {{ penggantiTarget.guruPenggantiAktif.guruPenggantiNama }}
         </p>
         <ActionButton variant="danger" icon="cancel" @click="handleRemovePengganti"
           >Hapus Pengganti</ActionButton
@@ -694,7 +687,7 @@ onMounted(async () => {
       <form @submit.prevent="savePengganti">
         <div class="mb-4">
           <SearchSelect
-            v-model="penggantiForm.guru_pengganti_id"
+            v-model="penggantiForm.guruPenggantiId"
             label="Guru Pengganti"
             :options="guruSelectOptions"
             placeholder="Pilih Guru Pengganti"
@@ -717,7 +710,7 @@ onMounted(async () => {
               >Tanggal Mulai</label
             >
             <input
-              v-model="penggantiForm.tanggal_mulai"
+              v-model="penggantiForm.tanggalMulai"
               type="date"
               class="w-full px-4 py-2.5 text-[15px] border-2 border-stone-200 rounded-xs focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-colors"
               required
@@ -728,7 +721,7 @@ onMounted(async () => {
               >Tanggal Selesai</label
             >
             <input
-              v-model="penggantiForm.tanggal_selesai"
+              v-model="penggantiForm.tanggalSelesai"
               type="date"
               class="w-full px-4 py-2.5 text-[15px] border-2 border-stone-200 rounded-xs focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-colors"
               required
