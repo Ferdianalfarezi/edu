@@ -115,7 +115,7 @@ async function fetchKelas() {
   }
   try {
     const { data } = await api.get<{ data: KelasOption[] }>(
-      `/rapor/kelas?mapelId=${selectedMapel.value}`,
+      `/rapor/kelas?mapel_id=${selectedMapel.value}`,
     );
     kelasOptions.value = data.data;
   } catch (err) {
@@ -135,9 +135,9 @@ async function fetchNilai() {
 
   try {
     const params = new URLSearchParams({
-      kelasId: selectedKelas.value,
-      periodeId: selectedPeriode.value,
-      mapelId: selectedMapel.value,
+      kelas_id: selectedKelas.value,
+      periode_id: selectedPeriode.value,
+      mapel_id: selectedMapel.value,
     });
 
     const { data } = await api.get<{

@@ -95,8 +95,8 @@ async function fetchRaporOverview() {
 
   try {
     const params = new URLSearchParams({
-      kelasId: selectedKelas.value,
-      periodeId: selectedPeriode.value,
+      kelas_id: selectedKelas.value,
+      periode_id: selectedPeriode.value,
     });
 
     const { data } = await api.get<{

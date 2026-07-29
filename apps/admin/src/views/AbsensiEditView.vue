@@ -98,7 +98,7 @@ async function fetchAbsensi() {
   loading.value = true;
   try {
     const { data } = await api.get<{ data: AbsensiItem[] }>('/absensi', {
-      params: { kelasId: selectedKelasId.value, tanggal: selectedTanggal.value },
+      params: { kelas_id: selectedKelasId.value, tanggal: selectedTanggal.value },
     });
     absensiList.value = data.data || [];
   } catch (error) {
@@ -113,7 +113,7 @@ async function fetchAuditLog(absensiId: string) {
   loadingAudit.value = true;
   try {
     const { data } = await api.get<{ data: AuditLogEntry[] }>('/absensi/audit-log', {
-      params: { absensiId: absensiId },
+      params: { absensi_id: absensiId },
     });
     auditLog.value = data.data || [];
   } catch (error) {
