@@ -125,7 +125,7 @@ async function fetchSourceKelas() {
   }
   try {
     const { data } = await api.get<{ data: Kelas[] }>('/kelas', {
-      params: { tahunAjaranId: sourceTahunAjaranId.value },
+      params: { tahun_ajaran_id: sourceTahunAjaranId.value },
     });
     sourceKelasList.value = data.data;
   } catch (err) {
@@ -140,7 +140,7 @@ async function fetchTargetKelas() {
   }
   try {
     const { data } = await api.get<{ data: Kelas[] }>('/kelas', {
-      params: { tahunAjaranId: targetTahunAjaranId.value },
+      params: { tahun_ajaran_id: targetTahunAjaranId.value },
     });
     targetKelasList.value = data.data;
   } catch (err) {

@@ -106,7 +106,7 @@ async function fetchKelas() {
   try {
     const params: Record<string, string> = {};
     if (selectedTahunAjaran.value) {
-      params.tahunAjaranId = selectedTahunAjaran.value;
+      params.tahun_ajaran_id = selectedTahunAjaran.value;
     }
     const { data } = await api.get<{ data: Kelas[] }>('/kelas', { params });
     kelasList.value = data.data;

@@ -93,7 +93,7 @@ async function fetchKelas() {
   }
   try {
     const { data } = await api.get<{ data: KelasOption[] }>(
-      `/kelas?tahunAjaranId=${selectedTahunAjaran.value}`,
+      `/kelas?tahun_ajaran_id=${selectedTahunAjaran.value}`,
     );
     kelasOptions.value = data.data;
   } catch (err) {

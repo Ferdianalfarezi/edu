@@ -367,7 +367,7 @@ async function fetchKelas() {
     const activeTa = tahunAjaranList.value.find((ta) => ta.status === 'aktif');
     const params: Record<string, string> = {};
     if (activeTa) {
-      params.tahunAjaranId = activeTa.id;
+      params.tahun_ajaran_id = activeTa.id;
     }
     const { data } = await api.get<{ data: Kelas[] }>('/kelas', { params });
     kelasList.value = data.data;
@@ -434,7 +434,7 @@ async function fetchTagihanList() {
       page_size: pageSize.value,
     };
     if (filters['status'].value) params.status = filters['status'].value;
-    if (filters['kelas_id'].value) params.kelasId = filters['kelas_id'].value;
+    if (filters['kelas_id'].value) params.kelas_id = filters['kelas_id'].value;
     if (filters['bulan'].value) params.bulan = filters['bulan'].value;
     if (listFilterTahun.value) params.tahun = listFilterTahun.value;
     if (search.value) params.search = search.value;
@@ -503,7 +503,7 @@ async function fetchTunggakan() {
   loading.value = true;
   try {
     const params: Record<string, string | number> = {};
-    if (tunggakanFilter.kelasId) params.kelasId = tunggakanFilter.kelasId;
+    if (tunggakanFilter.kelasId) params.kelas_id = tunggakanFilter.kelasId;
     if (tunggakanFilter.bulan) params.bulan = tunggakanFilter.bulan;
     if (tunggakanFilter.tahun) params.tahun = tunggakanFilter.tahun;
 
@@ -525,7 +525,7 @@ async function exportTunggakan() {
   exporting.value = true;
   try {
     const params: Record<string, string | number> = { format: 'csv' };
-    if (tunggakanFilter.kelasId) params.kelasId = tunggakanFilter.kelasId;
+    if (tunggakanFilter.kelasId) params.kelas_id = tunggakanFilter.kelasId;
 
     const response = await api.get('/tagihan/export', {
       params,
@@ -654,7 +654,7 @@ async function fetchAuditLogs() {
   auditLoading.value = true;
   try {
     const { data } = await api.get<{ data: AuditLog[] }>('/tagihan/audit-log', {
-      params: { tagihanId: auditTagihanId.value.trim() },
+      params: { tagihan_id: auditTagihanId.value.trim() },
     });
     auditLogs.value = data.data;
   } catch (error) {

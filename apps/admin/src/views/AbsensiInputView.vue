@@ -118,7 +118,7 @@ async function fetchStudentsAndAbsensi() {
 
   try {
     const { data: siswaData } = await api.get<{ data: Siswa[] }>('/siswa', {
-      params: { kelasId: selectedKelasId.value, status: 'aktif' },
+      params: { kelas_id: selectedKelasId.value, status: 'aktif' },
     });
     siswaList.value = siswaData.data;
 
@@ -127,7 +127,7 @@ async function fetchStudentsAndAbsensi() {
       isReadOnly?: boolean;
       holidayWarning?: string;
     }>('/absensi', {
-      params: { kelasId: selectedKelasId.value, tanggal: selectedTanggal.value },
+      params: { kelas_id: selectedKelasId.value, tanggal: selectedTanggal.value },
     });
 
     existingAbsensi.value = absensiData.data || [];
