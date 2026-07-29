@@ -118,23 +118,34 @@ function openDeleteConfirm(user: User) {
 }
 
 async function saveUser() {
-  const payload: Record<string, unknown> = {
-    nama: form.nama,
-    email: form.email,
-    phone: form.phone || undefined,
-    role: form.role,
-  };
-
-  // isActive only relevant when editing existing user
-  if (editingUser.value) {
-    payload.isActive = form.isActive;
-  }
-
   try {
     if (editingUser.value) {
-      await api.patch(`/users/${editingUser.value.id}`, payload);
+      // UpdateUserDto only accepts nama, email, role
+      const updatePayload: Record<string, unknown> = {
+        nama: form.nama,
+        email: form.email,
+        role: form.role,
+      };
+      await api.patch(`/users/${editingUser.value.id}`, updatePayload);
+
+      // Handle isActive change via dedicated endpoints
+      const wasActive = editingUser.value.isActive;
+      if (form.isActive !== wasActive) {
+        if (form.isActive) {
+          await api.patch(`/users/${editingUser.value.id}/activate`);
+        } else {
+          await api.patch(`/users/${editingUser.value.id}/deactivate`);
+        }
+      }
     } else {
-      await api.post('/users', payload);
+      // CreateUserDto accepts nama, email, phone, role
+      const createPayload: Record<string, unknown> = {
+        nama: form.nama,
+        email: form.email,
+        phone: form.phone || undefined,
+        role: form.role,
+      };
+      await api.post('/users', createPayload);
     }
     showFormModal.value = false;
     await fetchUsers();
