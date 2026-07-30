@@ -10,12 +10,12 @@ import {
 
 describe('CsvImportProcessor', () => {
   let processor: CsvImportProcessor;
-  let mockUserService: { bulkImportGuru: jest.Mock };
+  let mockUserService: { bulkImportUsers: jest.Mock };
   let mockSiswaService: { bulkImportSiswa: jest.Mock };
 
   beforeEach(async () => {
     mockUserService = {
-      bulkImportGuru: jest.fn(),
+      bulkImportUsers: jest.fn(),
     };
 
     mockSiswaService = {
@@ -61,9 +61,9 @@ describe('CsvImportProcessor', () => {
     }) as unknown as Job<BulkImportSiswaJobData>;
 
   describe('handleBulkImportGuru', () => {
-    it('should delegate to UserService.bulkImportGuru with correct params', async () => {
+    it('should delegate to UserService.bulkImportUsers with correct params', async () => {
       const job = createGuruJob();
-      mockUserService.bulkImportGuru.mockResolvedValue({
+      mockUserService.bulkImportUsers.mockResolvedValue({
         created: 1,
         skipped: [],
         total: 1,
@@ -71,7 +71,7 @@ describe('CsvImportProcessor', () => {
 
       await processor.handleBulkImportGuru(job);
 
-      expect(mockUserService.bulkImportGuru).toHaveBeenCalledWith(
+      expect(mockUserService.bulkImportUsers).toHaveBeenCalledWith(
         'tenant-1',
         'nama,email\nJohn,john@example.com',
       );
@@ -82,7 +82,7 @@ describe('CsvImportProcessor', () => {
 
       await processor.handleBulkImportGuru(job);
 
-      expect(mockUserService.bulkImportGuru).not.toHaveBeenCalled();
+      expect(mockUserService.bulkImportUsers).not.toHaveBeenCalled();
     });
 
     it('should skip processing if CSV content is whitespace only', async () => {
@@ -90,12 +90,12 @@ describe('CsvImportProcessor', () => {
 
       await processor.handleBulkImportGuru(job);
 
-      expect(mockUserService.bulkImportGuru).not.toHaveBeenCalled();
+      expect(mockUserService.bulkImportUsers).not.toHaveBeenCalled();
     });
 
     it('should propagate errors from UserService for retry handling', async () => {
       const job = createGuruJob();
-      mockUserService.bulkImportGuru.mockRejectedValue(new Error('Database connection failed'));
+      mockUserService.bulkImportUsers.mockRejectedValue(new Error('Database connection failed'));
 
       await expect(processor.handleBulkImportGuru(job)).rejects.toThrow(
         'Database connection failed',

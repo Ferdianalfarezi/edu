@@ -35,6 +35,7 @@ export interface BulkImportResult {
 export interface ParsedCsvRow {
   nama: string;
   email: string;
+  role: string;
 }
 
 export interface VacantJadwalSlot {
@@ -582,13 +583,14 @@ export class UserService {
 
   // ─── Bulk Import (CSV) ────────────────────────────────────────
 
-  async bulkImportGuru(tenantId: string, csvContent: string): Promise<BulkImportResult> {
+  async bulkImportUsers(tenantId: string, csvContent: string): Promise<BulkImportResult> {
     const rows = this.parseCsv(csvContent);
 
     if (rows.length === 0) {
       throw new BadRequestException('File CSV kosong atau format tidak valid');
     }
 
+    const validRoles = [Role.ADMIN, Role.KEPALA_SEKOLAH, Role.GURU, Role.BENDAHARA];
     const skipped: { email: string; reason: string }[] = [];
 
     // Pre-validate all rows
@@ -602,7 +604,18 @@ export class UserService {
         skipped.push({ email: row.email, reason: 'Nama tidak boleh kosong' });
         continue;
       }
-      validRows.push({ nama: row.nama.trim(), email: row.email.trim().toLowerCase() });
+      if (!validRoles.includes(row.role as Role)) {
+        skipped.push({
+          email: row.email,
+          reason: `Role tidak valid: "${row.role}". Harus salah satu dari: ${validRoles.join(', ')}`,
+        });
+        continue;
+      }
+      validRows.push({
+        nama: row.nama.trim(),
+        email: row.email.trim().toLowerCase(),
+        role: row.role as Role,
+      });
     }
 
     if (validRows.length === 0) {
@@ -647,7 +660,7 @@ export class UserService {
         tenantId,
         nama: entry.nama,
         email: entry.email,
-        role: Role.GURU,
+        role: entry.role as Role,
         passwordHash: entry.passwordHash,
         isActive: true,
         mustChangePassword: true,
@@ -660,7 +673,7 @@ export class UserService {
         to: entry.email,
         name: entry.nama,
         password: entry.rawPassword,
-        role: Role.GURU,
+        role: entry.role,
       });
     }
 
@@ -688,9 +701,10 @@ export class UserService {
     const header = headerCols.map((h) => h.toLowerCase().trim());
     const namaIdx = header.findIndex((h) => h === 'nama');
     const emailIdx = header.findIndex((h) => h === 'email');
+    const roleIdx = header.findIndex((h) => h === 'role');
 
     if (namaIdx === -1 || emailIdx === -1) {
-      throw new BadRequestException('Format CSV tidak valid. Kolom wajib: nama, email');
+      throw new BadRequestException('Format CSV tidak valid. Kolom wajib: nama, email, role');
     }
 
     const rows: ParsedCsvRow[] = [];
@@ -699,6 +713,7 @@ export class UserService {
       rows.push({
         nama: cols[namaIdx] || '',
         email: cols[emailIdx] || '',
+        role: (roleIdx !== -1 ? cols[roleIdx] || '' : 'guru').toLowerCase().trim(),
       });
     }
 

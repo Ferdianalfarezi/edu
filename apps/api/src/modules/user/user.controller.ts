@@ -194,8 +194,8 @@ export class UserController {
 
   /**
    * POST /users/bulk-import
-   * CSV file upload for bulk guru creation.
-   * CSV format: nama, email (one row per guru).
+   * CSV file upload for bulk user creation (admin, kepala_sekolah, guru, bendahara).
+   * CSV format: nama, email, role (one row per user).
    * Generates random passwords and sends credentials via email.
    */
   @Post('bulk-import')
@@ -221,6 +221,6 @@ export class UserController {
     }
 
     const csvContent = file.buffer.toString('utf-8');
-    return this.userService.bulkImportGuru(tenantId, csvContent);
+    return this.userService.bulkImportUsers(tenantId, csvContent);
   }
 }

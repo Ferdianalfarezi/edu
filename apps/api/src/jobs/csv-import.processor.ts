@@ -36,7 +36,7 @@ export type CsvImportJobData = BulkImportGuruJobData | BulkImportSiswaJobData;
  * CsvImportProcessor handles async large-file CSV imports via Bull queue.
  *
  * Job types:
- * - `bulk-import-guru`: delegates to UserService.bulkImportGuru
+ * - `bulk-import-guru`: delegates to UserService.bulkImportUsers
  * - `bulk-import-siswa`: delegates to SiswaService.bulkImportSiswa
  *
  * For now, the inline (synchronous) CSV processing in the controllers/services
@@ -67,7 +67,7 @@ export class CsvImportProcessor extends BaseProcessor {
 
     this.processorLogger.log(`Job ${job.id}: starting bulk guru import for tenant ${tenant_id}`);
 
-    const result = await this.userService.bulkImportGuru(tenant_id, csv_content);
+    const result = await this.userService.bulkImportUsers(tenant_id, csv_content);
 
     this.processorLogger.log(
       `Job ${job.id}: bulk guru import completed — ` +

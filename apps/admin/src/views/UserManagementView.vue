@@ -46,7 +46,7 @@ const form = reactive<UserForm>({
 
 // CSV import state
 const importFile = ref<File | null>(null);
-const importPreview = ref<Array<{ nama: string; email: string; mata_pelajaran: string }>>([]);
+const importPreview = ref<Array<{ nama: string; email: string; role: string }>>([]);
 const importErrors = ref<string[]>([]);
 const importing = ref(false);
 
@@ -192,10 +192,10 @@ function handleFileSelect(event: Event) {
     const header = lines[0].split(',').map((h) => h.trim().toLowerCase());
     const namaIdx = header.indexOf('nama');
     const emailIdx = header.indexOf('email');
-    const mapelIdx = header.indexOf('mata_pelajaran');
+    const roleIdx = header.indexOf('role');
 
-    if (namaIdx === -1 || emailIdx === -1) {
-      importErrors.value = ['Kolom wajib: nama, email'];
+    if (namaIdx === -1 || emailIdx === -1 || roleIdx === -1) {
+      importErrors.value = ['Kolom wajib: nama, email, role'];
       return;
     }
 
@@ -205,7 +205,7 @@ function handleFileSelect(event: Event) {
       return {
         nama: cols[namaIdx] || '',
         email: cols[emailIdx] || '',
-        mata_pelajaran: mapelIdx !== -1 ? cols[mapelIdx] || '' : '',
+        role: cols[roleIdx] || '',
       };
     });
   };
@@ -237,7 +237,7 @@ onMounted(fetchUsers);
   <div class="p-8 max-w-7xl mx-auto">
     <PageHeader title="Manajemen User">
       <template #actions>
-        <ActionButton variant="neutral" @click="openImportModal"> Import Guru (CSV) </ActionButton>
+        <ActionButton variant="neutral" @click="openImportModal"> Import User (CSV) </ActionButton>
         <ActionButton variant="primary" @click="openCreateForm"> Tambah User </ActionButton>
       </template>
     </PageHeader>
@@ -456,7 +456,7 @@ onMounted(fetchUsers);
     <!-- Import CSV Modal -->
     <BaseModal
       :show="showImportModal"
-      title="Import Guru dari CSV"
+      title="Import User dari CSV"
       size="lg"
       @close="showImportModal = false"
     >
@@ -464,11 +464,16 @@ onMounted(fetchUsers);
         Format CSV: kolom wajib
         <code class="px-1.5 py-0.5 bg-surface-warm rounded text-[13px] font-semibold">nama</code>,
         <code class="px-1.5 py-0.5 bg-surface-warm rounded text-[13px] font-semibold">email</code>,
-        dan
+        <code class="px-1.5 py-0.5 bg-surface-warm rounded text-[13px] font-semibold">role</code>.
+        Nilai role yang valid:
+        <code class="px-1.5 py-0.5 bg-surface-warm rounded text-[13px] font-semibold">admin</code>,
         <code class="px-1.5 py-0.5 bg-surface-warm rounded text-[13px] font-semibold"
-          >mata_pelajaran</code
-        >
-        (opsional).
+          >kepala_sekolah</code
+        >,
+        <code class="px-1.5 py-0.5 bg-surface-warm rounded text-[13px] font-semibold">guru</code>,
+        <code class="px-1.5 py-0.5 bg-surface-warm rounded text-[13px] font-semibold"
+          >bendahara</code
+        >.
       </p>
 
       <div class="mb-4">
@@ -507,7 +512,7 @@ onMounted(fetchUsers);
                 <th
                   class="px-5 py-4 text-left font-bold text-text-secondary text-[13px] uppercase tracking-[0.04em] bg-surface-warm"
                 >
-                  Mata Pelajaran
+                  Role
                 </th>
               </tr>
             </thead>
@@ -519,7 +524,7 @@ onMounted(fetchUsers);
               >
                 <td class="px-5 py-4 text-[15px] text-stone-800">{{ row.nama }}</td>
                 <td class="px-5 py-4 text-[15px] text-stone-600">{{ row.email }}</td>
-                <td class="px-5 py-4 text-[15px] text-stone-600">{{ row.mata_pelajaran }}</td>
+                <td class="px-5 py-4 text-[15px] text-stone-600">{{ row.role }}</td>
               </tr>
             </tbody>
           </table>

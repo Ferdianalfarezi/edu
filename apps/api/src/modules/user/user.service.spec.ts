@@ -246,15 +246,13 @@ describe('UserService', () => {
     });
   });
 
-  describe('bulkImportGuru', () => {
+  describe('bulkImportUsers', () => {
     const tenantId = '11111111-1111-1111-1111-111111111111';
 
-    it('should create guru users from valid CSV and return result', async () => {
-      const csv = 'nama,email\nBudi,budi@school.id\nAndi,andi@school.id';
+    it('should create users from valid CSV with role column and return result', async () => {
+      const csv = 'nama,email,role\nBudi,budi@school.id,guru\nAndi,andi@school.id,admin';
 
       // First select query: batch email uniqueness check → no existing emails
-      // The chain is: select({email}).from(user).where(and(inArray, eq))
-      // Since where() returns mock, we make mock itself iterable/thenable for this case
       let selectCallCount = 0;
       mockDb.where.mockImplementation(() => {
         selectCallCount++;
@@ -268,7 +266,7 @@ describe('UserService', () => {
       // insert().values() returns a chainable, returning() is called inside
       mockDb.returning.mockResolvedValue([{ id: 'new-id' }]);
 
-      const result = await service.bulkImportGuru(tenantId, csv);
+      const result = await service.bulkImportUsers(tenantId, csv);
 
       expect(result.created).toBe(2);
       expect(result.skipped).toHaveLength(0);
@@ -277,14 +275,14 @@ describe('UserService', () => {
     });
 
     it('should skip rows with duplicate emails', async () => {
-      const csv = 'nama,email\nBudi,budi@school.id';
+      const csv = 'nama,email,role\nBudi,budi@school.id,guru';
 
       // Batch uniqueness check returns the email as existing
       mockDb.where.mockImplementationOnce(() => {
         return Promise.resolve([{ email: 'budi@school.id' }]);
       });
 
-      const result = await service.bulkImportGuru(tenantId, csv);
+      const result = await service.bulkImportUsers(tenantId, csv);
 
       expect(result.created).toBe(0);
       expect(result.skipped).toHaveLength(1);
@@ -292,9 +290,9 @@ describe('UserService', () => {
     });
 
     it('should skip rows with invalid email format', async () => {
-      const csv = 'nama,email\nBudi,not-an-email';
+      const csv = 'nama,email,role\nBudi,not-an-email,guru';
 
-      const result = await service.bulkImportGuru(tenantId, csv);
+      const result = await service.bulkImportUsers(tenantId, csv);
 
       expect(result.created).toBe(0);
       expect(result.skipped).toHaveLength(1);
@@ -302,54 +300,64 @@ describe('UserService', () => {
     });
 
     it('should skip rows with empty nama', async () => {
-      const csv = 'nama,email\n,valid@school.id';
+      const csv = 'nama,email,role\n,valid@school.id,guru';
 
-      const result = await service.bulkImportGuru(tenantId, csv);
+      const result = await service.bulkImportUsers(tenantId, csv);
 
       expect(result.created).toBe(0);
       expect(result.skipped).toHaveLength(1);
       expect(result.skipped[0].reason).toBe('Nama tidak boleh kosong');
     });
 
+    it('should skip rows with invalid role', async () => {
+      const csv = 'nama,email,role\nBudi,budi@school.id,super_admin';
+
+      const result = await service.bulkImportUsers(tenantId, csv);
+
+      expect(result.created).toBe(0);
+      expect(result.skipped).toHaveLength(1);
+      expect(result.skipped[0].reason).toContain('Role tidak valid');
+    });
+
     it('should throw if CSV is empty', async () => {
-      await expect(service.bulkImportGuru(tenantId, '')).rejects.toThrow(BadRequestException);
+      await expect(service.bulkImportUsers(tenantId, '')).rejects.toThrow(BadRequestException);
     });
 
     it('should throw if CSV has no required columns', async () => {
       const csv = 'kolom1,kolom2\ndata1,data2';
 
-      await expect(service.bulkImportGuru(tenantId, csv)).rejects.toThrow(BadRequestException);
+      await expect(service.bulkImportUsers(tenantId, csv)).rejects.toThrow(BadRequestException);
     });
   });
 
   describe('parseCsv', () => {
-    it('should parse a valid CSV with nama and email columns', () => {
-      const csv = 'nama,email\nBudi Santoso,budi@school.id\nAndi,andi@school.id';
+    it('should parse a valid CSV with nama, email and role columns', () => {
+      const csv = 'nama,email,role\nBudi Santoso,budi@school.id,guru\nAndi,andi@school.id,admin';
       const rows = service.parseCsv(csv);
 
       expect(rows).toHaveLength(2);
-      expect(rows[0]).toEqual({ nama: 'Budi Santoso', email: 'budi@school.id' });
-      expect(rows[1]).toEqual({ nama: 'Andi', email: 'andi@school.id' });
+      expect(rows[0]).toEqual({ nama: 'Budi Santoso', email: 'budi@school.id', role: 'guru' });
+      expect(rows[1]).toEqual({ nama: 'Andi', email: 'andi@school.id', role: 'admin' });
     });
 
     it('should handle different column order', () => {
-      const csv = 'email,nama\nbudi@school.id,Budi';
+      const csv = 'email,role,nama\nbudi@school.id,guru,Budi';
       const rows = service.parseCsv(csv);
 
       expect(rows).toHaveLength(1);
-      expect(rows[0]).toEqual({ nama: 'Budi', email: 'budi@school.id' });
+      expect(rows[0]).toEqual({ nama: 'Budi', email: 'budi@school.id', role: 'guru' });
     });
 
     it('should handle extra columns gracefully', () => {
-      const csv = 'nama,email,mata_pelajaran\nBudi,budi@school.id,Matematika';
+      const csv = 'nama,email,role,catatan\nBudi,budi@school.id,guru,test';
       const rows = service.parseCsv(csv);
 
       expect(rows).toHaveLength(1);
-      expect(rows[0]).toEqual({ nama: 'Budi', email: 'budi@school.id' });
+      expect(rows[0]).toEqual({ nama: 'Budi', email: 'budi@school.id', role: 'guru' });
     });
 
     it('should return empty array for header-only CSV', () => {
-      const csv = 'nama,email';
+      const csv = 'nama,email,role';
       const rows = service.parseCsv(csv);
       expect(rows).toHaveLength(0);
     });
