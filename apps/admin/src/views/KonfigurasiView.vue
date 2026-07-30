@@ -58,8 +58,13 @@ const newHoliday = ref({ tanggal: '', keterangan: '' });
 function initSppEntries(nominalSpp: Record<string, number>, count: number) {
   sppEntries.value = Array.from({ length: count }, (_, i) => {
     const tingkat = i + 1;
-    // Check both key formats: "tingkat_1" and "1"
-    const nominal = nominalSpp[`tingkat_${tingkat}`] ?? nominalSpp[String(tingkat)] ?? 0;
+    // keysToCamel converts "tingkat_1" → "tingkat1" in responses;
+    // also handle legacy "tingkat_1" and plain numeric "1" formats
+    const nominal =
+      nominalSpp[`tingkat${tingkat}`] ??
+      nominalSpp[`tingkat_${tingkat}`] ??
+      nominalSpp[String(tingkat)] ??
+      0;
     return { tingkat, nominal };
   });
 }
