@@ -398,10 +398,10 @@ async function generateTagihan() {
       payload.bulan = generateForm.bulan;
       payload.tahun = generateForm.tahun;
     } else {
-      payload.tahunAjaranId = generateForm.tahunAjaranId;
+      payload.tahun_ajaran_id = generateForm.tahunAjaranId;
     }
     if (generateForm.kelasId) {
-      payload.kelasId = generateForm.kelasId;
+      payload.kelas_id = generateForm.kelasId;
     }
 
     const { data } = await api.post<{
@@ -484,7 +484,7 @@ async function verifyTransaksi(action: 'approve' | 'reject') {
   try {
     const { data } = await api.patch(`/tagihan/${selectedTransaksi.value.tagihanId}/verify`, {
       action,
-      alasanPenolakan: action === 'reject' ? rejectReason.value.trim() : undefined,
+      alasan_penolakan: action === 'reject' ? rejectReason.value.trim() : undefined,
     });
     showBuktiModal.value = false;
     toast.success(
@@ -574,7 +574,7 @@ async function saveManualPayment() {
 
   try {
     await api.post(`/tagihan/${manualPaymentTagihan.value.id}/manual-payment`, {
-      jumlahBayar: manualPaymentForm.jumlahBayar,
+      jumlah_bayar: manualPaymentForm.jumlahBayar,
       metode: manualPaymentForm.metode,
       catatan: manualPaymentForm.catatan.trim() || undefined,
     });
@@ -609,7 +609,6 @@ async function saveEditTagihan() {
   try {
     await api.patch(`/tagihan/${editingTagihan.value.id}`, {
       nominal: editForm.nominal,
-      tanggalJatuhTempo: editForm.tanggalJatuhTempo || undefined,
     });
     showEditModal.value = false;
     await fetchTagihanList();

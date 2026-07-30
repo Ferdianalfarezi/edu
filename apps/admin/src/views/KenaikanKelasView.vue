@@ -158,11 +158,11 @@ async function goToPreview() {
 
   try {
     const payload: Record<string, string> = {
-      sourceKelasId: sourceKelasId.value,
-      targetTahunAjaranId: targetTahunAjaranId.value,
+      source_kelas_id: sourceKelasId.value,
+      target_tahun_ajaran_id: targetTahunAjaranId.value,
     };
     if (targetKelasId.value) {
-      payload.targetKelasId = targetKelasId.value;
+      payload.target_kelas_id = targetKelasId.value;
     }
 
     const { data } = await api.post<PreviewResult>('/kenaikan-kelas/preview', payload);
@@ -224,10 +224,10 @@ async function executePromotion() {
 
   try {
     const payload = {
-      sourceKelasId: sourceKelasId.value,
-      targetKelasId: targetKelasId.value || undefined,
-      targetTahunAjaranId: targetTahunAjaranId.value,
-      excludedSiswaIds: Array.from(excludedStudentIds.value),
+      source_kelas_id: sourceKelasId.value,
+      target_kelas_id: targetKelasId.value || undefined,
+      target_tahun_ajaran_id: targetTahunAjaranId.value,
+      excluded_siswa_ids: Array.from(excludedStudentIds.value),
     };
 
     const { data } = await api.post<{

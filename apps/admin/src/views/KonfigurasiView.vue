@@ -105,9 +105,9 @@ async function saveKonfigurasi() {
   });
 
   const payload = {
-    batasKetidakhadiranNotifikasi: config.value.batasKetidakhadiranNotifikasi,
-    nominalSpp,
-    tanggalJatuhTempo: config.value.tanggalJatuhTempo,
+    batas_ketidakhadiran_notifikasi: config.value.batasKetidakhadiranNotifikasi,
+    nominal_spp: nominalSpp,
+    tanggal_jatuh_tempo: config.value.tanggalJatuhTempo,
   };
 
   try {
@@ -172,7 +172,7 @@ async function updateHariKerja() {
 
   savingHariKerja.value = true;
   try {
-    await api.patch('/tenants/hari-kerja', { hariKerja: hariKerja.value });
+    await api.patch('/tenants/hari-kerja', { hari_kerja: hariKerja.value });
     toast.success('Hari kerja berhasil diperbarui');
   } catch (error) {
     console.error('Failed to update hari kerja:', error);

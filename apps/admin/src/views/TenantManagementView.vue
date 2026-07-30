@@ -101,10 +101,10 @@ async function saveTenant() {
         alamat: form.value.alamat || undefined,
         telepon: form.value.telepon || undefined,
         email: form.value.email || undefined,
-        jumlahTingkat: form.value.jumlahTingkat,
-        hariKerja: form.value.hariKerja,
-        adminNama: form.value.adminNama,
-        adminEmail: form.value.adminEmail,
+        jumlah_tingkat: form.value.jumlahTingkat,
+        hari_kerja: form.value.hariKerja,
+        admin_nama: form.value.adminNama,
+        admin_email: form.value.adminEmail,
       };
       await api.post('/tenants', payload);
     }

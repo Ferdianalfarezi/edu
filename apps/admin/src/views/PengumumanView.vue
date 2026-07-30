@@ -174,7 +174,7 @@ async function submitPengumuman() {
       mode: form.mode,
     };
     if (form.mode === 'targeted') {
-      payload.siswaIds = form.siswaIds;
+      payload.siswa_ids = form.siswaIds;
     }
     const { data } = await api.post<{ jumlahPenerima: number }>('/pengumuman', payload);
     toast.success(`Pengumuman berhasil dikirim ke ${data.jumlahPenerima} penerima`);

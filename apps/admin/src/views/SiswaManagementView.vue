@@ -265,7 +265,7 @@ async function deleteSiswa() {
   try {
     await api.patch(`/siswa/${deletingSiswa.value.id}/soft-delete`, {
       status: deleteStatus.value,
-      alasan: deleteReason.value.trim() || undefined,
+      alasanKeluar: deleteReason.value.trim() || undefined,
     });
     showDeleteModal.value = false;
     deletingSiswa.value = null;

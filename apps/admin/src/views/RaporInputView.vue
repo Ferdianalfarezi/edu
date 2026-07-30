@@ -190,16 +190,16 @@ async function saveNilai(status: 'draft' | 'submitted') {
 
   try {
     await api.post('/rapor/nilai', {
-      kelasId: selectedKelas.value,
-      mataPelajaranId: selectedMapel.value,
-      periodeRaporId: selectedPeriode.value,
+      kelas_id: selectedKelas.value,
+      mata_pelajaran_id: selectedMapel.value,
+      periode_rapor_id: selectedPeriode.value,
       nilai: nilaiData.value.map((siswa) => ({
-        siswaId: siswa.siswaId,
+        siswa_id: siswa.siswaId,
         komponen: siswa.komponen.map((k) => ({
-          komponenId: k.komponenId,
+          komponen_id: k.komponenId,
           nilai: k.nilai,
         })),
-        capaianPembelajaran: siswa.capaianPembelajaran || undefined,
+        capaian_pembelajaran: siswa.capaianPembelajaran || undefined,
       })),
       status,
     });
@@ -284,16 +284,16 @@ onMounted(() => {
     if (isDirty.value && nilaiData.value.length > 0 && !saving.value && !isRaporFinalized.value) {
       try {
         await api.post('/rapor/nilai', {
-          kelasId: selectedKelas.value,
-          mataPelajaranId: selectedMapel.value,
-          periodeRaporId: selectedPeriode.value,
+          kelas_id: selectedKelas.value,
+          mata_pelajaran_id: selectedMapel.value,
+          periode_rapor_id: selectedPeriode.value,
           nilai: nilaiData.value.map((siswa) => ({
-            siswaId: siswa.siswaId,
+            siswa_id: siswa.siswaId,
             komponen: siswa.komponen.map((k) => ({
-              komponenId: k.komponenId,
+              komponen_id: k.komponenId,
               nilai: k.nilai,
             })),
-            capaianPembelajaran: siswa.capaianPembelajaran || undefined,
+            capaian_pembelajaran: siswa.capaianPembelajaran || undefined,
           })),
           status: 'draft',
         });
