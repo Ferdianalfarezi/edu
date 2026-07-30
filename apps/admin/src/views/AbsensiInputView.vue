@@ -163,7 +163,7 @@ async function submitAbsensi() {
     await api.post(`/absensi/kelas/${selectedKelasId.value}`, {
       tanggal: selectedTanggal.value,
       records: records.value.map((r) => ({
-        siswaId: r.siswaId,
+        siswa_id: r.siswaId,
         status: r.status,
       })),
     });

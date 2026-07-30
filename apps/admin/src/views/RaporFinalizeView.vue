@@ -151,12 +151,12 @@ async function finalize() {
 
   try {
     await api.post('/rapor/nilai/catatan', {
-      kelasId: selectedKelas.value,
-      periodeRaporId: selectedPeriode.value,
-      data: siswaRapors.value.map((s) => ({
-        siswaId: s.siswaId,
-        catatanWaliKelas: s.catatanWaliKelas || undefined,
-        p5Deskripsi: s.p5Deskripsi || undefined,
+      kelas_id: selectedKelas.value,
+      periode_rapor_id: selectedPeriode.value,
+      catatan: siswaRapors.value.map((s) => ({
+        siswa_id: s.siswaId,
+        catatan: s.catatanWaliKelas || undefined,
+        p5_deskripsi: s.p5Deskripsi || undefined,
       })),
     });
 

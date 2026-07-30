@@ -299,14 +299,11 @@ async function saveJadwal() {
   }
 
   const currentMonth = new Date().getMonth() + 1;
-  const semester = currentMonth >= 7 ? 1 : 2;
 
-  const tahunAjaranId = selectedTahunAjaranId.value;
-
-  const payload: Record<string, unknown> = {
+  const createPayload: Record<string, unknown> = {
     kelasId: selectedKelasId.value,
-    tahunAjaranId,
-    semester,
+    tahunAjaranId: selectedTahunAjaranId.value,
+    semester: currentMonth >= 7 ? 1 : 2,
     hari: selectedHari.value,
     jamKe: selectedJamKe.value,
     tanggalMulaiBerlaku: '2026-07-01',
@@ -315,15 +312,28 @@ async function saveJadwal() {
   };
 
   if (!form.value.isIstirahat) {
-    payload.mataPelajaranId = form.value.mataPelajaranId;
-    payload.guruId = form.value.guruId;
+    createPayload.mataPelajaranId = form.value.mataPelajaranId;
+    createPayload.guruId = form.value.guruId;
+  }
+
+  // UpdateJadwalDto only accepts: guruId, mataPelajaranId, jamKe, hari,
+  // tanggalMulaiBerlaku, tanggalSelesaiBerlaku
+  const updatePayload: Record<string, unknown> = {
+    hari: selectedHari.value,
+    jamKe: selectedJamKe.value,
+    tanggalMulaiBerlaku: '2026-07-01',
+    tanggalSelesaiBerlaku: '2027-06-30',
+  };
+  if (!form.value.isIstirahat) {
+    updatePayload.mataPelajaranId = form.value.mataPelajaranId;
+    updatePayload.guruId = form.value.guruId;
   }
 
   try {
     if (editingEntry.value) {
-      await api.patch(`/jadwal/${editingEntry.value.id}`, payload);
+      await api.patch(`/jadwal/${editingEntry.value.id}`, updatePayload);
     } else {
-      await api.post('/jadwal', payload);
+      await api.post('/jadwal', createPayload);
     }
     showFormModal.value = false;
     await fetchJadwal();
