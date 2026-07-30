@@ -47,7 +47,7 @@ describe('User Contract Tests', () => {
       updateUser: jest.fn(),
       deactivateUser: jest.fn(),
       deactivateGuru: jest.fn(),
-      bulkImportGuru: jest.fn(),
+      bulkImportUsers: jest.fn(),
     };
 
     const mocks: MockProviders = {

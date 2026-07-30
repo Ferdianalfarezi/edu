@@ -22,7 +22,7 @@ describe('UserController', () => {
       deactivateUser: jest.fn(),
       superadminDeactivateUser: jest.fn(),
       superadminActivateUser: jest.fn(),
-      bulkImportGuru: jest.fn(),
+      bulkImportUsers: jest.fn(),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -136,9 +136,9 @@ describe('UserController', () => {
   });
 
   describe('POST /users/bulk-import', () => {
-    it('should call bulkImportGuru with CSV content from file', async () => {
+    it('should call bulkImportUsers with CSV content from file', async () => {
       const tenantId = 'tenant-1';
-      const csvContent = 'nama,email\nBudi,budi@school.id';
+      const csvContent = 'nama,email,role\nBudi,budi@school.id,guru';
       const file = {
         buffer: Buffer.from(csvContent, 'utf-8'),
         originalname: 'guru.csv',
@@ -146,11 +146,11 @@ describe('UserController', () => {
       } as Express.Multer.File;
 
       const expected = { created: 1, skipped: [], total: 1 };
-      mockUserService.bulkImportGuru!.mockResolvedValue(expected);
+      mockUserService.bulkImportUsers!.mockResolvedValue(expected);
 
       const result = await controller.bulkImport(tenantId, file);
 
-      expect(mockUserService.bulkImportGuru).toHaveBeenCalledWith(tenantId, csvContent);
+      expect(mockUserService.bulkImportUsers).toHaveBeenCalledWith(tenantId, csvContent);
       expect(result.created).toBe(1);
     });
 

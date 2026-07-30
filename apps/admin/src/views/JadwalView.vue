@@ -151,7 +151,7 @@ async function fetchKelasList() {
   try {
     const params: Record<string, string> = {};
     if (selectedTahunAjaranId.value) {
-      params.tahun_ajaran_id = selectedTahunAjaranId.value;
+      params.tahunAjaranId = selectedTahunAjaranId.value;
     }
     const { data } = await api.get<{ data: Kelas[] }>('/kelas', { params });
     kelasList.value = data.data;
@@ -189,9 +189,9 @@ async function fetchJadwal() {
   if (!selectedKelasId.value) return;
   loading.value = true;
   try {
-    const params: Record<string, string> = { kelas_id: selectedKelasId.value };
+    const params: Record<string, string> = { kelasId: selectedKelasId.value };
     if (selectedTahunAjaranId.value) {
-      params.tahun_ajaran_id = selectedTahunAjaranId.value;
+      params.tahunAjaranId = selectedTahunAjaranId.value;
     }
     const { data } = await api.get<JadwalEntry[]>('/jadwal', { params });
     jadwalEntries.value = data;

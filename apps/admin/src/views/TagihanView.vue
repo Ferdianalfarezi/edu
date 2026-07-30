@@ -199,7 +199,7 @@ const generateForm = reactive({
 const generateResult = ref<{
   created: number;
   skipped: number;
-  total_nominal: number;
+  totalNominal: number;
 } | null>(null);
 const generating = ref(false);
 const generateError = ref('');
@@ -406,7 +406,7 @@ async function generateTagihan() {
 
     const { data } = await api.post<{
       message: string;
-      data: { created: number; skipped: number; total_nominal: number };
+      data: { created: number; skipped: number; totalNominal: number };
     }>('/tagihan/generate', payload);
 
     generateResult.value = data.data;
@@ -875,7 +875,7 @@ onMounted(async () => {
                 class="flex flex-col items-center px-5 py-4 bg-primary-50 rounded-[12px] min-w-[100px]"
               >
                 <span class="text-xl font-bold text-primary-600">{{
-                  formatCurrency(generateResult.total_nominal)
+                  formatCurrency(generateResult.totalNominal)
                 }}</span>
                 <span class="text-[13px] font-semibold text-stone-500 mt-1">Total Nominal</span>
               </div>
