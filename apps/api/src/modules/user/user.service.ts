@@ -74,8 +74,9 @@ export class UserService {
     // Validate email uniqueness per tenant
     await this.validateEmailUniqueness(dto.email, tenantId);
 
-    // Generate random password
-    const rawPassword = this.generateRandomPassword();
+    // In development, use a fixed password for easy testing
+    const rawPassword =
+      process.env.NODE_ENV === 'development' ? 'password123' : this.generateRandomPassword();
     const passwordHash = await bcrypt.hash(rawPassword, BCRYPT_SALT_ROUNDS);
 
     // Insert user
@@ -648,7 +649,8 @@ export class UserService {
     // Generate passwords and hash them in parallel
     const userEntries = await Promise.all(
       creatableRows.map(async (row) => {
-        const rawPassword = this.generateRandomPassword();
+        const rawPassword =
+          process.env.NODE_ENV === 'development' ? 'password123' : this.generateRandomPassword();
         const passwordHash = await bcrypt.hash(rawPassword, BCRYPT_SALT_ROUNDS);
         return { ...row, rawPassword, passwordHash };
       }),

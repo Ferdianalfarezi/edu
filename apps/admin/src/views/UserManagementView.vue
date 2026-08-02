@@ -1,15 +1,22 @@
 <script setup lang="ts">
-import { ref, reactive, computed, onMounted } from 'vue';
+import { ref, reactive, computed, watch } from 'vue';
 import { Role } from '@edu/shared';
 import { api } from '@/api/client';
-import { PageHeader, BaseModal, SearchSelect, ActionButton } from '@/components/ui';
+import {
+  PageHeader,
+  BaseModal,
+  SearchSelect,
+  ActionButton,
+  TablePagination,
+} from '@/components/ui';
 import type { SelectOption } from '@/components/ui';
+import { useTableUrlState } from '@/composables/useTableUrlState';
 
 interface User {
   id: string;
-  nama: string;
-  email: string;
-  phone?: string;
+  nama: string | null;
+  email: string | null;
+  phone?: string | null;
   role: Role;
   isActive: boolean;
   createdAt: string;
@@ -23,11 +30,31 @@ interface UserForm {
   isActive: boolean;
 }
 
+// ── Server-side state (useTableUrlState syncs search/filters/page to URL) ──
+const { page, pageSize, search, filters } = useTableUrlState({
+  searchKey: 'search',
+  defaultPageSize: 25,
+  filters: [
+    {
+      key: 'role',
+      type: 'enum',
+      enumValues: [Role.ADMIN, Role.KEPALA_SEKOLAH, Role.GURU, Role.BENDAHARA],
+    },
+    { key: 'is_active', type: 'enum', enumValues: ['true', 'false', 'all'] },
+  ],
+});
+
+const filterRole = filters['role'];
+const filterStatus = filters['is_active'];
+
+// ── Cursor stack for multi-page navigation ──
+// Index 0 = page 1 (no cursor), index 1 = cursor for page 2, etc.
+const cursorStack = ref<(string | null)[]>([null]);
+
 const users = ref<User[]>([]);
 const loading = ref(false);
-const search = ref('');
-const filterRole = ref<Role | ''>('');
-const filterStatus = ref<'' | 'active' | 'inactive'>('');
+const hasNext = ref(false);
+const totalPages = ref(1);
 
 // Modal state
 const showFormModal = ref(false);
@@ -53,8 +80,9 @@ const importing = ref(false);
 const staffRoles = [Role.ADMIN, Role.KEPALA_SEKOLAH, Role.GURU, Role.BENDAHARA] as const;
 
 const statusFilterOptions: SelectOption[] = [
-  { value: 'active', label: 'Aktif' },
-  { value: 'inactive', label: 'Nonaktif' },
+  { value: 'true', label: 'Aktif' },
+  { value: 'false', label: 'Nonaktif' },
+  { value: 'all', label: 'Semua' },
 ];
 
 const roleFilterOptions = computed<SelectOption[]>(() =>
@@ -65,26 +93,37 @@ const roleSelectOptions = computed<SelectOption[]>(() =>
   staffRoles.map((role) => ({ value: role, label: role })),
 );
 
-const filteredUsers = computed(() => {
-  return users.value.filter((u) => {
-    const matchSearch =
-      !search.value ||
-      u.nama.toLowerCase().includes(search.value.toLowerCase()) ||
-      u.email.toLowerCase().includes(search.value.toLowerCase());
-    const matchRole = !filterRole.value || u.role === filterRole.value;
-    const matchStatus =
-      !filterStatus.value ||
-      (filterStatus.value === 'active' && u.isActive) ||
-      (filterStatus.value === 'inactive' && !u.isActive);
-    return matchSearch && matchRole && matchStatus;
-  });
-});
-
-async function fetchUsers() {
+// ── Fetch users from API using cursor pagination ──
+async function fetchUsers(cursor: string | null = null) {
   loading.value = true;
   try {
-    const { data } = await api.get<{ data: User[] }>('/users');
+    const params: Record<string, string | number> = {
+      page_size: pageSize.value,
+    };
+    if (search.value) params.search = search.value;
+    if (filterRole.value) params.role = filterRole.value;
+    if (filterStatus.value) params.is_active = filterStatus.value;
+    if (cursor) params.cursor = cursor;
+
+    const { data } = await api.get<{
+      data: User[];
+      meta: { has_next: boolean; cursor: string | null };
+    }>('/users', { params });
+
     users.value = data.data;
+    hasNext.value = data.meta.has_next;
+
+    // Update cursor stack for the current page
+    if (hasNext.value && data.meta.cursor) {
+      if (cursorStack.value.length <= page.value) {
+        cursorStack.value.push(data.meta.cursor);
+      } else {
+        cursorStack.value[page.value] = data.meta.cursor;
+      }
+    }
+
+    // Estimate total pages: if we have a next page, show at least current + 1
+    totalPages.value = hasNext.value ? page.value + 1 : page.value;
   } catch (error) {
     console.error('Failed to fetch users:', error);
   } finally {
@@ -92,6 +131,33 @@ async function fetchUsers() {
   }
 }
 
+// ── Reset cursor stack and go to page 1 when filters/search change ──
+watch(
+  () => ({ s: search.value, r: filterRole.value, st: filterStatus.value, ps: pageSize.value }),
+  () => {
+    cursorStack.value = [null];
+    page.value = 1;
+    fetchUsers(null);
+  },
+  { immediate: true },
+);
+
+// ── Navigate pages using cursor stack ──
+watch(page, (newPage) => {
+  const cursor = cursorStack.value[newPage - 1] ?? null;
+  fetchUsers(cursor);
+});
+
+function onPageChange(newPage: number) {
+  page.value = newPage;
+}
+
+function onPageSizeChange(size: number) {
+  pageSize.value = size;
+  // Reset handled by useTableUrlState watcher above
+}
+
+// ── CRUD helpers ──
 function openCreateForm() {
   editingUser.value = null;
   form.nama = '';
@@ -104,9 +170,9 @@ function openCreateForm() {
 
 function openEditForm(user: User) {
   editingUser.value = user;
-  form.nama = user.nama;
-  form.email = user.email;
-  form.phone = user.phone || '';
+  form.nama = user.nama ?? '';
+  form.email = user.email ?? '';
+  form.phone = user.phone ?? '';
   form.role = user.role;
   form.isActive = user.isActive;
   showFormModal.value = true;
@@ -120,7 +186,6 @@ function openDeleteConfirm(user: User) {
 async function saveUser() {
   try {
     if (editingUser.value) {
-      // UpdateUserDto only accepts nama, email, role
       const updatePayload: Record<string, unknown> = {
         nama: form.nama,
         email: form.email,
@@ -128,7 +193,6 @@ async function saveUser() {
       };
       await api.patch(`/users/${editingUser.value.id}`, updatePayload);
 
-      // Handle isActive change via dedicated endpoints
       const wasActive = editingUser.value.isActive;
       if (form.isActive !== wasActive) {
         if (form.isActive) {
@@ -138,7 +202,6 @@ async function saveUser() {
         }
       }
     } else {
-      // CreateUserDto accepts nama, email, phone, role
       const createPayload: Record<string, unknown> = {
         nama: form.nama,
         email: form.email,
@@ -148,7 +211,9 @@ async function saveUser() {
       await api.post('/users', createPayload);
     }
     showFormModal.value = false;
-    await fetchUsers();
+    // Refresh current page
+    const cursor = cursorStack.value[page.value - 1] ?? null;
+    await fetchUsers(cursor);
   } catch (error) {
     console.error('Failed to save user:', error);
   }
@@ -160,7 +225,8 @@ async function deleteUser() {
     await api.patch(`/users/${deletingUser.value.id}/deactivate`);
     showDeleteModal.value = false;
     deletingUser.value = null;
-    await fetchUsers();
+    const cursor = cursorStack.value[page.value - 1] ?? null;
+    await fetchUsers(cursor);
   } catch (error) {
     console.error('Failed to delete user:', error);
   }
@@ -179,7 +245,6 @@ function handleFileSelect(event: Event) {
   if (!file) return;
   importFile.value = file;
 
-  // Parse CSV preview
   const reader = new FileReader();
   reader.onload = (e) => {
     const text = e.target?.result as string;
@@ -222,15 +287,15 @@ async function importCsv() {
       headers: { 'Content-Type': 'multipart/form-data' },
     });
     showImportModal.value = false;
-    await fetchUsers();
+    cursorStack.value = [null];
+    page.value = 1;
+    await fetchUsers(null);
   } catch (error) {
     console.error('Failed to import CSV:', error);
   } finally {
     importing.value = false;
   }
 }
-
-onMounted(fetchUsers);
 </script>
 
 <template>
@@ -244,7 +309,7 @@ onMounted(fetchUsers);
 
     <!-- Filters -->
     <div class="flex flex-wrap items-end gap-3 mb-6">
-      <div class="relative min-w-[200px]">
+      <div class="relative min-w-50">
         <input
           v-model="search"
           type="text"
@@ -278,7 +343,7 @@ onMounted(fetchUsers);
       </div>
 
       <div class="overflow-x-auto">
-        <table v-if="!loading && filteredUsers.length > 0" class="w-full">
+        <table v-if="!loading && users.length > 0" class="w-full">
           <thead class="border-b-2 border-stone-200">
             <tr>
               <th
@@ -309,11 +374,7 @@ onMounted(fetchUsers);
             </tr>
           </thead>
           <tbody class="divide-y divide-stone-200">
-            <tr
-              v-for="user in filteredUsers"
-              :key="user.id"
-              class="hover:bg-primary-50 transition-colors"
-            >
+            <tr v-for="user in users" :key="user.id" class="hover:bg-primary-50 transition-colors">
               <td class="px-5 py-4 text-[15px] text-stone-800 font-medium">{{ user.nama }}</td>
               <td class="px-5 py-4 text-[15px] text-stone-600">{{ user.email }}</td>
               <td class="px-5 py-4">
@@ -370,11 +431,23 @@ onMounted(fetchUsers);
       </div>
 
       <p
-        v-else-if="filteredUsers.length === 0 && !loading"
+        v-else-if="users.length === 0 && !loading"
         class="text-center text-[15px] text-stone-500 py-12"
       >
         Tidak ada user ditemukan.
       </p>
+
+      <!-- Pagination -->
+      <TablePagination
+        v-if="totalPages > 1 || hasNext"
+        :current-page="page"
+        :total-pages="totalPages"
+        :total-count="totalPages * pageSize"
+        :page-size="pageSize"
+        :loading="loading"
+        @page-change="onPageChange"
+        @page-size-change="onPageSizeChange"
+      />
     </div>
 
     <!-- Create/Edit Modal -->

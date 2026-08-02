@@ -2,6 +2,9 @@
 import { ref, onMounted } from 'vue';
 import { api } from '@/api/client';
 import { PageHeader, BaseModal, ActionButton } from '@/components/ui';
+import { useOnboardingForm } from '@/composables/useOnboardingForm';
+import { parseExcelFile } from '@/composables/useExcelParser';
+import OnboardingPreview from '@/components/OnboardingPreview.vue';
 
 interface Tenant {
   id: string;
@@ -29,6 +32,42 @@ interface TenantForm {
 
 const tenants = ref<Tenant[]>([]);
 const loading = ref(false);
+
+const {
+  step,
+  tenantForm,
+  parseResult,
+  isSubmitting,
+  submitError,
+  goToStep,
+  handleFileParsed,
+  handleGantiFile,
+  submitOnboarding,
+} = useOnboardingForm({
+  onSuccess: () => {
+    showFormModal.value = false;
+    fetchTenants();
+  },
+});
+
+// File parsing error state for Step 2
+const parseError = ref<string | null>(null);
+
+async function onFileChange(event: Event) {
+  const input = event.target as HTMLInputElement;
+  const file = input.files?.[0];
+  if (!file) return;
+
+  // Reset error state before each new parse (Requirement 2.11)
+  parseError.value = null;
+
+  const result = await parseExcelFile(file);
+  handleFileParsed(result);
+
+  if (result.errors.length > 0) {
+    parseError.value = result.errors.join('; ');
+  }
+}
 
 const showFormModal = ref(false);
 const editingTenant = ref<Tenant | null>(null);
@@ -257,110 +296,274 @@ onMounted(fetchTenants);
     <BaseModal
       :show="showFormModal"
       :title="editingTenant ? 'Edit Sekolah' : 'Tambah Sekolah Baru'"
-      size="lg"
+      size="xl"
       @close="showFormModal = false"
     >
-      <p v-if="!editingTenant" class="text-[15px] text-stone-500 mb-4">
-        Setelah dibuat, satu user Admin default akan dibuatkan dan kredensial dikirim ke email
-        sekolah.
-      </p>
-      <form @submit.prevent="saveTenant">
-        <div class="mb-4">
-          <label class="block text-[14px] font-semibold text-stone-800 mb-1.5">Nama Sekolah</label>
-          <input
-            v-model="form.nama"
-            type="text"
-            required
-            class="w-full px-4 py-2.5 text-[15px] border-2 border-stone-200 rounded-[8px] focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-colors"
-            placeholder="SD Negeri 1 Contoh"
+      <!-- Template download link — always visible on all steps -->
+      <div
+        class="mb-4 flex items-center gap-2 px-4 py-2.5 bg-stone-50 border border-stone-200 rounded-xs"
+      >
+        <svg
+          class="w-4 h-4 text-stone-500 shrink-0"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+          stroke-width="2"
+        >
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3"
           />
-        </div>
-        <div class="mb-4">
-          <label class="block text-[14px] font-semibold text-stone-800 mb-1.5">Alamat</label>
-          <textarea
-            v-model="form.alamat"
-            class="w-full px-4 py-2.5 text-[15px] border-2 border-stone-200 rounded-[8px] focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 min-h-[60px] resize-y transition-colors"
-            placeholder="Jl. Pendidikan No. 1"
-          ></textarea>
-        </div>
-        <div class="mb-4">
-          <label class="block text-[14px] font-semibold text-stone-800 mb-1.5">Telepon</label>
-          <input
-            v-model="form.telepon"
-            type="text"
-            class="w-full px-4 py-2.5 text-[15px] border-2 border-stone-200 rounded-[8px] focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-colors"
-            placeholder="021-12345678"
-          />
-        </div>
-        <div class="mb-4">
-          <label class="block text-[14px] font-semibold text-stone-800 mb-1.5">Email</label>
-          <input
-            v-model="form.email"
-            type="email"
-            class="w-full px-4 py-2.5 text-[15px] border-2 border-stone-200 rounded-[8px] focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-colors"
-            placeholder="admin@sekolah.sch.id"
-          />
-        </div>
-        <!-- Jumlah Tingkat -->
-        <div class="mb-4">
-          <label class="block text-[14px] font-semibold text-stone-800 mb-1.5"
-            >Jumlah Tingkat</label
-          >
-          <input
-            v-if="!editingTenant"
-            v-model.number="form.jumlahTingkat"
-            type="number"
-            min="1"
-            max="13"
-            required
-            class="w-full px-4 py-2.5 text-[15px] border-2 border-stone-200 rounded-[8px] focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-colors"
-          />
-          <div
-            v-else
-            class="w-full px-4 py-2.5 text-[15px] border-2 border-stone-200 rounded-[8px] bg-surface-warm text-stone-500"
-          >
-            {{ form.jumlahTingkat }}
+        </svg>
+        <a
+          href="/Template_TemanSekolah.xlsx"
+          download
+          class="text-[14px] text-primary-600 hover:text-primary-800 font-medium underline"
+        >
+          Download Template Excel
+        </a>
+        <span class="text-[13px] text-stone-400">— isi data sekolah sebelum upload</span>
+      </div>
+      <!-- Create mode: step-driven content -->
+      <template v-if="!editingTenant">
+        <!-- Step 1: Info Sekolah -->
+        <div v-if="step === 'info'">
+          <p class="text-[15px] text-stone-500 mb-4">
+            Setelah dibuat, satu user Admin default akan dibuatkan dan kredensial dikirim ke email
+            sekolah.
+          </p>
+          <div class="mb-4">
+            <label class="block text-[14px] font-semibold text-stone-800 mb-1.5"
+              >Nama Sekolah</label
+            >
+            <input
+              v-model="tenantForm.nama"
+              type="text"
+              required
+              class="w-full px-4 py-2.5 text-[15px] border-2 border-stone-200 rounded-xs focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-colors"
+              placeholder="SD Negeri 1 Contoh"
+            />
           </div>
-          <p class="mt-1 text-[13px] text-stone-400">SD = 6, SMP/SMA = 3</p>
-        </div>
-        <!-- Hari Kerja (create mode only) -->
-        <div v-if="!editingTenant" class="mb-4">
-          <label class="block text-[14px] font-semibold text-stone-800 mb-1.5">Hari Kerja</label>
-          <select
-            v-model="form.hariKerja"
-            class="w-full px-4 py-2.5 text-[15px] border-2 border-stone-200 rounded-[8px] focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-colors"
-          >
-            <option value="6_hari">6 Hari (Senin-Sabtu)</option>
-            <option value="5_hari">5 Hari (Senin-Jumat)</option>
-          </select>
-        </div>
-        <!-- Admin fields (create mode only) -->
-        <template v-if="!editingTenant">
+          <div class="mb-4">
+            <label class="block text-[14px] font-semibold text-stone-800 mb-1.5">Alamat</label>
+            <textarea
+              v-model="tenantForm.alamat"
+              class="w-full px-4 py-2.5 text-[15px] border-2 border-stone-200 rounded-xs focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 min-h-15 resize-y transition-colors"
+              placeholder="Jl. Pendidikan No. 1"
+            ></textarea>
+          </div>
+          <div class="mb-4">
+            <label class="block text-[14px] font-semibold text-stone-800 mb-1.5">Telepon</label>
+            <input
+              v-model="tenantForm.telepon"
+              type="text"
+              class="w-full px-4 py-2.5 text-[15px] border-2 border-stone-200 rounded-xs focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-colors"
+              placeholder="021-12345678"
+            />
+          </div>
+          <div class="mb-4">
+            <label class="block text-[14px] font-semibold text-stone-800 mb-1.5">Email</label>
+            <input
+              v-model="tenantForm.email"
+              type="email"
+              class="w-full px-4 py-2.5 text-[15px] border-2 border-stone-200 rounded-xs focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-colors"
+              placeholder="admin@sekolah.sch.id"
+            />
+          </div>
+          <!-- Jumlah Tingkat -->
+          <div class="mb-4">
+            <label class="block text-[14px] font-semibold text-stone-800 mb-1.5"
+              >Jumlah Tingkat</label
+            >
+            <input
+              v-model.number="tenantForm.jumlah_tingkat"
+              type="number"
+              min="1"
+              max="13"
+              required
+              class="w-full px-4 py-2.5 text-[15px] border-2 border-stone-200 rounded-xs focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-colors"
+            />
+            <p class="mt-1 text-[13px] text-stone-400">SD = 6, SMP/SMA = 3</p>
+          </div>
+          <!-- Hari Kerja -->
+          <div class="mb-4">
+            <label class="block text-[14px] font-semibold text-stone-800 mb-1.5">Hari Kerja</label>
+            <select
+              v-model="tenantForm.hari_kerja"
+              class="w-full px-4 py-2.5 text-[15px] border-2 border-stone-200 rounded-xs focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-colors"
+            >
+              <option value="6_hari">6 Hari (Senin-Sabtu)</option>
+              <option value="5_hari">5 Hari (Senin-Jumat)</option>
+            </select>
+          </div>
+          <!-- Admin fields -->
           <div class="mb-4">
             <label class="block text-[14px] font-semibold text-stone-800 mb-1.5">Nama Admin</label>
             <input
-              v-model="form.adminNama"
+              v-model="tenantForm.admin_nama"
               type="text"
               required
-              class="w-full px-4 py-2.5 text-[15px] border-2 border-stone-200 rounded-[8px] focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-colors"
+              class="w-full px-4 py-2.5 text-[15px] border-2 border-stone-200 rounded-xs focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-colors"
               placeholder="Nama lengkap admin sekolah"
             />
           </div>
           <div class="mb-4">
             <label class="block text-[14px] font-semibold text-stone-800 mb-1.5">Email Admin</label>
             <input
-              v-model="form.adminEmail"
+              v-model="tenantForm.admin_email"
               type="email"
               required
-              class="w-full px-4 py-2.5 text-[15px] border-2 border-stone-200 rounded-[8px] focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-colors"
+              class="w-full px-4 py-2.5 text-[15px] border-2 border-stone-200 rounded-xs focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-colors"
               placeholder="admin@sekolah.sch.id"
             />
           </div>
-        </template>
-      </form>
+        </div>
+
+        <!-- Step 2: Upload Excel -->
+        <div v-else-if="step === 'upload'">
+          <div class="mb-6">
+            <label class="block text-[14px] font-semibold text-stone-800 mb-1.5">
+              Upload File Excel
+              <span class="text-danger-600 ml-0.5" title="Wajib">*</span>
+              <span class="text-[13px] font-normal text-stone-400 ml-1">Wajib</span>
+            </label>
+            <input
+              type="file"
+              accept=".xlsx,.xls"
+              class="block w-full text-[15px] text-stone-700 file:mr-4 file:py-2 file:px-4 file:rounded-xs file:border-0 file:text-[14px] file:font-semibold file:bg-primary-50 file:text-primary-700 hover:file:bg-primary-100 transition-colors border-2 border-stone-200 rounded-xs px-2 py-2 cursor-pointer"
+              @change="onFileChange"
+            />
+            <!-- Inline error display -->
+            <p v-if="parseError" class="mt-2 text-[13px] text-danger-600 font-medium">
+              {{ parseError }}
+            </p>
+            <p
+              v-if="parseResult && parseResult.warnings.length > 0"
+              class="mt-2 text-[13px] text-amber-600"
+            >
+              <span v-for="(w, i) in parseResult.warnings" :key="i" class="block">⚠ {{ w }}</span>
+            </p>
+          </div>
+        </div>
+
+        <!-- Step 3: Preview -->
+        <div v-else-if="step === 'preview'">
+          <OnboardingPreview
+            v-if="parseResult?.data"
+            :data="parseResult.data"
+            :errors="parseResult?.errors ?? []"
+            :warnings="parseResult?.warnings ?? []"
+            @ganti-file="handleGantiFile"
+          />
+          <p v-if="submitError" class="mt-3 text-[14px] text-danger-600 font-medium">
+            {{ submitError }}
+          </p>
+        </div>
+      </template>
+
+      <!-- Edit mode: existing form unchanged -->
+      <template v-else>
+        <form @submit.prevent="saveTenant">
+          <div class="mb-4">
+            <label class="block text-[14px] font-semibold text-stone-800 mb-1.5"
+              >Nama Sekolah</label
+            >
+            <input
+              v-model="form.nama"
+              type="text"
+              required
+              class="w-full px-4 py-2.5 text-[15px] border-2 border-stone-200 rounded-xs focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-colors"
+              placeholder="SD Negeri 1 Contoh"
+            />
+          </div>
+          <div class="mb-4">
+            <label class="block text-[14px] font-semibold text-stone-800 mb-1.5">Alamat</label>
+            <textarea
+              v-model="form.alamat"
+              class="w-full px-4 py-2.5 text-[15px] border-2 border-stone-200 rounded-xs focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 min-h-15 resize-y transition-colors"
+              placeholder="Jl. Pendidikan No. 1"
+            ></textarea>
+          </div>
+          <div class="mb-4">
+            <label class="block text-[14px] font-semibold text-stone-800 mb-1.5">Telepon</label>
+            <input
+              v-model="form.telepon"
+              type="text"
+              class="w-full px-4 py-2.5 text-[15px] border-2 border-stone-200 rounded-xs focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-colors"
+              placeholder="021-12345678"
+            />
+          </div>
+          <div class="mb-4">
+            <label class="block text-[14px] font-semibold text-stone-800 mb-1.5">Email</label>
+            <input
+              v-model="form.email"
+              type="email"
+              class="w-full px-4 py-2.5 text-[15px] border-2 border-stone-200 rounded-xs focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-colors"
+              placeholder="admin@sekolah.sch.id"
+            />
+          </div>
+          <!-- Jumlah Tingkat (read-only in edit mode) -->
+          <div class="mb-4">
+            <label class="block text-[14px] font-semibold text-stone-800 mb-1.5"
+              >Jumlah Tingkat</label
+            >
+            <div
+              class="w-full px-4 py-2.5 text-[15px] border-2 border-stone-200 rounded-xs bg-surface-warm text-stone-500"
+            >
+              {{ form.jumlahTingkat }}
+            </div>
+            <p class="mt-1 text-[13px] text-stone-400">SD = 6, SMP/SMA = 3</p>
+          </div>
+        </form>
+      </template>
+
       <template #footer>
-        <ActionButton variant="neutral" @click="showFormModal = false"> Batal </ActionButton>
-        <ActionButton variant="primary" @click="saveTenant"> Simpan </ActionButton>
+        <!-- Create mode: step-driven footer -->
+        <template v-if="!editingTenant">
+          <!-- Step 1 footer -->
+          <template v-if="step === 'info'">
+            <ActionButton variant="neutral" @click="showFormModal = false"> Batal </ActionButton>
+            <ActionButton variant="primary" @click="goToStep('upload')"> Lanjut → </ActionButton>
+          </template>
+          <!-- Step 2 footer -->
+          <template v-else-if="step === 'upload'">
+            <ActionButton variant="neutral" @click="goToStep('info')"> ← Kembali </ActionButton>
+            <ActionButton variant="primary" :disabled="true" @click="submitOnboarding">
+              Konfirmasi
+            </ActionButton>
+          </template>
+          <!-- Step 3 footer -->
+          <template v-else-if="step === 'preview'">
+            <ActionButton variant="neutral" @click="handleGantiFile"> ← Ganti File </ActionButton>
+            <ActionButton variant="primary" :disabled="isSubmitting" @click="submitOnboarding">
+              <span v-if="isSubmitting" class="flex items-center gap-2">
+                <svg class="animate-spin h-4 w-4" viewBox="0 0 24 24" fill="none">
+                  <circle
+                    class="opacity-25"
+                    cx="12"
+                    cy="12"
+                    r="10"
+                    stroke="currentColor"
+                    stroke-width="4"
+                  />
+                  <path
+                    class="opacity-75"
+                    fill="currentColor"
+                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
+                  />
+                </svg>
+                Menyimpan...
+              </span>
+              <span v-else>Konfirmasi & Simpan</span>
+            </ActionButton>
+          </template>
+        </template>
+        <!-- Edit mode footer -->
+        <template v-else>
+          <ActionButton variant="neutral" @click="showFormModal = false"> Batal </ActionButton>
+          <ActionButton variant="primary" @click="saveTenant"> Simpan </ActionButton>
+        </template>
       </template>
     </BaseModal>
   </div>

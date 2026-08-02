@@ -72,9 +72,17 @@ export class AbsensiService {
    *
    * Requirements: 1.1–1.14
    */
-  async createAbsensi(tenantId: string, guruId: string, kelasId: string, dto: CreateAbsensiDto) {
+  async createAbsensi(
+    tenantId: string,
+    userId: string,
+    userRole: Role | string,
+    kelasId: string,
+    dto: CreateAbsensiDto,
+  ) {
     const db = this.drizzleService.db;
     const { tanggal, records } = dto;
+    // Use userId as guruId for audit/association purposes
+    const guruId = userId;
 
     // Reject Saturday attendance submissions for 5_hari tenants
     const tanggalDate = new Date(tanggal + 'T00:00:00');
@@ -85,13 +93,15 @@ export class AbsensiService {
       }
     }
 
-    // Authorize: check if guru has jadwal for this class on this date's day,
-    // OR is assigned as guru_pengganti for the date.
-    const isAuthorized = await this.isGuruAuthorizedForInput(tenantId, guruId, kelasId, tanggal);
-    if (!isAuthorized) {
-      throw new ForbiddenException(
-        'Anda tidak memiliki akses untuk menginput absensi kelas ini pada tanggal tersebut',
-      );
+    // Admin and kepala_sekolah can input attendance for any class without jadwal restriction.
+    // Only guru requires jadwal/pengganti authorization.
+    if (userRole === Role.GURU) {
+      const isAuthorized = await this.isGuruAuthorizedForInput(tenantId, guruId, kelasId, tanggal);
+      if (!isAuthorized) {
+        throw new ForbiddenException(
+          'Anda tidak memiliki akses untuk menginput absensi kelas ini pada tanggal tersebut',
+        );
+      }
     }
 
     // Validate class exists and get class name
@@ -374,8 +384,8 @@ export class AbsensiService {
    *
    * Authorization:
    * - Kepala_sekolah: can edit ANY class's attendance (Req 2.4)
+   * - Admin: can edit ANY class's attendance (same as kepala_sekolah)
    * - Guru: can edit IF currently or previously scheduled for the class (Req 2.1, 2.3)
-   * - Admin: CANNOT edit (Req 2.2) — explicit ForbiddenException
    *
    * Audit log: on every change, insert into absensi_audit (Req 2.5, 2.6)
    *
@@ -390,13 +400,8 @@ export class AbsensiService {
   ) {
     const db = this.drizzleService.db;
 
-    // Block admin from editing attendance (Req 2.2)
-    if (userRole === Role.ADMIN) {
-      throw new ForbiddenException('Admin tidak diizinkan mengedit data absensi');
-    }
-
     // Block any other non-allowed roles
-    if (userRole !== Role.GURU && userRole !== Role.KEPALA_SEKOLAH) {
+    if (userRole !== Role.GURU && userRole !== Role.KEPALA_SEKOLAH && userRole !== Role.ADMIN) {
       throw new ForbiddenException('Anda tidak memiliki izin untuk mengedit data absensi');
     }
 

@@ -75,7 +75,7 @@ const auditSiswaName = ref('');
 
 // Computed
 const canEdit = computed(() => {
-  return authStore.hasRole(Role.GURU, Role.KEPALA_SEKOLAH);
+  return authStore.hasRole(Role.GURU, Role.KEPALA_SEKOLAH, Role.ADMIN);
 });
 
 const kelasSelectOptions = computed<SelectOption[]>(() =>

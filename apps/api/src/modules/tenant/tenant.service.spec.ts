@@ -86,11 +86,11 @@ describe('TenantService', () => {
     };
 
     it('should create a tenant with a default admin user and enqueue credentials email', async () => {
-      // Mock: no existing user with that email
-      const selectChain = createSelectChain([]);
-      mockDb.select.mockReturnValue(selectChain);
+      // validateOnboardingData: no existing user with admin_email
+      const selectChainNoUser = createSelectChain([]);
+      mockDb.select.mockReturnValue(selectChainNoUser);
 
-      // Mock: insert tenant
+      // Inside transaction: mock insert calls for tenant, tahun_ajaran, and admin user
       const newTenant = {
         id: 'tenant-uuid-new',
         nama: 'SD Harapan Baru',
@@ -102,17 +102,28 @@ describe('TenantService', () => {
         createdAt: new Date(),
         updatedAt: new Date(),
       };
-      const tenantInsertChain = createInsertChain([newTenant]);
-
-      // Mock: insert user (admin)
+      const newTahunAjaran = { id: 'ta-uuid', nama: '2024/2025' };
       const newAdmin = {
         id: 'admin-uuid-new',
         email: 'admin@sdharapan.sch.id',
         nama: 'Admin Sekolah',
       };
+
+      const tenantInsertChain = createInsertChain([newTenant]);
+      const tahunAjaranInsertChain = createInsertChain([newTahunAjaran]);
       const userInsertChain = createInsertChain([newAdmin]);
 
-      mockDb.insert.mockReturnValueOnce(tenantInsertChain).mockReturnValueOnce(userInsertChain);
+      // tx inherits same mock methods
+      const mockTx = {
+        insert: jest
+          .fn()
+          .mockReturnValueOnce(tenantInsertChain)
+          .mockReturnValueOnce(tahunAjaranInsertChain)
+          .mockReturnValueOnce(userInsertChain),
+      };
+      mockDb.transaction = jest
+        .fn()
+        .mockImplementation(async (cb: (tx: any) => Promise<any>) => cb(mockTx));
 
       (mockedBcrypt.hash as jest.Mock).mockResolvedValue('$2b$10$hashed');
 
@@ -122,11 +133,13 @@ describe('TenantService', () => {
       expect(result.tenant.nama).toBe('SD Harapan Baru');
       expect(result.admin.id).toBe('admin-uuid-new');
       expect(result.admin.email).toBe('admin@sdharapan.sch.id');
+      // No onboarding arrays → no onboarding_summary
+      expect(result.onboarding_summary).toBeUndefined();
 
       // Verify bcrypt was called to hash the generated password
       expect(mockedBcrypt.hash).toHaveBeenCalledWith(expect.any(String), 10);
 
-      // Verify email job was enqueued
+      // Verify email job was enqueued after tx commit
       expect(mockEmailQueue.add).toHaveBeenCalledWith(
         'send-tenant-credentials',
         expect.objectContaining({
@@ -150,14 +163,23 @@ describe('TenantService', () => {
     });
 
     it('should generate a password of at least 12 characters', async () => {
-      const selectChain = createSelectChain([]);
-      mockDb.select.mockReturnValue(selectChain);
+      const selectChainNoUser = createSelectChain([]);
+      mockDb.select.mockReturnValue(selectChainNoUser);
 
       const newTenant = { id: 'tid', nama: 'T', email: 'e@e.com' };
+      const newTahunAjaran = { id: 'ta-uuid', nama: '2024/2025' };
       const newAdmin = { id: 'aid', email: 'a@a.com', nama: 'A' };
-      mockDb.insert
-        .mockReturnValueOnce(createInsertChain([newTenant]))
-        .mockReturnValueOnce(createInsertChain([newAdmin]));
+
+      const mockTx = {
+        insert: jest
+          .fn()
+          .mockReturnValueOnce(createInsertChain([newTenant]))
+          .mockReturnValueOnce(createInsertChain([newTahunAjaran]))
+          .mockReturnValueOnce(createInsertChain([newAdmin])),
+      };
+      mockDb.transaction = jest
+        .fn()
+        .mockImplementation(async (cb: (tx: any) => Promise<any>) => cb(mockTx));
 
       (mockedBcrypt.hash as jest.Mock).mockResolvedValue('$2b$10$hashed');
 
@@ -169,16 +191,27 @@ describe('TenantService', () => {
     });
 
     it('should set mustChangePassword to true for the default admin', async () => {
-      const selectChain = createSelectChain([]);
-      mockDb.select.mockReturnValue(selectChain);
+      const selectChainNoUser = createSelectChain([]);
+      mockDb.select.mockReturnValue(selectChainNoUser);
 
       const newTenant = { id: 'tid', nama: 'T', email: 'e@e.com' };
+      const newTahunAjaran = { id: 'ta-uuid', nama: '2024/2025' };
       const newAdmin = { id: 'aid', email: 'a@a.com', nama: 'A' };
 
       const tenantInsertChain = createInsertChain([newTenant]);
+      const tahunAjaranInsertChain = createInsertChain([newTahunAjaran]);
       const userInsertChain = createInsertChain([newAdmin]);
 
-      mockDb.insert.mockReturnValueOnce(tenantInsertChain).mockReturnValueOnce(userInsertChain);
+      const mockTx = {
+        insert: jest
+          .fn()
+          .mockReturnValueOnce(tenantInsertChain)
+          .mockReturnValueOnce(tahunAjaranInsertChain)
+          .mockReturnValueOnce(userInsertChain),
+      };
+      mockDb.transaction = jest
+        .fn()
+        .mockImplementation(async (cb: (tx: any) => Promise<any>) => cb(mockTx));
 
       (mockedBcrypt.hash as jest.Mock).mockResolvedValue('$2b$10$hashed');
 
