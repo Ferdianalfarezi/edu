@@ -69,8 +69,8 @@ const filteredUsers = computed(() => {
   return users.value.filter((u) => {
     const matchSearch =
       !search.value ||
-      u.nama.toLowerCase().includes(search.value.toLowerCase()) ||
-      u.email.toLowerCase().includes(search.value.toLowerCase());
+      (u.nama ?? '').toLowerCase().includes(search.value.toLowerCase()) ||
+      (u.email ?? '').toLowerCase().includes(search.value.toLowerCase());
     const matchRole = !filterRole.value || u.role === filterRole.value;
     const matchStatus =
       !filterStatus.value ||
