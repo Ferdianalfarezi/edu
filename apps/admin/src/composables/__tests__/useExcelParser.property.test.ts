@@ -82,7 +82,7 @@ function buildXlsxFile(opts: {
         ];
   XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(sppData), 'SPP Bulanan');
 
-  const u8 = XLSX.write(wb, { type: 'array', bookType: 'xlsx' }) as Uint8Array;
+  const u8 = XLSX.write(wb, { type: 'array', bookType: 'xlsx' }) as Uint8Array<ArrayBuffer>;
   return new File([u8], 'test.xlsx', {
     type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
   });
@@ -381,7 +381,7 @@ type RequiredSheetName = (typeof ALL_REQUIRED_SHEETS)[number];
  * Convert a XLSX.write 'array' result to a File safely.
  * We pass the Uint8Array directly (not .buffer) to avoid subview/offset issues.
  */
-function u8ToFile(u8: Uint8Array, name = 'test.xlsx'): File {
+function u8ToFile(u8: Uint8Array<ArrayBuffer>, name = 'test.xlsx'): File {
   return new File([u8], name, {
     type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
   });
@@ -398,7 +398,7 @@ function buildWorkbookWithSheets(presentSheets: string[]): File {
   for (const name of sheetsToAdd) {
     XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([['header']]), name);
   }
-  const u8 = XLSX.write(wb, { type: 'array', bookType: 'xlsx' }) as Uint8Array;
+  const u8 = XLSX.write(wb, { type: 'array', bookType: 'xlsx' }) as Uint8Array<ArrayBuffer>;
   return u8ToFile(u8);
 }
 
@@ -411,7 +411,7 @@ function buildFullWorkbook(sheetData: Record<RequiredSheetName, unknown[][]>): F
   for (const name of ALL_REQUIRED_SHEETS) {
     XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(sheetData[name]), name);
   }
-  const u8 = XLSX.write(wb, { type: 'array', bookType: 'xlsx' }) as Uint8Array;
+  const u8 = XLSX.write(wb, { type: 'array', bookType: 'xlsx' }) as Uint8Array<ArrayBuffer>;
   return u8ToFile(u8);
 }
 
@@ -503,7 +503,7 @@ describe('useExcelParser — Property 8: string values trimmed before validation
   // 0–5 leading spaces and 0–5 trailing spaces.
   const paddedStringArb = fc
     .tuple(
-      fc.stringMatching(/^[^\s]+$/, { minLength: 1, maxLength: 20 }),
+      fc.stringMatching(/^[^\s]+$/).filter((s) => s.length >= 1 && s.length <= 20),
       fc.nat({ max: 5 }),
       fc.nat({ max: 5 }),
     )
@@ -643,7 +643,8 @@ describe('useExcelParser — Property 8: string values trimmed before validation
           fc
             .tuple(
               fc
-                .stringMatching(/^[a-zA-Z ]+$/, { minLength: 1, maxLength: 20 })
+                .stringMatching(/^[a-zA-Z ]+$/)
+                .filter((s) => s.length >= 1 && s.length <= 20)
                 .map((s) => s.trim())
                 .filter((s) => s.length > 0),
               fc.nat({ max: 4 }),
@@ -744,7 +745,7 @@ describe('useExcelParser — Property 22: tingkat_N column pattern', () => {
       'SPP Bulanan',
     );
 
-    const u8 = XLSX.write(wb, { type: 'array', bookType: 'xlsx' }) as Uint8Array;
+    const u8 = XLSX.write(wb, { type: 'array', bookType: 'xlsx' }) as Uint8Array<ArrayBuffer>;
     return new File([u8], 'test.xlsx', {
       type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
     });
@@ -764,7 +765,8 @@ describe('useExcelParser — Property 22: tingkat_N column pattern', () => {
           fc.integer({ min: 1, max: 12 }),
           // Pick a non-empty class name (no leading/trailing spaces for simplicity)
           fc
-            .stringMatching(/^[^\s][^\n\r]*$/, { minLength: 1, maxLength: 30 })
+            .stringMatching(/^[^\s][^\n\r]*$/)
+            .filter((s) => s.length >= 1 && s.length <= 30)
             .map((s) => s.trim())
             .filter((s) => s.length > 0),
           async (n, kelasNama) => {
@@ -1095,7 +1097,7 @@ function buildXlsxFileWithSiswa(opts: {
         ];
   XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(sppData), 'SPP Bulanan');
 
-  const u8 = XLSX.write(wb, { type: 'array', bookType: 'xlsx' }) as Uint8Array;
+  const u8 = XLSX.write(wb, { type: 'array', bookType: 'xlsx' }) as Uint8Array<ArrayBuffer>;
   return new File([u8], 'test.xlsx', {
     type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
   });
