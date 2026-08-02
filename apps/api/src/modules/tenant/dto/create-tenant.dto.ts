@@ -8,7 +8,16 @@ import {
   MaxLength,
   Min,
   Max,
+  IsArray,
+  ValidateNested,
+  ArrayMaxSize,
 } from 'class-validator';
+import { Type } from 'class-transformer';
+import { CreateOnboardingKelasDto } from './create-onboarding-kelas.dto';
+import { CreateOnboardingMataPelajaranDto } from './create-onboarding-mata-pelajaran.dto';
+import { CreateOnboardingSiswaDto } from './create-onboarding-siswa.dto';
+import { CreateOnboardingGuruStaffDto } from './create-onboarding-guru-staff.dto';
+import { CreateOnboardingSppDto } from './create-onboarding-spp.dto';
 
 export class CreateTenantDto {
   @IsString()
@@ -55,4 +64,39 @@ export class CreateTenantDto {
   @IsNotEmpty()
   @MaxLength(255)
   admin_email: string;
+
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @ArrayMaxSize(500)
+  @Type(() => CreateOnboardingKelasDto)
+  kelas?: CreateOnboardingKelasDto[];
+
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @ArrayMaxSize(500)
+  @Type(() => CreateOnboardingMataPelajaranDto)
+  mata_pelajaran?: CreateOnboardingMataPelajaranDto[];
+
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @ArrayMaxSize(500)
+  @Type(() => CreateOnboardingSiswaDto)
+  siswa?: CreateOnboardingSiswaDto[];
+
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @ArrayMaxSize(500)
+  @Type(() => CreateOnboardingGuruStaffDto)
+  guru_staff?: CreateOnboardingGuruStaffDto[];
+
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @ArrayMaxSize(13)
+  @Type(() => CreateOnboardingSppDto)
+  spp_bulanan?: CreateOnboardingSppDto[];
 }

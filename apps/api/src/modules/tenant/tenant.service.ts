@@ -1,7 +1,7 @@
 import { BadRequestException, Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectQueue } from '@nestjs/bull';
 import { NodePgDatabase } from 'drizzle-orm/node-postgres';
-import { eq, and, count, ilike } from 'drizzle-orm';
+import { eq, and, count, ilike, inArray } from 'drizzle-orm';
 import * as bcrypt from 'bcrypt';
 import * as crypto from 'crypto';
 import { Queue } from 'bull';
@@ -11,6 +11,8 @@ import { user } from '@/drizzle/schema/user';
 import { siswa } from '@/drizzle/schema/siswa';
 import { kelas } from '@/drizzle/schema/kelas';
 import { tahunAjaran } from '@/drizzle/schema/tahun-ajaran';
+import { mataPelajaran } from '@/drizzle/schema/mata-pelajaran';
+import { konfigurasiSekolah } from '@/drizzle/schema/konfigurasi';
 import { AuthService } from '@/modules/auth/auth.service';
 import { QUEUE_NAMES } from '@/modules/queue';
 import { paginate } from '@/common/utils/paginate';
@@ -46,6 +48,13 @@ export interface CreateTenantResult {
     id: string;
     email: string | null;
     nama: string;
+  };
+  onboarding_summary?: {
+    kelas: number;
+    mata_pelajaran: number;
+    siswa: number;
+    guru_staff: number;
+    spp_bulanan: number;
   };
 }
 
@@ -110,75 +119,16 @@ export class TenantService {
   }
 
   /**
-   * Create a new tenant with a default admin user.
-   * Generates a random password for the admin and enqueues a credentials email.
+   * Create a new tenant with a default admin user (and optional onboarding data).
+   * Delegates to createTenantWithOnboarding after running pre-transaction validation.
+   * Backward-compatible: when no onboarding arrays are present, returns result without
+   * `onboarding_summary` field.
+   *
+   * Requirements: 9.1, 9.2, 9.3, 9.4
    */
   async createTenant(dto: CreateTenantDto): Promise<CreateTenantResult> {
-    // Check if admin email is already used
-    const existingUsers = await this.db
-      .select({ id: user.id })
-      .from(user)
-      .where(eq(user.email, dto.admin_email))
-      .limit(1);
-
-    if (existingUsers.length > 0) {
-      throw new BadRequestException(`Email ${dto.admin_email} sudah digunakan oleh user lain`);
-    }
-
-    // Create tenant
-    const [newTenant] = await this.db
-      .insert(tenant)
-      .values({
-        nama: dto.nama,
-        alamat: dto.alamat ?? null,
-        telepon: dto.telepon ?? null,
-        email: dto.email,
-        jumlahTingkat: dto.jumlah_tingkat,
-        hariKerja: dto.hari_kerja ?? '6_hari',
-        isActive: true,
-      })
-      .returning();
-
-    // Generate random password for default admin
-    const rawPassword = this.generateRandomPassword();
-    const passwordHash = await bcrypt.hash(rawPassword, BCRYPT_SALT_ROUNDS);
-
-    // Create default admin user for this tenant
-    const [adminUser] = await this.db
-      .insert(user)
-      .values({
-        tenantId: newTenant.id,
-        nama: dto.admin_nama,
-        email: dto.admin_email,
-        passwordHash,
-        role: 'admin',
-        isActive: true,
-        mustChangePassword: true,
-      })
-      .returning();
-
-    // Enqueue credentials email
-    await this.emailQueue.add('send-tenant-credentials', {
-      to: dto.admin_email,
-      tenantName: dto.nama,
-      adminName: dto.admin_nama,
-      email: dto.admin_email,
-      password: rawPassword,
-    });
-
-    return {
-      id: newTenant.id,
-      tenant: {
-        id: newTenant.id,
-        nama: newTenant.nama,
-        email: newTenant.email,
-      },
-      admin: {
-        id: adminUser.id,
-        email: adminUser.email,
-        nama: adminUser.nama,
-      },
-    };
+    await this.validateOnboardingData(dto);
+    return this.createTenantWithOnboarding(dto);
   }
 
   /**
@@ -460,16 +410,349 @@ export class TenantService {
   }
 
   /**
-   * Generate a random password of configurable length.
-   * Includes uppercase, lowercase, digits, and special characters.
+   * Validate cross-field onboarding constraints before entering the transaction.
+   * Also validates that admin_email is not already taken.
+   * Throws BadRequestException with a descriptive message on the first violation found.
+   * Requirements: 5.3, 5.4, 5.5, 5.8
+   */
+  private async validateOnboardingData(dto: CreateTenantDto): Promise<void> {
+    // ── 0. Admin email must not already be in use ───────────────────────────
+    const existingAdmin = await this.db
+      .select({ id: user.id })
+      .from(user)
+      .where(eq(user.email, dto.admin_email))
+      .limit(1);
+
+    if (existingAdmin.length > 0) {
+      throw new BadRequestException(`Email ${dto.admin_email} sudah digunakan oleh user lain`);
+    }
+
+    // ── 1. Duplicate emails within the guru_staff array (Req 5.3) ──────────────
+    if (dto.guru_staff && dto.guru_staff.length > 0) {
+      const emailCount = new Map<string, number>();
+      for (const gs of dto.guru_staff) {
+        const lower = gs.email.toLowerCase();
+        emailCount.set(lower, (emailCount.get(lower) ?? 0) + 1);
+      }
+      const duplicates = [...emailCount.entries()].filter(([, n]) => n > 1).map(([email]) => email);
+
+      if (duplicates.length > 0) {
+        throw new BadRequestException(`Email duplikat ditemukan: ${duplicates.join(', ')}`);
+      }
+
+      // ── 2. Emails already in the user table (Req 5.4) ──────────────────────
+      const requestedEmails = dto.guru_staff.map((gs) => gs.email.toLowerCase());
+      const existingRows = await this.db
+        .select({ email: user.email })
+        .from(user)
+        .where(inArray(user.email, requestedEmails));
+
+      if (existingRows.length > 0) {
+        const conflicting = existingRows.map((r) => r.email).filter(Boolean) as string[];
+        throw new BadRequestException(`Email sudah digunakan: ${conflicting.join(', ')}`);
+      }
+    }
+
+    // ── 3. Duplicate NISN within the siswa array — non-null/non-empty only (Req 5.8) ──
+    if (dto.siswa && dto.siswa.length > 0) {
+      const nisnCount = new Map<string, number>();
+      for (const s of dto.siswa) {
+        if (!s.nisn) continue;
+        const nisn = s.nisn.trim();
+        if (!nisn) continue;
+        nisnCount.set(nisn, (nisnCount.get(nisn) ?? 0) + 1);
+      }
+      const duplicateNisn = [...nisnCount.entries()].filter(([, n]) => n > 1).map(([nisn]) => nisn);
+
+      if (duplicateNisn.length > 0) {
+        throw new BadRequestException(`NISN duplikat ditemukan: ${duplicateNisn.join(', ')}`);
+      }
+    }
+
+    // ── 4. SPP tingkat must not exceed jumlah_tingkat (Req 5.5) ────────────────
+    if (dto.spp_bulanan && dto.spp_bulanan.length > 0) {
+      const exceeded = dto.spp_bulanan.some((spp) => spp.tingkat > dto.jumlah_tingkat);
+      if (exceeded) {
+        throw new BadRequestException('Tingkat SPP melebihi jumlah tingkat sekolah');
+      }
+    }
+  }
+
+  /**
+   * Create a new tenant with full onboarding data inside a single Drizzle transaction.
+   * Steps: (a) tenant, (b) tahun_ajaran, (c) kelas, (d) mata_pelajaran,
+   *        (e) admin + guru_staff users, (f) siswa, (g) konfigurasi_sekolah (SPP).
+   * After tx commit: enqueue credential emails for admin + all guru_staff.
+   *
+   * Requirements: 6.1, 6.2, 6.3, 6.4, 6.5, 6.6, 6.7, 6.8, 7.1, 7.2, 7.3, 7.4, 7.5
+   */
+  private async createTenantWithOnboarding(dto: CreateTenantDto): Promise<CreateTenantResult> {
+    // Capture email payloads to enqueue after transaction commit
+    const emailPayloads: Array<{
+      to: string;
+      tenantName: string;
+      adminName: string;
+      email: string;
+      password: string;
+    }> = [];
+
+    // Execute all inserts atomically
+    const { newTenant, adminUser, onboarding_summary } = await this.db.transaction(async (tx) => {
+      // ── Step (a): Insert tenant ──────────────────────────────────────────
+      const [insertedTenant] = await tx
+        .insert(tenant)
+        .values({
+          nama: dto.nama,
+          alamat: dto.alamat ?? null,
+          telepon: dto.telepon ?? null,
+          email: dto.email,
+          jumlahTingkat: dto.jumlah_tingkat,
+          hariKerja: dto.hari_kerja ?? '6_hari',
+          isActive: true,
+        })
+        .returning();
+
+      // ── Step (b): Insert tahun_ajaran default ────────────────────────────
+      // Use UTC+7 (Asia/Jakarta) timezone to determine current year
+      const now = new Date();
+      const utc7Year = new Date(now.getTime() + 7 * 60 * 60 * 1000).getUTCFullYear();
+      const tahunAjaranNama = `${utc7Year}/${utc7Year + 1}`;
+      const tanggalMulai = `${utc7Year}-07-01`;
+      const tanggalSelesai = `${utc7Year + 1}-06-30`;
+
+      const [insertedTahunAjaran] = await tx
+        .insert(tahunAjaran)
+        .values({
+          tenantId: insertedTenant.id,
+          nama: tahunAjaranNama,
+          tanggalMulai,
+          tanggalSelesai,
+          status: 'disiapkan',
+        })
+        .returning();
+
+      // ── Step (c): Insert kelas (bulk) ────────────────────────────────────
+      const kelasMap = new Map<string, string>(); // nama → id
+      let kelasCount = 0;
+
+      if (dto.kelas && dto.kelas.length > 0) {
+        const kelasValues = dto.kelas.map((k) => ({
+          tenantId: insertedTenant.id,
+          tahunAjaranId: insertedTahunAjaran.id,
+          nama: k.nama,
+          tingkat: k.tingkat,
+        }));
+
+        const insertedKelas = await tx.insert(kelas).values(kelasValues).returning();
+        kelasCount = insertedKelas.length;
+
+        for (const k of insertedKelas) {
+          kelasMap.set(k.nama, k.id);
+        }
+      }
+
+      // ── Step (d): Insert mata_pelajaran (bulk) ───────────────────────────
+      let mataPelajaranCount = 0;
+
+      if (dto.mata_pelajaran && dto.mata_pelajaran.length > 0) {
+        const mpValues = dto.mata_pelajaran.map((mp) => ({
+          tenantId: insertedTenant.id,
+          nama: mp.nama,
+          kode: mp.kode ?? null,
+        }));
+
+        const insertedMp = await tx.insert(mataPelajaran).values(mpValues).returning();
+        mataPelajaranCount = insertedMp.length;
+      }
+
+      // ── Step (e): Insert admin user + guru_staff users ───────────────────
+      // Admin user
+      const adminRawPassword = this.generateRandomPassword();
+      const adminPasswordHash = await bcrypt.hash(adminRawPassword, BCRYPT_SALT_ROUNDS);
+
+      const [insertedAdmin] = await tx
+        .insert(user)
+        .values({
+          tenantId: insertedTenant.id,
+          nama: dto.admin_nama,
+          email: dto.admin_email,
+          passwordHash: adminPasswordHash,
+          role: 'admin',
+          isActive: true,
+          mustChangePassword: true,
+        })
+        .returning();
+
+      // Collect admin email payload (enqueued after tx commit)
+      emailPayloads.push({
+        to: dto.admin_email,
+        tenantName: dto.nama,
+        adminName: dto.admin_nama,
+        email: dto.admin_email,
+        password: adminRawPassword,
+      });
+
+      // Guru & staff users
+      let guruStaffCount = 0;
+
+      if (dto.guru_staff && dto.guru_staff.length > 0) {
+        for (const gs of dto.guru_staff) {
+          const rawPassword = this.generateRandomPassword();
+          const passwordHash = await bcrypt.hash(rawPassword, BCRYPT_SALT_ROUNDS);
+
+          await tx.insert(user).values({
+            tenantId: insertedTenant.id,
+            nama: gs.nama,
+            email: gs.email,
+            passwordHash,
+            role: gs.role as 'admin' | 'kepala_sekolah' | 'guru' | 'bendahara',
+            isActive: true,
+            mustChangePassword: true,
+          });
+
+          emailPayloads.push({
+            to: gs.email,
+            tenantName: dto.nama,
+            adminName: gs.nama,
+            email: gs.email,
+            password: rawPassword,
+          });
+        }
+
+        guruStaffCount = dto.guru_staff.length;
+      }
+
+      // ── Step (f): Insert siswa (bulk) ────────────────────────────────────
+      let siswaCount = 0;
+
+      if (dto.siswa && dto.siswa.length > 0) {
+        const siswaValues = dto.siswa.map((s) => {
+          // Resolve kelasId via nama lookup; unmatched → null (do NOT throw)
+          const kelasId = s.kelasNama ? (kelasMap.get(s.kelasNama) ?? null) : null;
+
+          return {
+            tenantId: insertedTenant.id,
+            kelasId,
+            nama: s.nama,
+            nisn: s.nisn ?? null,
+            jenisKelamin: s.jenisKelamin ?? null,
+            tanggalLahir: s.tanggalLahir ?? null,
+            alamat: s.alamat ?? null,
+          };
+        });
+
+        const insertedSiswa = await tx.insert(siswa).values(siswaValues).returning();
+        siswaCount = insertedSiswa.length;
+      }
+
+      // ── Step (g): Insert konfigurasi_sekolah for SPP ────────────────────
+      let sppCount = 0;
+
+      if (dto.spp_bulanan && dto.spp_bulanan.length > 0) {
+        const sppValues = dto.spp_bulanan.map((spp) => ({
+          tenantId: insertedTenant.id,
+          key: `spp_nominal_tingkat_${spp.tingkat}`,
+          // Store as JSON number per spec (Requirements 6.5)
+          value: spp.nominal as unknown as Record<string, unknown>,
+        }));
+
+        const insertedSpp = await tx.insert(konfigurasiSekolah).values(sppValues).returning();
+        sppCount = insertedSpp.length;
+      }
+
+      return {
+        newTenant: insertedTenant,
+        adminUser: insertedAdmin,
+        onboarding_summary: {
+          kelas: kelasCount,
+          mata_pelajaran: mataPelajaranCount,
+          siswa: siswaCount,
+          guru_staff: guruStaffCount,
+          spp_bulanan: sppCount,
+        },
+      };
+    });
+
+    // ── After transaction commit: enqueue credential emails ─────────────────
+    // Requirement 7.5: enqueue failure must NOT fail the overall onboarding
+    for (const payload of emailPayloads) {
+      try {
+        await this.emailQueue.add('send-tenant-credentials', payload);
+      } catch (err) {
+        // Log and continue — email enqueue failure is non-fatal
+        console.error(`[TenantService] Failed to enqueue credentials email to ${payload.to}:`, err);
+      }
+    }
+
+    const hasOnboardingData =
+      (dto.kelas && dto.kelas.length > 0) ||
+      (dto.mata_pelajaran && dto.mata_pelajaran.length > 0) ||
+      (dto.siswa && dto.siswa.length > 0) ||
+      (dto.guru_staff && dto.guru_staff.length > 0) ||
+      (dto.spp_bulanan && dto.spp_bulanan.length > 0);
+
+    return {
+      id: newTenant.id,
+      tenant: {
+        id: newTenant.id,
+        nama: newTenant.nama,
+        email: newTenant.email,
+      },
+      admin: {
+        id: adminUser.id,
+        email: adminUser.email,
+        nama: adminUser.nama,
+      },
+      ...(hasOnboardingData ? { onboarding_summary } : {}),
+    };
+  }
+
+  /**
+   * Generate a cryptographically random password of exactly GENERATED_PASSWORD_LENGTH (12) chars.
+   *
+   * Guarantees at least one character from each required class (Requirement 6.7):
+   *   - 1 uppercase letter (A–Z)
+   *   - 1 lowercase letter (a–z)
+   *   - 1 digit (0–9)
+   *   - 1 special character from !@#$%&*
+   *
+   * The remaining characters are drawn from the full charset and all positions
+   * are shuffled using a Fisher–Yates shuffle seeded with crypto.randomBytes to
+   * ensure uniform distribution and unpredictability.
    */
   private generateRandomPassword(): string {
-    const charset = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%&*';
-    const bytes = crypto.randomBytes(GENERATED_PASSWORD_LENGTH);
-    let password = '';
-    for (let i = 0; i < GENERATED_PASSWORD_LENGTH; i++) {
-      password += charset[bytes[i] % charset.length];
+    const lowercase = 'abcdefghijklmnopqrstuvwxyz';
+    const uppercase = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+    const digits = '0123456789';
+    const special = '!@#$%&*';
+    const allChars = lowercase + uppercase + digits + special;
+
+    // Helper: pick one random character from a given set using crypto.randomBytes
+    const pickRandom = (charset: string): string => {
+      const byte = crypto.randomBytes(1)[0];
+      return charset[byte % charset.length];
+    };
+
+    // Guarantee at least one char from each required class (4 mandatory positions)
+    const chars: string[] = [
+      pickRandom(uppercase),
+      pickRandom(lowercase),
+      pickRandom(digits),
+      pickRandom(special),
+    ];
+
+    // Fill the remaining positions from the full charset
+    for (let i = chars.length; i < GENERATED_PASSWORD_LENGTH; i++) {
+      chars.push(pickRandom(allChars));
     }
-    return password;
+
+    // Fisher–Yates shuffle using crypto.randomBytes for uniform randomness
+    for (let i = chars.length - 1; i > 0; i--) {
+      const byte = crypto.randomBytes(1)[0];
+      const j = byte % (i + 1);
+      [chars[i], chars[j]] = [chars[j], chars[i]];
+    }
+
+    return chars.join('');
   }
 }

@@ -42,7 +42,7 @@ export class AbsensiController {
    * Requirements: 1.1, 1.12
    */
   @Get('kelas-hari-ini')
-  @Roles(Role.GURU, Role.KEPALA_SEKOLAH)
+  @Roles(Role.GURU, Role.KEPALA_SEKOLAH, Role.ADMIN)
   async getKelasHariIni(
     @TenantId() tenantId: string,
     @CurrentUser('id') guruId: string,
@@ -146,7 +146,7 @@ export class AbsensiController {
    * Requirements: 3.1, 3.2, 3.3
    */
   @Get('kelas/:kelasId/tanggal/:tanggal')
-  @Roles(Role.GURU, Role.KEPALA_SEKOLAH)
+  @Roles(Role.GURU, Role.KEPALA_SEKOLAH, Role.ADMIN)
   async getAbsensiByKelasAndTanggal(
     @TenantId() tenantId: string,
     @Param('kelasId', ParseUUIDPipe) kelasId: string,
@@ -172,14 +172,14 @@ export class AbsensiController {
    * Requirements: 1.1–1.14
    */
   @Post('kelas/:kelasId')
-  @Roles(Role.GURU, Role.KEPALA_SEKOLAH)
+  @Roles(Role.GURU, Role.KEPALA_SEKOLAH, Role.ADMIN)
   async createAbsensi(
     @TenantId() tenantId: string,
-    @CurrentUser('id') guruId: string,
+    @CurrentUser() user: RequestUser,
     @Param('kelasId', ParseUUIDPipe) kelasId: string,
     @Body() dto: CreateAbsensiDto,
   ) {
-    return this.absensiService.createAbsensi(tenantId, guruId, kelasId, dto);
+    return this.absensiService.createAbsensi(tenantId, user.id, user.role, kelasId, dto);
   }
 
   /**
@@ -188,8 +188,8 @@ export class AbsensiController {
    *
    * Authorization:
    * - Kepala_sekolah can edit ANY class's attendance (Req 2.4)
+   * - Admin can edit ANY class's attendance (same as kepala_sekolah)
    * - Guru can edit IF scheduled (current or past) for that class (Req 2.1, 2.3)
-   * - Admin hits this endpoint but is blocked in service with clear error (Req 2.2)
    *
    * Writes audit log entry: user_id, role, before/after status, timestamp (Req 2.5, 2.6)
    *
