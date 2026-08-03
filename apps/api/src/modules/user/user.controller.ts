@@ -177,8 +177,9 @@ export class UserController {
     strictMode: true,
     excludeFields: ['password', 'password_hash', 'temp_password'],
   })
-  async resetPassword(@Param('id', ParseUUIDPipe) id: string) {
-    return this.userService.resetPassword(id);
+  async resetPassword(@Param('id', ParseUUIDPipe) id: string, @Req() req: Request) {
+    const currentUser = (req as Request & { user: RequestUser }).user;
+    return this.userService.resetPassword(currentUser.id, currentUser.role, id);
   }
 
   /**

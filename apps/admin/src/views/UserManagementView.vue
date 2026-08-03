@@ -11,6 +11,9 @@ import {
 } from '@/components/ui';
 import type { SelectOption } from '@/components/ui';
 import { useTableUrlState } from '@/composables/useTableUrlState';
+import { useAuthStore } from '@/stores';
+import ResetPasswordDialog from '@/components/ResetPasswordDialog.vue';
+import { useToast } from '@/composables/useToast';
 
 interface User {
   id: string;
@@ -28,6 +31,23 @@ interface UserForm {
   phone: string;
   role: Role | '';
   isActive: boolean;
+}
+
+// ── Auth store and toast ──
+const authStore = useAuthStore();
+const toast = useToast();
+
+// ── Reset password state ──
+const showResetDialog = ref(false);
+const resettingUser = ref<User | null>(null);
+
+function openResetDialog(user: User) {
+  resettingUser.value = user;
+  showResetDialog.value = true;
+}
+
+function onResetSuccess(userEmail: string) {
+  toast.success('Password berhasil direset dan email telah dikirim ke ' + userEmail, 5000);
 }
 
 // ── Server-side state (useTableUrlState syncs search/filters/page to URL) ──
@@ -401,6 +421,14 @@ async function importCsv() {
                   <ActionButton variant="warning" icon="edit" @click="openEditForm(user)">
                     Edit
                   </ActionButton>
+                  <ActionButton
+                    v-if="authStore.hasRole(Role.SUPER_ADMIN) && user.role !== Role.SUPER_ADMIN"
+                    variant="purple"
+                    :disabled="!user.email || !user.email.trim()"
+                    @click="openResetDialog(user)"
+                  >
+                    Reset Password
+                  </ActionButton>
                   <ActionButton variant="danger" icon="delete" @click="openDeleteConfirm(user)">
                     Hapus
                   </ActionButton>
@@ -525,6 +553,14 @@ async function importCsv() {
         <ActionButton variant="danger" @click="deleteUser"> Hapus </ActionButton>
       </template>
     </BaseModal>
+
+    <!-- Reset Password Dialog -->
+    <ResetPasswordDialog
+      :show="showResetDialog"
+      :user="resettingUser"
+      @close="showResetDialog = false"
+      @success="onResetSuccess"
+    />
 
     <!-- Import CSV Modal -->
     <BaseModal
