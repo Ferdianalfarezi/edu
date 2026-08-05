@@ -1,14 +1,34 @@
 <script setup lang="ts">
+import { ref, watch } from 'vue';
+
 interface Props {
   title: string;
   schoolName?: string;
+  logoUrl?: string | null;
 }
 
-defineProps<Props>();
+const props = defineProps<Props>();
 
 const emit = defineEmits<{
   (e: 'toggleMobileMenu'): void;
 }>();
+
+const brandFallback = ref(false);
+function useFallbackBranding() {
+  brandFallback.value = true;
+}
+
+// Local ref so @error can clear it without mutating the prop
+const resolvedLogoUrl = ref<string | null>(props.logoUrl ?? null);
+watch(
+  () => props.logoUrl,
+  (val) => {
+    resolvedLogoUrl.value = val ?? null;
+  },
+);
+function handleLogoError() {
+  resolvedLogoUrl.value = null;
+}
 </script>
 
 <template>
@@ -23,8 +43,15 @@ const emit = defineEmits<{
       );
     "
   >
-    <!-- Left side: hamburger (mobile) + page title -->
+    <!-- Left side: branding + hamburger (mobile) + page title -->
     <div class="flex items-center gap-3">
+      <span class="hidden lg:block w-px h-5 bg-white/25"></span>
+
+      <!-- Page title -->
+      <h1 class="text-white font-bold" style="font-size: 20px; font-weight: 700">
+        {{ title }}
+      </h1>
+
       <!-- Mobile hamburger button -->
       <button
         class="lg:hidden flex items-center justify-center w-10 h-10 rounded-lg text-white/80 hover:text-white hover:bg-white/10 transition-colors duration-200"
@@ -35,14 +62,9 @@ const emit = defineEmits<{
           <path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16" />
         </svg>
       </button>
-
-      <!-- Page title -->
-      <h1 class="text-white font-bold" style="font-size: 20px; font-weight: 700">
-        {{ title }}
-      </h1>
     </div>
 
-    <!-- Right side: school name badge -->
+    <!-- Right side: school logo + name -->
     <div
       v-if="schoolName"
       class="flex items-center gap-2 px-3 py-1.5 rounded-lg text-white text-sm"
@@ -53,20 +75,15 @@ const emit = defineEmits<{
         font-size: 14px;
       "
     >
-      <!-- Building/school icon -->
-      <svg
-        class="w-4 h-4 shrink-0"
-        fill="none"
-        viewBox="0 0 24 24"
-        stroke="currentColor"
-        stroke-width="2"
-      >
-        <path
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          d="M12 21v-8.25M15.75 21v-8.25M8.25 21v-8.25M3 9l9-6 9 6m-1.5 12V10.332A48.36 48.36 0 0012 9.75c-2.551 0-5.056.2-7.5.582V21M3 21h18M12 6.75h.008v.008H12V6.75z"
-        />
-      </svg>
+      <!-- School logo (32x32 rounded) with fallback to /logo.png -->
+      <img
+        v-if="resolvedLogoUrl"
+        :src="resolvedLogoUrl"
+        :alt="schoolName"
+        class="w-8 h-8 rounded-full object-cover shrink-0"
+        @error="handleLogoError"
+      />
+      <img v-else src="/logo.png" alt="Teman Sekolah" class="w-8 h-8 rounded-full shrink-0" />
       <span class="truncate max-w-50">{{ schoolName }}</span>
     </div>
   </header>
