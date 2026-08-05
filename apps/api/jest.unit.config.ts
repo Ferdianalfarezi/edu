@@ -4,7 +4,7 @@ const config: Config = {
   displayName: 'unit',
   moduleFileExtensions: ['js', 'json', 'ts'],
   rootDir: '.',
-  testRegex: '.*\\.spec\\.ts$',
+  testRegex: '(.*\\.spec\\.ts$|.*\\.property\\.test\\.ts$)',
   testPathIgnorePatterns: [
     '\\.integration\\.spec\\.ts$',
     '\\.contract\\.spec\\.ts$',

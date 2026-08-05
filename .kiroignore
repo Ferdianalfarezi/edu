@@ -1,0 +1,7 @@
+# Test files — excluded from Kiro context to reduce memory pressure
+**/*.spec.ts
+**/*.test.ts
+**/__tests__/**
+**/test/**
+**/dist/**
+**/node_modules/**
