@@ -130,6 +130,8 @@ export const auditTrail = pgTable(
     nilaiSebelum: jsonb('nilai_sebelum'),
     nilaiSesudah: jsonb('nilai_sesudah'),
     alasan: text('alasan'),
+    aksiLabel: varchar('aksi_label', { length: 100 }),
+    perubahan: jsonb('perubahan'), // PerubahanItem[]
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     // NO updated_at — immutable, append-only table
   },
