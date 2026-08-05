@@ -1,2 +1,3 @@
 export { TagihanModule } from './tagihan.module';
-export { TagihanService, GenerateTagihanResult } from './tagihan.service';
+export { TagihanService, GenerateTagihanResult, TunggakanItem } from './tagihan.service';
+export { PerubahanItem, CreateAuditTrailEntry, JenisAksi } from './audit-trail.service';

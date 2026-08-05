@@ -9,9 +9,9 @@ import { AuditTrailService } from './audit-trail.service';
 import { QUEUE_NAMES } from '@/modules/queue/queue.constants';
 
 /**
- * TagihanService Unit Tests — Tunggakan Dashboard & Export (Task 11.13)
+ * TagihanService Unit Tests — Tunggakan Dashboard & Export (Task 10.1, 11.13)
  *
- * Requirements: 15.1–15.8
+ * Requirements: 9.1, 9.2, 9.3, 9.4, 15.1–15.5
  */
 describe('TagihanService - Tunggakan Dashboard & Export', () => {
   let service: TagihanService;
@@ -216,73 +216,118 @@ describe('TagihanService - Tunggakan Dashboard & Export', () => {
   });
 
   // ═══════════════════════════════════════════════════════════════════
-  // GET /tagihan/export (Requirements: 15.6–15.8)
+  // exportTagihanFile & exportTunggakan (Requirements: 9.1, 9.2, 9.3, 9.4)
   // ═══════════════════════════════════════════════════════════════════
 
-  describe('exportTagihan', () => {
-    /**
-     * Requirement 15.6: Enqueue export job and return job_id.
-     */
-    it('should enqueue export job and return job_id', async () => {
-      mockExportQueue.add.mockResolvedValue({ id: 'job-123' });
+  describe('exportTagihanFile', () => {
+    const exportRows = [
+      {
+        siswa_nama: 'Ahmad Fauzi',
+        kelas_nama: '6A',
+        bulan: 7,
+        tahun: 2024,
+        nominal: 250000,
+        total_dibayar: 0,
+        status: 'belum_bayar',
+        tanggal_jatuh_tempo: '2024-07-10',
+      },
+    ];
 
-      const result = await service.exportTagihan(tenantId, userId, {
-        format: 'xlsx',
-        periode_bulan: 9,
-        periode_tahun: 2024,
-      });
-
-      expect(result.job_id).toBe('job-123');
-      expect(result.message).toContain('Export tagihan sedang diproses');
-      expect(mockExportQueue.add).toHaveBeenCalledWith('export-tagihan', {
-        tenantId,
-        format: 'xlsx',
-        periode_bulan: 9,
-        periode_tahun: 2024,
-        requestedBy: userId,
-      });
-    });
-
-    /**
-     * Requirement 15.7: Support CSV format export.
-     */
-    it('should support csv format export', async () => {
-      mockExportQueue.add.mockResolvedValue({ id: 'job-456' });
-
-      const result = await service.exportTagihan(tenantId, userId, {
-        format: 'csv',
-        periode_bulan: 10,
-        periode_tahun: 2024,
-      });
-
-      expect(result.job_id).toBe('job-456');
-      expect(mockExportQueue.add).toHaveBeenCalledWith('export-tagihan', {
-        tenantId,
-        format: 'csv',
-        periode_bulan: 10,
-        periode_tahun: 2024,
-        requestedBy: userId,
+    beforeEach(() => {
+      // Provide two selects: main data query and tenant name query
+      let callCount = 0;
+      mockDb.select = jest.fn().mockImplementation(() => {
+        callCount++;
+        const chain: any = {};
+        chain.from = jest.fn().mockReturnValue(chain);
+        chain.innerJoin = jest.fn().mockReturnValue(chain);
+        chain.leftJoin = jest.fn().mockReturnValue(chain);
+        chain.where = jest.fn().mockReturnValue(chain);
+        chain.orderBy = jest.fn().mockReturnValue(chain);
+        chain.limit = jest.fn().mockImplementation(() => {
+          if (callCount === 1) return Promise.resolve(exportRows);
+          // tenant name lookup
+          return Promise.resolve([{ nama: 'SD Negeri 1' }]);
+        });
+        return chain;
       });
     });
 
     /**
-     * Export without periode filters (export all tunggakan).
+     * Requirement 9.1, 9.3: XLSX export returns buffer with correct filename.
      */
-    it('should allow export without periode filters', async () => {
-      mockExportQueue.add.mockResolvedValue({ id: 'job-789' });
+    it('should return xlsx buffer with correct filename', async () => {
+      const result = await service.exportTagihanFile({}, 'xlsx', tenantId);
 
-      const result = await service.exportTagihan(tenantId, userId, {
-        format: 'xlsx',
-      });
+      expect(result.buffer).toBeInstanceOf(Buffer);
+      expect(result.buffer.length).toBeGreaterThan(0);
+      expect(result.filename).toMatch(/^tagihan_list_\d{8}\.xlsx$/);
+    });
 
-      expect(result.job_id).toBe('job-789');
-      expect(mockExportQueue.add).toHaveBeenCalledWith('export-tagihan', {
-        tenantId,
-        format: 'xlsx',
-        periode_bulan: undefined,
-        periode_tahun: undefined,
-        requestedBy: userId,
+    /**
+     * Requirement 9.4: PDF export returns buffer with correct filename.
+     */
+    it('should return pdf buffer with correct filename', async () => {
+      const result = await service.exportTagihanFile({}, 'pdf', tenantId);
+
+      expect(result.buffer).toBeInstanceOf(Buffer);
+      expect(result.buffer.length).toBeGreaterThan(0);
+      expect(result.filename).toMatch(/^tagihan_list_\d{8}\.pdf$/);
+    });
+  });
+
+  describe('exportTunggakan', () => {
+    const exportRows = [
+      {
+        siswa_nama: 'Budi Santoso',
+        kelas_nama: '5B',
+        bulan: 8,
+        tahun: 2024,
+        nominal: 250000,
+        total_dibayar: 100000,
+        status: 'cicilan',
+        tanggal_jatuh_tempo: '2024-08-10',
+      },
+    ];
+
+    beforeEach(() => {
+      let callCount = 0;
+      mockDb.select = jest.fn().mockImplementation(() => {
+        callCount++;
+        const chain: any = {};
+        chain.from = jest.fn().mockReturnValue(chain);
+        chain.innerJoin = jest.fn().mockReturnValue(chain);
+        chain.leftJoin = jest.fn().mockReturnValue(chain);
+        chain.where = jest.fn().mockReturnValue(chain);
+        chain.orderBy = jest.fn().mockReturnValue(chain);
+        chain.limit = jest.fn().mockImplementation(() => {
+          if (callCount === 1) return Promise.resolve(exportRows);
+          return Promise.resolve([{ nama: 'SD Negeri 1' }]);
+        });
+        return chain;
       });
+    });
+
+    /**
+     * Requirement 9.2, 9.3: Tunggakan XLSX export returns buffer with correct filename.
+     */
+    it('should return xlsx buffer with tunggakan filename', async () => {
+      const result = await service.exportTunggakan({}, 'xlsx', tenantId);
+
+      expect(result.buffer).toBeInstanceOf(Buffer);
+      expect(result.buffer.length).toBeGreaterThan(0);
+      expect(result.filename).toMatch(/^tagihan_tunggakan_\d{8}\.xlsx$/);
+    });
+
+    /**
+     * Requirement 9.2, 9.4: Tunggakan PDF export returns buffer with correct filename.
+     */
+    it('should return pdf buffer with tunggakan filename', async () => {
+      const result = await service.exportTunggakan({}, 'pdf', tenantId);
+
+      expect(result.buffer).toBeInstanceOf(Buffer);
+      expect(result.buffer.length).toBeGreaterThan(0);
+      expect(result.filename).toMatch(/^tagihan_tunggakan_\d{8}\.pdf$/);
     });
   });
 });

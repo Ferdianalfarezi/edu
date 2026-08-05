@@ -9,10 +9,12 @@ import {
   Patch,
   Post,
   Query,
+  Res,
   UploadedFile,
   UseGuards,
   UseInterceptors,
 } from '@nestjs/common';
+import { Response } from 'express';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { Role } from '@edu/shared';
 import { JwtAuthGuard } from '@/common/guards/jwt-auth.guard';
@@ -125,21 +127,67 @@ export class TagihanController {
 
   /**
    * GET /tagihan/export
-   * Enqueue export job for billing report (Excel/CSV).
-   * Returns { job_id, message } for client to poll status.
-   * Bendahara and Admin.
+   * Export tagihan list as XLSX or PDF file download.
+   * Supports same filters as GET /tagihan list.
+   * Max 10.000 rows. Bendahara and Admin.
    *
-   * Requirements: 15.6–15.8
+   * Requirements: 9.1, 9.3, 9.4
    */
   @Get('export')
   @Roles(Role.BENDAHARA, Role.ADMIN)
-  async exportTagihan(
+  async exportTagihanFile(
     @TenantId() tenantId: string,
-    @CurrentUser('id') userId: string,
     @Query() query: ExportTagihanQueryDto,
+    @Res() res: Response,
   ) {
-    const data = await this.tagihanService.exportTagihan(tenantId, userId, query);
-    return { data };
+    const { format, status, kelas_id, bulan, tahun, search } = query;
+    const { buffer, filename } = await this.tagihanService.exportTagihanFile(
+      { status, kelas_id, bulan, tahun, search },
+      format,
+      tenantId,
+    );
+    const mimeType =
+      format === 'xlsx'
+        ? 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        : 'application/pdf';
+    res.set({
+      'Content-Type': mimeType,
+      'Content-Disposition': `attachment; filename="${filename}"`,
+      'Content-Length': buffer.length,
+    });
+    res.end(buffer);
+  }
+
+  /**
+   * GET /tagihan/tunggakan/export
+   * Export tunggakan list as XLSX or PDF file download.
+   * Supports kelas_id filter. Max 10.000 rows. Bendahara and Admin.
+   *
+   * Requirements: 9.2, 9.3, 9.4
+   */
+  @Get('tunggakan/export')
+  @Roles(Role.BENDAHARA, Role.ADMIN)
+  async exportTunggakanFile(
+    @TenantId() tenantId: string,
+    @Query() query: ExportTagihanQueryDto,
+    @Res() res: Response,
+  ) {
+    const { format, kelas_id } = query;
+    const { buffer, filename } = await this.tagihanService.exportTunggakan(
+      { kelas_id },
+      format,
+      tenantId,
+    );
+    const mimeType =
+      format === 'xlsx'
+        ? 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        : 'application/pdf';
+    res.set({
+      'Content-Type': mimeType,
+      'Content-Disposition': `attachment; filename="${filename}"`,
+      'Content-Length': buffer.length,
+    });
+    res.end(buffer);
   }
 
   /**
