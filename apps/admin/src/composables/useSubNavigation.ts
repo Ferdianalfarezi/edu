@@ -2,16 +2,32 @@ import { computed } from 'vue';
 import { useRoute } from 'vue-router';
 import { useAuthStore } from '@/stores/auth';
 import { router } from '@/router';
-import type { Role } from '@edu/shared';
+import { Role } from '@edu/shared';
 
 export interface SubNavTab {
   label: string;
   path: string;
 }
 
+interface SubNavTabWithRoles extends SubNavTab {
+  roles: Role[];
+}
+
 interface SubNavConfig {
   [sectionKey: string]: SubNavTab[];
 }
+
+/**
+ * Tab definitions untuk seksi keuangan (/tagihan/*).
+ * Setiap tab menyertakan daftar role yang diizinkan secara eksplisit.
+ */
+export const KEUANGAN_TABS: SubNavTabWithRoles[] = [
+  { label: 'Generate', path: '/tagihan/generate', roles: [Role.ADMIN, Role.BENDAHARA] },
+  { label: 'Daftar Tagihan', path: '/tagihan/list', roles: [Role.ADMIN, Role.BENDAHARA] },
+  { label: 'Verifikasi', path: '/tagihan/verifikasi', roles: [Role.ADMIN, Role.BENDAHARA] },
+  { label: 'Tunggakan', path: '/tagihan/tunggakan', roles: [Role.ADMIN, Role.BENDAHARA] },
+  { label: 'Audit Trail', path: '/tagihan/audit', roles: [Role.ADMIN, Role.BENDAHARA] },
+];
 
 const SUB_NAV_CONFIG: SubNavConfig = {
   dashboard: [
@@ -20,6 +36,7 @@ const SUB_NAV_CONFIG: SubNavConfig = {
     { label: 'Kelas', path: '/kelas' },
     { label: 'Mata Pelajaran', path: '/mata-pelajaran' },
     { label: 'Jadwal', path: '/jadwal' },
+    { label: 'Guru', path: '/guru' },
   ],
   absensi: [
     { label: 'Input Absensi', path: '/absensi/input' },
@@ -37,7 +54,6 @@ const SUB_NAV_CONFIG: SubNavConfig = {
     { label: 'Buat RPP', path: '/rpp/create' },
     { label: 'Favorit', path: '/rpp/favorites' },
   ],
-  keuangan: [{ label: 'Tagihan', path: '/tagihan' }],
   pengumuman: [{ label: 'Pengumuman', path: '/pengumuman' }],
   barang: [{ label: 'Inventaris Barang', path: '/barang' }],
   pengaturan: [
@@ -66,7 +82,7 @@ export function useSubNavigation() {
 
     // Academic routes under dashboard section
     if (
-      ['/siswa', '/kelas', '/mata-pelajaran', '/jadwal', '/kenaikan-kelas'].some((p) =>
+      ['/siswa', '/kelas', '/mata-pelajaran', '/jadwal', '/kenaikan-kelas', '/guru'].some((p) =>
         path.startsWith(p),
       )
     ) {
@@ -86,6 +102,11 @@ export function useSubNavigation() {
   });
 
   const tabs = computed<SubNavTab[]>(() => {
+    // Keuangan section: filter berdasarkan role dari KEUANGAN_TABS secara eksplisit
+    if (route.path.startsWith('/tagihan')) {
+      return KEUANGAN_TABS.filter((tab) => authStore.hasRole(...tab.roles));
+    }
+
     const config = SUB_NAV_CONFIG[activeSection.value] ?? [];
 
     return config.filter((tab) => {

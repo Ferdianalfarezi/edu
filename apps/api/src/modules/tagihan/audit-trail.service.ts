@@ -18,6 +18,21 @@ export type JenisAksi =
   | 'setujui_pembayaran'
   | 'tolak_pembayaran';
 
+/**
+ * Satu item perubahan field pada entri audit trail.
+ * Digunakan untuk menampilkan riwayat perubahan dalam format human-readable.
+ *
+ * Requirements: 8.4
+ */
+export interface PerubahanItem {
+  /** Nama teknis kolom, e.g. "nominal" */
+  namaField: string;
+  /** Label Bahasa Indonesia, e.g. "Nominal" */
+  labelField: string;
+  nilaiSebelum: unknown;
+  nilaiSesudah: unknown;
+}
+
 export interface CreateAuditTrailEntry {
   tenantId: string;
   userId: string;
@@ -27,6 +42,10 @@ export interface CreateAuditTrailEntry {
   nilaiSebelum?: Record<string, unknown> | null;
   nilaiSesudah?: Record<string, unknown> | null;
   alasan?: string | null;
+  /** Label aksi dalam Bahasa Indonesia, maks 100 karakter. Requirements: 8.4 */
+  aksiLabel?: string;
+  /** Daftar perubahan field. Requirements: 8.4 */
+  perubahan?: PerubahanItem[];
 }
 
 /**
@@ -62,6 +81,8 @@ export class AuditTrailService {
       nilaiSebelum: entry.nilaiSebelum ?? null,
       nilaiSesudah: entry.nilaiSesudah ?? null,
       alasan: entry.alasan ?? null,
+      aksiLabel: entry.aksiLabel ?? null,
+      perubahan: entry.perubahan ?? null,
     });
   }
 
@@ -106,6 +127,8 @@ export class AuditTrailService {
         nilaiSebelum: auditTrail.nilaiSebelum,
         nilaiSesudah: auditTrail.nilaiSesudah,
         alasan: auditTrail.alasan,
+        aksiLabel: auditTrail.aksiLabel,
+        perubahan: auditTrail.perubahan,
         createdAt: auditTrail.createdAt,
       })
       .from(auditTrail)
@@ -127,6 +150,8 @@ export class AuditTrailService {
         nilai_sebelum: row.nilaiSebelum,
         nilai_sesudah: row.nilaiSesudah,
         alasan: row.alasan,
+        aksi_label: row.aksiLabel,
+        perubahan: row.perubahan,
         created_at: row.createdAt,
       })),
       meta: {

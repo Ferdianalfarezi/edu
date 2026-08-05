@@ -34,6 +34,12 @@ export interface TenantCredentialsJobData {
   password: string;
 }
 
+export interface AdminPasswordResetJobData {
+  to: string;
+  name: string;
+  password: string;
+}
+
 // ─── Email Templates ────────────────────────────────────────────────────────
 
 function buildPasswordResetHtml(name: string, resetUrl: string): string {
@@ -116,6 +122,34 @@ function buildTenantCredentialsHtml(
 </html>`.trim();
 }
 
+function buildAdminPasswordResetHtml(name: string, password: string): string {
+  return `
+<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"></head>
+<body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+  <h2 style="color: #2563eb;">Password Anda Telah Direset</h2>
+  <p>Halo ${name},</p>
+  <p>Password akun Anda telah direset oleh administrator sistem.</p>
+  <div style="background: #f3f4f6; padding: 16px; border-radius: 8px; margin: 20px 0;">
+    <p style="margin: 4px 0;"><strong>Password Sementara:</strong> <code style="background: #e5e7eb; padding: 2px 6px; border-radius: 4px;">${password}</code></p>
+  </div>
+  <p>Langkah-langkah login:</p>
+  <ol>
+    <li>Buka aplikasi Teman Sekolah</li>
+    <li>Login dengan email dan password sementara di atas</li>
+    <li>Sistem akan meminta Anda membuat password baru segera setelah login</li>
+  </ol>
+  <p style="color: #dc2626;">
+    ⚠ Perhatian: Email ini dikirim karena aksi administrator, bukan permintaan Anda sendiri.
+    Jika Anda tidak mengharapkan perubahan ini, segera hubungi administrator sekolah Anda.
+  </p>
+  <hr style="border: none; border-top: 1px solid #eee; margin: 30px 0;">
+  <p style="font-size: 12px; color: #999;">Email ini dikirim secara otomatis oleh Sistem Manajemen Sekolah.</p>
+</body>
+</html>`.trim();
+}
+
 // ─── Exported template builders for testing ──────────────────────────────────
 
 export const emailTemplates = {
@@ -123,6 +157,7 @@ export const emailTemplates = {
   buildPasswordChangedHtml,
   buildUserCredentialsHtml,
   buildTenantCredentialsHtml,
+  buildAdminPasswordResetHtml,
 };
 
 // ─── Gmail API Helper ───────────────────────────────────────────────────────
@@ -297,5 +332,21 @@ export class EmailProcessor extends BaseProcessor {
     );
 
     this.processorLogger.log(`Tenant credentials email sent to ${to} for ${tenantName}`);
+  }
+
+  @Process('send-admin-password-reset')
+  async handleAdminPasswordReset(job: Job<AdminPasswordResetJobData>): Promise<void> {
+    const { to, name, password } = job.data;
+
+    try {
+      const html = buildAdminPasswordResetHtml(name, password);
+      await this.sendEmail(to, 'Password Anda Telah Direset oleh Administrator', html);
+      this.processorLogger.log(`Admin password reset email sent to ${to}`);
+    } catch (error) {
+      this.processorLogger.error(
+        `Failed to send admin password reset email to ${to}: ${error instanceof Error ? error.message : error}`,
+      );
+      throw error;
+    }
   }
 }

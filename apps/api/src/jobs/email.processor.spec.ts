@@ -1,6 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { ConfigService } from '@nestjs/config';
 import { Job } from 'bull';
+import * as fc from 'fast-check';
 import {
   EmailProcessor,
   PasswordResetJobData,
@@ -200,6 +201,36 @@ describe('EmailProcessor', () => {
       expect(html).toContain('Admin');
       expect(html).toContain('admin@sd.com');
       expect(html).toContain('pass123');
+    });
+  });
+
+  // ─── Property-Based Tests ────────────────────────────────────────────────
+
+  // Feature: user-password-reset, Property 4: Template email admin-reset mengandung semua elemen wajib
+  describe('Property 4: buildAdminPasswordResetHtml mengandung semua elemen wajib', () => {
+    it('should always contain name, password, login instruction, and admin warning for any valid input', () => {
+      fc.assert(
+        fc.property(
+          fc.string({ minLength: 1, maxLength: 50 }).filter((s) => s.trim().length > 0),
+          fc.string({ minLength: 12, maxLength: 20 }),
+          (name, password) => {
+            const html = emailTemplates.buildAdminPasswordResetHtml(name, password);
+
+            // Template harus mengandung nama user
+            expect(html).toContain(name);
+
+            // Template harus mengandung password sementara
+            expect(html).toContain(password);
+
+            // Template harus mengandung instruksi login
+            expect(html.toLowerCase()).toContain('login');
+
+            // Template harus mengandung teks peringatan bahwa aksi dilakukan oleh administrator
+            expect(html.toLowerCase()).toMatch(/administrator|admin/);
+          },
+        ),
+        { numRuns: 100 },
+      );
     });
   });
 });

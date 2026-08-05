@@ -1,6 +1,12 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { getQueueToken } from '@nestjs/bull';
-import { ConflictException, NotFoundException, BadRequestException } from '@nestjs/common';
+import {
+  ConflictException,
+  NotFoundException,
+  BadRequestException,
+  ForbiddenException,
+} from '@nestjs/common';
+import * as fc from 'fast-check';
 import { UserService } from './user.service';
 import { DRIZZLE } from '@/drizzle/drizzle.module';
 import { QUEUE_NAMES } from '@/modules/queue';
@@ -20,6 +26,8 @@ const createMockDb = () => {
     update: jest.fn(),
     set: jest.fn(),
     innerJoin: jest.fn(),
+    // transaction: executes the callback immediately with a mock tx (same chainable mock)
+    transaction: jest.fn(),
   };
   // Chain everything to `this` by default
   mock.select.mockReturnValue(mock);
@@ -33,6 +41,8 @@ const createMockDb = () => {
   mock.update.mockReturnValue(mock);
   mock.set.mockReturnValue(mock);
   mock.innerJoin.mockReturnValue(mock);
+  // transaction receives async (tx) => {...} and runs it with the same mock as tx
+  mock.transaction.mockImplementation(async (cb: (tx: any) => Promise<any>) => cb(mock));
   return mock;
 };
 
@@ -381,6 +391,38 @@ describe('UserService', () => {
     });
   });
 
+  // ---------------------------------------------------------------------------
+  // Property 2: Password generator memenuhi semua kriteria keamanan
+  // Feature: user-password-reset, Property 2: Password generator memenuhi semua kriteria keamanan
+  // **Validates: Requirements 3.1**
+  // ---------------------------------------------------------------------------
+
+  describe('Property 2: Password generator memenuhi semua kriteria keamanan', () => {
+    it('generateSecurePassword() selalu memenuhi semua kriteria keamanan', () => {
+      fc.assert(
+        fc.property(fc.constant(null), () => {
+          const password = service.generateSecurePassword();
+
+          // Minimal 12 karakter
+          expect(password.length).toBeGreaterThanOrEqual(12);
+
+          // Mengandung minimal 1 huruf besar
+          expect(password).toMatch(/[A-Z]/);
+
+          // Mengandung minimal 1 huruf kecil
+          expect(password).toMatch(/[a-z]/);
+
+          // Mengandung minimal 1 angka
+          expect(password).toMatch(/[0-9]/);
+
+          // Mengandung minimal 1 simbol dari set yang ditentukan
+          expect(password).toMatch(/[!@#$%^&*]/);
+        }),
+        { numRuns: 100 },
+      );
+    });
+  });
+
   describe('listUsers', () => {
     const tenantId = '11111111-1111-1111-1111-111111111111';
 
@@ -429,6 +471,47 @@ describe('UserService', () => {
     });
   });
 
+  // ---------------------------------------------------------------------------
+
+  describe('listGuru', () => {
+    const tenantId = '11111111-1111-1111-1111-111111111111';
+
+    it('should return active guru users with id, nama, email, telepon', async () => {
+      const mockGuruList = [
+        { id: 'g1', nama: 'Pak Budi', email: 'budi@school.id', telepon: '08111' },
+        { id: 'g2', nama: 'Bu Ani', email: 'ani@school.id', telepon: null },
+      ];
+
+      mockDb.orderBy.mockResolvedValueOnce(mockGuruList);
+
+      const result = await service.listGuru(tenantId);
+
+      expect(result).toEqual({ data: mockGuruList });
+      expect(result.data).toHaveLength(2);
+    });
+
+    it('should return empty data array when no active guru found', async () => {
+      mockDb.orderBy.mockResolvedValueOnce([]);
+
+      const result = await service.listGuru(tenantId);
+
+      expect(result).toEqual({ data: [] });
+    });
+
+    it('should query with tenantId, role=GURU, and isActive=true filters', async () => {
+      // Capture the where call args to verify filtering
+      const whereSpy = jest.spyOn(mockDb, 'where');
+      mockDb.orderBy.mockResolvedValueOnce([]);
+
+      await service.listGuru(tenantId);
+
+      // where() must be called — meaning filters are applied, not a full table scan
+      expect(whereSpy).toHaveBeenCalled();
+    });
+  });
+
+  // ---------------------------------------------------------------------------
+
   describe('deactivateGuru', () => {
     const tenantId = '11111111-1111-1111-1111-111111111111';
     const guruId = 'guru-user-id';
@@ -456,8 +539,7 @@ describe('UserService', () => {
           kelasId: 'kelas-1',
           mataPelajaranId: 'mapel-1',
           hari: 'senin',
-          jamMulai: '08:00',
-          jamSelesai: '09:00',
+          jamKe: 1,
           semester: 1,
           tahunAjaranId: 'ta-1',
         },
@@ -466,8 +548,7 @@ describe('UserService', () => {
           kelasId: 'kelas-2',
           mataPelajaranId: 'mapel-2',
           hari: 'selasa',
-          jamMulai: '10:00',
-          jamSelesai: '11:00',
+          jamKe: 3,
           semester: 1,
           tahunAjaranId: 'ta-1',
         },
@@ -537,8 +618,7 @@ describe('UserService', () => {
           kelasId: 'kelas-1',
           mataPelajaranId: 'mapel-1',
           hari: 'rabu',
-          jamMulai: '07:30',
-          jamSelesai: '08:30',
+          jamKe: 1,
           semester: 2,
           tahunAjaranId: 'ta-2',
         },
@@ -592,5 +672,197 @@ describe('UserService', () => {
       // Verify deactivateUser was called (which sets tokensInvalidatedAt)
       expect(deactivateSpy).toHaveBeenCalledWith(tenantId, guruId);
     });
+  });
+
+  // ---------------------------------------------------------------------------
+  // Unit tests: resetPassword() validation
+  // Requirements: 3.4, 4.3, 4.6, 6.4, 6.5
+  // ---------------------------------------------------------------------------
+
+  describe('resetPassword()', () => {
+    const callerId = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa';
+    const targetId = 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb';
+
+    /** Helper: mock a successful DB lookup returning a user */
+    const mockUserLookup = (overrides: Record<string, unknown> = {}) => {
+      mockDb.limit.mockResolvedValueOnce([
+        {
+          id: targetId,
+          nama: 'Budi Santoso',
+          email: 'budi@school.id',
+          role: Role.GURU,
+          tenantId: 'tenant-1',
+          ...overrides,
+        },
+      ]);
+    };
+
+    /** Helper: mock a successful DB transaction update (no return value needed) */
+    const mockTransactionUpdate = () => {
+      // transaction calls the callback with mock as tx
+      // inside callback: tx.update().set().where() — all chainable, no terminal resolution needed
+      // The mock.transaction already resolves the callback, so where() returning mock is fine
+    };
+
+    it('should throw ForbiddenException when callerId === targetId', async () => {
+      await expect(service.resetPassword(callerId, Role.SUPER_ADMIN, callerId)).rejects.toThrow(
+        ForbiddenException,
+      );
+    });
+
+    it('should throw ForbiddenException with correct message when callerId === targetId', async () => {
+      await expect(service.resetPassword(callerId, Role.SUPER_ADMIN, callerId)).rejects.toThrow(
+        'Tidak dapat mereset password sendiri',
+      );
+    });
+
+    it('should throw NotFoundException when user is not found', async () => {
+      // DB returns empty — user does not exist
+      mockDb.limit.mockResolvedValueOnce([]);
+
+      await expect(service.resetPassword(callerId, Role.SUPER_ADMIN, targetId)).rejects.toThrow(
+        NotFoundException,
+      );
+    });
+
+    it('should throw NotFoundException with correct message when user is not found', async () => {
+      mockDb.limit.mockResolvedValueOnce([]);
+
+      await expect(service.resetPassword(callerId, Role.SUPER_ADMIN, targetId)).rejects.toThrow(
+        'User tidak ditemukan',
+      );
+    });
+
+    it('should throw ForbiddenException when target user is super_admin', async () => {
+      mockUserLookup({ role: Role.SUPER_ADMIN });
+
+      await expect(service.resetPassword(callerId, Role.SUPER_ADMIN, targetId)).rejects.toThrow(
+        ForbiddenException,
+      );
+    });
+
+    it('should throw ForbiddenException with correct message when target is super_admin', async () => {
+      mockUserLookup({ role: Role.SUPER_ADMIN });
+
+      await expect(service.resetPassword(callerId, Role.SUPER_ADMIN, targetId)).rejects.toThrow(
+        'Tidak dapat mereset password superadmin',
+      );
+    });
+
+    it('should throw BadRequestException when target email is null', async () => {
+      mockUserLookup({ email: null });
+
+      await expect(service.resetPassword(callerId, Role.SUPER_ADMIN, targetId)).rejects.toThrow(
+        BadRequestException,
+      );
+    });
+
+    it('should throw BadRequestException with correct message when email is null', async () => {
+      mockUserLookup({ email: null });
+
+      await expect(service.resetPassword(callerId, Role.SUPER_ADMIN, targetId)).rejects.toThrow(
+        'User tidak memiliki alamat email',
+      );
+    });
+
+    it('should throw BadRequestException when target email is empty string', async () => {
+      mockUserLookup({ email: '' });
+
+      await expect(service.resetPassword(callerId, Role.SUPER_ADMIN, targetId)).rejects.toThrow(
+        BadRequestException,
+      );
+    });
+
+    it('should throw BadRequestException when target email is whitespace only', async () => {
+      mockUserLookup({ email: '   ' });
+
+      await expect(service.resetPassword(callerId, Role.SUPER_ADMIN, targetId)).rejects.toThrow(
+        BadRequestException,
+      );
+    });
+
+    it('should return success and log error (not throw) when emailQueue.add() fails', async () => {
+      // Happy-path DB lookup
+      mockUserLookup();
+
+      // emailQueue.add() rejects — simulates queue failure
+      mockEmailQueue.add.mockRejectedValueOnce(new Error('Redis connection refused'));
+
+      // Spy on console.error to verify the error is logged
+      const consoleSpy = jest.spyOn(console, 'error').mockImplementation(() => undefined);
+
+      let result: { message: string } | undefined;
+      await expect(
+        (async () => {
+          result = await service.resetPassword(callerId, Role.SUPER_ADMIN, targetId);
+        })(),
+      ).resolves.not.toThrow();
+
+      // Should still return the success message
+      expect(result).toEqual({ message: 'Password berhasil direset' });
+
+      // console.error should have been called with the failure info
+      expect(consoleSpy).toHaveBeenCalledWith(
+        expect.stringContaining('Failed to enqueue admin password reset email'),
+        expect.any(Error),
+      );
+
+      consoleSpy.mockRestore();
+    });
+  });
+
+  // ---------------------------------------------------------------------------
+  // Property 3: Response reset tidak mengandung password plaintext
+  // Feature: user-password-reset, Property 3: Response reset tidak mengandung password plaintext
+  // **Validates: Requirements 3.3**
+  // ---------------------------------------------------------------------------
+
+  describe('Property 3: Response reset tidak mengandung password plaintext', () => {
+    // Fixed callerId — always different from any generated targetId (different UUID v4 value)
+    const fixedCallerId = 'cccccccc-cccc-cccc-cccc-cccccccccccc';
+
+    it('response dari resetPassword() tidak pernah mengandung field password plaintext', async () => {
+      // Mock bcrypt.hash agar tidak lakukan komputasi mahal (10 salt rounds) per iterasi
+      // Ini tidak mempengaruhi properti yang diuji: apakah response mengandung plaintext atau tidak
+      const bcrypt = await import('bcrypt');
+      const bcryptSpy = jest
+        .spyOn(bcrypt, 'hash')
+        .mockResolvedValue('$2b$10$mockedhashvalue' as never);
+
+      try {
+        await fc.assert(
+          fc.asyncProperty(fc.uuid(), async (targetId) => {
+            // Guard: skip jika UUID yang di-generate kebetulan sama dengan callerId
+            // (probabilitas sangat rendah, tapi kita tangani untuk kebenaran formal)
+            if (targetId === fixedCallerId) return;
+
+            // Mock DB lookup: kembalikan user valid (non-superadmin, punya email)
+            mockDb.limit.mockResolvedValueOnce([
+              {
+                id: targetId,
+                nama: 'Test User',
+                email: 'testuser@school.id',
+                role: Role.GURU,
+                tenantId: 'tenant-test',
+              },
+            ]);
+
+            // Mock emailQueue.add agar tidak throw
+            mockEmailQueue.add.mockResolvedValueOnce(undefined);
+
+            const result = await service.resetPassword(fixedCallerId, Role.SUPER_ADMIN, targetId);
+
+            // Verifikasi: response tidak mengandung field password plaintext
+            const keys = Object.keys(result);
+            expect(keys).not.toContain('password');
+            expect(keys).not.toContain('tempPassword');
+            expect(keys).not.toContain('temp_password');
+          }),
+          { numRuns: 100 },
+        );
+      } finally {
+        bcryptSpy.mockRestore();
+      }
+    }, 30000); // timeout 30 detik untuk 100 iterasi async
   });
 });

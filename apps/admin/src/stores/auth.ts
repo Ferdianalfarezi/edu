@@ -56,6 +56,27 @@ export const useAuthStore = defineStore('auth', () => {
     }
 
     user.value = loginData.user;
+
+    // Populate tenant-context store from login response so logo_url and
+    // school name are available in the topbar immediately after login (Req 1.8).
+    // Super admin has no fixed tenant — they use TenantContextSwitcher instead.
+    const tenantContextStore = useTenantContextStore();
+    const loginUser = loginData.user as unknown as {
+      id: string;
+      name: string;
+      role: string;
+      tenant_id: string | null;
+      tenants?: { id: string; name: string; logo_url?: string | null }[];
+    };
+
+    if (loginUser.tenant_id && loginUser.tenants && loginUser.tenants.length > 0) {
+      const primaryTenant = loginUser.tenants[0];
+      tenantContextStore.setTenant({
+        id: primaryTenant.id,
+        nama: primaryTenant.name,
+        logo_url: primaryTenant.logo_url ?? null,
+      });
+    }
   }
 
   async function changePassword(oldPassword: string, newPassword: string): Promise<void> {

@@ -95,7 +95,7 @@ function isActive(item: SidebarItem): boolean {
   }
   // Match by section prefix
   const sectionPrefixes: Record<string, string[]> = {
-    akademik: ['/siswa', '/kelas', '/mata-pelajaran', '/jadwal', '/kenaikan-kelas'],
+    akademik: ['/siswa', '/kelas', '/mata-pelajaran', '/jadwal', '/kenaikan-kelas', '/guru'],
     absensi: ['/absensi'],
     rapor: ['/rapor'],
     rpp: ['/rpp'],
@@ -116,7 +116,7 @@ function navigateTo(item: SidebarItem) {
   // Find the first accessible route for this section by checking route meta roles
   const sectionTabPaths: Record<string, string[]> = {
     dashboard: ['/'],
-    akademik: ['/siswa', '/kelas', '/mata-pelajaran', '/jadwal', '/kenaikan-kelas'],
+    akademik: ['/siswa', '/kelas', '/mata-pelajaran', '/jadwal', '/kenaikan-kelas', '/guru'],
     absensi: ['/absensi/input', '/absensi/edit', '/absensi/rekap'],
     rapor: ['/rapor/komponen', '/rapor/input', '/rapor/finalize', '/rapor'],
     rpp: ['/rpp/portal', '/rpp/create', '/rpp/favorites'],
@@ -169,6 +169,8 @@ const userInitial = computed(() => {
       <div class="sidebar__logo-container">
         <img src="/logo.png" alt="Teman Sekolah" class="sidebar__logo-img" />
       </div>
+      <!-- Brand text — only visible when sidebar is expanded (hover) -->
+      <span class="sidebar__brand-text">Teman Sekolah</span>
     </div>
 
     <!-- Navigation -->
@@ -352,6 +354,7 @@ const userInitial = computed(() => {
   justify-content: center;
   padding: 24px 0 16px;
   flex-shrink: 0;
+  flex-direction: column;
 }
 
 .sidebar__logo-container {
@@ -369,6 +372,19 @@ const userInitial = computed(() => {
   width: 32px;
   height: 32px;
   object-fit: contain;
+}
+
+.sidebar__brand-text {
+  display: none;
+  font-size: 12px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.7);
+  margin-top: 4px;
+  white-space: nowrap;
+}
+
+.sidebar:hover .sidebar__brand-text {
+  display: block;
 }
 
 /* Navigation */

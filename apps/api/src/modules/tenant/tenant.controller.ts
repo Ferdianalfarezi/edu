@@ -10,9 +10,11 @@ import {
   Patch,
   Post,
   Query,
+  UploadedFile,
   UseGuards,
   UseInterceptors,
 } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
 import { JwtAuthGuard } from '@/common/guards/jwt-auth.guard';
 import { RolesGuard } from '@/common/guards/roles.guard';
 import { Roles } from '@/common/decorators/roles.decorator';
@@ -20,6 +22,7 @@ import { TenantId } from '@/common/decorators/tenant-id.decorator';
 import { PaginationQueryDto } from '@/common/dto/pagination.dto';
 import { Role } from '@edu/shared';
 import { Auditable, AuditInterceptor } from '@/modules/audit-log';
+import { StorageService } from '@/modules/storage/storage.service';
 import { TenantService, CreateTenantResult, TenantStats } from './tenant.service';
 import { CreateTenantDto, UpdateHariKerjaDto, UpdateTenantDto } from './dto';
 
@@ -27,7 +30,10 @@ import { CreateTenantDto, UpdateHariKerjaDto, UpdateTenantDto } from './dto';
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Roles(Role.SUPER_ADMIN)
 export class TenantController {
-  constructor(private readonly tenantService: TenantService) {}
+  constructor(
+    private readonly tenantService: TenantService,
+    private readonly storageService: StorageService,
+  ) {}
 
   /**
    * GET /tenants/search?q=
@@ -94,6 +100,34 @@ export class TenantController {
     @Body() dto: UpdateHariKerjaDto,
   ): Promise<{ message: string }> {
     return this.tenantService.updateHariKerja(tenantId, dto.hari_kerja);
+  }
+
+  /**
+   * PATCH /tenants/:id/logo
+   * Upload or replace the school logo for a tenant.
+   * Accepts multipart/form-data with field "file" (JPEG, PNG, WebP, ≤ 2 MB).
+   * Validates MIME type via Sharp (not just Multer Content-Type header).
+   * Resizes to max 512×512 WebP and uploads to S3.
+   * Returns the updated tenant record with the new logo_url.
+   *
+   * Requirements: 1.1, 1.2, 1.3, 1.4
+   */
+  @Patch(':id/logo')
+  @HttpCode(HttpStatus.OK)
+  @UseInterceptors(
+    FileInterceptor('file', {
+      limits: { fileSize: 2 * 1024 * 1024 },
+    }),
+  )
+  async uploadLogo(
+    @Param('id') id: string,
+    @UploadedFile() file: Express.Multer.File,
+  ): Promise<{ id: string; logo_url: string }> {
+    if (!file) {
+      throw new BadRequestException('File wajib diupload.');
+    }
+    const publicUrl = await this.storageService.uploadLogo(id, file);
+    return this.tenantService.updateLogoUrl(id, publicUrl);
   }
 
   /**

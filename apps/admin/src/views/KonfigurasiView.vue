@@ -215,11 +215,11 @@ onMounted(fetchKonfigurasi);
         <div class="px-6 py-5">
           <div class="flex items-center gap-6">
             <label class="flex items-center gap-2 cursor-pointer">
-              <input type="radio" v-model="hariKerja" value="5_hari" class="accent-primary-600" />
+              <input v-model="hariKerja" type="radio" value="5_hari" class="accent-primary-600" />
               <span class="text-[15px] text-stone-800">5 Hari (Senin-Jumat)</span>
             </label>
             <label class="flex items-center gap-2 cursor-pointer">
-              <input type="radio" v-model="hariKerja" value="6_hari" class="accent-primary-600" />
+              <input v-model="hariKerja" type="radio" value="6_hari" class="accent-primary-600" />
               <span class="text-[15px] text-stone-800">6 Hari (Senin-Sabtu)</span>
             </label>
           </div>

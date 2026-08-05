@@ -1,5 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { ConfigService } from '@nestjs/config';
+import { BadRequestException } from '@nestjs/common';
 import { StorageService, BUCKET_PATHS } from './storage.service';
 import {
   S3Client,
@@ -24,6 +25,29 @@ jest.mock('@aws-sdk/client-s3', () => {
   };
 });
 
+// ─── Sharp mock ──────────────────────────────────────────────────────────────
+// We need a fluent builder mock because StorageService chains: sharp(buf).metadata()
+// and sharp(buf).resize(...).webp(...).toBuffer()
+const mockToBuffer = jest.fn();
+const mockWebp = jest.fn();
+const mockResize = jest.fn();
+const mockMetadata = jest.fn();
+
+const mockSharpInstance = {
+  metadata: mockMetadata,
+  resize: mockResize,
+  webp: mockWebp,
+  toBuffer: mockToBuffer,
+};
+
+// resize() and webp() return the same instance (fluent chain)
+mockResize.mockReturnValue(mockSharpInstance);
+mockWebp.mockReturnValue(mockSharpInstance);
+
+jest.mock('sharp', () => {
+  return jest.fn().mockImplementation(() => mockSharpInstance);
+});
+
 const mockGetSignedUrl = getSignedUrl as jest.MockedFunction<typeof getSignedUrl>;
 
 describe('StorageService', () => {
@@ -40,6 +64,10 @@ describe('StorageService', () => {
 
   beforeEach(async () => {
     jest.clearAllMocks();
+
+    // Reset sharp fluent chain defaults
+    mockResize.mockReturnValue(mockSharpInstance);
+    mockWebp.mockReturnValue(mockSharpInstance);
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -68,7 +96,7 @@ describe('StorageService', () => {
           accessKeyId: mockConfig.S3_ACCESS_KEY_ID,
           secretAccessKey: mockConfig.S3_SECRET_ACCESS_KEY,
         },
-        forcePathStyle: true,
+        forcePathStyle: false,
       });
     });
   });
@@ -227,6 +255,172 @@ describe('StorageService', () => {
       expect(BUCKET_PATHS.BUKTI_TRANSFER).toBe('bukti-transfer');
       expect(BUCKET_PATHS.RPP).toBe('rpp');
       expect(BUCKET_PATHS.EXPORTS).toBe('exports');
+      expect(BUCKET_PATHS.LOGOS).toBe('logos');
+    });
+  });
+
+  // ─── uploadLogo ────────────────────────────────────────────────────────────
+
+  describe('uploadLogo', () => {
+    const tenantId = 'tenant-abc-123';
+
+    /** Build a minimal Multer.File-like object */
+    function makeFile(opts: {
+      size?: number;
+      buffer?: Buffer;
+      mimetype?: string;
+    }): Express.Multer.File {
+      return {
+        fieldname: 'file',
+        originalname: 'logo.jpg',
+        encoding: '7bit',
+        mimetype: opts.mimetype ?? 'image/jpeg',
+        size: opts.size ?? 1024,
+        buffer: opts.buffer ?? Buffer.from('fake-image-data'),
+        stream: null as any,
+        destination: '',
+        filename: '',
+        path: '',
+      };
+    }
+
+    beforeEach(() => {
+      // Default: Sharp reports a valid JPEG and produces a small WebP buffer
+      mockMetadata.mockResolvedValue({ format: 'jpeg', width: 200, height: 200 });
+      mockToBuffer.mockResolvedValue(Buffer.from('resized-webp-data'));
+      mockSend.mockResolvedValue({});
+    });
+
+    it('accepts a valid JPEG file and returns a public URL', async () => {
+      const file = makeFile({ size: 500 * 1024, mimetype: 'image/jpeg' });
+
+      const result = await service.uploadLogo(tenantId, file);
+
+      expect(result).toContain(
+        `${mockConfig.S3_ENDPOINT}/${mockConfig.S3_BUCKET}/logos/${tenantId}/`,
+      );
+      expect(result).toMatch(/\.webp$/);
+    });
+
+    it('accepts a valid PNG file', async () => {
+      mockMetadata.mockResolvedValue({ format: 'png', width: 100, height: 100 });
+      const file = makeFile({ size: 200 * 1024, mimetype: 'image/png' });
+
+      const result = await service.uploadLogo(tenantId, file);
+
+      expect(result).toContain('logos/');
+      expect(result).toMatch(/\.webp$/);
+    });
+
+    it('accepts a valid WebP file', async () => {
+      mockMetadata.mockResolvedValue({ format: 'webp', width: 256, height: 256 });
+      const file = makeFile({ size: 100 * 1024, mimetype: 'image/webp' });
+
+      const result = await service.uploadLogo(tenantId, file);
+
+      expect(result).toContain('logos/');
+    });
+
+    it('rejects a file larger than 2 MB with a BadRequestException', async () => {
+      const file = makeFile({ size: 2 * 1024 * 1024 + 1 });
+
+      await expect(service.uploadLogo(tenantId, file)).rejects.toThrow(BadRequestException);
+      await expect(service.uploadLogo(tenantId, file)).rejects.toThrow('Ukuran file maksimum 2 MB');
+    });
+
+    it('does not call Sharp when file exceeds 2 MB (early return)', async () => {
+      const file = makeFile({ size: 3 * 1024 * 1024 });
+
+      await expect(service.uploadLogo(tenantId, file)).rejects.toThrow(BadRequestException);
+      expect(mockMetadata).not.toHaveBeenCalled();
+    });
+
+    it('rejects a file with unsupported format (e.g. GIF) with a BadRequestException', async () => {
+      mockMetadata.mockResolvedValue({ format: 'gif' });
+      const file = makeFile({ size: 512, mimetype: 'image/gif' });
+
+      await expect(service.uploadLogo(tenantId, file)).rejects.toThrow(BadRequestException);
+      await expect(service.uploadLogo(tenantId, file)).rejects.toThrow(
+        'Format file tidak valid. Gunakan JPEG, PNG, atau WebP.',
+      );
+    });
+
+    it('rejects a non-image file disguised as image (Sharp throws on metadata)', async () => {
+      mockMetadata.mockRejectedValue(new Error('Input buffer contains unsupported image format'));
+      const file = makeFile({ size: 1024, mimetype: 'image/jpeg' });
+
+      await expect(service.uploadLogo(tenantId, file)).rejects.toThrow(BadRequestException);
+      await expect(service.uploadLogo(tenantId, file)).rejects.toThrow(
+        'Format file tidak valid. Gunakan JPEG, PNG, atau WebP.',
+      );
+    });
+
+    it('calls sharp resize with max 512×512 inside constraint', async () => {
+      const file = makeFile({ size: 1024 });
+
+      await service.uploadLogo(tenantId, file);
+
+      expect(mockResize).toHaveBeenCalledWith(512, 512, {
+        fit: 'inside',
+        withoutEnlargement: true,
+      });
+    });
+
+    it('calls sharp webp with quality 85', async () => {
+      const file = makeFile({ size: 1024 });
+
+      await service.uploadLogo(tenantId, file);
+
+      expect(mockWebp).toHaveBeenCalledWith({ quality: 85 });
+    });
+
+    it('uploads resized buffer to S3 as image/webp', async () => {
+      const resizedData = Buffer.from('webp-output');
+      mockToBuffer.mockResolvedValue(resizedData);
+      const file = makeFile({ size: 1024 });
+
+      await service.uploadLogo(tenantId, file);
+
+      expect(mockSend).toHaveBeenCalledTimes(1);
+      const sentCommand = mockSend.mock.calls[0][0];
+      expect(sentCommand).toBeInstanceOf(PutObjectCommand);
+      expect(sentCommand.input.Body).toEqual(resizedData);
+      expect(sentCommand.input.ContentType).toBe('image/webp');
+    });
+
+    it('uses a UUID-based filename under logos/{tenantId}/', async () => {
+      const file = makeFile({ size: 1024 });
+
+      await service.uploadLogo(tenantId, file);
+
+      const key: string = mockSend.mock.calls[0][0].input.Key;
+      expect(key).toMatch(new RegExp(`^logos/${tenantId}/[0-9a-f-]{36}\\.webp$`));
+    });
+
+    it('propagates S3 upload errors', async () => {
+      mockSend.mockRejectedValue(new Error('S3 write failed'));
+      const file = makeFile({ size: 1024 });
+
+      await expect(service.uploadLogo(tenantId, file)).rejects.toThrow('S3 write failed');
+    });
+
+    it('exactly at 2 MB boundary is accepted (≤ 2 MB)', async () => {
+      const file = makeFile({ size: 2 * 1024 * 1024 });
+
+      const result = await service.uploadLogo(tenantId, file);
+
+      expect(result).toContain('logos/');
+    });
+
+    it('generates a different UUID on each call', async () => {
+      const file = makeFile({ size: 1024 });
+
+      await service.uploadLogo(tenantId, file);
+      await service.uploadLogo(tenantId, file);
+
+      const key1: string = mockSend.mock.calls[0][0].input.Key;
+      const key2: string = mockSend.mock.calls[1][0].input.Key;
+      expect(key1).not.toBe(key2);
     });
   });
 });

@@ -48,7 +48,8 @@ export class KelasController {
 
   /**
    * GET /kelas/:id
-   * Get class detail with student count.
+   * Get class detail including the list of enrolled students (id, nama, nisn, status).
+   * Returns all students regardless of status (aktif, tidak_aktif, pindah, lulus).
    * Accessible by all staff roles.
    */
   @Get(':id')

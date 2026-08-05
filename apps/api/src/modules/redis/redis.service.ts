@@ -50,6 +50,33 @@ export class RedisService implements OnModuleDestroy {
     return result === 1;
   }
 
+  // ─── Session Operations ─────────────────────────────────────────
+
+  /**
+   * Store a session_id for the given user.
+   * Key pattern: session:{userId}
+   * TTL should match the refresh token lifetime (e.g. 7 days = 604800s).
+   * Overwrites any existing session — this is the force-logout mechanism.
+   */
+  async setSession(userId: string, sessionId: string, ttlSeconds: number): Promise<void> {
+    await this.redis.set(`session:${userId}`, sessionId, 'EX', ttlSeconds);
+  }
+
+  /**
+   * Retrieve the active session_id for the given user.
+   * Returns null if the session has expired or was never set.
+   */
+  async getSession(userId: string): Promise<string | null> {
+    return this.redis.get(`session:${userId}`);
+  }
+
+  /**
+   * Delete the active session for the given user (explicit logout).
+   */
+  async delSession(userId: string): Promise<void> {
+    await this.redis.del(`session:${userId}`);
+  }
+
   // ─── Distributed Lock Operations ───────────────────────────────
 
   /**

@@ -37,5 +37,8 @@ export * from './barang';
 // Konfigurasi & Utility
 export * from './konfigurasi';
 
+// Konfigurasi Biaya (override per siswa/kelas)
+export * from './konfigurasi-biaya';
+
 // Relations
 export * from './relations';

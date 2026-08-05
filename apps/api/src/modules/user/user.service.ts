@@ -1,6 +1,7 @@
 import {
   BadRequestException,
   ConflictException,
+  ForbiddenException,
   Inject,
   Injectable,
   NotFoundException,
@@ -183,6 +184,29 @@ export class UserService {
         cursor: nextCursor,
       },
     };
+  }
+
+  // ─── List Guru (Req 3.4) ──────────────────────────────────────
+
+  /**
+   * Return all active, non-deactivated users with role=guru within a tenant.
+   * Response shape: { data: GuruListResponse[] }
+   */
+  async listGuru(tenantId: string): Promise<{
+    data: { id: string; nama: string; email: string | null; telepon: string | null }[];
+  }> {
+    const results = await this.db
+      .select({
+        id: user.id,
+        nama: user.nama,
+        email: user.email,
+        telepon: user.phone,
+      })
+      .from(user)
+      .where(and(eq(user.tenantId, tenantId), eq(user.role, Role.GURU), eq(user.isActive, true)))
+      .orderBy(asc(user.nama));
+
+    return { data: results };
   }
 
   // ─── List Users Cross-Tenant (SUPER_ADMIN) ────────────────────
@@ -767,24 +791,63 @@ export class UserService {
   /**
    * Generate a random password using crypto.randomBytes.
    * Returns a 12-character alphanumeric string.
+   *
+   * @deprecated Use `generateSecurePassword()` instead. This method produces
+   * base64url characters only (no symbols) and does not guarantee character
+   * class coverage. Kept for backwards compatibility with bulk-import flow.
    */
   generateRandomPassword(): string {
     return crypto.randomBytes(9).toString('base64url').slice(0, 12);
   }
 
+  /**
+   * Generate a cryptographically secure random password that satisfies all
+   * security criteria: at least 1 uppercase letter, 1 lowercase letter,
+   * 1 digit, and 1 symbol, with a total length of 12 characters.
+   *
+   * Uses `crypto.randomInt()` exclusively — never `Math.random()`.
+   */
+  generateSecurePassword(): string {
+    const upper = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+    const lower = 'abcdefghijklmnopqrstuvwxyz';
+    const digits = '0123456789';
+    const symbols = '!@#$%^&*';
+    const all = upper + lower + digits + symbols;
+
+    // Guarantee at least one character from each required class
+    const required = [
+      upper[crypto.randomInt(upper.length)],
+      lower[crypto.randomInt(lower.length)],
+      digits[crypto.randomInt(digits.length)],
+      symbols[crypto.randomInt(symbols.length)],
+    ];
+
+    // Fill remaining 8 characters from the full charset
+    const rest = Array.from({ length: 8 }, () => all[crypto.randomInt(all.length)]);
+
+    // Shuffle to avoid predictable positions (e.g. first char always uppercase)
+    return [...required, ...rest].sort(() => crypto.randomInt(3) - 1).join('');
+  }
+
   // ─── Reset Password (SUPER_ADMIN) ────────────────────────────
 
-  async resetPassword(userId: string) {
-    // Find user by ID (cross-tenant, no tenant scoping)
+  async resetPassword(callerId: string, callerRole: string, targetId: string) {
+    // 1. Validasi self-reset
+    if (callerId === targetId) {
+      throw new ForbiddenException('Tidak dapat mereset password sendiri');
+    }
+
+    // 2. Lookup user target (cross-tenant, no tenant scoping)
     const results = await this.db
       .select({
         id: user.id,
         nama: user.nama,
         email: user.email,
+        role: user.role,
         tenantId: user.tenantId,
       })
       .from(user)
-      .where(eq(user.id, userId))
+      .where(eq(user.id, targetId))
       .limit(1);
 
     if (!results[0]) {
@@ -793,26 +856,44 @@ export class UserService {
 
     const existingUser = results[0];
 
-    // Generate temporary password (12+ chars)
-    const tempPassword = this.generateRandomPassword();
+    // 3. Validasi target bukan superadmin
+    if (existingUser.role === Role.SUPER_ADMIN) {
+      throw new ForbiddenException('Tidak dapat mereset password superadmin');
+    }
+
+    // 4. Validasi email target tidak kosong/whitespace
+    const email = existingUser.email?.trim();
+    if (!email) {
+      throw new BadRequestException('User tidak memiliki alamat email');
+    }
+
+    // 5. Generate secure temporary password
+    const tempPassword = this.generateSecurePassword();
     const passwordHash = await bcrypt.hash(tempPassword, BCRYPT_SALT_ROUNDS);
 
-    // Update user: set new password hash and must_change_password flag
-    await this.db
-      .update(user)
-      .set({
-        passwordHash,
-        mustChangePassword: true,
-        updatedAt: new Date(),
-      })
-      .where(eq(user.id, userId));
-
-    // Enqueue email with temporary password
-    await this.emailQueue.add('send-password-reset', {
-      to: existingUser.email,
-      name: existingUser.nama,
-      password: tempPassword,
+    // 6. Atomically update passwordHash and mustChangePassword in a transaction
+    await this.db.transaction(async (tx) => {
+      await tx
+        .update(user)
+        .set({
+          passwordHash,
+          mustChangePassword: true,
+          updatedAt: new Date(),
+        })
+        .where(eq(user.id, targetId));
     });
+
+    // 7. Enqueue email — failure must not roll back the reset
+    try {
+      await this.emailQueue.add('send-admin-password-reset', {
+        to: email,
+        name: existingUser.nama,
+        password: tempPassword,
+      });
+    } catch (err) {
+      // Log but do not re-throw — reset is already committed to DB
+      console.error('[UserService] Failed to enqueue admin password reset email', err);
+    }
 
     return { message: 'Password berhasil direset' };
   }

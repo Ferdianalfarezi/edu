@@ -8,7 +8,7 @@ import {
 } from '@nestjs/common';
 import { InjectQueue } from '@nestjs/bull';
 import { Queue } from 'bull';
-import { eq, and, or, asc, gt, ilike, sql } from 'drizzle-orm';
+import { eq, and, or, asc, gt, ilike, sql, inArray } from 'drizzle-orm';
 import { paginate } from '../../common/utils/paginate';
 import { DrizzleService } from '@/drizzle/drizzle.service';
 import { StorageService, BUCKET_PATHS } from '@/modules/storage/storage.service';
@@ -20,6 +20,8 @@ import { siswa } from '@/drizzle/schema/siswa';
 import { kelas } from '@/drizzle/schema/kelas';
 import { tahunAjaran } from '@/drizzle/schema/tahun-ajaran';
 import { user } from '@/drizzle/schema/user';
+import { konfigurasiBiaya } from '@/drizzle/schema/konfigurasi-biaya';
+import { tenant } from '@/drizzle/schema/tenant';
 import { AuditTrailService } from './audit-trail.service';
 import {
   GenerateTagihanDto,
@@ -33,6 +35,10 @@ import {
   ListTagihanQueryDto,
 } from './dto';
 import { randomUUID } from 'crypto';
+import * as ExcelJS from 'exceljs';
+// pdfkit uses CommonJS exports; use require() to avoid default-import issues in Jest/ts-jest
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const PDFDocument = require('pdfkit') as typeof import('pdfkit');
 
 /**
  * Allowed MIME types for bukti transfer upload.
@@ -63,6 +69,27 @@ export interface GenerateTagihanResult {
   skipped: number;
   total_nominal: number;
   months_processed: number;
+}
+
+/**
+ * Shape of a single item in the GET /tagihan/tunggakan response.
+ * `sisa` is always non-negative (Req 7.1 — server-authoritative calculation).
+ */
+export interface TunggakanItem {
+  id: string;
+  siswa_id: string;
+  siswa_nama: string;
+  siswa_status: string;
+  kelas_id: string | null;
+  kelas_nama: string | null;
+  bulan: number;
+  tahun: number;
+  nominal: number;
+  total_dibayar: number;
+  sisa_tagihan: number;
+  sisa: number; // Always non-negative: Math.max(0, nominal - total_dibayar)
+  status: string;
+  tanggal_jatuh_tempo: string | null;
 }
 
 @Injectable()
@@ -133,7 +160,13 @@ export class TagihanService {
     }
 
     try {
-      return await this.processGeneration(tenantId, tahunAjaranId, months, dto.kelas_id);
+      return await this.processGeneration(
+        tenantId,
+        tahunAjaranId,
+        months,
+        dto.kelas_id,
+        dto.siswa_ids,
+      );
     } finally {
       await this.redisService.releaseLock(lockKey);
     }
@@ -173,9 +206,14 @@ export class TagihanService {
       return { created: 0, total_nominal: 0 };
     }
 
-    // Get kelas → tingkat → nominal
+    // Get kelas → tingkat → nominal (using hierarchy: per-siswa → per-kelas → global)
     const kelasData = await this.getKelasWithTingkat(tenantId, kelasId);
-    const nominal = await this.getNominalForTingkat(tenantId, kelasData.tingkat);
+    const nominal = await this.resolveNominalForSiswa(
+      siswaId,
+      kelasId,
+      tenantId,
+      kelasData.tingkat,
+    );
     const tanggalJatuhTempo = await this.getTanggalJatuhTempo(tenantId);
 
     // Get student parent info for notification
@@ -411,6 +449,21 @@ export class TagihanService {
         jenisAksi: 'upload_bukti_transfer',
         entityType: 'tagihan',
         entityId: tagihanId,
+        aksiLabel: 'Upload bukti transfer',
+        perubahan: [
+          {
+            namaField: 'status',
+            labelField: 'Status',
+            nilaiSebelum: tagihanRecord.status,
+            nilaiSesudah: 'menunggu_verifikasi',
+          },
+          {
+            namaField: 'jumlah_bayar',
+            labelField: 'Jumlah Bayar',
+            nilaiSebelum: null,
+            nilaiSesudah: nominalBayar,
+          },
+        ],
         nilaiSebelum: { status: tagihanRecord.status },
         nilaiSesudah: {
           status: 'menunggu_verifikasi',
@@ -531,6 +584,27 @@ export class TagihanService {
       jenisAksi: 'catat_pembayaran_manual',
       entityType: 'tagihan',
       entityId: tagihanId,
+      aksiLabel: 'Catat pembayaran manual',
+      perubahan: [
+        {
+          namaField: 'status',
+          labelField: 'Status',
+          nilaiSebelum: tagihanRecord.status,
+          nilaiSesudah: newStatus,
+        },
+        {
+          namaField: 'total_dibayar',
+          labelField: 'Total Dibayar',
+          nilaiSebelum: tagihanRecord.totalDibayar,
+          nilaiSesudah: newTotalDibayar,
+        },
+        {
+          namaField: 'jumlah_bayar',
+          labelField: 'Jumlah Bayar',
+          nilaiSebelum: null,
+          nilaiSesudah: jumlahBayar,
+        },
+      ],
       nilaiSebelum: {
         status: tagihanRecord.status,
         total_dibayar: tagihanRecord.totalDibayar,
@@ -690,6 +764,21 @@ export class TagihanService {
           jenisAksi: 'setujui_pembayaran',
           entityType: 'tagihan',
           entityId: tagihanId,
+          aksiLabel: 'Verifikasi pembayaran disetujui',
+          perubahan: [
+            {
+              namaField: 'status',
+              labelField: 'Status',
+              nilaiSebelum: tagihanRecord.status,
+              nilaiSesudah: newStatus,
+            },
+            {
+              namaField: 'total_dibayar',
+              labelField: 'Total Dibayar',
+              nilaiSebelum: tagihanRecord.totalDibayar,
+              nilaiSesudah: newTotalDibayar,
+            },
+          ],
           nilaiSebelum: {
             status: tagihanRecord.status,
             total_dibayar: tagihanRecord.totalDibayar,
@@ -765,6 +854,15 @@ export class TagihanService {
           jenisAksi: 'tolak_pembayaran',
           entityType: 'tagihan',
           entityId: tagihanId,
+          aksiLabel: 'Verifikasi pembayaran ditolak',
+          perubahan: [
+            {
+              namaField: 'status',
+              labelField: 'Status',
+              nilaiSebelum: tagihanRecord.status,
+              nilaiSesudah: 'ditolak',
+            },
+          ],
           nilaiSebelum: { status: tagihanRecord.status },
           nilaiSesudah: { status: 'ditolak' },
           alasan: dto.alasan_penolakan,
@@ -902,6 +1000,7 @@ export class TagihanService {
     tahunAjaranId: string,
     months: { bulan: number; tahun: number }[],
     kelasId?: string,
+    siswaIds?: string[],
   ): Promise<GenerateTagihanResult> {
     const db = this.drizzleService.db;
 
@@ -914,6 +1013,11 @@ export class TagihanService {
 
     if (kelasId) {
       conditions.push(eq(siswa.kelasId, kelasId));
+    }
+
+    // Filter by specific siswa_ids if provided (takes precedence over kelas filter)
+    if (siswaIds && siswaIds.length > 0) {
+      conditions.push(inArray(siswa.id, siswaIds));
     }
 
     const activeStudents = await db
@@ -932,8 +1036,10 @@ export class TagihanService {
       return { created: 0, skipped: 0, total_nominal: 0, months_processed: months.length };
     }
 
-    // Get nominal config per tingkat
-    const nominalConfig = await this.getNominalConfig(tenantId);
+    // Resolve nominal per student using the priority hierarchy (Req 6.4, 6.5, 6.7):
+    //   per-siswa override → per-kelas override → global tenant config
+    // Uses buildNominalMapForBatch to avoid N+1 queries.
+    const nominalByStudent = await this.buildNominalMapForBatch(tenantId, activeStudents);
     const tanggalJatuhTempo = await this.getTanggalJatuhTempo(tenantId);
 
     let totalCreated = 0;
@@ -967,7 +1073,7 @@ export class TagihanService {
       }[] = [];
 
       for (const student of chunk) {
-        const nominal = this.getNominalFromConfig(nominalConfig, student.tingkat);
+        const nominal = nominalByStudent.get(student.id)!;
 
         for (const month of months) {
           values.push({
@@ -1103,6 +1209,198 @@ export class TagihanService {
   private async getNominalForTingkat(tenantId: string, tingkat: number): Promise<number> {
     const config = await this.getNominalConfig(tenantId);
     return this.getNominalFromConfig(config, tingkat);
+  }
+
+  /**
+   * Resolve nominal biaya for a single student using the priority hierarchy:
+   *   1. Override per siswa   — highest priority
+   *   2. Override per kelas
+   *   3. Global tenant config (nominal_spp by tingkat)
+   *   4. None configured     — throw 400
+   *
+   * Requirements: 6.4, 6.5, 6.7
+   */
+  async resolveNominalForSiswa(
+    siswaId: string,
+    kelasId: string,
+    tenantId: string,
+    tingkat?: number,
+  ): Promise<number> {
+    const db = this.drizzleService.db;
+
+    // 1. Override per siswa
+    const [perSiswa] = await db
+      .select({ nominal: konfigurasiBiaya.nominal })
+      .from(konfigurasiBiaya)
+      .where(
+        and(
+          eq(konfigurasiBiaya.siswaId, siswaId),
+          eq(konfigurasiBiaya.tenantId, tenantId),
+          eq(konfigurasiBiaya.type, 'per_siswa'),
+        ),
+      )
+      .limit(1);
+
+    if (perSiswa?.nominal != null && perSiswa.nominal > 0) {
+      return perSiswa.nominal;
+    }
+
+    // 2. Override per kelas
+    const [perKelas] = await db
+      .select({ nominal: konfigurasiBiaya.nominal })
+      .from(konfigurasiBiaya)
+      .where(
+        and(
+          eq(konfigurasiBiaya.kelasId, kelasId),
+          eq(konfigurasiBiaya.tenantId, tenantId),
+          eq(konfigurasiBiaya.type, 'per_kelas'),
+        ),
+      )
+      .limit(1);
+
+    if (perKelas?.nominal != null && perKelas.nominal > 0) {
+      return perKelas.nominal;
+    }
+
+    // 3. Global tenant config (nominal_spp by tingkat)
+    try {
+      const nominalConfig = await this.getNominalConfig(tenantId);
+
+      // If we don't have tingkat, look it up from the kelas record
+      let resolvedTingkat = tingkat;
+      if (resolvedTingkat == null) {
+        const [kelasRecord] = await db
+          .select({ tingkat: kelas.tingkat })
+          .from(kelas)
+          .where(eq(kelas.id, kelasId))
+          .limit(1);
+        resolvedTingkat = kelasRecord?.tingkat;
+      }
+
+      if (resolvedTingkat != null) {
+        const key = `tingkat_${resolvedTingkat}`;
+        const globalNominal =
+          (nominalConfig[key] as number | undefined) ??
+          (DEFAULT_CONFIG.nominal_spp[key] as number | undefined);
+        if (globalNominal != null && globalNominal > 0) {
+          return globalNominal;
+        }
+      }
+    } catch {
+      // Fall through to the 400 below — config not found is treated as "not configured"
+    }
+
+    // 4. Nothing configured
+    throw new BadRequestException(
+      'Tidak ada nominal biaya yang dikonfigurasi. Silakan atur nominal biaya terlebih dahulu.',
+    );
+  }
+
+  /**
+   * Build a per-student nominal map for a batch of students in a single tenant.
+   * Uses three DB lookups instead of N per-student lookups:
+   *   1. Fetch all per-siswa overrides for the student IDs in the batch
+   *   2. Fetch all per-kelas overrides for the kelas IDs in the batch
+   *   3. Fall back to global nominal_spp config (already in memory)
+   *
+   * Returns a Map<siswaId, nominal>.
+   *
+   * Requirements: 6.4, 6.5, 6.7
+   */
+  private async buildNominalMapForBatch(
+    tenantId: string,
+    students: { id: string; kelasId: string | null; tingkat: number }[],
+  ): Promise<Map<string, number>> {
+    const db = this.drizzleService.db;
+
+    const siswaIds = students.map((s) => s.id);
+    const kelasIds = [
+      ...new Set(students.map((s) => s.kelasId).filter((id): id is string => id != null)),
+    ];
+
+    // 1. Per-siswa overrides — one query for the whole batch
+    const siswaOverrides = await db
+      .select({ siswaId: konfigurasiBiaya.siswaId, nominal: konfigurasiBiaya.nominal })
+      .from(konfigurasiBiaya)
+      .where(
+        and(
+          eq(konfigurasiBiaya.tenantId, tenantId),
+          eq(konfigurasiBiaya.type, 'per_siswa'),
+          // Drizzle's inArray requires at least one element; guard is in processGeneration
+          sql`${konfigurasiBiaya.siswaId} = ANY(${sql.raw(`ARRAY[${siswaIds.map((id) => `'${id}'`).join(',')}]::uuid[]`)})`,
+        ),
+      );
+
+    const siswaOverrideMap = new Map(
+      siswaOverrides
+        .filter((r) => r.siswaId != null && r.nominal != null && r.nominal > 0)
+        .map((r) => [r.siswaId!, r.nominal]),
+    );
+
+    // 2. Per-kelas overrides — one query for all unique kelas
+    const kelasOverrides = await db
+      .select({ kelasId: konfigurasiBiaya.kelasId, nominal: konfigurasiBiaya.nominal })
+      .from(konfigurasiBiaya)
+      .where(
+        and(
+          eq(konfigurasiBiaya.tenantId, tenantId),
+          eq(konfigurasiBiaya.type, 'per_kelas'),
+          sql`${konfigurasiBiaya.kelasId} = ANY(${sql.raw(`ARRAY[${kelasIds.map((id) => `'${id}'`).join(',')}]::uuid[]`)})`,
+        ),
+      );
+
+    const kelasOverrideMap = new Map(
+      kelasOverrides
+        .filter((r) => r.kelasId != null && r.nominal != null && r.nominal > 0)
+        .map((r) => [r.kelasId!, r.nominal]),
+    );
+
+    // 3. Global config for fallback
+    let nominalConfig: Record<string, number> = {};
+    try {
+      nominalConfig = await this.getNominalConfig(tenantId);
+    } catch {
+      // If config not found, we rely on per-student/kelas overrides only
+    }
+
+    // Build the result map
+    const result = new Map<string, number>();
+    const unconfigured: string[] = [];
+
+    for (const student of students) {
+      // Priority 1: per siswa
+      if (siswaOverrideMap.has(student.id)) {
+        result.set(student.id, siswaOverrideMap.get(student.id)!);
+        continue;
+      }
+
+      // Priority 2: per kelas (skip if student has no kelas)
+      if (student.kelasId != null && kelasOverrideMap.has(student.kelasId)) {
+        result.set(student.id, kelasOverrideMap.get(student.kelasId)!);
+        continue;
+      }
+
+      // Priority 3: global config by tingkat
+      const key = `tingkat_${student.tingkat}`;
+      const globalNominal =
+        (nominalConfig[key] as number | undefined) ??
+        (DEFAULT_CONFIG.nominal_spp[key] as number | undefined);
+
+      if (globalNominal != null && globalNominal > 0) {
+        result.set(student.id, globalNominal);
+        continue;
+      }
+
+      unconfigured.push(student.id);
+    }
+
+    if (unconfigured.length > 0) {
+      throw new BadRequestException(
+        'Tidak ada nominal biaya yang dikonfigurasi. Silakan atur nominal biaya terlebih dahulu.',
+      );
+    }
+
+    return result;
   }
 
   private async getTanggalJatuhTempo(tenantId: string): Promise<number> {
@@ -1390,6 +1688,21 @@ export class TagihanService {
       jenisAksi: 'hapus_tagihan',
       entityType: 'tagihan',
       entityId: tagihanId,
+      aksiLabel: 'Menghapus tagihan',
+      perubahan: [
+        {
+          namaField: 'nominal',
+          labelField: 'Nominal',
+          nilaiSebelum: tagihanRecord.nominal,
+          nilaiSesudah: null,
+        },
+        {
+          namaField: 'status',
+          labelField: 'Status',
+          nilaiSebelum: tagihanRecord.status,
+          nilaiSesudah: null,
+        },
+      ],
       nilaiSebelum: {
         nominal: tagihanRecord.nominal,
         bulan: tagihanRecord.bulan,
@@ -1442,6 +1755,15 @@ export class TagihanService {
       jenisAksi: 'edit_tagihan',
       entityType: 'tagihan',
       entityId: tagihanId,
+      aksiLabel: 'Mengubah nominal tagihan',
+      perubahan: [
+        {
+          namaField: 'nominal',
+          labelField: 'Nominal',
+          nilaiSebelum: nominalSebelum,
+          nilaiSesudah: dto.nominal,
+        },
+      ],
       nilaiSebelum: { nominal: nominalSebelum },
       nilaiSesudah: { nominal: dto.nominal },
       alasan: null,
@@ -1497,6 +1819,15 @@ export class TagihanService {
       jenisAksi: 'batalkan_tagihan',
       entityType: 'tagihan',
       entityId: tagihanId,
+      aksiLabel: 'Membatalkan tagihan',
+      perubahan: [
+        {
+          namaField: 'status',
+          labelField: 'Status',
+          nilaiSebelum: 'belum_bayar',
+          nilaiSesudah: 'dibatalkan',
+        },
+      ],
       nilaiSebelum: { status: 'belum_bayar' },
       nilaiSesudah: { status: 'dibatalkan' },
       alasan: dto.alasan,
@@ -1731,6 +2062,7 @@ export class TagihanService {
         nominal: row.nominal,
         total_dibayar: row.totalDibayar,
         sisa_tagihan: row.nominal - row.totalDibayar,
+        sisa: Math.max(0, row.nominal - row.totalDibayar), // Req 7.1 — server-side, always non-negative
         status: row.status,
         tanggal_jatuh_tempo: row.tanggalJatuhTempo,
       })),
@@ -1741,36 +2073,365 @@ export class TagihanService {
   }
 
   // ═══════════════════════════════════════════════════════════════════
-  // EXPORT (Requirements: 15.6–15.8)
+  // EXPORT TAGIHAN & TUNGGAKAN (Requirements: 9.1, 9.2, 9.3, 9.4)
   // ═══════════════════════════════════════════════════════════════════
 
   /**
-   * Enqueue an export job for billing data (tunggakan or period-based report).
-   * Returns job_id so client can poll for completion.
+   * Export tagihan list to XLSX or PDF.
    *
-   * Export payload: { tenantId, format, periode_bulan, periode_tahun, requestedBy }
-   * Data included: nama siswa, kelas, bulan, nominal, status, tanggal bayar (Req 15.8)
+   * Column order (Req 9.3): nama_siswa | kelas | bulan | tahun | nominal |
+   *   total_dibayar | sisa | status | tanggal_jatuh_tempo
    *
-   * Requirements: 15.6, 15.7, 15.8
+   * Max 10.000 rows. Returns { buffer, filename } so controller can set headers.
+   *
+   * Requirements: 9.1, 9.3, 9.4
    */
-  async exportTagihan(
+  async exportTagihanFile(
+    filters: {
+      status?: string;
+      kelas_id?: string;
+      bulan?: number;
+      tahun?: number;
+      search?: string;
+    },
+    format: 'xlsx' | 'pdf',
     tenantId: string,
-    userId: string,
-    query: ExportTagihanQueryDto,
-  ): Promise<{ job_id: string; message: string }> {
-    const { format, periode_bulan, periode_tahun } = query;
+  ): Promise<{ buffer: Buffer; filename: string }> {
+    const db = this.drizzleService.db;
 
-    const job = await this.exportQueue.add('export-tagihan', {
-      tenantId,
-      format,
-      periode_bulan,
-      periode_tahun,
-      requestedBy: userId,
-    });
+    const conditions: any[] = [eq(tagihan.tenantId, tenantId)];
 
-    return {
-      job_id: String(job.id),
-      message: 'Export tagihan sedang diproses. Silakan cek status export secara berkala.',
+    if (filters.status) {
+      conditions.push(eq(tagihan.status, filters.status as any));
+    }
+    if (filters.kelas_id) {
+      conditions.push(eq(siswa.kelasId, filters.kelas_id));
+    }
+    if (filters.bulan) {
+      conditions.push(eq(tagihan.bulan, filters.bulan));
+    }
+    if (filters.tahun) {
+      conditions.push(eq(tagihan.tahun, filters.tahun));
+    }
+    if (filters.search) {
+      conditions.push(ilike(siswa.nama, `%${filters.search}%`));
+    }
+
+    const rows = await db
+      .select({
+        siswa_nama: siswa.nama,
+        kelas_nama: kelas.nama,
+        bulan: tagihan.bulan,
+        tahun: tagihan.tahun,
+        nominal: tagihan.nominal,
+        total_dibayar: tagihan.totalDibayar,
+        status: tagihan.status,
+        tanggal_jatuh_tempo: tagihan.tanggalJatuhTempo,
+      })
+      .from(tagihan)
+      .innerJoin(siswa, eq(tagihan.siswaId, siswa.id))
+      .leftJoin(kelas, eq(siswa.kelasId, kelas.id))
+      .where(and(...conditions))
+      .orderBy(sql`${tagihan.createdAt} DESC`)
+      .limit(10000);
+
+    const exportRows = rows.map((r) => ({
+      nama_siswa: r.siswa_nama ?? '',
+      kelas: r.kelas_nama ?? '-',
+      bulan: r.bulan,
+      tahun: r.tahun,
+      nominal: r.nominal,
+      total_dibayar: r.total_dibayar,
+      sisa: Math.max(0, r.nominal - r.total_dibayar),
+      status: r.status,
+      tanggal_jatuh_tempo: r.tanggal_jatuh_tempo ?? '-',
+    }));
+
+    const dateStr = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+
+    if (format === 'xlsx') {
+      const buffer = await this.buildTagihanXlsx(exportRows);
+      return { buffer, filename: `tagihan_list_${dateStr}.xlsx` };
+    } else {
+      const namaSekolah = await this.getTenantNama(tenantId);
+      const buffer = await this.buildTagihanPdf(exportRows, namaSekolah);
+      return { buffer, filename: `tagihan_list_${dateStr}.pdf` };
+    }
+  }
+
+  /**
+   * Export tunggakan list to XLSX or PDF.
+   *
+   * Column order (Req 9.3): nama_siswa | kelas | bulan | tahun | nominal |
+   *   total_dibayar | sisa | status | tanggal_jatuh_tempo
+   *
+   * Tunggakan = tagihan with status belum_bayar or cicilan.
+   * Max 10.000 rows. Returns { buffer, filename }.
+   *
+   * Requirements: 9.2, 9.3, 9.4
+   */
+  async exportTunggakan(
+    filters: { kelas_id?: string },
+    format: 'xlsx' | 'pdf',
+    tenantId: string,
+  ): Promise<{ buffer: Buffer; filename: string }> {
+    const db = this.drizzleService.db;
+
+    const conditions: any[] = [
+      eq(tagihan.tenantId, tenantId),
+      or(eq(tagihan.status, 'belum_bayar'), eq(tagihan.status, 'cicilan')),
+    ];
+
+    if (filters.kelas_id) {
+      conditions.push(eq(siswa.kelasId, filters.kelas_id));
+    }
+
+    const rows = await db
+      .select({
+        siswa_nama: siswa.nama,
+        kelas_nama: kelas.nama,
+        bulan: tagihan.bulan,
+        tahun: tagihan.tahun,
+        nominal: tagihan.nominal,
+        total_dibayar: tagihan.totalDibayar,
+        status: tagihan.status,
+        tanggal_jatuh_tempo: tagihan.tanggalJatuhTempo,
+      })
+      .from(tagihan)
+      .innerJoin(siswa, eq(tagihan.siswaId, siswa.id))
+      .leftJoin(kelas, eq(siswa.kelasId, kelas.id))
+      .where(and(...conditions))
+      .orderBy(asc(tagihan.tanggalJatuhTempo))
+      .limit(10000);
+
+    const exportRows = rows.map((r) => ({
+      nama_siswa: r.siswa_nama ?? '',
+      kelas: r.kelas_nama ?? '-',
+      bulan: r.bulan,
+      tahun: r.tahun,
+      nominal: r.nominal,
+      total_dibayar: r.total_dibayar,
+      sisa: Math.max(0, r.nominal - r.total_dibayar),
+      status: r.status,
+      tanggal_jatuh_tempo: r.tanggal_jatuh_tempo ?? '-',
+    }));
+
+    const dateStr = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+
+    if (format === 'xlsx') {
+      const buffer = await this.buildTagihanXlsx(exportRows);
+      return { buffer, filename: `tagihan_tunggakan_${dateStr}.xlsx` };
+    } else {
+      const namaSekolah = await this.getTenantNama(tenantId);
+      const buffer = await this.buildTagihanPdf(exportRows, namaSekolah);
+      return { buffer, filename: `tagihan_tunggakan_${dateStr}.pdf` };
+    }
+  }
+
+  /**
+   * Build an XLSX buffer from export rows.
+   * Column order (Req 9.3): nama_siswa | kelas | bulan | tahun | nominal |
+   *   total_dibayar | sisa | status | tanggal_jatuh_tempo
+   */
+  private async buildTagihanXlsx(
+    rows: {
+      nama_siswa: string;
+      kelas: string;
+      bulan: number;
+      tahun: number;
+      nominal: number;
+      total_dibayar: number;
+      sisa: number;
+      status: string;
+      tanggal_jatuh_tempo: string;
+    }[],
+  ): Promise<Buffer> {
+    const workbook = new ExcelJS.Workbook();
+    const sheet = workbook.addWorksheet('Tagihan');
+
+    // Define columns in exact order per Req 9.3
+    sheet.columns = [
+      { header: 'Nama Siswa', key: 'nama_siswa', width: 30 },
+      { header: 'Kelas', key: 'kelas', width: 15 },
+      { header: 'Bulan', key: 'bulan', width: 8 },
+      { header: 'Tahun', key: 'tahun', width: 8 },
+      { header: 'Nominal', key: 'nominal', width: 15 },
+      { header: 'Total Dibayar', key: 'total_dibayar', width: 15 },
+      { header: 'Sisa', key: 'sisa', width: 15 },
+      { header: 'Status', key: 'status', width: 20 },
+      { header: 'Tanggal Jatuh Tempo', key: 'tanggal_jatuh_tempo', width: 20 },
+    ];
+
+    // Style header row
+    const headerRow = sheet.getRow(1);
+    headerRow.font = { bold: true };
+    headerRow.fill = {
+      type: 'pattern',
+      pattern: 'solid',
+      fgColor: { argb: 'FFD9EAD3' },
     };
+
+    // Add data rows
+    for (const row of rows) {
+      sheet.addRow(row);
+    }
+
+    const arrayBuffer = await workbook.xlsx.writeBuffer();
+    return Buffer.from(arrayBuffer);
+  }
+
+  /**
+   * Build a PDF buffer from export rows.
+   * Header: nama sekolah + tanggal cetak (dd/MM/yyyy).
+   * Table with same 9-column layout as XLSX.
+   */
+  private buildTagihanPdf(
+    rows: {
+      nama_siswa: string;
+      kelas: string;
+      bulan: number;
+      tahun: number;
+      nominal: number;
+      total_dibayar: number;
+      sisa: number;
+      status: string;
+      tanggal_jatuh_tempo: string;
+    }[],
+    namaSekolah: string,
+  ): Promise<Buffer> {
+    return new Promise((resolve, reject) => {
+      const doc = new PDFDocument({ margin: 30, size: 'A4', layout: 'landscape' });
+      const chunks: Buffer[] = [];
+
+      doc.on('data', (chunk: Buffer) => chunks.push(chunk));
+      doc.on('end', () => resolve(Buffer.concat(chunks)));
+      doc.on('error', reject);
+
+      // ── Header ──────────────────────────────────────────────────────
+      const now = new Date();
+      const dd = String(now.getDate()).padStart(2, '0');
+      const mm = String(now.getMonth() + 1).padStart(2, '0');
+      const yyyy = now.getFullYear();
+      const tanggalCetak = `${dd}/${mm}/${yyyy}`;
+
+      doc.fontSize(14).font('Helvetica-Bold').text(namaSekolah, { align: 'center' });
+      doc
+        .fontSize(10)
+        .font('Helvetica')
+        .text(`Tanggal Cetak: ${tanggalCetak}`, { align: 'center' });
+      doc.moveDown(0.5);
+      doc
+        .moveTo(30, doc.y)
+        .lineTo(doc.page.width - 30, doc.y)
+        .stroke();
+      doc.moveDown(0.5);
+
+      // ── Column definitions ──────────────────────────────────────────
+      const cols = [
+        { label: 'Nama Siswa', width: 130 },
+        { label: 'Kelas', width: 50 },
+        { label: 'Bulan', width: 35 },
+        { label: 'Tahun', width: 35 },
+        { label: 'Nominal', width: 70 },
+        { label: 'Total Dibayar', width: 75 },
+        { label: 'Sisa', width: 70 },
+        { label: 'Status', width: 80 },
+        { label: 'Tgl Jatuh Tempo', width: 80 },
+      ];
+
+      const rowHeight = 16;
+      const fontSize = 8;
+      const startX = 30;
+
+      const drawTableRow = (y: number, values: string[], isHeader: boolean) => {
+        let x = startX;
+        if (isHeader) {
+          doc
+            .rect(
+              startX,
+              y,
+              cols.reduce((s, c) => s + c.width, 0),
+              rowHeight,
+            )
+            .fill('#4a86c8');
+        }
+        for (let i = 0; i < cols.length; i++) {
+          const col = cols[i];
+          const text = values[i] ?? '';
+          if (isHeader) {
+            doc.fontSize(fontSize).font('Helvetica-Bold').fillColor('white');
+          } else {
+            doc.fontSize(fontSize).font('Helvetica').fillColor('black');
+          }
+          doc.text(text, x + 2, y + 3, {
+            width: col.width - 4,
+            height: rowHeight - 4,
+            ellipsis: true,
+            lineBreak: false,
+          });
+          // Cell border
+          doc.rect(x, y, col.width, rowHeight).stroke();
+          x += col.width;
+        }
+      };
+
+      // ── Table header ─────────────────────────────────────────────────
+      let currentY = doc.y;
+      drawTableRow(
+        currentY,
+        cols.map((c) => c.label),
+        true,
+      );
+      currentY += rowHeight;
+
+      // ── Table rows ───────────────────────────────────────────────────
+      const formatRp = (n: number) => `Rp ${n.toLocaleString('id-ID')}`;
+
+      for (const row of rows) {
+        // Page break if needed
+        if (currentY + rowHeight > doc.page.height - doc.page.margins.bottom) {
+          doc.addPage();
+          currentY = doc.page.margins.top;
+          drawTableRow(
+            currentY,
+            cols.map((c) => c.label),
+            true,
+          );
+          currentY += rowHeight;
+        }
+
+        drawTableRow(
+          currentY,
+          [
+            row.nama_siswa,
+            row.kelas,
+            String(row.bulan),
+            String(row.tahun),
+            formatRp(row.nominal),
+            formatRp(row.total_dibayar),
+            formatRp(row.sisa),
+            row.status,
+            row.tanggal_jatuh_tempo,
+          ],
+          false,
+        );
+        currentY += rowHeight;
+      }
+
+      doc.end();
+    });
+  }
+
+  /**
+   * Get tenant name (nama sekolah) for PDF header.
+   */
+  private async getTenantNama(tenantId: string): Promise<string> {
+    const db = this.drizzleService.db;
+    const [record] = await db
+      .select({ nama: tenant.nama })
+      .from(tenant)
+      .where(eq(tenant.id, tenantId))
+      .limit(1);
+    return record?.nama ?? 'Teman Sekolah';
   }
 }

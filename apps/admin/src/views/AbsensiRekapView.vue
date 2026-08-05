@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, watch } from 'vue';
+import { ref, computed, onMounted, watch, onUnmounted } from 'vue';
 import { api } from '@/api/client';
 import { PageHeader, SearchSelect, ActionButton } from '@/components/ui';
 import type { SelectOption } from '@/components/ui';
@@ -46,6 +46,31 @@ const BULAN_LABELS = [
   'November',
   'Desember',
 ];
+
+const STATUS_COLORS: Record<string, string> = {
+  hadir: '#dcfce7',
+  izin: '#fef3c7',
+  sakit: '#e0e7ff',
+  alpa: '#fee2e2',
+};
+
+// Helper to get status color (avoids template accessing const directly)
+function getStatusColor(status: string): string {
+  return STATUS_COLORS[status] || '#ffffff';
+}
+
+// Responsive breakpoint detection
+const isMobile = ref(false);
+const checkMobile = () => {
+  isMobile.value = window.innerWidth < 768;
+};
+onMounted(() => {
+  checkMobile();
+  window.addEventListener('resize', checkMobile);
+});
+onUnmounted(() => {
+  window.removeEventListener('resize', checkMobile);
+});
 
 // State
 const kelasList = ref<Kelas[]>([]);
@@ -222,7 +247,7 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="p-8 max-w-7xl mx-auto">
+  <div class="p-4 md:p-8 max-w-7xl mx-auto">
     <PageHeader title="Rekap Absensi">
       <template #actions>
         <ActionButton
@@ -230,6 +255,7 @@ onMounted(() => {
           variant="primary"
           icon="download"
           :disabled="exporting"
+          class="w-full sm:w-auto"
           @click="exportRekap"
         >
           {{ exporting ? 'Mengexport...' : 'Export' }}
@@ -237,9 +263,11 @@ onMounted(() => {
       </template>
     </PageHeader>
 
-    <!-- Filter Bar -->
-    <div class="flex flex-wrap items-center gap-4 mb-6">
-      <div class="min-w-[200px]">
+    <!-- Filter Bar - Mobile optimized -->
+    <div
+      class="grid grid-cols-1 sm:grid-cols-2 lg:flex lg:flex-wrap items-stretch lg:items-center gap-3 sm:gap-4 mb-6"
+    >
+      <div class="sm:min-w-[200px]">
         <SearchSelect
           v-model="selectedKelasId"
           :options="kelasOptions"
@@ -248,7 +276,7 @@ onMounted(() => {
         />
       </div>
 
-      <div class="min-w-[150px]">
+      <div class="sm:min-w-[150px]">
         <SearchSelect
           v-model="selectedPeriode"
           :options="PERIODE_OPTIONS"
@@ -257,11 +285,11 @@ onMounted(() => {
         />
       </div>
 
-      <div v-if="selectedPeriode === 'bulanan'" class="min-w-[160px]">
+      <div v-if="selectedPeriode === 'bulanan'" class="sm:min-w-[160px]">
         <SearchSelect v-model="selectedBulan" :options="bulanOptions" label="Bulan" />
       </div>
 
-      <div v-if="selectedPeriode === 'semester'" class="min-w-[160px]">
+      <div v-if="selectedPeriode === 'semester'" class="sm:min-w-[160px]">
         <SearchSelect
           v-model="selectedSemester"
           :options="SEMESTER_OPTIONS"
@@ -270,7 +298,7 @@ onMounted(() => {
         />
       </div>
 
-      <div class="min-w-[120px]">
+      <div class="sm:min-w-[120px]">
         <SearchSelect
           v-model="selectedTahun"
           :options="tahunSelectOptions"
@@ -283,7 +311,7 @@ onMounted(() => {
     <!-- Error -->
     <div
       v-if="errorMessage"
-      class="p-4 bg-danger-50 border-2 border-danger-500/20 rounded-xs text-[15px] text-danger-700 mb-4"
+      class="p-3 sm:p-4 bg-danger-50 border-2 border-danger-500/20 rounded-xs text-[14px] sm:text-[15px] text-danger-700 mb-4"
     >
       {{ errorMessage }}
     </div>
@@ -303,14 +331,16 @@ onMounted(() => {
 
     <!-- Rekap Content -->
     <div v-else-if="rekapData">
-      <!-- Info Bar -->
-      <div class="flex flex-wrap gap-6 p-4 bg-surface-warm rounded-xs mb-5 text-[15px]">
+      <!-- Info Bar - Mobile optimized -->
+      <div
+        class="grid grid-cols-1 sm:flex sm:flex-wrap gap-3 sm:gap-6 p-3 sm:p-4 bg-surface-warm rounded-xs mb-5 text-[14px] sm:text-[15px]"
+      >
         <div class="flex items-center gap-2">
           <span class="text-stone-500">Periode:</span>
           <span class="font-bold text-stone-800">{{ periodeLabel }}</span>
         </div>
-        <div class="flex items-center gap-2">
-          <span class="text-stone-500">Total Hari Efektif:</span>
+        <div class="flex items-center gap-2 flex-wrap">
+          <span class="text-stone-500">Hari Efektif:</span>
           <span class="font-bold text-stone-800">
             {{
               rekapData.totalHariEfektif !== null
@@ -318,12 +348,15 @@ onMounted(() => {
                 : 'Belum tersedia'
             }}
           </span>
-          <span v-if="rekapData.hariEfektifSource" class="text-[13px] text-stone-400">
-            ({{ rekapData.hariEfektifSource === 'manual' ? 'input manual' : 'kalkulasi otomatis' }})
+          <span
+            v-if="rekapData.hariEfektifSource"
+            class="text-[12px] sm:text-[13px] text-stone-400"
+          >
+            ({{ rekapData.hariEfektifSource === 'manual' ? 'manual' : 'otomatis' }})
           </span>
         </div>
         <div v-if="averagePercentage !== null" class="flex items-center gap-2">
-          <span class="text-stone-500">Rata-rata Kehadiran:</span>
+          <span class="text-stone-500">Rata-rata:</span>
           <span class="font-bold" :class="getPercentageClass(averagePercentage)">
             {{ averagePercentage }}%
           </span>
@@ -333,14 +366,117 @@ onMounted(() => {
       <!-- Hari efektif warning -->
       <div
         v-if="rekapData.totalHariEfektif === null"
-        class="p-4 bg-warning-50 border-2 border-warning-500/20 rounded-xs text-[15px] text-warning-700 mb-4"
+        class="p-3 sm:p-4 bg-warning-50 border-2 border-warning-500/20 rounded-xs text-[14px] sm:text-[15px] text-warning-700 mb-4"
       >
         ⚠️ Data hari efektif belum tersedia. Persentase kehadiran tidak dapat dihitung.
       </div>
 
-      <!-- Rekap Table Card -->
+      <!-- ===== MOBILE VIEW: Card-based layout ===== -->
+      <div v-if="rekapData.data && rekapData.data.length > 0 && isMobile" class="space-y-3">
+        <!-- Section Header -->
+        <div
+          class="bg-primary-50 px-4 py-3 rounded-t-[12px] border-2 border-primary-200 border-b-0"
+        >
+          <h3 class="text-[15px] font-bold text-primary-800">Rekap Kehadiran</h3>
+        </div>
+
+        <!-- Student Cards -->
+        <div
+          v-for="(siswa, index) in rekapData.data"
+          :key="siswa.siswaId"
+          class="bg-white rounded-[12px] border-2 border-stone-200 shadow-xs overflow-hidden"
+        >
+          <!-- Card Header -->
+          <div class="px-4 py-3 border-b border-stone-100">
+            <div class="flex items-center justify-between">
+              <div class="flex items-center gap-3 min-w-0">
+                <span
+                  class="w-7 h-7 rounded-full bg-primary-100 text-primary-700 flex items-center justify-center text-[12px] font-bold flex-shrink-0"
+                >
+                  {{ index + 1 }}
+                </span>
+                <div class="min-w-0">
+                  <p class="text-[15px] font-semibold text-stone-800 truncate">
+                    {{ siswa.siswaNama }}
+                  </p>
+                  <p class="text-[12px] text-stone-500">NISN: {{ siswa.siswaNisn || '-' }}</p>
+                </div>
+              </div>
+              <!-- Percentage badge -->
+              <span
+                class="px-2.5 py-1 rounded-full text-[12px] font-bold flex-shrink-0"
+                :class="getPercentageClass(siswa.persentaseKehadiran)"
+                :style="{
+                  background:
+                    siswa.persentaseKehadiran !== null && siswa.persentaseKehadiran >= 90
+                      ? '#dcfce7'
+                      : siswa.persentaseKehadiran !== null && siswa.persentaseKehadiran >= 75
+                        ? '#fef3c7'
+                        : '#fee2e2',
+                }"
+              >
+                {{ siswa.persentaseKehadiran !== null ? siswa.persentaseKehadiran + '%' : '-' }}
+              </span>
+            </div>
+          </div>
+
+          <!-- Status Grid -->
+          <div class="grid grid-cols-4 gap-0">
+            <div
+              class="py-3 text-center border-r border-stone-100"
+              :style="{ background: getStatusColor('hadir') }"
+            >
+              <span class="block text-[16px] font-bold text-success-700">{{ siswa.hadir }}</span>
+              <span class="block text-[10px] font-semibold text-stone-600">Hadir</span>
+            </div>
+            <div
+              class="py-3 text-center border-r border-stone-100"
+              :style="{ background: getStatusColor('izin') }"
+            >
+              <span class="block text-[16px] font-bold text-warning-700">{{ siswa.izin }}</span>
+              <span class="block text-[10px] font-semibold text-stone-600">Izin</span>
+            </div>
+            <div
+              class="py-3 text-center border-r border-stone-100"
+              :style="{ background: getStatusColor('sakit') }"
+            >
+              <span class="block text-[16px] font-bold text-primary-700">{{ siswa.sakit }}</span>
+              <span class="block text-[10px] font-semibold text-stone-600">Sakit</span>
+            </div>
+            <div class="py-3 text-center" :style="{ background: getStatusColor('alpa') }">
+              <span class="block text-[16px] font-bold text-danger-700">{{ siswa.alpa }}</span>
+              <span class="block text-[10px] font-semibold text-stone-600">Alpa</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Totals Card -->
+        <div class="bg-primary-100 rounded-[12px] border-2 border-primary-300 p-4">
+          <p class="text-[14px] font-bold text-primary-800 mb-3">Total Keseluruhan</p>
+          <div class="grid grid-cols-4 gap-3 text-center">
+            <div>
+              <span class="block text-[18px] font-bold text-success-700">{{ totals.hadir }}</span>
+              <span class="block text-[11px] text-stone-600">Hadir</span>
+            </div>
+            <div>
+              <span class="block text-[18px] font-bold text-warning-700">{{ totals.izin }}</span>
+              <span class="block text-[11px] text-stone-600">Izin</span>
+            </div>
+            <div>
+              <span class="block text-[18px] font-bold text-primary-700">{{ totals.sakit }}</span>
+              <span class="block text-[11px] text-stone-600">Sakit</span>
+            </div>
+            <div>
+              <span class="block text-[18px] font-bold text-danger-700">{{ totals.alpa }}</span>
+              <span class="block text-[11px] text-stone-600">Alpa</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ===== DESKTOP VIEW: Table layout ===== -->
       <div
-        v-if="rekapData.data && rekapData.data.length > 0"
+        v-else-if="rekapData.data && rekapData.data.length > 0"
         class="bg-white rounded-[16px] border-2 border-stone-200 shadow-xs overflow-hidden"
       >
         <!-- Section Header -->

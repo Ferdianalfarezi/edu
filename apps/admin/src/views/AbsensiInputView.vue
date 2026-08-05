@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, watch } from 'vue';
+import { ref, computed, onMounted, watch, onUnmounted } from 'vue';
 import { api } from '@/api/client';
 import { useAuthStore } from '@/stores/auth';
 import { Role } from '@edu/shared';
@@ -43,6 +43,25 @@ const STATUS_COLORS: Record<string, string> = {
   sakit: '#e0e7ff',
   alpa: '#fee2e2',
 };
+const STATUS_ICONS: Record<string, string> = {
+  hadir: '✓',
+  izin: '📋',
+  sakit: '🏥',
+  alpa: '✗',
+};
+
+// Responsive breakpoint detection
+const isMobile = ref(false);
+const checkMobile = () => {
+  isMobile.value = window.innerWidth < 768;
+};
+onMounted(() => {
+  checkMobile();
+  window.addEventListener('resize', checkMobile);
+});
+onUnmounted(() => {
+  window.removeEventListener('resize', checkMobile);
+});
 
 const authStore = useAuthStore();
 
@@ -209,26 +228,28 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="p-8 max-w-7xl mx-auto">
+  <div class="p-4 md:p-8 max-w-7xl mx-auto">
     <PageHeader title="Input Absensi" />
 
-    <!-- Filter Bar -->
-    <div class="flex flex-wrap items-center gap-4 mb-6">
-      <div class="flex items-center gap-2">
-        <label class="text-[15px] font-semibold text-stone-700">Tanggal:</label>
+    <!-- Filter Bar - Mobile optimized -->
+    <div
+      class="flex flex-col sm:flex-row flex-wrap items-stretch sm:items-center gap-3 sm:gap-4 mb-6"
+    >
+      <div class="flex flex-col sm:flex-row sm:items-center gap-2">
+        <label class="text-[14px] sm:text-[15px] font-semibold text-stone-700">Tanggal:</label>
         <input
           v-model="selectedTanggal"
           type="date"
-          class="px-4 py-2.5 text-[15px] border-2 border-stone-200 rounded-xs focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 min-w-[160px]"
+          class="w-full sm:w-auto px-4 py-3 sm:py-2.5 text-[16px] border-2 border-stone-200 rounded-xs focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 min-w-[160px]"
         />
       </div>
-      <div class="flex items-center gap-2">
-        <label class="text-[15px] font-semibold text-stone-700">Kelas:</label>
+      <div class="flex flex-col sm:flex-row sm:items-center gap-2">
+        <label class="text-[14px] sm:text-[15px] font-semibold text-stone-700">Kelas:</label>
         <SearchSelect
           v-model="selectedKelasId"
           :options="kelasSelectOptions"
           placeholder="Pilih Kelas"
-          class="min-w-[200px] max-w-xs"
+          class="w-full sm:w-auto sm:min-w-[200px] sm:max-w-xs"
         />
       </div>
     </div>
@@ -236,7 +257,7 @@ onMounted(() => {
     <!-- Holiday Warning -->
     <div
       v-if="holidayWarning"
-      class="p-4 bg-warning-50 border-2 border-warning-500/20 rounded-xs text-[15px] text-warning-700 mb-4"
+      class="p-3 sm:p-4 bg-warning-50 border-2 border-warning-500/20 rounded-xs text-[14px] sm:text-[15px] text-warning-700 mb-4"
     >
       ⚠️ {{ holidayWarning }}
     </div>
@@ -244,7 +265,7 @@ onMounted(() => {
     <!-- Read-only Notice -->
     <div
       v-if="isReadOnly && existingAbsensi.length > 0"
-      class="p-4 bg-primary-50 border-2 border-primary-500/20 rounded-xs text-[15px] text-primary-700 mb-4"
+      class="p-3 sm:p-4 bg-primary-50 border-2 border-primary-500/20 rounded-xs text-[14px] sm:text-[15px] text-primary-700 mb-4"
     >
       ℹ️ Absensi sudah diinput. Data ditampilkan dalam mode read-only.
     </div>
@@ -252,13 +273,13 @@ onMounted(() => {
     <!-- Messages -->
     <div
       v-if="successMessage"
-      class="p-4 bg-success-50 border-2 border-success-500/20 rounded-xs text-[15px] text-success-700 mb-4"
+      class="p-3 sm:p-4 bg-success-50 border-2 border-success-500/20 rounded-xs text-[14px] sm:text-[15px] text-success-700 mb-4"
     >
       ✅ {{ successMessage }}
     </div>
     <div
       v-if="errorMessage"
-      class="p-4 bg-danger-50 border-2 border-danger-500/20 rounded-xs text-[15px] text-danger-700 mb-4"
+      class="p-3 sm:p-4 bg-danger-50 border-2 border-danger-500/20 rounded-xs text-[14px] sm:text-[15px] text-danger-700 mb-4"
     >
       ❌ {{ errorMessage }}
     </div>
@@ -279,22 +300,26 @@ onMounted(() => {
     <!-- Student List -->
     <div v-else-if="siswaList.length > 0 && selectedKelasId">
       <!-- Quick Actions -->
-      <div v-if="!isReadOnly" class="flex items-center gap-3 mb-4">
-        <span class="text-[15px] font-semibold text-stone-700">Set Semua:</span>
-        <button
-          v-for="status in STATUS_OPTIONS"
-          :key="status"
-          class="px-3 py-1.5 text-[13px] font-semibold rounded-xs border-2 border-stone-200 transition-colors hover:opacity-80"
-          :style="{ background: STATUS_COLORS[status] }"
-          @click="setAllStatus(status)"
+      <div v-if="!isReadOnly" class="flex flex-wrap items-center gap-2 sm:gap-3 mb-4">
+        <span class="text-[14px] sm:text-[15px] font-semibold text-stone-700 w-full sm:w-auto"
+          >Set Semua:</span
         >
-          {{ STATUS_LABELS[status] }}
-        </button>
+        <div class="flex flex-wrap gap-2">
+          <button
+            v-for="status in STATUS_OPTIONS"
+            :key="status"
+            class="px-3 py-2 sm:py-1.5 text-[13px] font-semibold rounded-xs border-2 border-stone-200 transition-colors hover:opacity-80 active:scale-95"
+            :style="{ background: STATUS_COLORS[status] }"
+            @click="setAllStatus(status)"
+          >
+            {{ STATUS_LABELS[status] }}
+          </button>
+        </div>
       </div>
 
-      <!-- Summary -->
+      <!-- Summary - Compact on mobile -->
       <div
-        class="flex flex-wrap gap-5 p-4 bg-surface-warm rounded-xs mb-5 text-[13px] text-text-secondary"
+        class="grid grid-cols-2 sm:flex sm:flex-wrap gap-3 sm:gap-5 p-3 sm:p-4 bg-surface-warm rounded-xs mb-5 text-[13px] text-text-secondary"
       >
         <span
           v-for="(count, status) in statusSummary"
@@ -302,16 +327,90 @@ onMounted(() => {
           class="inline-flex items-center gap-1.5"
         >
           <span
-            class="w-3 h-3 rounded-full inline-block"
+            class="w-3 h-3 rounded-full inline-block flex-shrink-0"
             :style="{ background: STATUS_COLORS[status] }"
           ></span>
-          {{ STATUS_LABELS[status] }}: {{ count }}
+          {{ STATUS_LABELS[status] }}: <span class="font-semibold">{{ count }}</span>
         </span>
-        <span class="font-bold text-stone-800">Total: {{ records.length }}</span>
+        <span
+          class="font-bold text-stone-800 col-span-2 sm:col-span-1 text-center sm:text-left pt-2 sm:pt-0 border-t sm:border-t-0 border-stone-200"
+        >
+          Total: {{ records.length }}
+        </span>
       </div>
 
-      <!-- Student Table Card -->
-      <div class="bg-white rounded-[16px] border-2 border-stone-200 shadow-xs overflow-hidden">
+      <!-- ===== MOBILE VIEW: Card-based layout ===== -->
+      <div v-if="isMobile" class="space-y-3">
+        <!-- Section Header -->
+        <div
+          class="bg-primary-50 px-4 py-3 rounded-t-[12px] border-2 border-primary-200 border-b-0"
+        >
+          <h3 class="text-[15px] font-bold text-primary-800">Daftar Siswa</h3>
+        </div>
+
+        <!-- Student Cards -->
+        <div
+          v-for="(record, index) in records"
+          :key="record.siswaId"
+          class="bg-white rounded-[12px] border-2 border-stone-200 shadow-xs overflow-hidden"
+        >
+          <!-- Card Header -->
+          <div class="px-4 py-3 border-b border-stone-100 flex items-center justify-between">
+            <div class="flex items-center gap-3 min-w-0">
+              <span
+                class="w-8 h-8 rounded-full bg-primary-100 text-primary-700 flex items-center justify-center text-[13px] font-bold flex-shrink-0"
+              >
+                {{ index + 1 }}
+              </span>
+              <div class="min-w-0">
+                <p class="text-[15px] font-semibold text-stone-800 truncate">
+                  {{ getSiswaName(record.siswaId) }}
+                </p>
+                <p class="text-[12px] text-stone-500">NISN: {{ getSiswaNisn(record.siswaId) }}</p>
+              </div>
+            </div>
+            <!-- Current status badge -->
+            <span
+              v-if="record.status"
+              class="px-2.5 py-1 rounded-full text-[11px] font-bold flex-shrink-0"
+              :style="{ background: STATUS_COLORS[record.status] }"
+            >
+              {{ STATUS_ICONS[record.status] }} {{ STATUS_LABELS[record.status] }}
+            </span>
+          </div>
+
+          <!-- Status Buttons - Full width tap targets -->
+          <div class="grid grid-cols-4 gap-0">
+            <button
+              v-for="status in STATUS_OPTIONS"
+              :key="status"
+              :disabled="isReadOnly"
+              class="py-4 text-center transition-all active:scale-95 border-r border-stone-100 last:border-r-0"
+              :class="{
+                'font-bold': record.status === status,
+                'opacity-50': isReadOnly,
+              }"
+              :style="
+                record.status === status
+                  ? { background: STATUS_COLORS[status] }
+                  : { background: '#ffffff' }
+              "
+              @click="!isReadOnly && (record.status = status)"
+            >
+              <span class="block text-[18px] mb-0.5">{{ STATUS_ICONS[status] }}</span>
+              <span class="block text-[11px] font-semibold text-stone-700">{{
+                STATUS_LABELS[status]
+              }}</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ===== DESKTOP VIEW: Table layout ===== -->
+      <div
+        v-else
+        class="bg-white rounded-[16px] border-2 border-stone-200 shadow-xs overflow-hidden"
+      >
         <!-- Section Header -->
         <div class="bg-primary-50 px-6 py-5 border-b-2 border-primary-200">
           <h3 class="text-[16px] font-bold text-primary-800">Daftar Siswa</h3>
@@ -388,22 +487,23 @@ onMounted(() => {
         </div>
       </div>
 
-      <!-- Submit -->
+      <!-- Submit - Mobile optimized sticky footer -->
       <div
         v-if="!isReadOnly"
-        class="flex justify-between items-center mt-6 pt-5 border-t-2 border-stone-200"
+        class="flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-4 mt-6 pt-5 border-t-2 border-stone-200"
       >
         <div
           v-if="unfilledStudents.length > 0"
-          class="p-4 bg-warning-50 border-2 border-warning-500/20 rounded-xs text-[15px] text-warning-700"
+          class="p-3 sm:p-4 bg-warning-50 border-2 border-warning-500/20 rounded-xs text-[14px] sm:text-[15px] text-warning-700"
         >
           ⚠️ {{ unfilledStudents.length }} siswa belum diisi
         </div>
-        <div v-else></div>
+        <div v-else class="hidden sm:block"></div>
         <ActionButton
           variant="primary"
           icon="check"
           :disabled="!allFilled || submitting"
+          class="w-full sm:w-auto py-4 sm:py-2 text-[16px] sm:text-[14px]"
           @click="submitAbsensi"
         >
           {{ submitting ? 'Menyimpan...' : 'Simpan Absensi' }}

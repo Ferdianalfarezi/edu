@@ -95,18 +95,18 @@ describe('Kelas Contract Tests', () => {
   // ─── GET /api/v1/kelas/:id ──────────────────────────────────────
 
   describe('GET /api/v1/kelas/:id', () => {
-    it('should return single kelas shape with required fields', async () => {
+    it('should return single kelas shape with siswa array', async () => {
       const kelasId = '550e8400-e29b-41d4-a716-446655440001';
+      const siswaId = '770e8400-e29b-41d4-a716-446655440001';
       mockKelasService.getKelasById.mockResolvedValue({
         id: kelasId,
         nama: 'Kelas 1A',
         tingkat: 1,
-        tahunAjaranId: '660e8400-e29b-41d4-a716-446655440001',
-        waliKelasId: null,
-        kapasitas: 30,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-        jumlahSiswa: 25,
+        waliKelasNama: 'Budi Santoso',
+        siswa: [
+          { id: siswaId, nama: 'Andi', nisn: '1234567890', status: 'aktif' },
+          { id: '770e8400-e29b-41d4-a716-446655440002', nama: 'Cici', nisn: null, status: 'lulus' },
+        ],
       });
 
       const res = await request(app.getHttpServer())
@@ -114,10 +114,35 @@ describe('Kelas Contract Tests', () => {
         .set('Authorization', `Bearer ${adminToken()}`)
         .expect(200);
 
-      expectObjectWithFields(res.body, ['id', 'nama', 'tingkat']);
+      expectObjectWithFields(res.body, ['id', 'nama', 'tingkat', 'waliKelasNama', 'siswa']);
       expectUUID(res.body.id);
       expect(typeof res.body.nama).toBe('string');
       expect(typeof res.body.tingkat).toBe('number');
+      expect(Array.isArray(res.body.siswa)).toBe(true);
+
+      const firstSiswa = res.body.siswa[0];
+      expectObjectWithFields(firstSiswa, ['id', 'nama', 'nisn', 'status']);
+      expectUUID(firstSiswa.id);
+      expect(typeof firstSiswa.nama).toBe('string');
+      expect(['aktif', 'tidak_aktif', 'pindah', 'lulus']).toContain(firstSiswa.status);
+    });
+
+    it('should return empty siswa array when no students enrolled', async () => {
+      const kelasId = '550e8400-e29b-41d4-a716-446655440001';
+      mockKelasService.getKelasById.mockResolvedValue({
+        id: kelasId,
+        nama: 'Kelas 1A',
+        tingkat: 1,
+        waliKelasNama: null,
+        siswa: [],
+      });
+
+      const res = await request(app.getHttpServer())
+        .get(`/api/v1/kelas/${kelasId}`)
+        .set('Authorization', `Bearer ${adminToken()}`)
+        .expect(200);
+
+      expect(res.body.siswa).toEqual([]);
     });
 
     it('should return 401 when no auth token is provided', async () => {
