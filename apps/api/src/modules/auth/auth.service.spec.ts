@@ -99,6 +99,9 @@ describe('AuthService', () => {
       del: jest.fn().mockResolvedValue(undefined),
       get: jest.fn().mockResolvedValue(null),
       set: jest.fn().mockResolvedValue(undefined),
+      setSession: jest.fn().mockResolvedValue(undefined),
+      getSession: jest.fn().mockResolvedValue(null),
+      delSession: jest.fn().mockResolvedValue(undefined),
     };
 
     mockConfigService = {

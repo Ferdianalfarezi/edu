@@ -75,7 +75,9 @@ if (tokenChannel) {
       }
     } else if (type === 'logged_out') {
       clearTokens();
-      window.location.href = '/login';
+      import('@/router').then(({ router }) => {
+        router.push('/login');
+      });
     }
   };
 }
@@ -119,12 +121,29 @@ api.interceptors.response.use(
 // Response interceptor: auto-refresh on 401 + global error toast
 api.interceptors.response.use(
   (response) => response,
-  async (error: AxiosError) => {
+  async (error: AxiosError<{ code?: string; message?: string }>) => {
     const originalRequest = error.config as InternalAxiosRequestConfig & {
       _retry?: boolean;
     };
 
-    // Only attempt refresh for 401 errors, not on login/refresh endpoints themselves
+    // Extract the error code returned by the backend
+    const errorCode = error.response?.data?.code;
+
+    // SESSION_INVALIDATED or REFRESH_TOKEN_EXPIRED → force logout immediately,
+    // do NOT attempt a refresh (it would fail or create an infinite loop).
+    if (errorCode === 'REFRESH_TOKEN_EXPIRED' || errorCode === 'SESSION_INVALIDATED') {
+      isRefreshing = false;
+      processQueue(error, null);
+      clearTokens();
+      // Lazy-import router to avoid circular dependency (auth.ts → client.ts → router)
+      import('@/router').then(({ router }) => {
+        router.push('/login');
+      });
+      return Promise.reject(error);
+    }
+
+    // Only attempt refresh for 401 errors (including TOKEN_EXPIRED),
+    // not on login/refresh endpoints themselves, and not if already retried.
     if (
       error.response?.status !== 401 ||
       originalRequest._retry ||
@@ -154,7 +173,9 @@ api.interceptors.response.use(
       isRefreshing = false;
       processQueue(error, null);
       clearTokens();
-      window.location.href = '/login';
+      import('@/router').then(({ router }) => {
+        router.push('/login');
+      });
       return Promise.reject(error);
     }
 
@@ -184,7 +205,9 @@ api.interceptors.response.use(
       isRefreshing = false;
       processQueue(refreshError, null);
       clearTokens();
-      window.location.href = '/login';
+      import('@/router').then(({ router }) => {
+        router.push('/login');
+      });
       return Promise.reject(refreshError);
     }
   },

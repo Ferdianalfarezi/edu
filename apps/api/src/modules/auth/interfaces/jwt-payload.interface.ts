@@ -17,6 +17,8 @@ export interface JwtPayload {
   platform: 'admin_panel' | 'mobile';
   /** JWT ID — used for token blacklisting */
   jti: string;
+  /** Session ID (UUID v4) — present for roles supporting single device login (non-orang_tua) */
+  sid?: string;
   /** Issued at (epoch seconds) */
   iat: number;
   /** Expiration (epoch seconds) */

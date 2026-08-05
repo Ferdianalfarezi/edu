@@ -36,6 +36,7 @@ const BCRYPT_SALT_ROUNDS = 10;
 interface TenantInfo {
   id: string;
   nama: string;
+  logo_url?: string;
 }
 
 export interface LoginResponse {
@@ -109,9 +110,10 @@ export class AuthService {
     }
 
     // Check if the user's tenant is active (skip for super_admin who has no tenant)
+    let tenantInfo: { id: string; nama: string; logo_url?: string } | null = null;
     if (foundUser.tenantId && foundUser.role !== Role.SUPER_ADMIN) {
       const tenants = await this.db
-        .select({ isActive: tenant.isActive })
+        .select({ isActive: tenant.isActive, nama: tenant.nama, logoUrl: tenant.logoUrl })
         .from(tenant)
         .where(eq(tenant.id, foundUser.tenantId))
         .limit(1);
@@ -119,6 +121,12 @@ export class AuthService {
       if (tenants.length === 0 || !tenants[0].isActive) {
         throw new UnauthorizedException('Sekolah Anda sedang nonaktif. Hubungi administrator.');
       }
+
+      tenantInfo = {
+        id: foundUser.tenantId,
+        nama: tenants[0].nama,
+        logo_url: tenants[0].logoUrl ?? undefined,
+      };
     }
 
     // Validate password
@@ -159,6 +167,7 @@ export class AuthService {
         name: foundUser.nama,
         role: foundUser.role as Role,
         tenant_id: foundUser.tenantId,
+        tenants: tenantInfo ? [tenantInfo] : undefined,
       },
     };
   }
@@ -256,7 +265,14 @@ export class AuthService {
     let payload: JwtPayload & { type?: string };
     try {
       payload = this.jwtService.verify(dto.refresh_token, { secret: refreshSecret });
-    } catch {
+    } catch (err) {
+      // Req 11.5: distinguish expired token from other invalid token errors
+      if (err?.name === 'TokenExpiredError') {
+        throw new UnauthorizedException({
+          code: 'REFRESH_TOKEN_EXPIRED',
+          message: 'Sesi berakhir. Silakan login kembali.',
+        });
+      }
       throw new UnauthorizedException('Refresh token tidak valid atau sudah kadaluarsa');
     }
 
@@ -321,6 +337,12 @@ export class AuthService {
    * Called with the access token's user context from the guard.
    */
   async logout(currentUser: RequestUser, refreshToken?: string): Promise<void> {
+    // Remove session from Redis for single-device-login roles (Req 12.6).
+    // orang_tua is excluded per Req 12.9 (multi-device access).
+    if (currentUser.role !== Role.ORANG_TUA) {
+      await this.redisService.delSession(currentUser.id);
+    }
+
     // Blacklist the current access token
     // We don't have exp from RequestUser, so use a generous TTL (max possible: 365 days)
     // The Redis entry auto-expires, so over-estimating is safe
@@ -536,16 +558,27 @@ export class AuthService {
     const accessExpiration = this.getAccessTokenTTL(platform, role);
     const refreshExpiration = this.getRefreshTokenTTL(platform, role);
 
-    const accessToken = this.jwtService.sign(
-      { ...payload, jti: accessJti },
-      {
-        secret: this.configService.get<string>('JWT_ACCESS_SECRET'),
-        expiresIn: accessExpiration,
-      },
-    );
+    // Generate session_id for roles that support single device login.
+    // orang_tua is excluded per Req 12.9 (multi-device access needed).
+    const isSessionRole = role !== Role.ORANG_TUA;
+    const sessionId = isSessionRole ? crypto.randomUUID() : undefined;
+
+    if (sessionId) {
+      const refreshTtlSeconds = this.getRefreshTokenTTLSeconds(platform, role);
+      // Overwrite existing session — this is the force logout mechanism (Req 12.2)
+      await this.redisService.set(`session:${payload.sub}`, sessionId, refreshTtlSeconds);
+    }
+
+    // Embed sid into both access and refresh token payloads
+    const tokenPayload = { ...payload, jti: accessJti, ...(sessionId && { sid: sessionId }) };
+
+    const accessToken = this.jwtService.sign(tokenPayload, {
+      secret: this.configService.get<string>('JWT_ACCESS_SECRET'),
+      expiresIn: accessExpiration,
+    });
 
     const refreshToken = this.jwtService.sign(
-      { ...payload, jti: refreshJti, type: 'refresh' },
+      { ...payload, jti: refreshJti, type: 'refresh', ...(sessionId && { sid: sessionId }) },
       {
         secret: this.configService.get<string>('JWT_REFRESH_SECRET'),
         expiresIn: refreshExpiration,
@@ -553,6 +586,21 @@ export class AuthService {
     );
 
     return { access_token: accessToken, refresh_token: refreshToken };
+  }
+
+  /**
+   * Return refresh token TTL as seconds (numeric) for use as Redis TTL.
+   * Mirrors getRefreshTokenTTL() but returns a number instead of a string.
+   */
+  private getRefreshTokenTTLSeconds(platform: 'admin_panel' | 'mobile', role: Role): number {
+    if (platform === 'admin_panel') {
+      return 7 * 24 * 60 * 60; // 7 days
+    }
+    if (role === Role.ORANG_TUA) {
+      return 365 * 24 * 60 * 60; // 365 days
+    }
+    // mobile guru
+    return 180 * 24 * 60 * 60; // 180 days
   }
 
   /**
