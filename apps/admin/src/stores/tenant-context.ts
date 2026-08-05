@@ -3,11 +3,17 @@ import { ref, computed } from 'vue';
 
 const SESSION_STORAGE_KEY = 'tenant_context';
 
-function loadFromSessionStorage(): { id: string; nama: string } | null {
+export interface TenantContext {
+  id: string;
+  nama: string;
+  logo_url?: string | null;
+}
+
+function loadFromSessionStorage(): TenantContext | null {
   try {
     const stored = sessionStorage.getItem(SESSION_STORAGE_KEY);
     if (stored) {
-      return JSON.parse(stored);
+      return JSON.parse(stored) as TenantContext;
     }
   } catch {
     // Invalid JSON — clear and return null
@@ -17,11 +23,14 @@ function loadFromSessionStorage(): { id: string; nama: string } | null {
 }
 
 export const useTenantContextStore = defineStore('tenantContext', () => {
-  const activeTenant = ref<{ id: string; nama: string } | null>(loadFromSessionStorage());
+  const activeTenant = ref<TenantContext | null>(loadFromSessionStorage());
 
   const hasTenantContext = computed(() => activeTenant.value !== null);
 
-  function setTenant(tenant: { id: string; nama: string }) {
+  /** logoUrl derived from active tenant — null/undefined treated as no logo */
+  const logoUrl = computed<string | null>(() => activeTenant.value?.logo_url ?? null);
+
+  function setTenant(tenant: TenantContext) {
     activeTenant.value = tenant;
     sessionStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(tenant));
   }
@@ -31,5 +40,5 @@ export const useTenantContextStore = defineStore('tenantContext', () => {
     sessionStorage.removeItem(SESSION_STORAGE_KEY);
   }
 
-  return { activeTenant, hasTenantContext, setTenant, clearTenant };
+  return { activeTenant, hasTenantContext, logoUrl, setTenant, clearTenant };
 });

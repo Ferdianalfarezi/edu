@@ -191,6 +191,34 @@ export class TenantService {
   }
 
   /**
+   * Update the logo_url for a tenant after successful S3 upload.
+   * Returns the updated tenant record with the new logo_url.
+   *
+   * Requirements: 1.2
+   */
+  async updateLogoUrl(
+    tenantId: string,
+    logoUrl: string,
+  ): Promise<{ id: string; logo_url: string }> {
+    const existing = await this.db
+      .select({ id: tenant.id })
+      .from(tenant)
+      .where(eq(tenant.id, tenantId))
+      .limit(1);
+
+    if (existing.length === 0) {
+      throw new NotFoundException(`Tenant dengan id ${tenantId} tidak ditemukan`);
+    }
+
+    await this.db
+      .update(tenant)
+      .set({ logoUrl, updatedAt: new Date() })
+      .where(eq(tenant.id, tenantId));
+
+    return { id: tenantId, logo_url: logoUrl };
+  }
+
+  /**
    * Update tenant details (nama, alamat, telepon, email).
    */
   async updateTenant(tenantId: string, dto: UpdateTenantDto): Promise<{ message: string }> {
@@ -383,6 +411,7 @@ export class TenantService {
   async getTenantProfile(tenantId: string): Promise<{
     id: string;
     nama: string;
+    logo_url: string | null;
     jumlah_tingkat: number;
     hari_kerja: '5_hari' | '6_hari';
   }> {
@@ -390,6 +419,7 @@ export class TenantService {
       .select({
         id: tenant.id,
         nama: tenant.nama,
+        logoUrl: tenant.logoUrl,
         jumlahTingkat: tenant.jumlahTingkat,
         hariKerja: tenant.hariKerja,
       })
@@ -404,6 +434,7 @@ export class TenantService {
     return {
       id: result[0].id,
       nama: result[0].nama,
+      logo_url: result[0].logoUrl ?? null,
       jumlah_tingkat: result[0].jumlahTingkat,
       hari_kerja: result[0].hariKerja as '5_hari' | '6_hari',
     };
