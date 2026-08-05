@@ -39,7 +39,7 @@ interface BarangRecord {
   deletedAt: Date | null;
 }
 
-let store: BarangRecord[] = [];
+const store: BarangRecord[] = [];
 let idCounter = 0;
 
 function generateUUID(): string {

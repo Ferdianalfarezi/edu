@@ -1549,7 +1549,14 @@ describe('BarangService — Unit Tests', () => {
 
   describe('create — happy path', () => {
     it('should create a barang and return response DTO', async () => {
-      const dto: CreateBarangDto = { nama: 'Kursi Besi', deskripsi: 'Kursi kantor', jumlah: 5 };
+      const dto: CreateBarangDto = {
+        nama: 'Kursi Besi',
+        deskripsi: 'Kursi kantor',
+        jumlah: 5,
+        kondisi_barang: 'bagus',
+        sumber_dana: 'yayasan',
+        kategori: 'peralatan',
+      };
       const record = makeFakeRecord({
         nama: dto.nama,
         deskripsi: dto.deskripsi,
@@ -1569,6 +1576,10 @@ describe('BarangService — Unit Tests', () => {
         nama: 'Kursi Besi',
         deskripsi: 'Kursi kantor',
         jumlah: 5,
+        lokasi: null,
+        kondisi_barang: null,
+        sumber_dana: null,
+        kategori: null,
         createdAt: now.toISOString(),
         updatedAt: now.toISOString(),
       });
@@ -1576,7 +1587,13 @@ describe('BarangService — Unit Tests', () => {
     });
 
     it('should create a barang with null deskripsi when not provided', async () => {
-      const dto: CreateBarangDto = { nama: 'Papan Tulis', jumlah: 3 };
+      const dto: CreateBarangDto = {
+        nama: 'Papan Tulis',
+        jumlah: 3,
+        kondisi_barang: 'bagus',
+        sumber_dana: 'yayasan',
+        kategori: 'peralatan',
+      };
       const record = makeFakeRecord({ nama: dto.nama, deskripsi: null, jumlah: dto.jumlah });
 
       mockDb.insert.mockReturnValue({
@@ -1656,6 +1673,10 @@ describe('BarangService — Unit Tests', () => {
         nama: 'Meja Kayu',
         deskripsi: 'Meja kayu jati ukuran besar',
         jumlah: 10,
+        lokasi: null,
+        kondisi_barang: null,
+        sumber_dana: null,
+        kategori: null,
         createdAt: now.toISOString(),
         updatedAt: now.toISOString(),
       });
@@ -1726,7 +1747,13 @@ describe('BarangService — Unit Tests', () => {
         }),
       });
 
-      const result = await service.create(TENANT_ID, { nama: longNama, jumlah: 1 });
+      const result = await service.create(TENANT_ID, {
+        nama: longNama,
+        jumlah: 1,
+        kondisi_barang: 'bagus',
+        sumber_dana: 'yayasan',
+        kategori: 'peralatan',
+      });
 
       expect(result.nama).toBe(longNama);
       expect(result.nama.length).toBe(255);
@@ -1741,7 +1768,13 @@ describe('BarangService — Unit Tests', () => {
         }),
       });
 
-      const result = await service.create(TENANT_ID, { nama: 'Barang Kosong', jumlah: 0 });
+      const result = await service.create(TENANT_ID, {
+        nama: 'Barang Kosong',
+        jumlah: 0,
+        kondisi_barang: 'bagus',
+        sumber_dana: 'yayasan',
+        kategori: 'peralatan',
+      });
 
       expect(result.jumlah).toBe(0);
     });
@@ -1755,7 +1788,13 @@ describe('BarangService — Unit Tests', () => {
         }),
       });
 
-      const result = await service.create(TENANT_ID, { nama: 'Barang Banyak', jumlah: 999999999 });
+      const result = await service.create(TENANT_ID, {
+        nama: 'Barang Banyak',
+        jumlah: 999999999,
+        kondisi_barang: 'bagus',
+        sumber_dana: 'yayasan',
+        kategori: 'peralatan',
+      });
 
       expect(result.jumlah).toBe(999999999);
     });
@@ -1851,4 +1890,360 @@ describe('BarangService — Unit Tests', () => {
       );
     });
   });
+});
+
+/**
+ * Property 7: Import XLSX — jumlah_berhasil + jumlah_dilewati = total_baris,
+ * setiap dilewati ada alasan
+ *
+ * For any XLSX buffer containing a mix of valid and invalid rows:
+ * 1. berhasilDitambahkan + dilewati.length === total data rows in the sheet
+ * 2. Every entry in `dilewati` has a non-empty `alasan` string
+ * 3. Valid rows are inserted regardless of how many invalid rows exist in the same batch
+ *
+ * // Feature: sistem-pengembangan-v2, Property 7: Import XLSX — jumlah_berhasil + jumlah_dilewati = total_baris, setiap dilewati ada alasan
+ *
+ * **Validates: Requirements 5.8**
+ */
+import * as ExcelJS from 'exceljs';
+
+type KondisiBarang = 'bagus' | 'perlu_perbaikan' | 'rusak';
+type SumberDana = 'yayasan' | 'unit_sekolah' | 'bos';
+type KategoriBarang = 'peralatan' | 'perlengkapan';
+
+interface XlsxRow {
+  nama: string;
+  deskripsi: string;
+  jumlah: string; // raw string — may be invalid
+  lokasi: string;
+  kondisi_barang: string;
+  sumber_dana: string;
+  kategori: string;
+}
+
+/**
+ * Builds an XLSX buffer from an array of row objects.
+ * Row 1 is always the header; rows 2+ are data.
+ */
+async function buildXlsxBuffer(rows: XlsxRow[]): Promise<Buffer> {
+  const workbook = new ExcelJS.Workbook();
+  const sheet = workbook.addWorksheet('Barang');
+
+  // Header row
+  sheet.addRow([
+    'nama',
+    'deskripsi',
+    'jumlah',
+    'lokasi',
+    'kondisi_barang',
+    'sumber_dana',
+    'kategori',
+  ]);
+
+  for (const row of rows) {
+    sheet.addRow([
+      row.nama,
+      row.deskripsi,
+      row.jumlah,
+      row.lokasi,
+      row.kondisi_barang,
+      row.sumber_dana,
+      row.kategori,
+    ]);
+  }
+
+  const arrayBuffer = await workbook.xlsx.writeBuffer();
+  return Buffer.from(arrayBuffer);
+}
+
+/**
+ * Creates a mocked DB for importFromXlsx:
+ * - select().from().where() returns existingNames (for duplicate check)
+ * - insert().values() records what was inserted
+ */
+function createImportMockDb(existingNames: string[] = []) {
+  const insertedRows: unknown[] = [];
+
+  const mockDb = {
+    select: jest.fn().mockReturnValue({
+      from: jest.fn().mockReturnValue({
+        where: jest.fn().mockResolvedValue(existingNames.map((nama) => ({ nama }))),
+      }),
+    }),
+    insert: jest.fn().mockReturnValue({
+      values: jest.fn().mockImplementation((rows: unknown[]) => {
+        insertedRows.push(...rows);
+        return Promise.resolve();
+      }),
+    }),
+  };
+
+  return { mockDb, getInsertedRows: () => insertedRows };
+}
+
+describe('Feature: sistem-pengembangan-v2, Property 7: Import XLSX — jumlah_berhasil + jumlah_dilewati = total_baris, setiap dilewati ada alasan', () => {
+  // ─── Arbitraries ────────────────────────────────────────────────────────────
+
+  const validKondisi: KondisiBarang[] = ['bagus', 'perlu_perbaikan', 'rusak'];
+  const validSumberDana: SumberDana[] = ['yayasan', 'unit_sekolah', 'bos'];
+  const validKategori: KategoriBarang[] = ['peralatan', 'perlengkapan'];
+
+  /** Arbitrary for a valid row (all fields correct) */
+  const validRowArb = (index: number): fc.Arbitrary<XlsxRow> =>
+    fc.record({
+      nama: fc
+        .string({ minLength: 1, maxLength: 60 })
+        .filter((s) => s.trim().length > 0)
+        .map((s) => `${s}-${index}`), // suffix index to ensure uniqueness across iterations
+      deskripsi: fc.string({ maxLength: 50 }),
+      jumlah: fc.integer({ min: 0, max: 999 }).map(String),
+      lokasi: fc.string({ maxLength: 30 }),
+      kondisi_barang: fc.constantFrom(...validKondisi),
+      sumber_dana: fc.constantFrom(...validSumberDana),
+      kategori: fc.constantFrom(...validKategori),
+    });
+
+  /** Arbitrary for an invalid row — at least one field is wrong */
+  const invalidRowArb = (index: number): fc.Arbitrary<XlsxRow> =>
+    fc.oneof(
+      // bad kondisi_barang
+      fc.record({
+        nama: fc.constant(`Invalid-kondisi-${index}`),
+        deskripsi: fc.constant(''),
+        jumlah: fc.constant('5'),
+        lokasi: fc.constant(''),
+        kondisi_barang: fc.constant('sangat_bagus'), // not a valid enum
+        sumber_dana: fc.constantFrom(...validSumberDana),
+        kategori: fc.constantFrom(...validKategori),
+      }),
+      // bad sumber_dana
+      fc.record({
+        nama: fc.constant(`Invalid-sumber-${index}`),
+        deskripsi: fc.constant(''),
+        jumlah: fc.constant('3'),
+        lokasi: fc.constant(''),
+        kondisi_barang: fc.constantFrom(...validKondisi),
+        sumber_dana: fc.constant('pemerintah'), // not a valid enum
+        kategori: fc.constantFrom(...validKategori),
+      }),
+      // bad kategori
+      fc.record({
+        nama: fc.constant(`Invalid-kategori-${index}`),
+        deskripsi: fc.constant(''),
+        jumlah: fc.constant('2'),
+        lokasi: fc.constant(''),
+        kondisi_barang: fc.constantFrom(...validKondisi),
+        sumber_dana: fc.constantFrom(...validSumberDana),
+        kategori: fc.constant('furniture'), // not a valid enum
+      }),
+      // negative jumlah
+      fc.record({
+        nama: fc.constant(`Invalid-jumlah-${index}`),
+        deskripsi: fc.constant(''),
+        jumlah: fc.integer({ min: -999, max: -1 }).map(String),
+        lokasi: fc.constant(''),
+        kondisi_barang: fc.constantFrom(...validKondisi),
+        sumber_dana: fc.constantFrom(...validSumberDana),
+        kategori: fc.constantFrom(...validKategori),
+      }),
+      // empty nama
+      fc.record({
+        nama: fc.constant(''),
+        deskripsi: fc.constant(''),
+        jumlah: fc.constant('1'),
+        lokasi: fc.constant(''),
+        kondisi_barang: fc.constantFrom(...validKondisi),
+        sumber_dana: fc.constantFrom(...validSumberDana),
+        kategori: fc.constantFrom(...validKategori),
+      }),
+    );
+
+  // ─── Property tests ─────────────────────────────────────────────────────────
+
+  it('berhasilDitambahkan + dilewati.length === total data rows for any mix of valid/invalid rows', async () => {
+    await fc.assert(
+      fc.asyncProperty(
+        fc.integer({ min: 0, max: 8 }), // number of valid rows
+        fc.integer({ min: 0, max: 8 }), // number of invalid rows
+        fc.uuid(), // tenantId
+        async (validCount, invalidCount, tenantId) => {
+          // Need at least 1 row total
+          fc.pre(validCount + invalidCount > 0);
+
+          // Build valid rows — must have unique names
+          const validRows = await Promise.all(
+            Array.from({ length: validCount }, (_, i) => fc.sample(validRowArb(i), 1)[0]),
+          );
+
+          // Build invalid rows
+          const invalidRows = await Promise.all(
+            Array.from({ length: invalidCount }, (_, i) => fc.sample(invalidRowArb(i + 100), 1)[0]),
+          );
+
+          // Shuffle valid and invalid together
+          const allRows = [...validRows, ...invalidRows].sort(() => Math.random() - 0.5);
+          const totalRows = allRows.length;
+
+          const buffer = await buildXlsxBuffer(allRows);
+          const { mockDb } = createImportMockDb([]); // no pre-existing names
+
+          const module: TestingModule = await Test.createTestingModule({
+            providers: [BarangService, { provide: DRIZZLE, useValue: mockDb }],
+          }).compile();
+
+          const service = module.get<BarangService>(BarangService);
+          const result = await service.importFromXlsx(buffer, tenantId);
+
+          // PROPERTY 1: berhasilDitambahkan + dilewati.length === total data rows
+          expect(result.berhasilDitambahkan + result.dilewati.length).toBe(totalRows);
+        },
+      ),
+      { numRuns: 100 },
+    );
+  });
+
+  it('every entry in dilewati has a non-empty alasan string', async () => {
+    await fc.assert(
+      fc.asyncProperty(
+        fc.integer({ min: 1, max: 10 }), // number of invalid rows (at least 1)
+        fc.integer({ min: 0, max: 5 }), // number of valid rows mixed in
+        fc.uuid(),
+        async (invalidCount, validCount, tenantId) => {
+          const validRows = await Promise.all(
+            Array.from({ length: validCount }, (_, i) => fc.sample(validRowArb(i), 1)[0]),
+          );
+
+          const invalidRows = await Promise.all(
+            Array.from({ length: invalidCount }, (_, i) => fc.sample(invalidRowArb(i + 200), 1)[0]),
+          );
+
+          const allRows = [...validRows, ...invalidRows].sort(() => Math.random() - 0.5);
+
+          const buffer = await buildXlsxBuffer(allRows);
+          const { mockDb } = createImportMockDb([]);
+
+          const module: TestingModule = await Test.createTestingModule({
+            providers: [BarangService, { provide: DRIZZLE, useValue: mockDb }],
+          }).compile();
+
+          const service = module.get<BarangService>(BarangService);
+          const result = await service.importFromXlsx(buffer, tenantId);
+
+          // PROPERTY 2: every skipped entry has a non-empty alasan
+          for (const skipped of result.dilewati) {
+            expect(typeof skipped.alasan).toBe('string');
+            expect(skipped.alasan.trim().length).toBeGreaterThan(0);
+            // Also verify baris and nama fields exist
+            expect(typeof skipped.baris).toBe('number');
+            expect(skipped.baris).toBeGreaterThanOrEqual(2); // data rows start at row 2
+          }
+        },
+      ),
+      { numRuns: 100 },
+    );
+  }, 60000);
+
+  it('valid rows are inserted regardless of the presence of invalid rows in the same batch', async () => {
+    await fc.assert(
+      fc.asyncProperty(
+        fc.integer({ min: 1, max: 6 }), // valid rows (at least 1)
+        fc.integer({ min: 1, max: 6 }), // invalid rows (at least 1) — ensures mixed batch
+        fc.uuid(),
+        async (validCount, invalidCount, tenantId) => {
+          // Generate valid rows with unique names
+          const validRows = await Promise.all(
+            Array.from({ length: validCount }, (_, i) => fc.sample(validRowArb(i + 300), 1)[0]),
+          );
+
+          const invalidRows = await Promise.all(
+            Array.from({ length: invalidCount }, (_, i) => fc.sample(invalidRowArb(i + 400), 1)[0]),
+          );
+
+          // Interleave valid and invalid rows intentionally
+          const allRows: XlsxRow[] = [];
+          const maxLen = Math.max(validRows.length, invalidRows.length);
+          for (let i = 0; i < maxLen; i++) {
+            if (i < invalidRows.length) allRows.push(invalidRows[i]);
+            if (i < validRows.length) allRows.push(validRows[i]);
+          }
+
+          const buffer = await buildXlsxBuffer(allRows);
+          const { mockDb, getInsertedRows } = createImportMockDb([]);
+
+          const module: TestingModule = await Test.createTestingModule({
+            providers: [BarangService, { provide: DRIZZLE, useValue: mockDb }],
+          }).compile();
+
+          const service = module.get<BarangService>(BarangService);
+          const result = await service.importFromXlsx(buffer, tenantId);
+
+          // PROPERTY 3a: berhasilDitambahkan equals the number of valid rows we generated
+          // (since all valid rows have unique names and correct enum values)
+          expect(result.berhasilDitambahkan).toBe(validCount);
+
+          // PROPERTY 3b: the number of inserted rows matches berhasilDitambahkan
+          expect(getInsertedRows().length).toBe(result.berhasilDitambahkan);
+
+          // PROPERTY 3c: dilewati count matches the number of invalid rows
+          expect(result.dilewati.length).toBe(invalidCount);
+
+          // PROPERTY 3d: total invariant still holds
+          expect(result.berhasilDitambahkan + result.dilewati.length).toBe(allRows.length);
+        },
+      ),
+      { numRuns: 100 },
+    );
+  }, 60000);
+
+  it('duplicate names (against existing DB records) are skipped with a reason', async () => {
+    await fc.assert(
+      fc.asyncProperty(
+        fc.integer({ min: 1, max: 5 }), // count of rows whose names already exist in DB
+        fc.integer({ min: 1, max: 5 }), // count of genuinely new valid rows
+        fc.uuid(),
+        async (dupCount, newCount, tenantId) => {
+          const existingNames = Array.from({ length: dupCount }, (_, i) => `Existing-${i}`);
+
+          // Build rows that duplicate existing names
+          const dupRows: XlsxRow[] = existingNames.map((nama) => ({
+            nama,
+            deskripsi: '',
+            jumlah: '5',
+            lokasi: '',
+            kondisi_barang: 'bagus',
+            sumber_dana: 'yayasan',
+            kategori: 'peralatan',
+          }));
+
+          // Build genuinely new valid rows
+          const newRows = await Promise.all(
+            Array.from({ length: newCount }, (_, i) => fc.sample(validRowArb(i + 500), 1)[0]),
+          );
+
+          const allRows = [...dupRows, ...newRows];
+          const buffer = await buildXlsxBuffer(allRows);
+          const { mockDb } = createImportMockDb(existingNames);
+
+          const module: TestingModule = await Test.createTestingModule({
+            providers: [BarangService, { provide: DRIZZLE, useValue: mockDb }],
+          }).compile();
+
+          const service = module.get<BarangService>(BarangService);
+          const result = await service.importFromXlsx(buffer, tenantId);
+
+          // PROPERTY: total invariant
+          expect(result.berhasilDitambahkan + result.dilewati.length).toBe(allRows.length);
+
+          // PROPERTY: duplicate rows appear in dilewati
+          expect(result.dilewati.length).toBeGreaterThanOrEqual(dupCount);
+
+          // PROPERTY: every skipped row has a non-empty alasan
+          for (const skipped of result.dilewati) {
+            expect(skipped.alasan.trim().length).toBeGreaterThan(0);
+          }
+        },
+      ),
+      { numRuns: 100 },
+    );
+  }, 60000);
 });
