@@ -45,13 +45,15 @@ export class UserController {
 
   /**
    * GET /users
-   * For ADMIN: List all users within the tenant. Cursor-paginated.
+   * For ADMIN / KEPALA_SEKOLAH: List all users within the tenant. Cursor-paginated.
+   *   When ?role=guru is provided, returns a flat guru list { data: [{id, nama, email, telepon}] }
+   *   suitable for the Guru management view (Req 3.4).
    * For SUPER_ADMIN: Cross-tenant user list with tenant name, offset-paginated (default page_size 50).
    * Supports search by email/nama/phone (min 3 chars for cross-tenant).
    * When X-Tenant-Context is set, scopes to that tenant.
    */
   @Get()
-  @Roles(Role.ADMIN, Role.SUPER_ADMIN)
+  @Roles(Role.ADMIN, Role.KEPALA_SEKOLAH, Role.SUPER_ADMIN)
   async listUsers(
     @Req() req: Request,
     @TenantId() tenantId: string,
@@ -70,7 +72,13 @@ export class UserController {
       );
     }
 
-    // ADMIN: existing tenant-scoped, cursor-paginated behavior
+    // ADMIN / KEPALA_SEKOLAH: when filtering by guru role, return the flat guru list
+    // (Req 3.4 — returns {id, nama, email, telepon}, only isActive=true)
+    if (query.role === Role.GURU) {
+      return this.userService.listGuru(tenantId);
+    }
+
+    // Default: existing tenant-scoped, cursor-paginated behavior
     return this.userService.listUsers(tenantId, query);
   }
 

@@ -17,6 +17,7 @@ describe('UserController', () => {
     mockUserService = {
       createUser: jest.fn(),
       listUsers: jest.fn(),
+      listGuru: jest.fn(),
       getUserById: jest.fn(),
       updateUser: jest.fn(),
       deactivateUser: jest.fn(),
@@ -57,10 +58,47 @@ describe('UserController', () => {
   });
 
   describe('GET /users', () => {
-    it('should call listUsers with tenantId and query for ADMIN role', async () => {
+    it('should call listGuru when role=GURU for ADMIN role', async () => {
       const tenantId = 'tenant-1';
       const query = { role: Role.GURU };
-      const expected = { data: [], nextCursor: null };
+      const expected = {
+        data: [{ id: 'u1', nama: 'Pak Guru', email: 'guru@school.id', telepon: null }],
+      };
+      const mockReq = {
+        user: { id: 'user-1', role: Role.ADMIN, tenant_id: tenantId },
+        headers: {},
+      } as unknown as import('express').Request;
+
+      mockUserService.listGuru!.mockResolvedValue(expected);
+
+      const result = await controller.listUsers(mockReq, tenantId, query as any);
+
+      expect(mockUserService.listGuru).toHaveBeenCalledWith(tenantId);
+      expect(mockUserService.listUsers).not.toHaveBeenCalled();
+      expect(result).toEqual(expected);
+    });
+
+    it('should call listGuru when role=GURU for KEPALA_SEKOLAH role', async () => {
+      const tenantId = 'tenant-1';
+      const query = { role: Role.GURU };
+      const expected = { data: [] };
+      const mockReq = {
+        user: { id: 'user-2', role: Role.KEPALA_SEKOLAH, tenant_id: tenantId },
+        headers: {},
+      } as unknown as import('express').Request;
+
+      mockUserService.listGuru!.mockResolvedValue(expected);
+
+      const result = await controller.listUsers(mockReq, tenantId, query as any);
+
+      expect(mockUserService.listGuru).toHaveBeenCalledWith(tenantId);
+      expect(result).toEqual(expected);
+    });
+
+    it('should call listUsers for ADMIN without role filter', async () => {
+      const tenantId = 'tenant-1';
+      const query = {};
+      const expected = { data: [], meta: { cursor: null, has_next: false } };
       const mockReq = {
         user: { id: 'user-1', role: Role.ADMIN, tenant_id: tenantId },
         headers: {},
@@ -71,6 +109,7 @@ describe('UserController', () => {
       const result = await controller.listUsers(mockReq, tenantId, query as any);
 
       expect(mockUserService.listUsers).toHaveBeenCalledWith(tenantId, query);
+      expect(mockUserService.listGuru).not.toHaveBeenCalled();
       expect(result).toEqual(expected);
     });
   });

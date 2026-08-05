@@ -186,6 +186,29 @@ export class UserService {
     };
   }
 
+  // ─── List Guru (Req 3.4) ──────────────────────────────────────
+
+  /**
+   * Return all active, non-deactivated users with role=guru within a tenant.
+   * Response shape: { data: GuruListResponse[] }
+   */
+  async listGuru(tenantId: string): Promise<{
+    data: { id: string; nama: string; email: string | null; telepon: string | null }[];
+  }> {
+    const results = await this.db
+      .select({
+        id: user.id,
+        nama: user.nama,
+        email: user.email,
+        telepon: user.phone,
+      })
+      .from(user)
+      .where(and(eq(user.tenantId, tenantId), eq(user.role, Role.GURU), eq(user.isActive, true)))
+      .orderBy(asc(user.nama));
+
+    return { data: results };
+  }
+
   // ─── List Users Cross-Tenant (SUPER_ADMIN) ────────────────────
 
   async listUsersCrossTenant(

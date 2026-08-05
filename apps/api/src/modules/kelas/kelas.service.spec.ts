@@ -3,6 +3,7 @@ import { BadRequestException, ConflictException, NotFoundException } from '@nest
 import { KelasService } from './kelas.service';
 import { TenantService } from '@/modules/tenant/tenant.service';
 import { DRIZZLE } from '@/drizzle/drizzle.module';
+import { ListKelasQueryDto } from './dto';
 
 /**
  * Creates a mock DB that tracks query chains.
@@ -178,7 +179,54 @@ describe('KelasService', () => {
   // ─── getKelasById ─────────────────────────────────────────────
 
   describe('getKelasById', () => {
-    it('should return kelas with student count', async () => {
+    it('should return kelas detail with siswa array', async () => {
+      const siswaId1 = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa';
+      const siswaId2 = 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb';
+
+      const service = buildService([
+        // kelas found (with wali kelas join)
+        [
+          {
+            id: kelasId,
+            nama: '1A',
+            tingkat: 1,
+            tahunAjaranId,
+            waliKelasId: guruId,
+            waliKelasNama: 'Budi Santoso',
+            kapasitas: 30,
+            createdAt: new Date(),
+            updatedAt: new Date(),
+          },
+        ],
+        // siswa list query
+        [
+          { id: siswaId1, nama: 'Andi', nisn: '1234567890', status: 'aktif' },
+          { id: siswaId2, nama: 'Budi', nisn: null, status: 'lulus' },
+        ],
+      ]);
+
+      const result = await service.getKelasById(tenantId, kelasId);
+
+      expect(result.id).toBe(kelasId);
+      expect(result.nama).toBe('1A');
+      expect(result.tingkat).toBe(1);
+      expect(result.waliKelasNama).toBe('Budi Santoso');
+      expect(result.siswa).toHaveLength(2);
+      expect(result.siswa[0]).toMatchObject({
+        id: siswaId1,
+        nama: 'Andi',
+        nisn: '1234567890',
+        status: 'aktif',
+      });
+      expect(result.siswa[1]).toMatchObject({
+        id: siswaId2,
+        nama: 'Budi',
+        nisn: null,
+        status: 'lulus',
+      });
+    });
+
+    it('should return empty siswa array when no students in kelas', async () => {
       const service = buildService([
         // kelas found
         [
@@ -187,21 +235,21 @@ describe('KelasService', () => {
             nama: '1A',
             tingkat: 1,
             tahunAjaranId,
-            waliKelasId: guruId,
+            waliKelasId: null,
+            waliKelasNama: null,
             kapasitas: 30,
             createdAt: new Date(),
             updatedAt: new Date(),
           },
         ],
-        // student count
-        [{ count: 25 }],
+        // no siswa
+        [],
       ]);
 
       const result = await service.getKelasById(tenantId, kelasId);
 
-      expect(result.id).toBe(kelasId);
-      expect(result.nama).toBe('1A');
-      expect(result.jumlahSiswa).toBe(25);
+      expect(result.siswa).toEqual([]);
+      expect(result.waliKelasNama).toBeNull();
     });
 
     it('should throw NotFoundException if kelas not found', async () => {
@@ -221,7 +269,7 @@ describe('KelasService', () => {
   describe('updateKelas', () => {
     it('should update kelas nama successfully', async () => {
       const service = buildService([
-        // getKelasById: kelas found
+        // getKelasRaw: kelas found
         [
           {
             id: kelasId,
@@ -230,12 +278,8 @@ describe('KelasService', () => {
             tahunAjaranId,
             waliKelasId: null,
             kapasitas: 30,
-            createdAt: new Date(),
-            updatedAt: new Date(),
           },
         ],
-        // getKelasById: student count
-        [{ count: 0 }],
         // update returning
         [
           {
@@ -258,7 +302,7 @@ describe('KelasService', () => {
 
     it('should validate wali_kelas uniqueness on update and throw ConflictException', async () => {
       const service = buildService([
-        // getKelasById: kelas found
+        // getKelasRaw: kelas found
         [
           {
             id: kelasId,
@@ -267,12 +311,8 @@ describe('KelasService', () => {
             tahunAjaranId,
             waliKelasId: null,
             kapasitas: 30,
-            createdAt: new Date(),
-            updatedAt: new Date(),
           },
         ],
-        // getKelasById: student count
-        [{ count: 0 }],
         // validateWaliKelasUniqueness: guru exists
         [{ id: guruId }],
         // validateWaliKelasUniqueness: guru already assigned
@@ -290,7 +330,7 @@ describe('KelasService', () => {
   describe('deleteKelas', () => {
     it('should delete kelas when no active students', async () => {
       const service = buildService([
-        // getKelasById: kelas found
+        // getKelasRaw: kelas found
         [
           {
             id: kelasId,
@@ -299,12 +339,8 @@ describe('KelasService', () => {
             tahunAjaranId,
             waliKelasId: null,
             kapasitas: 30,
-            createdAt: new Date(),
-            updatedAt: new Date(),
           },
         ],
-        // getKelasById: student count = 0
-        [{ count: 0 }],
         // deleteKelas: student count check = 0
         [{ count: 0 }],
       ]);
@@ -316,7 +352,7 @@ describe('KelasService', () => {
 
     it('should throw BadRequestException when kelas has active students', async () => {
       const service = buildService([
-        // getKelasById: kelas found
+        // getKelasRaw: kelas found
         [
           {
             id: kelasId,
@@ -325,12 +361,8 @@ describe('KelasService', () => {
             tahunAjaranId,
             waliKelasId: null,
             kapasitas: 30,
-            createdAt: new Date(),
-            updatedAt: new Date(),
           },
         ],
-        // getKelasById: student count = 15
-        [{ count: 15 }],
         // deleteKelas: student count check = 15
         [{ count: 15 }],
       ]);
@@ -340,7 +372,7 @@ describe('KelasService', () => {
 
     it('should include student count in error message when deletion fails', async () => {
       const service = buildService([
-        // getKelasById: kelas found
+        // getKelasRaw: kelas found
         [
           {
             id: kelasId,
@@ -349,12 +381,8 @@ describe('KelasService', () => {
             tahunAjaranId,
             waliKelasId: null,
             kapasitas: 30,
-            createdAt: new Date(),
-            updatedAt: new Date(),
           },
         ],
-        // getKelasById: student count = 7
-        [{ count: 7 }],
         // deleteKelas: student count check = 7
         [{ count: 7 }],
       ]);
@@ -431,7 +459,8 @@ describe('KelasService', () => {
       // First call: main query; Second call: student counts
       const service = buildService([items, []]);
 
-      const result = await service.listKelas(tenantId, {});
+      const query = new ListKelasQueryDto();
+      const result = await service.listKelas(tenantId, query);
 
       expect(result.data).toHaveLength(20);
     });
@@ -455,7 +484,8 @@ describe('KelasService', () => {
         [], // student counts
       ]);
 
-      const result = await service.listKelas(tenantId, {});
+      const query = new ListKelasQueryDto();
+      const result = await service.listKelas(tenantId, query);
 
       expect(result.data).toHaveLength(1);
       expect(result.data[0].wali_kelas_nama).toBeNull();

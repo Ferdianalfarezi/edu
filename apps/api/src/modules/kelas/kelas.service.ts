@@ -129,7 +129,7 @@ export class KelasService {
     return { data };
   }
 
-  // ─── Get Kelas Detail (with student count) ────────────────────
+  // ─── Get Kelas Detail (with student list) ────────────────────
 
   async getKelasById(tenantId: string, kelasId: string) {
     const results = await this.db
@@ -139,11 +139,13 @@ export class KelasService {
         tingkat: kelas.tingkat,
         tahunAjaranId: kelas.tahunAjaranId,
         waliKelasId: kelas.waliKelasId,
+        waliKelasNama: user.nama,
         kapasitas: kelas.kapasitas,
         createdAt: kelas.createdAt,
         updatedAt: kelas.updatedAt,
       })
       .from(kelas)
+      .leftJoin(user, eq(kelas.waliKelasId, user.id))
       .where(and(eq(kelas.id, kelasId), eq(kelas.tenantId, tenantId)))
       .limit(1);
 
@@ -151,23 +153,33 @@ export class KelasService {
       throw new NotFoundException('Kelas tidak ditemukan');
     }
 
-    // Get student count for this class (active students only)
-    const [studentCount] = await this.db
-      .select({ count: count() })
+    // Get all students enrolled in this class (all statuses, not just active)
+    const siswaList = await this.db
+      .select({
+        id: siswa.id,
+        nama: siswa.nama,
+        nisn: siswa.nisn,
+        status: siswa.status,
+      })
       .from(siswa)
-      .where(and(eq(siswa.kelasId, kelasId), eq(siswa.status, 'aktif')));
+      .where(and(eq(siswa.kelasId, kelasId), eq(siswa.tenantId, tenantId)))
+      .orderBy(asc(siswa.nama));
 
+    const kelasData = results[0];
     return {
-      ...results[0],
-      jumlahSiswa: Number(studentCount.count),
+      id: kelasData.id,
+      nama: kelasData.nama,
+      tingkat: kelasData.tingkat,
+      waliKelasNama: kelasData.waliKelasNama ?? null,
+      siswa: siswaList,
     };
   }
 
   // ─── Update Kelas ─────────────────────────────────────────────
 
   async updateKelas(tenantId: string, kelasId: string, dto: UpdateKelasDto) {
-    // Verify kelas exists
-    const existing = await this.getKelasById(tenantId, kelasId);
+    // Verify kelas exists and get internal fields needed for validation
+    const existing = await this.getKelasRaw(tenantId, kelasId);
 
     // Validate tingkat does not exceed tenant's jumlah_tingkat if being updated
     if (dto.tingkat !== undefined) {
@@ -203,7 +215,7 @@ export class KelasService {
 
   async deleteKelas(tenantId: string, kelasId: string) {
     // Verify kelas exists
-    await this.getKelasById(tenantId, kelasId);
+    await this.getKelasRaw(tenantId, kelasId);
 
     // Check if kelas has active students
     const [studentCount] = await this.db
@@ -279,6 +291,31 @@ export class KelasService {
   }
 
   // ─── Validation Helpers ───────────────────────────────────────
+
+  /**
+   * Internal helper: fetch raw kelas row including tahunAjaranId for internal logic.
+   * Not part of the public API response.
+   */
+  private async getKelasRaw(tenantId: string, kelasId: string) {
+    const results = await this.db
+      .select({
+        id: kelas.id,
+        nama: kelas.nama,
+        tingkat: kelas.tingkat,
+        tahunAjaranId: kelas.tahunAjaranId,
+        waliKelasId: kelas.waliKelasId,
+        kapasitas: kelas.kapasitas,
+      })
+      .from(kelas)
+      .where(and(eq(kelas.id, kelasId), eq(kelas.tenantId, tenantId)))
+      .limit(1);
+
+    if (!results[0]) {
+      throw new NotFoundException('Kelas tidak ditemukan');
+    }
+
+    return results[0];
+  }
 
   /**
    * Validates that the provided tingkat does not exceed the tenant's jumlah_tingkat.

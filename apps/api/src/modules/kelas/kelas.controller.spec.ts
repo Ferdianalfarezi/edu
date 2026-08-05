@@ -3,6 +3,7 @@ import { KelasController } from './kelas.controller';
 import { KelasService } from './kelas.service';
 import { RedisService } from '@/modules/redis/redis.service';
 import { DRIZZLE } from '@/drizzle/drizzle.module';
+import { ListKelasQueryDto } from './dto';
 
 describe('KelasController', () => {
   let controller: KelasController;
@@ -51,7 +52,7 @@ describe('KelasController', () => {
 
   describe('GET /kelas', () => {
     it('should call service.listKelas with tenantId and query', async () => {
-      const query = { tahunAjaranId: 'ta-id' };
+      const query = Object.assign(new ListKelasQueryDto(), { tahunAjaranId: 'ta-id' });
       const expected = { data: [], nextCursor: null };
       mockService.listKelas!.mockResolvedValue(expected);
 
@@ -64,7 +65,13 @@ describe('KelasController', () => {
 
   describe('GET /kelas/:id', () => {
     it('should call service.getKelasById with tenantId and id', async () => {
-      const expected = { id: 'kelas-id', nama: '1A', jumlahSiswa: 10 };
+      const expected = {
+        id: 'kelas-id',
+        nama: '1A',
+        tingkat: 1,
+        waliKelasNama: null,
+        siswa: [],
+      };
       mockService.getKelasById!.mockResolvedValue(expected);
 
       const result = await controller.getKelas(tenantId, 'kelas-id');

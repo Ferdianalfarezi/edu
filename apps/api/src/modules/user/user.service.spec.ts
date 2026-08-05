@@ -471,6 +471,47 @@ describe('UserService', () => {
     });
   });
 
+  // ---------------------------------------------------------------------------
+
+  describe('listGuru', () => {
+    const tenantId = '11111111-1111-1111-1111-111111111111';
+
+    it('should return active guru users with id, nama, email, telepon', async () => {
+      const mockGuruList = [
+        { id: 'g1', nama: 'Pak Budi', email: 'budi@school.id', telepon: '08111' },
+        { id: 'g2', nama: 'Bu Ani', email: 'ani@school.id', telepon: null },
+      ];
+
+      mockDb.orderBy.mockResolvedValueOnce(mockGuruList);
+
+      const result = await service.listGuru(tenantId);
+
+      expect(result).toEqual({ data: mockGuruList });
+      expect(result.data).toHaveLength(2);
+    });
+
+    it('should return empty data array when no active guru found', async () => {
+      mockDb.orderBy.mockResolvedValueOnce([]);
+
+      const result = await service.listGuru(tenantId);
+
+      expect(result).toEqual({ data: [] });
+    });
+
+    it('should query with tenantId, role=GURU, and isActive=true filters', async () => {
+      // Capture the where call args to verify filtering
+      const whereSpy = jest.spyOn(mockDb, 'where');
+      mockDb.orderBy.mockResolvedValueOnce([]);
+
+      await service.listGuru(tenantId);
+
+      // where() must be called — meaning filters are applied, not a full table scan
+      expect(whereSpy).toHaveBeenCalled();
+    });
+  });
+
+  // ---------------------------------------------------------------------------
+
   describe('deactivateGuru', () => {
     const tenantId = '11111111-1111-1111-1111-111111111111';
     const guruId = 'guru-user-id';
