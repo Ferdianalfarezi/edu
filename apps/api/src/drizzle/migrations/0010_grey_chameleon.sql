@@ -33,12 +33,12 @@ CREATE TABLE IF NOT EXISTS "konfigurasi_biaya" (
 	"updated_at" timestamp with time zone DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
-ALTER TABLE "audit_trail" ADD COLUMN "aksi_label" varchar(100);--> statement-breakpoint
-ALTER TABLE "audit_trail" ADD COLUMN "perubahan" jsonb;--> statement-breakpoint
-ALTER TABLE "barang" ADD COLUMN "lokasi" varchar(255);--> statement-breakpoint
-ALTER TABLE "barang" ADD COLUMN "kondisi_barang" "kondisi_barang";--> statement-breakpoint
-ALTER TABLE "barang" ADD COLUMN "sumber_dana" "sumber_dana";--> statement-breakpoint
-ALTER TABLE "barang" ADD COLUMN "kategori" "kategori_barang";--> statement-breakpoint
+ALTER TABLE "audit_trail" ADD COLUMN IF NOT EXISTS "aksi_label" varchar(100);--> statement-breakpoint
+ALTER TABLE "audit_trail" ADD COLUMN IF NOT EXISTS "perubahan" jsonb;--> statement-breakpoint
+ALTER TABLE "barang" ADD COLUMN IF NOT EXISTS "lokasi" varchar(255);--> statement-breakpoint
+ALTER TABLE "barang" ADD COLUMN IF NOT EXISTS "kondisi_barang" "kondisi_barang";--> statement-breakpoint
+ALTER TABLE "barang" ADD COLUMN IF NOT EXISTS "sumber_dana" "sumber_dana";--> statement-breakpoint
+ALTER TABLE "barang" ADD COLUMN IF NOT EXISTS "kategori" "kategori_barang";--> statement-breakpoint
 CREATE UNIQUE INDEX IF NOT EXISTS "idx_konfigbiaya_tenant_siswa" ON "konfigurasi_biaya" ("tenant_id","siswa_id");--> statement-breakpoint
 CREATE UNIQUE INDEX IF NOT EXISTS "idx_konfigbiaya_tenant_kelas" ON "konfigurasi_biaya" ("tenant_id","kelas_id");--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS "idx_barang_kondisi" ON "barang" ("tenant_id","kondisi_barang");--> statement-breakpoint
