@@ -13,11 +13,6 @@ const emit = defineEmits<{
   (e: 'toggleMobileMenu'): void;
 }>();
 
-const brandFallback = ref(false);
-function useFallbackBranding() {
-  brandFallback.value = true;
-}
-
 // Local ref so @error can clear it without mutating the prop
 const resolvedLogoUrl = ref<string | null>(props.logoUrl ?? null);
 watch(
