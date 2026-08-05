@@ -27,6 +27,7 @@ import { RppModule } from './modules/rpp/rpp.module';
 import { KenaikanKelasModule } from './modules/kenaikan-kelas/kenaikan-kelas.module';
 import { AuditLogModule } from './modules/audit-log';
 import { BarangModule } from './modules/barang/barang.module';
+import { KonfigurasiBiayaModule } from './modules/konfigurasi-biaya/konfigurasi-biaya.module';
 import { DashboardModule } from './modules/dashboard/dashboard.module';
 import { HealthModule } from './modules/health/health.module';
 import { TenantInterceptor } from './common/interceptors/tenant.interceptor';
@@ -172,6 +173,9 @@ import { MONITORING_CONFIG } from './common/monitoring/monitoring.config';
 
     // Barang (pencatatan inventaris barang sekolah)
     BarangModule,
+
+    // Konfigurasi Biaya (override nominal SPP per siswa/kelas)
+    KonfigurasiBiayaModule,
 
     // Dashboard (Superadmin cross-tenant metrics)
     DashboardModule,
