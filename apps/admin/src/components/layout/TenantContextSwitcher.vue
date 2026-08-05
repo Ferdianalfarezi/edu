@@ -9,6 +9,7 @@ import { Role } from '@edu/shared';
 interface TenantOption {
   id: string;
   nama: string;
+  logo_url?: string | null;
 }
 
 const authStore = useAuthStore();
@@ -66,7 +67,11 @@ async function searchTenants(query: string) {
 }
 
 function selectTenant(tenant: TenantOption) {
-  tenantContextStore.setTenant({ id: tenant.id, nama: tenant.nama });
+  tenantContextStore.setTenant({
+    id: tenant.id,
+    nama: tenant.nama,
+    logo_url: tenant.logo_url ?? null,
+  });
   searchQuery.value = '';
   tenantOptions.value = [];
   isOpen.value = false;

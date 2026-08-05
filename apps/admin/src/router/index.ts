@@ -56,6 +56,18 @@ export const router = createRouter({
       meta: { roles: [Role.ADMIN] },
     },
     {
+      path: '/kelas/:id',
+      name: 'kelas-detail',
+      component: () => import('@/views/KelasDetailView.vue'),
+      meta: { roles: [Role.ADMIN, Role.KEPALA_SEKOLAH] },
+    },
+    {
+      path: '/guru',
+      name: 'guru',
+      component: () => import('@/views/GuruView.vue'),
+      meta: { roles: [Role.ADMIN, Role.KEPALA_SEKOLAH] },
+    },
+    {
       path: '/tahun-ajaran',
       name: 'tahun-ajaran',
       component: () => import('@/views/TahunAjaranView.vue'),
@@ -72,6 +84,12 @@ export const router = createRouter({
       name: 'konfigurasi',
       component: () => import('@/views/KonfigurasiView.vue'),
       meta: { roles: [Role.ADMIN] },
+    },
+    {
+      path: '/konfigurasi-biaya',
+      name: 'konfigurasi-biaya',
+      component: () => import('@/views/KonfigurasiBiayaView.vue'),
+      meta: { roles: [Role.ADMIN, Role.BENDAHARA] },
     },
     {
       path: '/jadwal',
@@ -151,12 +169,40 @@ export const router = createRouter({
       component: () => import('@/views/AbsensiRekapView.vue'),
       meta: { roles: [Role.ADMIN, Role.KEPALA_SEKOLAH] },
     },
+    // Redirect /tagihan → /tagihan/list
+    { path: '/tagihan', redirect: '/tagihan/list' },
     {
-      path: '/tagihan',
-      name: 'tagihan',
-      component: () => import('@/views/TagihanView.vue'),
+      path: '/tagihan/generate',
+      name: 'tagihan-generate',
+      component: () => import('@/views/tagihan/TagihanGenerateView.vue'),
       meta: { roles: [Role.ADMIN, Role.BENDAHARA] },
     },
+    {
+      path: '/tagihan/list',
+      name: 'tagihan-list',
+      component: () => import('@/views/tagihan/TagihanListView.vue'),
+      meta: { roles: [Role.ADMIN, Role.BENDAHARA] },
+    },
+    {
+      path: '/tagihan/verifikasi',
+      name: 'tagihan-verifikasi',
+      component: () => import('@/views/tagihan/TagihanVerifikasiView.vue'),
+      meta: { roles: [Role.ADMIN, Role.BENDAHARA] },
+    },
+    {
+      path: '/tagihan/tunggakan',
+      name: 'tagihan-tunggakan',
+      component: () => import('@/views/tagihan/TunggakanView.vue'),
+      meta: { roles: [Role.ADMIN, Role.BENDAHARA] },
+    },
+    {
+      path: '/tagihan/audit',
+      name: 'tagihan-audit',
+      component: () => import('@/views/tagihan/TagihanAuditView.vue'),
+      meta: { roles: [Role.ADMIN, Role.BENDAHARA] },
+    },
+    // Catch-all untuk /tagihan/* yang tidak dikenali
+    { path: '/tagihan/:pathMatch(.*)*', redirect: '/tagihan/list' },
     {
       path: '/barang',
       name: 'barang',

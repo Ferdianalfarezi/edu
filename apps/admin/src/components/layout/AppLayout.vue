@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue';
+import { ref, computed, onMounted } from 'vue';
 import { useRoute } from 'vue-router';
 import { useAuthStore } from '@/stores/auth';
 import { useTenantContextStore } from '@/stores/tenant-context';
@@ -7,6 +7,7 @@ import { useSubNavigation } from '@/composables/useSubNavigation';
 import AppSidebar from '@/components/layout/AppSidebar.vue';
 import AppTopBar from '@/components/layout/AppTopBar.vue';
 import AppSubNav from '@/components/layout/AppSubNav.vue';
+import { api } from '@/api/client';
 
 const route = useRoute();
 const authStore = useAuthStore();
@@ -14,6 +15,33 @@ const tenantContextStore = useTenantContextStore();
 const { tabs } = useSubNavigation();
 
 const mobileMenuOpen = ref(false);
+
+// Reactive tenant info fetched from API (used when auth response lacks tenant data)
+const fetchedTenantName = ref<string | null>(null);
+const fetchedTenantLogoUrl = ref<string | null>(null);
+
+onMounted(async () => {
+  // Skip if tenant context is already set (super admin) or tenant info already in auth user
+  if (tenantContextStore.activeTenant) return;
+  if (authStore.user?.tenants?.[0]?.name) return;
+
+  // Skip for super_admin (no tenant)
+  if (
+    !authStore.user?.tenant_id &&
+    !(authStore.user as unknown as Record<string, unknown>)?.['tenantId']
+  )
+    return;
+
+  try {
+    const { data } = await api.get<{ id: string; nama: string; logoUrl?: string }>(
+      '/tenants/profile',
+    );
+    fetchedTenantName.value = data.nama ?? null;
+    fetchedTenantLogoUrl.value = data.logoUrl ?? null;
+  } catch {
+    // Non-critical — topbar just won't show school name
+  }
+});
 
 const pageTitle = computed(() => {
   if (route.meta?.title) return route.meta.title as string;
@@ -63,12 +91,31 @@ const pageTitle = computed(() => {
 });
 
 const schoolName = computed(() => {
-  // Prefer active tenant context (super admin switching)
+  // 1. Active tenant context (super admin switching)
   if (tenantContextStore.activeTenant?.nama) {
     return tenantContextStore.activeTenant.nama;
   }
-  // Fall back to user's first tenant
-  return authStore.user?.tenants?.[0]?.name || '';
+  // 2. Tenant info from login response (if backend already returns it)
+  if (authStore.user?.tenants?.[0]?.name) {
+    return authStore.user.tenants[0].name;
+  }
+  // 3. Fetched on mount via GET /tenant/:id
+  return fetchedTenantName.value ?? '';
+});
+
+const schoolLogoUrl = computed<string | null>(() => {
+  // 1. Active tenant context (super admin switching)
+  if (tenantContextStore.activeTenant) {
+    return tenantContextStore.logoUrl;
+  }
+  // 2. Tenant info from login response (camelCase after axios transform)
+  const firstTenant = authStore.user?.tenants?.[0] as
+    ({ logoUrl?: string; logo_url?: string } & { id: string; name: string }) | undefined;
+  if (firstTenant?.logoUrl ?? firstTenant?.logo_url) {
+    return firstTenant?.logoUrl ?? firstTenant?.logo_url ?? null;
+  }
+  // 3. Fetched on mount via GET /tenant/:id
+  return fetchedTenantLogoUrl.value;
 });
 </script>
 
@@ -96,6 +143,7 @@ const schoolName = computed(() => {
       <AppTopBar
         :title="pageTitle"
         :school-name="schoolName"
+        :logo-url="schoolLogoUrl"
         @toggle-mobile-menu="mobileMenuOpen = !mobileMenuOpen"
       />
 
