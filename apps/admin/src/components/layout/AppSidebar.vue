@@ -20,6 +20,7 @@ interface SidebarItem {
   label: string;
   basePath: string;
   roles?: Role[];
+  isExternal?: boolean;
 }
 
 const SIDEBAR_ITEMS: SidebarItem[] = [
@@ -44,6 +45,14 @@ const SIDEBAR_ITEMS: SidebarItem[] = [
     label: 'Rapor',
     basePath: '/rapor/input',
     roles: [Role.ADMIN, Role.GURU, Role.KEPALA_SEKOLAH],
+  },
+  {
+    key: 'cbt',
+    icon: 'computer-desktop',
+    label: 'CBT',
+    basePath: '/cbt',
+    roles: [Role.ADMIN, Role.GURU, Role.KEPALA_SEKOLAH],
+    isExternal: true,
   },
   {
     key: 'rpp',
@@ -82,6 +91,17 @@ const SIDEBAR_ITEMS: SidebarItem[] = [
   },
 ];
 
+// CBT Admin URL - uses access token for SSO
+const CBT_ADMIN_URL = import.meta.env.VITE_CBT_ADMIN_URL || 'https://cbt-admin.teman-sekolah.com';
+
+function getCbtUrl(): string {
+  const token = localStorage.getItem('access_token');
+  if (token) {
+    return `${CBT_ADMIN_URL}?token=${encodeURIComponent(token)}`;
+  }
+  return CBT_ADMIN_URL;
+}
+
 const filteredItems = computed(() =>
   SIDEBAR_ITEMS.filter((item) => {
     if (!item.roles) return true;
@@ -113,6 +133,14 @@ function isActive(item: SidebarItem): boolean {
 }
 
 function navigateTo(item: SidebarItem) {
+  // Handle external links (like CBT)
+  if (item.isExternal) {
+    if (item.key === 'cbt') {
+      window.open(getCbtUrl(), '_blank');
+    }
+    return;
+  }
+
   // Find the first accessible route for this section by checking route meta roles
   const sectionTabPaths: Record<string, string[]> = {
     dashboard: ['/'],
@@ -250,6 +278,13 @@ const userInitial = computed(() => {
                 stroke-linecap="round"
                 stroke-linejoin="round"
                 d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"
+              />
+            </template>
+            <template v-else-if="item.icon === 'computer-desktop'">
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                d="M9 17.25v1.007a3 3 0 01-.879 2.122L7.5 21h9l-.621-.621A3 3 0 0115 18.257V17.25m6-12V15a2.25 2.25 0 01-2.25 2.25H5.25A2.25 2.25 0 013 15V5.25m18 0A2.25 2.25 0 0018.75 3H5.25A2.25 2.25 0 003 5.25m18 0V12a2.25 2.25 0 01-2.25 2.25H5.25A2.25 2.25 0 013 12V5.25"
               />
             </template>
             <template v-else-if="item.icon === 'cog'">
