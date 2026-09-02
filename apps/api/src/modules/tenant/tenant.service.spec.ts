@@ -226,6 +226,76 @@ describe('TenantService', () => {
         }),
       );
     });
+
+    it('should create parent user and link to siswa when teleponWali is provided', async () => {
+      const createDtoWithSiswa = {
+        nama: 'SD Harapan',
+        alamat: 'Jl. A',
+        telepon: '021-111',
+        email: 'info@sd.id',
+        jumlah_tingkat: 6,
+        admin_nama: 'Admin',
+        admin_email: 'admin@sd.id',
+        siswa: [
+          {
+            nama: 'Budi',
+            nisn: '1234567890',
+            namaWali: 'Ibu Sari',
+            teleponWali: '081234567890',
+          },
+        ],
+      };
+
+      // validateOnboardingData: no existing admin email
+      const selectChainNoUser = createSelectChain([]);
+      mockDb.select.mockReturnValue(selectChainNoUser);
+
+      const newTenant = { id: 'tenant-id', nama: 'SD Harapan', email: 'info@sd.id' };
+      const newTahunAjaran = { id: 'ta-id', nama: '2024/2025' };
+      const newAdmin = { id: 'admin-id', email: 'admin@sd.id', nama: 'Admin' };
+      const newParent = { id: 'parent-id' };
+      const newSiswa = [{ id: 'siswa-id' }];
+
+      // Track insert calls to verify orangTuaId
+      let siswaInsertValues: any = null;
+      let insertCallCount = 0;
+
+      const mockTx = {
+        select: jest.fn().mockReturnValue(createSelectChain([])), // No existing parent
+        insert: jest.fn().mockImplementation(() => {
+          const returnValues = [
+            [newTenant], // tenant
+            [newTahunAjaran], // tahunAjaran
+            [newAdmin], // admin
+            [newParent], // parent (from resolveOrCreateParentInTx)
+            newSiswa, // siswa
+          ];
+          const chain = {
+            values: jest.fn().mockImplementation((vals) => {
+              if (vals && Array.isArray(vals) && vals[0] && 'orangTuaId' in vals[0]) {
+                siswaInsertValues = vals;
+              }
+              return chain;
+            }),
+            returning: jest.fn().mockResolvedValue(returnValues[insertCallCount++] || []),
+          };
+          return chain;
+        }),
+      };
+
+      mockDb.transaction = jest
+        .fn()
+        .mockImplementation(async (cb: (tx: any) => Promise<any>) => cb(mockTx));
+
+      (mockedBcrypt.hash as jest.Mock).mockResolvedValue('$2b$10$hashed');
+
+      const result = await service.createTenant(createDtoWithSiswa);
+
+      expect(result.onboarding_summary?.siswa).toBe(1);
+      // Verify that siswa was inserted with orangTuaId
+      expect(siswaInsertValues).not.toBeNull();
+      expect(siswaInsertValues[0].orangTuaId).toBe('parent-id');
+    });
   });
 
   describe('deactivateTenant', () => {
@@ -268,6 +338,56 @@ describe('TenantService', () => {
       await expect(service.deactivateTenant('tenant-uuid-1')).rejects.toThrow(
         'Tenant sudah nonaktif',
       );
+    });
+  });
+
+  describe('resolveOrCreateParentInTx', () => {
+    it('should create new parent user when phone does not exist', async () => {
+      // Setup: no existing user with this phone
+      const selectChain = createSelectChain([]);
+      const mockTx = {
+        select: jest.fn().mockReturnValue(selectChain),
+        insert: jest.fn().mockReturnValue(createInsertChain([{ id: 'new-parent-id' }])),
+      };
+
+      const result = await (service as any).resolveOrCreateParentInTx(
+        mockTx,
+        '081234567890',
+        'Ibu Sari',
+      );
+
+      expect(result).toBe('new-parent-id');
+      expect(mockTx.insert).toHaveBeenCalled();
+      // Verify insert was called with correct values
+      const insertCall = mockTx.insert.mock.results[0].value;
+      expect(insertCall.values).toHaveBeenCalledWith(
+        expect.objectContaining({
+          phone: '081234567890',
+          nama: 'Ibu Sari',
+          role: 'orang_tua',
+          tenantId: null,
+          passwordHash: null,
+          isActive: true,
+        }),
+      );
+    });
+
+    it('should return existing parent ID when phone already exists', async () => {
+      // Setup: existing user with this phone
+      const selectChain = createSelectChain([{ id: 'existing-parent-id' }]);
+      const mockTx = {
+        select: jest.fn().mockReturnValue(selectChain),
+        insert: jest.fn(),
+      };
+
+      const result = await (service as any).resolveOrCreateParentInTx(
+        mockTx,
+        '081234567890',
+        'Ibu Sari',
+      );
+
+      expect(result).toBe('existing-parent-id');
+      expect(mockTx.insert).not.toHaveBeenCalled();
     });
   });
 

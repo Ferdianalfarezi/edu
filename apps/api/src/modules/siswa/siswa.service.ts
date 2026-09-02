@@ -742,10 +742,10 @@ export class SiswaService {
       ['tanggal_lahir', 'tanggallahir', 'tgl_lahir'].includes(h),
     );
     const orangTuaNamaIdx = header.findIndex((h) =>
-      ['orang_tua_nama', 'orangtuanama', 'nama_ortu'].includes(h),
+      ['orang_tua_nama', 'orangtuanama', 'nama_ortu', 'nama_wali'].includes(h),
     );
     const orangTuaPhoneIdx = header.findIndex((h) =>
-      ['orang_tua_phone', 'orangtuaphone', 'phone_ortu', 'telp_ortu'].includes(h),
+      ['orang_tua_phone', 'orangtuaphone', 'phone_ortu', 'telp_ortu', 'telepon_wali'].includes(h),
     );
     const kelasIdIdx = header.findIndex((h) => ['kelas_id', 'kelasid', 'kelas'].includes(h));
 

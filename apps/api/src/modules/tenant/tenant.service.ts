@@ -653,24 +653,47 @@ export class TenantService {
         guruStaffCount = dto.guru_staff.length;
       }
 
-      // ── Step (f): Insert siswa (bulk) ────────────────────────────────────
+      // ── Step (f): Insert siswa (bulk) with parent linkage ──────────────────
       let siswaCount = 0;
 
       if (dto.siswa && dto.siswa.length > 0) {
-        const siswaValues = dto.siswa.map((s) => {
-          // Resolve kelasId via nama lookup; unmatched → null (do NOT throw)
-          const kelasId = s.kelasNama ? (kelasMap.get(s.kelasNama) ?? null) : null;
+        // Build a map of phone → parentId to deduplicate parents within this batch
+        const parentIdCache = new Map<string, string>();
 
-          return {
-            tenantId: insertedTenant.id,
-            kelasId,
-            nama: s.nama,
-            nisn: s.nisn ?? null,
-            jenisKelamin: s.jenisKelamin ?? null,
-            tanggalLahir: s.tanggalLahir ?? null,
-            alamat: s.alamat ?? null,
-          };
-        });
+        const siswaValues = await Promise.all(
+          dto.siswa.map(async (s) => {
+            // Resolve kelasId via nama lookup; unmatched → null (do NOT throw)
+            const kelasId = s.kelasNama ? (kelasMap.get(s.kelasNama) ?? null) : null;
+
+            // Resolve or create parent if teleponWali is provided
+            let orangTuaId: string | null = null;
+            if (s.teleponWali) {
+              // Check cache first to avoid duplicate DB calls for same phone
+              const cached = parentIdCache.get(s.teleponWali);
+              if (cached) {
+                orangTuaId = cached;
+              } else {
+                orangTuaId = await this.resolveOrCreateParentInTx(
+                  tx,
+                  s.teleponWali,
+                  s.namaWali || s.nama, // Fallback to student name if no parent name
+                );
+                parentIdCache.set(s.teleponWali, orangTuaId);
+              }
+            }
+
+            return {
+              tenantId: insertedTenant.id,
+              kelasId,
+              nama: s.nama,
+              nisn: s.nisn ?? null,
+              jenisKelamin: s.jenisKelamin ?? null,
+              tanggalLahir: s.tanggalLahir ?? null,
+              alamat: s.alamat ?? null,
+              orangTuaId,
+            };
+          }),
+        );
 
         const insertedSiswa = await tx.insert(siswa).values(siswaValues).returning();
         siswaCount = insertedSiswa.length;
@@ -736,6 +759,47 @@ export class TenantService {
       },
       ...(hasOnboardingData ? { onboarding_summary } : {}),
     };
+  }
+
+  /**
+   * Resolve or create a parent user within a transaction context.
+   * Per ADR-002: parents have tenant_id = NULL, deduplicated globally by phone.
+   *
+   * @param tx - Drizzle transaction instance
+   * @param phone - Parent's phone number
+   * @param nama - Parent's name (used only if creating new)
+   * @returns Parent user ID
+   */
+  private async resolveOrCreateParentInTx(
+    tx: Parameters<Parameters<typeof this.db.transaction>[0]>[0],
+    phone: string,
+    nama: string,
+  ): Promise<string> {
+    // Check globally for existing orang_tua with this phone
+    const existing = await tx
+      .select({ id: user.id })
+      .from(user)
+      .where(and(eq(user.phone, phone), eq(user.role, 'orang_tua')))
+      .limit(1);
+
+    if (existing.length > 0) {
+      return existing[0].id;
+    }
+
+    // Create new parent user with tenant_id = NULL
+    const [created] = await tx
+      .insert(user)
+      .values({
+        tenantId: null,
+        nama,
+        phone,
+        role: 'orang_tua',
+        isActive: true,
+        passwordHash: null,
+      })
+      .returning({ id: user.id });
+
+    return created.id;
   }
 
   /**

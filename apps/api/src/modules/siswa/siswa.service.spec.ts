@@ -648,6 +648,28 @@ describe('SiswaService', () => {
       const rows = service.parseSiswaCsv(csv);
       expect(rows).toHaveLength(0);
     });
+
+    it('should parse nama_wali and telepon_wali headers', () => {
+      const csv = `nama,nisn,nama_wali,telepon_wali
+Budi,1234567890,Ibu Sari,081234567890`;
+
+      const result = service.parseSiswaCsv(csv);
+
+      expect(result).toHaveLength(1);
+      expect(result[0].orangTuaNama).toBe('Ibu Sari');
+      expect(result[0].orangTuaPhone).toBe('081234567890');
+    });
+
+    it('should still parse legacy headers orang_tua_nama and orang_tua_phone', () => {
+      const csv = `nama,nisn,orang_tua_nama,orang_tua_phone
+Budi,1234567890,Ibu Sari,081234567890`;
+
+      const result = service.parseSiswaCsv(csv);
+
+      expect(result).toHaveLength(1);
+      expect(result[0].orangTuaNama).toBe('Ibu Sari');
+      expect(result[0].orangTuaPhone).toBe('081234567890');
+    });
   });
 
   // ─── PARENT LINKAGE (ADR-002) ─────────────────────────────────
