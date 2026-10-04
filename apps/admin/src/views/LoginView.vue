@@ -79,7 +79,7 @@ async function handleLogin() {
         </div>
 
         <div class="mb-8">
-          <h2 class="text-xl font-semibold text-text-primary mb-1">Masuk ke akun Anda</h2>
+          <h2 class="text-xl font-semibold text-text-primary mb-1">Masuk ke akun gw</h2>
           <p class="text-[15px] text-text-secondary">
             Masukkan email dan password untuk melanjutkan
           </p>
