@@ -2,7 +2,8 @@
 # Deploys the Vue.js admin panel as a static site on Railway
 
 FROM node:20-alpine AS build
-RUN corepack enable && corepack prepare pnpm@9 --activate
+ENV NODE_OPTIONS=--max-old-space-size=3072
+RUN npm install -g pnpm@9
 WORKDIR /app
 
 COPY pnpm-lock.yaml pnpm-workspace.yaml package.json ./

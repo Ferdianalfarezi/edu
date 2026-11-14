@@ -2,7 +2,7 @@
 # Target: Railway deployment — 1GB RAM, 1 vCPU (ADR-006)
 
 FROM node:20-alpine AS base
-RUN corepack enable && corepack prepare pnpm@9 --activate
+RUN npm install -g pnpm@9
 WORKDIR /app
 
 # ---- Dependencies ----
@@ -14,6 +14,7 @@ RUN pnpm install --frozen-lockfile --prod=false
 
 # ---- Build ----
 FROM base AS build
+ENV NODE_OPTIONS=--max-old-space-size=3072
 COPY --from=deps /app/node_modules ./node_modules
 COPY --from=deps /app/apps/api/node_modules ./apps/api/node_modules
 COPY --from=deps /app/packages/shared/node_modules ./packages/shared/node_modules
