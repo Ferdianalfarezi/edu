@@ -1,0 +1,2 @@
+# File migrasi selalu LF (hash-nya dicatat di database, lihat apps/api/migrate.mjs)
+apps/api/src/drizzle/migrations/*.sql text eol=lf

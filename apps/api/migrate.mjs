@@ -45,7 +45,9 @@ async function migrate() {
 
   for (const file of files) {
     const filePath = path.join(MIGRATIONS_DIR, file);
-    const sql = fs.readFileSync(filePath, 'utf-8');
+    // Hash dihitung dari versi LF supaya sama di Windows (CRLF) dan Linux (LF).
+    // Hash di database production memang dari versi LF.
+    const sql = fs.readFileSync(filePath, 'utf-8').replace(/\r\n/g, '\n');
     const hash = crypto.createHash('sha256').update(sql).digest('hex');
 
     if (appliedHashes.has(hash)) {
