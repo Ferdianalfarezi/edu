@@ -1,10 +1,11 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue';
+import { ref, computed, onMounted, watch } from 'vue';
 import { api } from '@/api/client';
 import { PageHeader, BaseModal, ActionButton } from '@/components/ui';
 import { useOnboardingForm } from '@/composables/useOnboardingForm';
 import { parseExcelFile } from '@/composables/useExcelParser';
 import OnboardingPreview from '@/components/OnboardingPreview.vue';
+import { JENJANG_OPTIONS, jenjangLabel, type Jenjang } from '@/utils/kelas-label';
 
 interface Tenant {
   id: string;
@@ -13,6 +14,7 @@ interface Tenant {
   telepon: string | null;
   email: string | null;
   jumlahTingkat: number;
+  jenjang?: Jenjang | null;
   hariKerja?: '5_hari' | '6_hari';
   isActive: boolean;
   userCount?: number;
@@ -25,6 +27,7 @@ interface TenantForm {
   telepon: string;
   email: string;
   jumlahTingkat: number;
+  jenjang: Jenjang | '';
   hariKerja: '5_hari' | '6_hari';
   adminNama: string;
   adminEmail: string;
@@ -32,6 +35,7 @@ interface TenantForm {
 
 const tenants = ref<Tenant[]>([]);
 const loading = ref(false);
+
 
 const {
   step,
@@ -49,6 +53,21 @@ const {
     fetchTenants();
   },
 });
+
+// Jenjang dipilih di form → set jumlah_tingkat (SD 6, SMP/SMA 3)
+watch(
+  () => tenantForm.value.jenjang,
+  (v) => {
+    const opt = JENJANG_OPTIONS.find((o) => o.value === v);
+    if (opt) tenantForm.value.jumlah_tingkat = opt.jumlahTingkat;
+  },
+  { immediate: true },
+);
+
+// Saat edit: jenjang cuma bisa diganti ke jenjang dengan jumlah tingkat sama (SMP ↔ SMA)
+const editJenjangOptions = computed(() =>
+  JENJANG_OPTIONS.filter((o) => o.jumlahTingkat === form.value.jumlahTingkat),
+);
 
 // File parsing error state for Step 2
 const parseError = ref<string | null>(null);
@@ -77,6 +96,7 @@ const form = ref<TenantForm>({
   telepon: '',
   email: '',
   jumlahTingkat: 3,
+  jenjang: '',
   hariKerja: '6_hari',
   adminNama: '',
   adminEmail: '',
@@ -102,6 +122,7 @@ function openCreateForm() {
     telepon: '',
     email: '',
     jumlahTingkat: 3,
+    jenjang: '',
     hariKerja: '6_hari',
     adminNama: '',
     adminEmail: '',
@@ -117,6 +138,7 @@ function openEditForm(tenant: Tenant) {
     telepon: tenant.telepon || '',
     email: tenant.email || '',
     jumlahTingkat: tenant.jumlahTingkat,
+    jenjang: tenant.jenjang ?? '',
     hariKerja: '6_hari',
     adminNama: '',
     adminEmail: '',
@@ -132,6 +154,7 @@ async function saveTenant() {
         alamat: form.value.alamat || undefined,
         telepon: form.value.telepon || undefined,
         email: form.value.email || undefined,
+        jenjang: form.value.jenjang || undefined,
       };
       await api.patch(`/tenants/${editingTenant.value.id}`, payload);
     } else {
@@ -371,20 +394,21 @@ onMounted(fetchTenants);
               placeholder="admin@sekolah.sch.id"
             />
           </div>
-          <!-- Jumlah Tingkat -->
+          <!-- Jenjang (menentukan jumlah tingkat) -->
           <div class="mb-4">
-            <label class="block text-[14px] font-semibold text-stone-800 mb-1.5"
-              >Jumlah Tingkat</label
-            >
-            <input
-              v-model.number="tenantForm.jumlah_tingkat"
-              type="number"
-              min="1"
-              max="13"
+            <label class="block text-[14px] font-semibold text-stone-800 mb-1.5">Jenjang</label>
+            <select
+              v-model="tenantForm.jenjang"
               required
               class="w-full px-4 py-2.5 text-[15px] border-2 border-stone-200 rounded-xs focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-colors"
-            />
-            <p class="mt-1 text-[13px] text-stone-400">SD = 6, SMP/SMA = 3</p>
+            >
+              <option v-for="opt in JENJANG_OPTIONS" :key="opt.value" :value="opt.value">
+                {{ opt.label }}
+              </option>
+            </select>
+            <p class="mt-1 text-[13px] text-stone-400">
+              Setelah dibuat, SD tidak bisa diganti ke SMP/SMA (dan sebaliknya).
+            </p>
           </div>
           <!-- Hari Kerja -->
           <div class="mb-4">
@@ -454,6 +478,7 @@ onMounted(fetchTenants);
             :data="parseResult.data"
             :errors="parseResult?.errors ?? []"
             :warnings="parseResult?.warnings ?? []"
+            :jenjang="tenantForm.jenjang"
             @ganti-file="handleGantiFile"
           />
           <p v-if="submitError" class="mt-3 text-[14px] text-danger-600 font-medium">
@@ -503,17 +528,25 @@ onMounted(fetchTenants);
               placeholder="admin@sekolah.sch.id"
             />
           </div>
-          <!-- Jumlah Tingkat (read-only in edit mode) -->
+          <!-- Jenjang (edit: hanya antar jenjang dengan jumlah tingkat sama, mis. SMP ↔ SMA) -->
           <div class="mb-4">
-            <label class="block text-[14px] font-semibold text-stone-800 mb-1.5"
-              >Jumlah Tingkat</label
+            <label class="block text-[14px] font-semibold text-stone-800 mb-1.5">Jenjang</label>
+            <select
+              v-if="editJenjangOptions.length > 1"
+              v-model="form.jenjang"
+              class="w-full px-4 py-2.5 text-[15px] border-2 border-stone-200 rounded-xs focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-colors"
             >
+              <option value="" disabled>-- Pilih Jenjang --</option>
+              <option v-for="opt in editJenjangOptions" :key="opt.value" :value="opt.value">
+                {{ opt.label }}
+              </option>
+            </select>
             <div
+              v-else
               class="w-full px-4 py-2.5 text-[15px] border-2 border-stone-200 rounded-xs bg-surface-warm text-stone-500"
             >
-              {{ form.jumlahTingkat }}
+              {{ form.jenjang ? jenjangLabel(form.jenjang) : `${form.jumlahTingkat} tingkat` }}
             </div>
-            <p class="mt-1 text-[13px] text-stone-400">SD = 6, SMP/SMA = 3</p>
           </div>
         </form>
       </template>

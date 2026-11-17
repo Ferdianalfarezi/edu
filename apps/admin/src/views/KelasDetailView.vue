@@ -2,6 +2,7 @@
 import { ref, computed, onMounted } from 'vue';
 import { useRoute } from 'vue-router';
 import { api } from '@/api/client';
+import { useJenjang } from '@/composables/useJenjang';
 
 // --- Types ---
 type StatusSiswa = 'aktif' | 'tidak_aktif' | 'pindah' | 'lulus';
@@ -81,7 +82,10 @@ async function fetchKelasDetail() {
   }
 }
 
+const { load: loadJenjang, label: kelasLabel } = useJenjang();
+
 onMounted(() => {
+  loadJenjang();
   fetchKelasDetail();
 });
 </script>
@@ -204,9 +208,9 @@ onMounted(() => {
             </div>
             <div>
               <dt class="text-[13px] font-bold text-text-tertiary uppercase tracking-[0.04em]">
-                Tingkat
+                Kelas
               </dt>
-              <dd class="text-[15px] text-text-primary mt-1">{{ kelas.tingkat }}</dd>
+              <dd class="text-[15px] text-text-primary mt-1">{{ kelasLabel(kelas.tingkat) }}</dd>
             </div>
             <div>
               <dt class="text-[13px] font-bold text-text-tertiary uppercase tracking-[0.04em]">

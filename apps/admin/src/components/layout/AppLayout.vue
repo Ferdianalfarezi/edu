@@ -55,6 +55,7 @@ const pageTitle = computed(() => {
     '/kelas': 'Kelas',
     '/mata-pelajaran': 'Mata Pelajaran',
     '/jadwal': 'Jadwal',
+    '/jadwal-saya': 'Jadwal Saya',
     '/kenaikan-kelas': 'Kenaikan Kelas',
     '/absensi/input': 'Input Absensi',
     '/absensi/edit': 'Edit Absensi',

@@ -2,6 +2,7 @@
 import { ref, onMounted } from 'vue';
 import { api } from '@/api/client';
 import { StatCard, QuickActionCard } from '@/components/ui';
+import GenderChartCard from './GenderChartCard.vue';
 
 interface TenantStats {
   totalUsers: number;
@@ -102,6 +103,8 @@ onMounted(fetchStats);
           icon="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
         />
       </div>
+
+      <GenderChartCard />
 
       <!-- Quick Actions -->
       <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">

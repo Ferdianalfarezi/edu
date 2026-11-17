@@ -12,6 +12,7 @@ export interface TenantFormData {
   telepon: string;
   email: string;
   jumlah_tingkat: number;
+  jenjang: 'sd' | 'smp' | 'sma';
   hari_kerja: '5_hari' | '6_hari';
   admin_nama: string;
   admin_email: string;
@@ -23,6 +24,7 @@ const DEFAULT_TENANT_FORM: TenantFormData = {
   telepon: '',
   email: '',
   jumlah_tingkat: 6,
+  jenjang: 'sd',
   hari_kerja: '6_hari',
   admin_nama: '',
   admin_email: '',

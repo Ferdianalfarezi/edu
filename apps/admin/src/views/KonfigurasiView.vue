@@ -3,6 +3,7 @@ import { ref, onMounted } from 'vue';
 import { api } from '@/api/client';
 import { PageHeader, ActionButton } from '@/components/ui';
 import { useToast } from '@/composables/useToast';
+import { kelasLabel } from '@/utils/kelas-label';
 
 interface KonfigurasiData {
   batasKetidakhadiranNotifikasi: number;
@@ -20,6 +21,7 @@ interface TenantProfile {
   id: string;
   nama: string;
   jumlahTingkat: number;
+  jenjang?: string | null;
   hariKerja?: '5_hari' | '6_hari';
 }
 
@@ -35,6 +37,7 @@ const savingHariKerja = ref(false);
 
 // Jumlah tingkat from tenant profile
 const jumlahTingkat = ref(0);
+const jenjang = ref<string | null>(null);
 
 // Configuration form
 const config = ref<KonfigurasiData>({
@@ -76,6 +79,7 @@ async function fetchKonfigurasi() {
   try {
     const { data } = await api.get<TenantProfile>('/tenants/profile');
     jumlahTingkat.value = data.jumlahTingkat;
+    jenjang.value = data.jenjang ?? null;
     hariKerja.value = data.hariKerja ?? '6_hari';
   } catch (error) {
     console.error('Failed to fetch tenant profile:', error);
@@ -280,16 +284,16 @@ onMounted(fetchKonfigurasi);
       <!-- Nominal SPP per Tingkat Card -->
       <div class="bg-white rounded-[16px] border-2 border-stone-200 shadow-xs overflow-hidden">
         <div class="bg-primary-50 px-6 py-5 border-b-2 border-primary-200">
-          <h3 class="text-[16px] font-bold text-primary-800">Nominal SPP per Tingkat Kelas</h3>
+          <h3 class="text-[16px] font-bold text-primary-800">Nominal SPP per Kelas</h3>
         </div>
         <div class="px-6 py-5 space-y-4">
           <div v-for="entry in sppEntries" :key="entry.tingkat" class="flex items-end gap-4">
             <div>
-              <label class="block text-[15px] font-medium text-stone-800 mb-1.5">Tingkat</label>
+              <label class="block text-[15px] font-medium text-stone-800 mb-1.5">Kelas</label>
               <span
                 class="inline-block w-28 px-3 py-2.5 text-[15px] bg-surface-warm border-2 border-stone-200 rounded-xs text-stone-800"
               >
-                Tingkat {{ entry.tingkat }}
+                {{ kelasLabel(entry.tingkat, jenjang) }}
               </span>
             </div>
             <div>

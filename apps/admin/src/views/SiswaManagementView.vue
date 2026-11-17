@@ -285,6 +285,22 @@ function openImportModal() {
   showImportModal.value = true;
 }
 
+// Template CSV import siswa. Header harus cocok dengan parseSiswaCsv di API
+// (pemisah koma, tanpa BOM; kolom kelas sengaja tidak ada karena API butuh ID kelas).
+function downloadImportTemplate() {
+  const csv = [
+    'nama,nisn,jenis_kelamin,tanggal_lahir,nama_wali,telepon_wali',
+    'Budi Santoso,0012345678,L,2012-05-17,Slamet Santoso,081234567890',
+    'Siti Aminah,0012345679,P,2012-08-03,Aminah Rahayu,081298765432',
+  ].join('\n');
+  const url = URL.createObjectURL(new Blob([csv + '\n'], { type: 'text/csv;charset=utf-8' }));
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'template_import_siswa.csv';
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
 function handleFileSelect(event: Event) {
   const target = event.target as HTMLInputElement;
   const file = target.files?.[0];
@@ -842,8 +858,21 @@ onMounted(() => {
           Format CSV: kolom wajib
           <code class="px-1 py-0.5 bg-surface-100 rounded text-xs">nama</code>,
           <code class="px-1 py-0.5 bg-surface-100 rounded text-xs">nisn</code>. Kolom opsional:
-          kelas, jenis_kelamin, tanggal_lahir, alamat, nama_wali, telepon_wali.
+          jenis_kelamin (L/P), tanggal_lahir (YYYY-MM-DD), nama_wali, telepon_wali. Pisahkan kolom
+          dengan koma.
         </p>
+        <div
+          class="flex items-center justify-between gap-3 p-3 rounded-lg border border-border bg-surface-50"
+        >
+          <p class="text-sm text-text-secondary">Belum punya format? Unduh template lalu isi datanya.</p>
+          <button
+            type="button"
+            class="shrink-0 px-3 py-2 rounded-lg border border-border bg-white text-sm font-medium text-text-primary hover:bg-surface-100"
+            @click="downloadImportTemplate"
+          >
+            Unduh Template CSV
+          </button>
+        </div>
         <div>
           <label class="block text-sm font-medium text-text-primary mb-1.5">Pilih File CSV</label>
           <input

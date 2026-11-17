@@ -2,6 +2,7 @@
 import { ref, computed, onMounted } from 'vue';
 import { useRoute } from 'vue-router';
 import { api } from '@/api/client';
+import { useJenjang } from '@/composables/useJenjang';
 
 // --- Types ---
 interface SiswaDetailProfil {
@@ -255,7 +256,10 @@ async function retryRaporDetail() {
   }
 }
 
+const { load: loadJenjang, label: kelasLabel } = useJenjang();
+
 onMounted(() => {
+  loadJenjang();
   fetchDetail();
 });
 </script>
@@ -498,7 +502,7 @@ onMounted(() => {
                   <p class="text-[15px] font-semibold text-text-primary">
                     {{ entry.kelasNama }}
                     <span class="text-text-tertiary font-normal"
-                      >(Tingkat {{ entry.tingkat }})</span
+                      >({{ kelasLabel(entry.tingkat) }})</span
                     >
                   </p>
                   <p class="text-[13px] text-text-secondary mt-0.5">

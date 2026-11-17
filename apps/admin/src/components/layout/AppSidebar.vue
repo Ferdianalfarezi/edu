@@ -115,7 +115,7 @@ function isActive(item: SidebarItem): boolean {
   }
   // Match by section prefix
   const sectionPrefixes: Record<string, string[]> = {
-    akademik: ['/siswa', '/kelas', '/mata-pelajaran', '/jadwal', '/kenaikan-kelas', '/guru'],
+    akademik: ['/siswa', '/kelas', '/mata-pelajaran', '/jadwal', '/jadwal-saya', '/kenaikan-kelas', '/guru'],
     absensi: ['/absensi'],
     rapor: ['/rapor'],
     rpp: ['/rpp'],
@@ -144,7 +144,7 @@ function navigateTo(item: SidebarItem) {
   // Find the first accessible route for this section by checking route meta roles
   const sectionTabPaths: Record<string, string[]> = {
     dashboard: ['/'],
-    akademik: ['/siswa', '/kelas', '/mata-pelajaran', '/jadwal', '/kenaikan-kelas', '/guru'],
+    akademik: ['/siswa', '/kelas', '/mata-pelajaran', '/jadwal', '/jadwal-saya', '/kenaikan-kelas', '/guru'],
     absensi: ['/absensi/input', '/absensi/edit', '/absensi/rekap'],
     rapor: ['/rapor/komponen', '/rapor/input', '/rapor/finalize', '/rapor'],
     rpp: ['/rpp/portal', '/rpp/create', '/rpp/favorites'],

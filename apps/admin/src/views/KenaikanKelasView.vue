@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue';
 import { api } from '@/api/client';
+import { useJenjang } from '@/composables/useJenjang';
 import { PageHeader, SearchSelect, ActionButton } from '@/components/ui';
 import type { SelectOption } from '@/components/ui';
 
@@ -74,7 +75,7 @@ const sourceTahunAjaranSelectOptions = computed<SelectOption[]>(() =>
 const sourceKelasSelectOptions = computed<SelectOption[]>(() =>
   sourceKelasList.value.map((k) => ({
     value: k.id,
-    label: `${k.nama} (Tingkat ${k.tingkat})`,
+    label: `${k.nama} (${kelasLabel(k.tingkat)})`,
   })),
 );
 
@@ -88,7 +89,7 @@ const targetTahunAjaranSelectOptions = computed<SelectOption[]>(() =>
 const targetKelasSelectOptions = computed<SelectOption[]>(() =>
   targetKelasList.value.map((k) => ({
     value: k.id,
-    label: `${k.nama} (Tingkat ${k.tingkat})`,
+    label: `${k.nama} (${kelasLabel(k.tingkat)})`,
   })),
 );
 
@@ -268,7 +269,7 @@ function getSourceKelasName(): string {
 
 function getTargetKelasName(): string {
   const kelas = targetKelasList.value.find((k) => k.id === targetKelasId.value);
-  return kelas ? kelas.nama : '(Auto - Tingkat +1)';
+  return kelas ? kelas.nama : '(Otomatis - naik 1 kelas)';
 }
 
 function getTargetTahunAjaranName(): string {
@@ -276,7 +277,10 @@ function getTargetTahunAjaranName(): string {
   return ta ? ta.nama : '';
 }
 
+const { load: loadJenjang, label: kelasLabel } = useJenjang();
+
 onMounted(async () => {
+  loadJenjang();
   await fetchTahunAjaran();
   const nonTarget = tahunAjaranList.value.find((t) => t.id !== targetTahunAjaranId.value);
   if (nonTarget) {
@@ -400,7 +404,7 @@ onMounted(async () => {
               v-model="targetKelasId"
               label="Kelas Tujuan"
               :options="targetKelasSelectOptions"
-              placeholder="-- Otomatis (Tingkat +1) --"
+              placeholder="-- Otomatis (naik 1 kelas) --"
               :disabled="!targetTahunAjaranId"
               clearable
             />

@@ -46,6 +46,11 @@ export class CreateTenantDto {
   @Max(13)
   jumlah_tingkat: number;
 
+  /** Jenjang sekolah: sd (Kelas 1–6), smp (Kelas 7–9), sma (Kelas 10–12) */
+  @IsOptional()
+  @IsIn(['sd', 'smp', 'sma'], { message: 'jenjang harus sd, smp, atau sma' })
+  jenjang?: 'sd' | 'smp' | 'sma';
+
   /** Hari kerja sekolah: 5 hari (Senin-Jumat) atau 6 hari (Senin-Sabtu) */
   @IsOptional()
   @IsIn(['5_hari', '6_hari'], {

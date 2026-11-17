@@ -1,4 +1,4 @@
-import { IsString, IsOptional, IsEmail, MaxLength } from 'class-validator';
+import { IsString, IsOptional, IsEmail, IsIn, MaxLength } from 'class-validator';
 
 export class UpdateTenantDto {
   @IsString()
@@ -19,4 +19,9 @@ export class UpdateTenantDto {
   @IsOptional()
   @MaxLength(255)
   email?: string;
+
+  /** Jenjang hanya bisa diganti antar jenjang dengan jumlah tingkat sama (SMP ↔ SMA) */
+  @IsOptional()
+  @IsIn(['sd', 'smp', 'sma'], { message: 'jenjang harus sd, smp, atau sma' })
+  jenjang?: 'sd' | 'smp' | 'sma';
 }

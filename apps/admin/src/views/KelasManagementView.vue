@@ -3,6 +3,7 @@ import { ref, computed, onMounted } from 'vue';
 import { api } from '@/api/client';
 import { PageHeader, BaseModal, SearchSelect, ActionButton } from '@/components/ui';
 import type { SelectOption } from '@/components/ui';
+import { useJenjang } from '@/composables/useJenjang';
 
 interface TahunAjaran {
   id: string;
@@ -71,8 +72,14 @@ const tingkatOptions = computed<SelectOption[]>(() => {
   const tingkatSet = new Set(kelasList.value.map((k) => k.tingkat));
   return Array.from(tingkatSet)
     .sort((a, b) => a - b)
-    .map((t) => ({ value: String(t), label: `Tingkat ${t}` }));
+    .map((t) => ({ value: String(t), label: kelasLabel(t) }));
 });
+
+// Jenjang sekolah → pilihan kelas di form (SD: Kelas 1–6, SMP: Kelas 7–9, SMA: Kelas 10–12)
+const { jumlahTingkat, load: fetchJumlahTingkat, label: kelasLabel } = useJenjang();
+const formTingkatOptions = computed(() =>
+  Array.from({ length: jumlahTingkat.value }, (_, i) => i + 1),
+);
 
 const tahunAjaranSelectOptions = computed<SelectOption[]>(() =>
   tahunAjaranList.value.map((ta) => ({
@@ -209,7 +216,7 @@ function onTahunAjaranChange() {
 
 onMounted(async () => {
   await fetchTahunAjaran();
-  await Promise.all([fetchKelas(), fetchGuru()]);
+  await Promise.all([fetchKelas(), fetchGuru(), fetchJumlahTingkat()]);
 });
 </script>
 
@@ -236,7 +243,7 @@ onMounted(async () => {
       <SearchSelect
         v-model="selectedTingkat"
         :options="tingkatOptions"
-        placeholder="Semua Tingkat"
+        placeholder="Semua Kelas"
         clearable
         class="max-w-xs"
       />
@@ -267,7 +274,7 @@ onMounted(async () => {
               <th
                 class="px-5 py-3.5 text-left text-[13px] font-bold uppercase tracking-[0.04em] text-text-secondary"
               >
-                Tingkat
+                Kelas
               </th>
               <th
                 class="px-5 py-3.5 text-left text-[13px] font-bold uppercase tracking-[0.04em] text-text-secondary"
@@ -298,7 +305,7 @@ onMounted(async () => {
               class="hover:bg-primary-50 transition-colors"
             >
               <td class="px-5 py-4 text-[15px] text-text-primary font-medium">{{ kelas.nama }}</td>
-              <td class="px-5 py-4 text-[15px] text-text-primary">{{ kelas.tingkat }}</td>
+              <td class="px-5 py-4 text-[15px] text-text-primary">{{ kelasLabel(kelas.tingkat) }}</td>
               <td class="px-5 py-4 text-[15px] text-text-primary">
                 {{ kelas.waliKelasNama || '-' }}
               </td>
@@ -381,16 +388,15 @@ onMounted(async () => {
           />
         </div>
         <div class="mb-4">
-          <label class="block text-[15px] font-medium text-text-primary mb-1.5">Tingkat</label>
-          <input
-            v-model="form.tingkat"
-            type="number"
+          <label class="block text-[15px] font-medium text-text-primary mb-1.5">Kelas</label>
+          <select
+            v-model.number="form.tingkat"
             required
-            min="1"
-            max="12"
-            class="w-full px-3 py-2.5 text-[15px] border-2 border-border rounded-xs focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-colors"
-            placeholder="1-12"
-          />
+            class="w-full px-3 py-2.5 text-[15px] border-2 border-border rounded-xs bg-white focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-colors"
+          >
+            <option value="" disabled>-- Pilih Kelas --</option>
+            <option v-for="t in formTingkatOptions" :key="t" :value="t">{{ kelasLabel(t) }}</option>
+          </select>
         </div>
         <div class="mb-4">
           <SearchSelect

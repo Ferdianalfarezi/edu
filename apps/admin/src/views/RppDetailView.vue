@@ -4,14 +4,15 @@ import { useRouter, useRoute } from 'vue-router';
 import { api } from '@/api/client';
 import { useAuthStore } from '@/stores/auth';
 import { BaseModal, ActionButton } from '@/components/ui';
+import { useToast } from '@/composables/useToast';
 
 interface RppDetail {
   id: string;
   judul: string;
-  guruId: string;
-  guruNama: string;
-  mataPelajaranNama: string;
-  kategoriNama: string;
+  // API detail mengirim guru: { id, nama }, mata_pelajaran, kategori (lalu di-camelCase interceptor)
+  guru: { id: string; nama: string } | null;
+  mataPelajaran: string | null;
+  kategori: string | null;
   tahunTerbit: number;
   kontenType: 'richtext' | 'file';
   konten: string | null;
@@ -33,7 +34,47 @@ const loading = ref(false);
 const error = ref('');
 const showDeleteModal = ref(false);
 
-const isOwner = computed(() => rpp.value?.guruId === authStore.user?.id);
+const isOwner = computed(() => rpp.value?.guru?.id === authStore.user?.id);
+
+const toast = useToast();
+
+// ===== Preview file =====
+const showPreview = ref(false);
+const previewLoading = ref(false);
+const previewUrl = ref('');
+const previewError = ref('');
+
+const fileExt = computed(() => (rpp.value?.fileNama?.split('.').pop() || '').toLowerCase());
+const previewKind = computed<'pdf' | 'image' | 'none'>(() => {
+  if (fileExt.value === 'pdf') return 'pdf';
+  if (['png', 'jpg', 'jpeg', 'gif', 'webp'].includes(fileExt.value)) return 'image';
+  return 'none';
+});
+
+async function getFileUrl(): Promise<string> {
+  // API membungkus jawaban: { data: { url, file_nama } }
+  const { data } = await api.get<{ data?: { url?: string }; url?: string }>(
+    `/rpp/${rpp.value!.id}/download`,
+  );
+  const url = data.data?.url ?? data.url;
+  if (!url) throw new Error('URL file tidak ditemukan');
+  return url;
+}
+
+async function openPreview() {
+  if (!rpp.value) return;
+  showPreview.value = true;
+  previewLoading.value = true;
+  previewError.value = '';
+  previewUrl.value = '';
+  try {
+    previewUrl.value = await getFileUrl();
+  } catch (e) {
+    previewError.value = e.response?.data?.message || 'Gagal memuat file.';
+  } finally {
+    previewLoading.value = false;
+  }
+}
 
 async function fetchDetail() {
   loading.value = true;
@@ -59,11 +100,15 @@ async function toggleFavorite() {
 
 async function downloadRpp() {
   if (!rpp.value) return;
+  // Buka tab dulu saat klik (sebelum await) supaya tidak diblok popup blocker
+  const tab = window.open('', '_blank');
   try {
-    const { data } = await api.get<{ url: string }>(`/rpp/${rpp.value.id}/download`);
-    window.open(data.url, '_blank');
+    const url = await getFileUrl();
+    if (tab) tab.location.href = url;
+    else window.location.href = url;
   } catch (e) {
-    console.error('Failed to download RPP:', e);
+    tab?.close();
+    toast.error(e.response?.data?.message || 'Gagal mengunduh file RPP.');
   }
 }
 
@@ -181,14 +226,16 @@ onMounted(fetchDetail);
               <span class="text-[13px] font-semibold text-text-tertiary uppercase tracking-wide"
                 >Guru Pembuat</span
               >
-              <span class="text-[15px] font-semibold text-text-primary">{{ rpp.guruNama }}</span>
+              <span class="text-[15px] font-semibold text-text-primary">{{
+                rpp.guru?.nama || '-'
+              }}</span>
             </div>
             <div class="flex flex-col gap-1">
               <span class="text-[13px] font-semibold text-text-tertiary uppercase tracking-wide"
                 >Mata Pelajaran</span
               >
               <span class="text-[15px] font-semibold text-text-primary">{{
-                rpp.mataPelajaranNama
+                rpp.mataPelajaran || '-'
               }}</span>
             </div>
             <div class="flex flex-col gap-1">
@@ -196,7 +243,7 @@ onMounted(fetchDetail);
                 >Kategori</span
               >
               <span class="text-[15px] font-semibold text-text-primary">{{
-                rpp.kategoriNama
+                rpp.kategori || '-'
               }}</span>
             </div>
             <div class="flex flex-col gap-1">
@@ -255,18 +302,83 @@ onMounted(fetchDetail);
         <div class="p-6">
           <div
             class="flex items-center gap-4 p-5 border-2 border-stone-200 rounded-[12px] cursor-pointer hover:bg-primary-50 hover:border-primary-300 transition-all duration-200"
-            @click="downloadRpp"
+            @click="openPreview"
           >
             <span class="text-3xl">📄</span>
-            <div>
-              <p class="text-[15px] font-semibold text-text-primary">{{ rpp.fileNama }}</p>
-              <p class="text-[13px] text-text-tertiary">{{ formatFileSize(rpp.fileSize) }}</p>
+            <div class="min-w-0">
+              <p class="text-[15px] font-semibold text-text-primary truncate">{{ rpp.fileNama }}</p>
+              <p class="text-[13px] text-text-tertiary">
+                {{ formatFileSize(rpp.fileSize) }} · Klik untuk lihat isi
+              </p>
             </div>
-            <span class="ml-auto text-lg text-text-tertiary">⬇</span>
+            <span class="ml-auto text-[14px] font-semibold text-primary-600 shrink-0">Lihat</span>
           </div>
         </div>
       </div>
     </div>
+
+    <!-- Preview File Modal -->
+    <BaseModal
+      :show="showPreview"
+      :title="rpp?.fileNama || 'Preview File'"
+      size="xl"
+      @close="showPreview = false"
+    >
+      <div v-if="previewLoading" class="py-16 text-center">
+        <svg class="w-6 h-6 animate-spin text-primary-500 mx-auto" viewBox="0 0 24 24" fill="none">
+          <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
+          <path
+            class="opacity-75"
+            fill="currentColor"
+            d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
+          />
+        </svg>
+        <p class="text-[15px] text-text-tertiary mt-2">Memuat file...</p>
+      </div>
+      <div v-else-if="previewError" class="py-12 text-center">
+        <p class="text-[15px] text-danger-600 mb-3">{{ previewError }}</p>
+        <button
+          class="text-[14px] font-semibold text-primary-600 hover:text-primary-700"
+          @click="openPreview"
+        >
+          Coba lagi
+        </button>
+      </div>
+      <template v-else-if="previewUrl">
+        <iframe
+          v-if="previewKind === 'pdf'"
+          :src="previewUrl"
+          title="Preview file RPP"
+          class="w-full h-[70vh] rounded-[12px] border-2 border-stone-200 bg-stone-50"
+        />
+        <img
+          v-else-if="previewKind === 'image'"
+          :src="previewUrl"
+          :alt="rpp?.fileNama || 'File RPP'"
+          class="max-h-[70vh] mx-auto rounded-[12px]"
+        />
+        <div v-else class="py-12 text-center">
+          <p class="text-[15px] text-text-secondary mb-1">
+            Preview langsung hanya tersedia untuk file PDF dan gambar.
+          </p>
+          <p class="text-[13px] text-text-tertiary">
+            File .{{ fileExt }} perlu diunduh untuk dibuka (Word/PowerPoint).
+          </p>
+        </div>
+      </template>
+      <template #footer>
+        <ActionButton variant="neutral" size="sm" @click="showPreview = false">Tutup</ActionButton>
+        <a
+          v-if="previewUrl"
+          :href="previewUrl"
+          target="_blank"
+          rel="noopener"
+          class="inline-flex items-center px-4 py-2 rounded-lg bg-primary-600 text-white text-[14px] font-semibold hover:bg-primary-700"
+        >
+          Download
+        </a>
+      </template>
+    </BaseModal>
 
     <!-- Delete Confirmation Modal -->
     <BaseModal

@@ -22,6 +22,9 @@ import { CreateTenantDto, UpdateTenantDto } from './dto';
 const BCRYPT_SALT_ROUNDS = 10;
 const GENERATED_PASSWORD_LENGTH = 12;
 
+type Jenjang = 'sd' | 'smp' | 'sma';
+const JENJANG_JUMLAH_TINGKAT: Record<Jenjang, number> = { sd: 6, smp: 3, sma: 3 };
+
 export interface TenantWithStats {
   id: string;
   nama: string;
@@ -30,6 +33,7 @@ export interface TenantWithStats {
   email: string | null;
   logo_url: string | null;
   jumlah_tingkat: number;
+  jenjang: string | null;
   hari_kerja: '5_hari' | '6_hari';
   is_active: boolean | null;
   created_at: Date | null;
@@ -64,6 +68,23 @@ export interface TenantStats {
   total_classes: number;
   total_teachers: number;
   active_tahun_ajaran: string | null;
+}
+
+export interface GenderCount {
+  laki_laki: number;
+  perempuan: number;
+  tidak_diketahui: number;
+}
+
+export interface GenderStatsPerKelas extends GenderCount {
+  kelas_id: string | null; // null = siswa belum punya kelas
+  kelas_nama: string;
+  tingkat: number | null;
+}
+
+export interface GenderStats {
+  total: GenderCount;
+  per_kelas: GenderStatsPerKelas[];
 }
 
 @Injectable()
@@ -116,6 +137,62 @@ export class TenantService {
       total_teachers: Number(teacherCountResult.count),
       active_tahun_ajaran: activeTahunAjaran.length > 0 ? activeTahunAjaran[0].nama : null,
     };
+  }
+
+  /**
+   * Jumlah siswa aktif per jenis kelamin: total sekolah + rincian per kelas.
+   */
+  async getGenderStats(tenantId: string): Promise<GenderStats> {
+    const rows = await this.db
+      .select({
+        kelasId: siswa.kelasId,
+        kelasNama: kelas.nama,
+        tingkat: kelas.tingkat,
+        jenisKelamin: siswa.jenisKelamin,
+        count: count(siswa.id),
+      })
+      .from(siswa)
+      .leftJoin(kelas, eq(siswa.kelasId, kelas.id))
+      .where(and(eq(siswa.tenantId, tenantId), eq(siswa.status, 'aktif')))
+      .groupBy(siswa.kelasId, kelas.nama, kelas.tingkat, siswa.jenisKelamin);
+
+    const empty = (): GenderCount => ({ laki_laki: 0, perempuan: 0, tidak_diketahui: 0 });
+    const add = (target: GenderCount, jk: string | null, n: number) => {
+      if (jk === 'L') target.laki_laki += n;
+      else if (jk === 'P') target.perempuan += n;
+      else target.tidak_diketahui += n;
+    };
+
+    const total = empty();
+    const byKelas = new Map<string, GenderStatsPerKelas>();
+    for (const row of rows) {
+      const n = Number(row.count);
+      add(total, row.jenisKelamin, n);
+      const key = row.kelasId ?? '__none__';
+      let entry = byKelas.get(key);
+      if (!entry) {
+        entry = {
+          kelas_id: row.kelasId,
+          kelas_nama: row.kelasId ? (row.kelasNama ?? '-') : 'Belum ada kelas',
+          tingkat: row.tingkat ?? null,
+          ...empty(),
+        };
+        byKelas.set(key, entry);
+      }
+      add(entry, row.jenisKelamin, n);
+    }
+
+    // Urutkan per tingkat lalu nama; "Belum ada kelas" paling bawah
+    const per_kelas = [...byKelas.values()].sort((a, b) => {
+      if (a.kelas_id === null) return 1;
+      if (b.kelas_id === null) return -1;
+      return (
+        (a.tingkat ?? 0) - (b.tingkat ?? 0) ||
+        a.kelas_nama.localeCompare(b.kelas_nama, 'id', { numeric: true })
+      );
+    });
+
+    return { total, per_kelas };
   }
 
   /**
@@ -233,6 +310,15 @@ export class TenantService {
     if (dto.alamat !== undefined) updateData.alamat = dto.alamat;
     if (dto.telepon !== undefined) updateData.telepon = dto.telepon;
     if (dto.email !== undefined) updateData.email = dto.email;
+    if (dto.jenjang !== undefined) {
+      const expected = JENJANG_JUMLAH_TINGKAT[dto.jenjang];
+      if (expected !== tenants[0].jumlahTingkat) {
+        throw new BadRequestException(
+          `Jenjang ${dto.jenjang.toUpperCase()} tidak sesuai dengan jumlah tingkat sekolah (${tenants[0].jumlahTingkat})`,
+        );
+      }
+      updateData.jenjang = dto.jenjang;
+    }
 
     await this.db.update(tenant).set(updateData).where(eq(tenant.id, tenantId));
 
@@ -252,6 +338,7 @@ export class TenantService {
         email: tenant.email,
         logoUrl: tenant.logoUrl,
         jumlahTingkat: tenant.jumlahTingkat,
+        jenjang: tenant.jenjang,
         hariKerja: tenant.hariKerja,
         isActive: tenant.isActive,
         createdAt: tenant.createdAt,
@@ -271,6 +358,7 @@ export class TenantService {
       email: r.email,
       logo_url: r.logoUrl,
       jumlah_tingkat: r.jumlahTingkat,
+      jenjang: r.jenjang ?? null,
       hari_kerja: r.hariKerja as '5_hari' | '6_hari',
       is_active: r.isActive,
       user_count: Number(r.userCount),
@@ -301,6 +389,7 @@ export class TenantService {
         email: tenant.email,
         logoUrl: tenant.logoUrl,
         jumlahTingkat: tenant.jumlahTingkat,
+        jenjang: tenant.jenjang,
         hariKerja: tenant.hariKerja,
         isActive: tenant.isActive,
         createdAt: tenant.createdAt,
@@ -322,6 +411,7 @@ export class TenantService {
       email: r.email,
       logo_url: r.logoUrl,
       jumlah_tingkat: r.jumlahTingkat,
+      jenjang: r.jenjang ?? null,
       hari_kerja: r.hariKerja as '5_hari' | '6_hari',
       is_active: r.isActive,
       user_count: Number(r.userCount),
@@ -413,6 +503,7 @@ export class TenantService {
     nama: string;
     logo_url: string | null;
     jumlah_tingkat: number;
+    jenjang: string | null;
     hari_kerja: '5_hari' | '6_hari';
   }> {
     const result = await this.db
@@ -421,6 +512,7 @@ export class TenantService {
         nama: tenant.nama,
         logoUrl: tenant.logoUrl,
         jumlahTingkat: tenant.jumlahTingkat,
+        jenjang: tenant.jenjang,
         hariKerja: tenant.hariKerja,
       })
       .from(tenant)
@@ -436,6 +528,7 @@ export class TenantService {
       nama: result[0].nama,
       logo_url: result[0].logoUrl ?? null,
       jumlah_tingkat: result[0].jumlahTingkat,
+      jenjang: result[0].jenjang ?? null,
       hari_kerja: result[0].hariKerja as '5_hari' | '6_hari',
     };
   }
@@ -538,6 +631,9 @@ export class TenantService {
           telepon: dto.telepon ?? null,
           email: dto.email,
           jumlahTingkat: dto.jumlah_tingkat,
+          jenjang:
+            dto.jenjang ??
+            (dto.jumlah_tingkat === 6 ? 'sd' : dto.jumlah_tingkat === 3 ? 'smp' : null),
           hariKerja: dto.hari_kerja ?? '6_hari',
           isActive: true,
         })

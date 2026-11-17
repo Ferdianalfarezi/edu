@@ -1,11 +1,13 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue';
 import type { ParsedOnboardingData } from '@/composables/useExcelParser';
+import { kelasLabel } from '@/utils/kelas-label';
 
 const props = defineProps<{
   data: ParsedOnboardingData;
   errors: string[];
   warnings: string[];
+  jenjang?: string | null;
 }>();
 
 const emit = defineEmits<{ gantiFile: [] }>();
@@ -223,7 +225,7 @@ const hasNoValidStaffEmail = computed(
         </div>
         <div v-else class="flex flex-col gap-4">
           <div v-for="[tingkat, namaList] in kelasByTingkat" :key="tingkat">
-            <p class="text-[13px] font-bold text-stone-700 mb-1">Tingkat {{ tingkat }}</p>
+            <p class="text-[13px] font-bold text-stone-700 mb-1">{{ kelasLabel(tingkat, jenjang) }}</p>
             <ul class="flex flex-wrap gap-2">
               <li
                 v-for="nama in namaList"
@@ -339,7 +341,7 @@ const hasNoValidStaffEmail = computed(
             <thead>
               <tr class="border-b border-stone-200 bg-stone-50">
                 <th class="text-left px-3 py-2 font-semibold text-stone-600 w-10">No</th>
-                <th class="text-left px-3 py-2 font-semibold text-stone-600 w-28">Tingkat</th>
+                <th class="text-left px-3 py-2 font-semibold text-stone-600 w-28">Kelas</th>
                 <th class="text-left px-3 py-2 font-semibold text-stone-600">Nominal</th>
               </tr>
             </thead>
@@ -351,7 +353,7 @@ const hasNoValidStaffEmail = computed(
               >
                 <td class="px-3 py-2 text-stone-400">{{ idx + 1 }}</td>
                 <td class="px-3 py-2 text-stone-700">
-                  {{ spp.tingkat !== null ? spp.tingkat : '-' }}
+                  {{ spp.tingkat !== null ? kelasLabel(spp.tingkat, jenjang) : '-' }}
                 </td>
                 <td class="px-3 py-2 text-stone-700">{{ formatNominal(spp.nominal) }}</td>
               </tr>

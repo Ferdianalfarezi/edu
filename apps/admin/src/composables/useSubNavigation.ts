@@ -36,6 +36,7 @@ const SUB_NAV_CONFIG: SubNavConfig = {
     { label: 'Kelas', path: '/kelas' },
     { label: 'Mata Pelajaran', path: '/mata-pelajaran' },
     { label: 'Jadwal', path: '/jadwal' },
+    { label: 'Jadwal Saya', path: '/jadwal-saya' },
     { label: 'Guru', path: '/guru' },
   ],
   absensi: [
