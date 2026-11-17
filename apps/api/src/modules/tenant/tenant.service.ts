@@ -631,6 +631,10 @@ export class TenantService {
           nama: tahunAjaranNama,
           tanggalMulai,
           tanggalSelesai,
+          semester1Mulai: tanggalMulai,
+          semester1Selesai: `${utc7Year}-12-31`,
+          semester2Mulai: `${utc7Year + 1}-01-01`,
+          semester2Selesai: tanggalSelesai,
           status: 'disiapkan',
         })
         .returning();

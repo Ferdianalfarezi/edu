@@ -77,6 +77,18 @@ export interface ParsedSiswaCsvRow {
   kelasId: string;
 }
 
+export interface NisnImportConflict {
+  /** dobel_di_file: NISN muncul >1x di CSV. sudah_terdaftar: NISN sudah dipakai siswa di sekolah ini */
+  jenis: 'dobel_di_file' | 'sudah_terdaftar';
+  nisn: string;
+  /** nomor baris di file CSV (baris 1 = header) */
+  baris: number[];
+  nama_csv: string[];
+  nama_terdaftar?: string;
+  kelas_terdaftar?: string | null;
+  status_terdaftar?: 'aktif' | 'pindah_sekolah' | 'keluar' | 'lulus';
+}
+
 @Injectable()
 export class SiswaService {
   constructor(
@@ -113,7 +125,13 @@ export class SiswaService {
         tanggalLahir: dto.tanggalLahir || null,
         alamat: dto.alamat || null,
         orangTuaId,
-        status: 'aktif',
+        status: dto.status || 'aktif',
+        tanggalKeluar:
+          dto.status && dto.status !== 'aktif' ? new Date().toISOString().split('T')[0] : null,
+        alasanKeluar:
+          dto.status === 'pindah_sekolah' || dto.status === 'keluar'
+            ? dto.alasanKeluar?.trim() || null
+            : null,
       })
       .returning();
 
@@ -443,6 +461,29 @@ export class SiswaService {
     if (dto.kelasId !== undefined) updateData.kelasId = dto.kelasId;
     if (orangTuaId !== undefined) updateData.orangTuaId = orangTuaId;
 
+    // Ubah status (aktif / pindah_sekolah / keluar / lulus)
+    if (dto.status !== undefined && dto.status !== existing.status) {
+      updateData.status = dto.status;
+      if (dto.status === 'aktif') {
+        // Diaktifkan lagi: NISN tidak boleh bentrok dengan siswa aktif lain
+        const nisn = dto.nisn !== undefined ? dto.nisn : existing.nisn;
+        if (nisn) await this.validateNisnUniqueness(nisn, tenantId, siswaId);
+        updateData.tanggalKeluar = null;
+        updateData.alasanKeluar = null;
+      } else if (!existing.tanggalKeluar) {
+        updateData.tanggalKeluar = new Date().toISOString().split('T')[0];
+      }
+    }
+
+    // Alasan keluar hanya untuk siswa nonaktif (pindah_sekolah / keluar), bukan aktif atau lulus
+    const statusAkhir = dto.status ?? existing.status;
+    const nonaktif = statusAkhir === 'pindah_sekolah' || statusAkhir === 'keluar';
+    if (!nonaktif && existing.alasanKeluar) {
+      updateData.alasanKeluar = null;
+    } else if (nonaktif && dto.alasanKeluar !== undefined) {
+      updateData.alasanKeluar = dto.alasanKeluar.trim() || null;
+    }
+
     const [updated] = await this.db
       .update(siswa)
       .set(updateData)
@@ -586,10 +627,17 @@ export class SiswaService {
     }
 
     // Filter by status
-    if (query.status) {
+    if (query.status === 'nonaktif') {
+      conditions.push(inArray(siswa.status, ['pindah_sekolah', 'keluar']));
+    } else if (query.status) {
       conditions.push(
         eq(siswa.status, query.status as 'aktif' | 'pindah_sekolah' | 'keluar' | 'lulus'),
       );
+    }
+
+    // Filter by jenis kelamin
+    if (query.jenis_kelamin) {
+      conditions.push(eq(siswa.jenisKelamin, query.jenis_kelamin));
     }
 
     // Filter by tahun_ajaran (via kelas.tahun_ajaran_id)
@@ -628,6 +676,8 @@ export class SiswaService {
           orang_tua_nama: orangTuaUser.nama,
           orang_tua_phone: orangTuaUser.phone,
           status: siswa.status,
+          tanggal_keluar: siswa.tanggalKeluar,
+          alasan_keluar: siswa.alasanKeluar,
           created_at: siswa.createdAt,
         })
         .from(siswa)
@@ -813,24 +863,28 @@ export class SiswaService {
     tenantId: string,
     excludeSiswaId?: string,
   ): Promise<void> {
-    const conditions = [
-      eq(siswa.nisn, nisn),
-      eq(siswa.tenantId, tenantId),
-      eq(siswa.status, 'aktif'),
-    ];
+    // Satu NISN = satu anak: cek ke semua siswa di sekolah ini, apa pun statusnya
+    const conditions = [eq(siswa.nisn, nisn), eq(siswa.tenantId, tenantId)];
 
     if (excludeSiswaId) {
       conditions.push(sql`${siswa.id} != ${excludeSiswaId}`);
     }
 
-    const existing = await this.db
-      .select({ id: siswa.id })
+    const [existing] = await this.db
+      .select({ nama: siswa.nama, status: siswa.status, kelas_nama: kelas.nama })
       .from(siswa)
+      .leftJoin(kelas, eq(siswa.kelasId, kelas.id))
       .where(and(...conditions))
       .limit(1);
 
-    if (existing.length > 0) {
-      throw new ConflictException('NISN sudah terdaftar di sekolah ini untuk siswa aktif');
+    if (existing) {
+      const statusLabel =
+        existing.status === 'aktif' ? 'Aktif' : existing.status === 'lulus' ? 'Lulus' : 'Nonaktif';
+      throw new ConflictException(
+        `NISN ${nisn} sudah digunakan oleh ${existing.nama}` +
+          (existing.kelas_nama ? ` kelas ${existing.kelas_nama}` : '') +
+          ` dengan status ${statusLabel}`,
+      );
     }
   }
 
@@ -840,7 +894,7 @@ export class SiswaService {
     const existing = await this.db
       .select({ id: siswa.id })
       .from(siswa)
-      .where(and(eq(siswa.nisn, nisn), eq(siswa.tenantId, tenantId), eq(siswa.status, 'aktif')))
+      .where(and(eq(siswa.nisn, nisn), eq(siswa.tenantId, tenantId)))
       .limit(1);
 
     return existing.length > 0;
@@ -875,8 +929,70 @@ export class SiswaService {
   // ─── CSV Import with Preview ──────────────────────────────────
 
   /**
-   * Preview CSV import: parse, validate, detect NISN conflicts.
-   * Returns conflicts and preview counts without persisting.
+   * Cari semua NISN bermasalah di file CSV:
+   * - dobel di dalam file itu sendiri
+   * - sudah dipakai siswa lain di sekolah ini (status apa pun: aktif, nonaktif, lulus)
+   * Satu NISN = satu anak, jadi import ditolak semua kalau ada satu saja konflik.
+   */
+  private async findNisnConflicts(
+    tenantId: string,
+    rows: ParsedSiswaCsvRow[],
+  ): Promise<NisnImportConflict[]> {
+    const conflicts: NisnImportConflict[] = [];
+
+    // 1. Dobel di dalam file
+    const barisPerNisn = new Map<string, number[]>();
+    rows.forEach((row, i) => {
+      if (!row.nisn) return;
+      const list = barisPerNisn.get(row.nisn) ?? [];
+      list.push(i + 2); // +2: header + index mulai 0
+      barisPerNisn.set(row.nisn, list);
+    });
+    for (const [nisn, barisList] of barisPerNisn) {
+      if (barisList.length > 1) {
+        conflicts.push({
+          jenis: 'dobel_di_file',
+          nisn,
+          baris: barisList,
+          nama_csv: barisList.map((b) => rows[b - 2].nama),
+        });
+      }
+    }
+
+    // 2. Sudah dipakai di sekolah ini
+    const nisnList = [...barisPerNisn.keys()];
+    if (nisnList.length > 0) {
+      const existing = await this.db
+        .select({
+          nisn: siswa.nisn,
+          nama: siswa.nama,
+          status: siswa.status,
+          kelas_nama: kelas.nama,
+        })
+        .from(siswa)
+        .leftJoin(kelas, eq(siswa.kelasId, kelas.id))
+        .where(and(eq(siswa.tenantId, tenantId), inArray(siswa.nisn, nisnList)));
+
+      for (const e of existing) {
+        if (!e.nisn) continue;
+        const barisList = barisPerNisn.get(e.nisn) ?? [];
+        conflicts.push({
+          jenis: 'sudah_terdaftar',
+          nisn: e.nisn,
+          baris: barisList,
+          nama_csv: barisList.map((b) => rows[b - 2].nama),
+          nama_terdaftar: e.nama,
+          kelas_terdaftar: e.kelas_nama ?? null,
+          status_terdaftar: e.status ?? undefined,
+        });
+      }
+    }
+
+    return conflicts.sort((a, b) => a.baris[0] - b.baris[0]);
+  }
+
+  /**
+   * Preview CSV import: parse, validasi, dan cari konflik NISN tanpa menyimpan apa pun.
    */
   async importCsvPreview(tenantId: string, csvContent: string) {
     const rows = this.parseSiswaCsv(csvContent);
@@ -885,148 +1001,114 @@ export class SiswaService {
       throw new BadRequestException('File CSV kosong atau format tidak valid');
     }
 
-    const conflicts: { nisn: string; nama_csv: string; nama_existing: string }[] = [];
-
-    for (const row of rows) {
-      if (row.nisn) {
-        const exists = await this.checkNisnExists(row.nisn, tenantId);
-        if (exists) {
-          const [existing] = await this.db
-            .select({ nama: siswa.nama })
-            .from(siswa)
-            .where(
-              and(
-                eq(siswa.nisn, row.nisn),
-                eq(siswa.tenantId, tenantId),
-                eq(siswa.status, 'aktif'),
-              ),
-            )
-            .limit(1);
-
-          conflicts.push({
-            nisn: row.nisn,
-            nama_csv: row.nama,
-            nama_existing: existing?.nama || '',
-          });
-        }
-      }
-    }
+    const conflicts = await this.findNisnConflicts(tenantId, rows);
 
     return {
       preview_count: rows.length,
-      valid_count: rows.length - conflicts.length,
       conflicts,
     };
   }
 
   /**
-   * Execute CSV import with conflict resolutions.
+   * Simpan hasil import CSV. Semua-atau-tidak-sama-sekali:
+   * - ada konflik NISN -> ditolak semua (409) dengan daftar konfliknya
+   * - error di tengah jalan -> transaksi dibatalkan, tidak ada data yang masuk
    */
-  async importCsvExecute(
-    tenantId: string,
-    csvContent: string,
-    processedByUserId: string,
-    resolutions: { nisn: string; action: 'skip' | 'update' }[],
-  ) {
+  async importCsvExecute(tenantId: string, csvContent: string, _processedByUserId: string) {
     const rows = this.parseSiswaCsv(csvContent);
-    const resolutionMap = new Map(resolutions.map((r) => [r.nisn, r.action]));
+
+    if (rows.length === 0) {
+      throw new BadRequestException('File CSV kosong atau format tidak valid');
+    }
+
+    const conflicts = await this.findNisnConflicts(tenantId, rows);
+    if (conflicts.length > 0) {
+      throw new ConflictException({
+        message: `Import dibatalkan: ${conflicts.length} konflik NISN ditemukan`,
+        error: 'NisnConflict',
+        details: { conflicts },
+      });
+    }
 
     let created = 0;
-    let updated = 0;
     let skipped = 0;
 
-    const riwayatEntries: RiwayatKelasEntry[] = [];
+    await this.db.transaction(async (tx) => {
+      const riwayatValues: (typeof riwayatKelas.$inferInsert)[] = [];
+      const today = new Date().toISOString().split('T')[0];
 
-    for (const row of rows) {
-      if (!row.nama) {
-        skipped++;
-        continue;
-      }
-
-      // Check for conflict
-      if (row.nisn) {
-        const exists = await this.checkNisnExists(row.nisn, tenantId);
-        if (exists) {
-          const action = resolutionMap.get(row.nisn) || 'skip';
-          if (action === 'skip') {
-            skipped++;
-            continue;
-          }
-          // action === 'update': update existing record
-          await this.db
-            .update(siswa)
-            .set({
-              nama: row.nama,
-              jenisKelamin:
-                row.jenisKelamin === 'L' || row.jenisKelamin === 'P' ? row.jenisKelamin : undefined,
-              tanggalLahir: row.tanggalLahir || undefined,
-              kelasId: row.kelasId || undefined,
-              updatedAt: new Date(),
-            })
-            .where(
-              and(
-                eq(siswa.nisn, row.nisn),
-                eq(siswa.tenantId, tenantId),
-                eq(siswa.status, 'aktif'),
-              ),
-            );
-          updated++;
+      for (const row of rows) {
+        if (!row.nama) {
+          skipped++;
           continue;
         }
-      }
 
-      // Create new student
-      const insertData: any = {
-        tenantId,
-        nama: row.nama,
-        nisn: row.nisn || null,
-        jenisKelamin:
-          row.jenisKelamin === 'L' || row.jenisKelamin === 'P' ? row.jenisKelamin : null,
-        tanggalLahir: row.tanggalLahir || null,
-        kelasId: row.kelasId || null,
-        status: 'aktif',
-      };
-
-      // Handle parent linkage
-      if (row.orangTuaPhone) {
-        const parentId = await this.resolveOrCreateParent(
-          row.orangTuaPhone,
-          row.orangTuaNama || row.nama,
-        );
-        insertData.orangTuaId = parentId;
-      }
-
-      const [insertedSiswa] = await this.db
-        .insert(siswa)
-        .values(insertData)
-        .returning({ id: siswa.id });
-
-      // Collect riwayat entry if kelasId is non-null
-      if (row.kelasId) {
-        const [kelasRecord] = await this.db
-          .select({ tahunAjaranId: kelas.tahunAjaranId })
-          .from(kelas)
-          .where(eq(kelas.id, row.kelasId))
-          .limit(1);
-
-        if (kelasRecord) {
-          riwayatEntries.push({
-            tenantId,
-            siswaId: insertedSiswa.id,
-            kelasId: row.kelasId,
-            tahunAjaranId: kelasRecord.tahunAjaranId,
-          });
+        // Orang tua: pakai akun yang sudah ada (berdasarkan nomor HP) atau buat baru
+        let orangTuaId: string | null = null;
+        if (row.orangTuaPhone) {
+          const [ortu] = await tx
+            .select({ id: user.id })
+            .from(user)
+            .where(and(eq(user.phone, row.orangTuaPhone), eq(user.role, 'orang_tua')))
+            .limit(1);
+          if (ortu) {
+            orangTuaId = ortu.id;
+          } else {
+            const [baru] = await tx
+              .insert(user)
+              .values({
+                tenantId: null,
+                nama: row.orangTuaNama || row.nama,
+                phone: row.orangTuaPhone,
+                role: 'orang_tua',
+                isActive: true,
+                passwordHash: null,
+              })
+              .returning({ id: user.id });
+            orangTuaId = baru.id;
+          }
         }
+
+        const [insertedSiswa] = await tx
+          .insert(siswa)
+          .values({
+            tenantId,
+            nama: row.nama,
+            nisn: row.nisn || null,
+            jenisKelamin:
+              row.jenisKelamin === 'L' || row.jenisKelamin === 'P' ? row.jenisKelamin : null,
+            tanggalLahir: row.tanggalLahir || null,
+            kelasId: row.kelasId || null,
+            orangTuaId,
+            status: 'aktif',
+          })
+          .returning({ id: siswa.id });
+
+        if (row.kelasId) {
+          const [kelasRecord] = await tx
+            .select({ tahunAjaranId: kelas.tahunAjaranId })
+            .from(kelas)
+            .where(eq(kelas.id, row.kelasId))
+            .limit(1);
+          if (kelasRecord) {
+            riwayatValues.push({
+              tenantId,
+              siswaId: insertedSiswa.id,
+              kelasId: row.kelasId,
+              tahunAjaranId: kelasRecord.tahunAjaranId,
+              tanggalMulai: today,
+            });
+          }
+        }
+
+        created++;
       }
 
-      created++;
-    }
+      if (riwayatValues.length > 0) {
+        await tx.insert(riwayatKelas).values(riwayatValues);
+      }
+    });
 
-    // Batch record all riwayat kelas entries at the end
-    if (riwayatEntries.length > 0) {
-      await this.riwayatKelasHelper.recordBatch(riwayatEntries);
-    }
-
-    return { created, updated, skipped };
+    return { created, updated: 0, skipped };
   }
 }

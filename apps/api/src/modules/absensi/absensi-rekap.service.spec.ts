@@ -324,9 +324,20 @@ describe('AbsensiService — Rekap Absensi (Task 8.8)', () => {
       expect(result.data[0].persentase_kehadiran).toBe(31.8);
     });
 
-    it('should handle semester period by summing 6 months', async () => {
+    it('should use Semester 1 dates from the kelas tahun ajaran', async () => {
       setupSelectMocks(
-        [{ id: kelasId, nama: '6A' }], // kelas exists
+        [{ id: kelasId, nama: '6A', tahunAjaranId: 'ta-1' }], // kelas exists
+        [
+          // tahun ajaran milik kelas
+          {
+            id: 'ta-1',
+            nama: '2024/2025',
+            semester1Mulai: '2024-07-01',
+            semester1Selesai: '2024-12-31',
+            semester2Mulai: '2025-01-01',
+            semester2Selesai: '2025-06-30',
+          },
+        ],
         [{ id: 'siswa-1', nama: 'Andi' }], // active students
         [
           // attendance over semester
@@ -336,12 +347,9 @@ describe('AbsensiService — Rekap Absensi (Task 8.8)', () => {
           { siswaId: 'siswa-1', status: 'izin' },
           { siswaId: 'siswa-1', status: 'alpa' },
         ],
-        // holidays query for the full semester period
-        [],
       );
 
-      // Manual override for each month (the service calls getConfigByKey for each of the 6 months)
-      // Months 7,8,9,10,11,12 in 2024
+      // Semua bulan Jul–Des 2024 penuh masuk semester dan punya setelan manual
       mockKonfigurasiService.getConfigByKey
         .mockResolvedValueOnce({ key: 'hari_efektif_manual_7_2024', value: { value: 22 } })
         .mockResolvedValueOnce({ key: 'hari_efektif_manual_8_2024', value: { value: 22 } })
@@ -352,19 +360,61 @@ describe('AbsensiService — Rekap Absensi (Task 8.8)', () => {
 
       const result = await service.getRekapAbsensi(tenantId, {
         kelas_id: kelasId,
-        bulan: 7,
-        tahun: 2024,
         periode: 'semester',
+        semester: 1,
       });
 
+      expect(result.tanggal_mulai).toBe('2024-07-01');
+      expect(result.tanggal_selesai).toBe('2024-12-31');
+      expect(result.semester).toBe(1);
+      expect(result.tahun_ajaran_nama).toBe('2024/2025');
       expect(result.data).toHaveLength(1);
       expect(result.data[0].hadir).toBe(3);
       expect(result.data[0].izin).toBe(1);
       expect(result.data[0].alpa).toBe(1);
       // total hari efektif = 22+22+20+22+21+18 = 125
       expect(result.total_hari_efektif).toBe(125);
+      expect(result.hari_efektif_source).toBe('manual');
       // persentase = (3 / 125) * 100 = 2.4
       expect(result.data[0].persentase_kehadiran).toBe(2.4);
+    });
+
+    it('should count a partial month automatically when the semester starts mid-month', async () => {
+      setupSelectMocks(
+        [{ id: kelasId, nama: '6A', tahunAjaranId: 'ta-1' }],
+        [
+          {
+            id: 'ta-1',
+            nama: '2024/2025',
+            semester1Mulai: '2024-07-01',
+            semester1Selesai: '2024-12-20',
+            semester2Mulai: '2025-01-06', // Senin, setelah libur semester
+            semester2Selesai: '2025-06-30',
+          },
+        ],
+        [{ id: 'siswa-1', nama: 'Andi' }],
+        [], // attendance
+        [], // hari libur Januari 2025 (bulan tidak penuh -> dihitung otomatis)
+      );
+
+      // Januari tidak penuh -> tidak cek setelan manual. Feb–Jun penuh -> manual 20 hari.
+      mockKonfigurasiService.getConfigByKey.mockResolvedValue({ value: { value: 20 } });
+
+      const result = await service.getRekapAbsensi(tenantId, {
+        kelas_id: kelasId,
+        periode: 'semester',
+        semester: 2,
+      });
+
+      expect(result.tanggal_mulai).toBe('2025-01-06');
+      expect(result.tanggal_selesai).toBe('2025-06-30');
+      // 6 Jan–31 Jan 2025, Senin–Sabtu = 23 hari; Feb–Jun manual 5 x 20 = 100
+      expect(result.total_hari_efektif).toBe(123);
+      expect(result.hari_efektif_source).toBe('campuran');
+      expect(mockKonfigurasiService.getConfigByKey).not.toHaveBeenCalledWith(
+        tenantId,
+        'hari_efektif_manual_1_2025',
+      );
     });
 
     it('should auto-calculate hari_efektif from weekdays minus holidays when no manual override', async () => {

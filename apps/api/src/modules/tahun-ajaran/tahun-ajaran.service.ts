@@ -4,7 +4,56 @@ import { eq, and, desc, sql } from 'drizzle-orm';
 import { DRIZZLE } from '@/drizzle/drizzle.module';
 import { tahunAjaran } from '@/drizzle/schema/tahun-ajaran';
 import { KelasService } from '@/modules/kelas/kelas.service';
-import { CreateTahunAjaranDto } from './dto';
+import { CreateTahunAjaranDto, UpdateSemesterDto } from './dto';
+
+/** Tambah/kurang hari pada tanggal 'YYYY-MM-DD' (tanpa efek zona waktu). */
+function geserHari(tanggal: string, hari: number): string {
+  const d = new Date(`${tanggal}T00:00:00Z`);
+  d.setUTCDate(d.getUTCDate() + hari);
+  return d.toISOString().slice(0, 10);
+}
+
+/**
+ * Batas semester default: Semester 2 mulai 1 Januari setelah tanggal mulai TA.
+ * Kalau 1 Januari tidak ada di dalam TA, pakai tengah-tengah TA.
+ * (Rumus yang sama dipakai migrasi 0011 untuk data lama.)
+ */
+export function hitungSemesterDefault(tanggalMulai: string, tanggalSelesai: string) {
+  const tahunMulai = Number(tanggalMulai.slice(0, 4));
+  let semester2Mulai = `${tahunMulai + 1}-01-01`;
+  if (!(semester2Mulai > tanggalMulai && semester2Mulai <= tanggalSelesai)) {
+    const totalHari =
+      (Date.parse(`${tanggalSelesai}T00:00:00Z`) - Date.parse(`${tanggalMulai}T00:00:00Z`)) /
+      86_400_000;
+    semester2Mulai = geserHari(tanggalMulai, Math.floor(totalHari / 2) + 1);
+  }
+  return { semester1Selesai: geserHari(semester2Mulai, -1), semester2Mulai };
+}
+
+/**
+ * Urutan wajib: mulai TA <= akhir Sem 1 < awal Sem 2 <= selesai TA
+ * (Sem 1 minimal 1 hari, boleh ada jeda libur di antara dua semester).
+ */
+function validasiSemester(
+  tanggalMulai: string,
+  tanggalSelesai: string,
+  semester1Selesai: string,
+  semester2Mulai: string,
+) {
+  if (semester1Selesai < tanggalMulai || semester1Selesai >= tanggalSelesai) {
+    throw new BadRequestException(
+      'Akhir Semester 1 harus di antara tanggal mulai dan tanggal selesai tahun ajaran',
+    );
+  }
+  if (semester2Mulai <= semester1Selesai) {
+    throw new BadRequestException('Awal Semester 2 harus setelah akhir Semester 1');
+  }
+  if (semester2Mulai > tanggalSelesai) {
+    throw new BadRequestException(
+      'Awal Semester 2 tidak boleh melewati tanggal selesai tahun ajaran',
+    );
+  }
+}
 
 export interface TahunAjaranDetail {
   id: string;
@@ -12,6 +61,10 @@ export interface TahunAjaranDetail {
   nama: string;
   tanggalMulai: string;
   tanggalSelesai: string;
+  semester1Mulai: string;
+  semester1Selesai: string;
+  semester2Mulai: string;
+  semester2Selesai: string;
   status: string;
   createdAt: Date | null;
   kelasCount: number;
@@ -34,6 +87,12 @@ export class TahunAjaranService {
       throw new BadRequestException('Tanggal mulai harus sebelum tanggal selesai');
     }
 
+    // Rentang semester: pakai isian admin, sisanya diisi default
+    const def = hitungSemesterDefault(dto.tanggal_mulai, dto.tanggal_selesai);
+    const semester1Selesai = dto.semester_1_selesai ?? def.semester1Selesai;
+    const semester2Mulai = dto.semester_2_mulai ?? def.semester2Mulai;
+    validasiSemester(dto.tanggal_mulai, dto.tanggal_selesai, semester1Selesai, semester2Mulai);
+
     // Create tahun ajaran with default status 'disiapkan'
     const [created] = await this.db
       .insert(tahunAjaran)
@@ -42,6 +101,10 @@ export class TahunAjaranService {
         nama: dto.nama,
         tanggalMulai: dto.tanggal_mulai,
         tanggalSelesai: dto.tanggal_selesai,
+        semester1Mulai: dto.tanggal_mulai,
+        semester1Selesai,
+        semester2Mulai,
+        semester2Selesai: dto.tanggal_selesai,
         status: 'disiapkan',
       })
       .returning();
@@ -103,10 +166,48 @@ export class TahunAjaranService {
       nama: ta.nama,
       tanggalMulai: ta.tanggalMulai,
       tanggalSelesai: ta.tanggalSelesai,
+      semester1Mulai: ta.semester1Mulai,
+      semester1Selesai: ta.semester1Selesai,
+      semester2Mulai: ta.semester2Mulai,
+      semester2Selesai: ta.semester2Selesai,
       status: ta.status,
       createdAt: ta.createdAt,
       kelasCount,
     };
+  }
+
+  /**
+   * Ubah batas semester (akhir Semester 1 & awal Semester 2) sebuah tahun ajaran.
+   */
+  async updateSemester(tenantId: string, id: string, dto: UpdateSemesterDto) {
+    const [ta] = await this.db
+      .select()
+      .from(tahunAjaran)
+      .where(and(eq(tahunAjaran.id, id), eq(tahunAjaran.tenantId, tenantId)));
+
+    if (!ta) {
+      throw new NotFoundException(`Tahun ajaran dengan id ${id} tidak ditemukan`);
+    }
+
+    validasiSemester(
+      ta.tanggalMulai,
+      ta.tanggalSelesai,
+      dto.semester_1_selesai,
+      dto.semester_2_mulai,
+    );
+
+    const [updated] = await this.db
+      .update(tahunAjaran)
+      .set({
+        semester1Mulai: ta.tanggalMulai,
+        semester1Selesai: dto.semester_1_selesai,
+        semester2Mulai: dto.semester_2_mulai,
+        semester2Selesai: ta.tanggalSelesai,
+      })
+      .where(eq(tahunAjaran.id, id))
+      .returning();
+
+    return updated;
   }
 
   /**

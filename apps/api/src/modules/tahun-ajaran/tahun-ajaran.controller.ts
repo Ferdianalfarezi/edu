@@ -15,7 +15,7 @@ import { Roles } from '@/common/decorators/roles.decorator';
 import { TenantId } from '@/common/decorators/tenant-id.decorator';
 import { Role } from '@edu/shared';
 import { TahunAjaranService } from './tahun-ajaran.service';
-import { CreateTahunAjaranDto } from './dto';
+import { CreateTahunAjaranDto, UpdateSemesterDto } from './dto';
 
 @Controller('tahun-ajaran')
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -56,6 +56,22 @@ export class TahunAjaranController {
   @HttpCode(HttpStatus.OK)
   async findOne(@TenantId() tenantId: string, @Param('id') id: string) {
     return this.tahunAjaranService.findOne(tenantId, id);
+  }
+
+  /**
+   * PATCH /tahun-ajaran/:id/semester
+   * Ubah batas semester (akhir Semester 1 & awal Semester 2).
+   * Admin only.
+   */
+  @Patch(':id/semester')
+  @Roles(Role.ADMIN)
+  @HttpCode(HttpStatus.OK)
+  async updateSemester(
+    @TenantId() tenantId: string,
+    @Param('id') id: string,
+    @Body() dto: UpdateSemesterDto,
+  ) {
+    return this.tahunAjaranService.updateSemester(tenantId, id, dto);
   }
 
   /**

@@ -12,6 +12,7 @@ export interface ExportRekapAbsensiJobData {
   kelasId: string;
   bulan?: number;
   tahun?: number;
+  semester?: number;
   periode: 'bulanan' | 'semester';
   format: 'xlsx' | 'csv';
   requestedBy: string;

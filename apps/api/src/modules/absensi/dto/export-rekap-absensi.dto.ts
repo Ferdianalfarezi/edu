@@ -5,17 +5,26 @@ export class ExportRekapAbsensiQueryDto {
   @IsUUID()
   kelas_id: string;
 
-  @Transform(({ value }) => parseInt(value, 10))
+  @Transform(({ value }) => (value !== undefined ? parseInt(value, 10) : undefined))
   @IsInt()
   @Min(1)
   @Max(12)
-  bulan: number;
+  @IsOptional()
+  bulan?: number;
 
-  @Transform(({ value }) => parseInt(value, 10))
+  @Transform(({ value }) => (value !== undefined ? parseInt(value, 10) : undefined))
   @IsInt()
   @Min(2000)
   @Max(2100)
-  tahun: number;
+  @IsOptional()
+  tahun?: number;
+
+  @Transform(({ value }) => (value !== undefined ? parseInt(value, 10) : undefined))
+  @IsInt()
+  @Min(1)
+  @Max(2)
+  @IsOptional()
+  semester?: number;
 
   @IsEnum(['bulanan', 'semester'], {
     message: 'periode harus salah satu dari: bulanan, semester',

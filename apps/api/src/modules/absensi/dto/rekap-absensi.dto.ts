@@ -12,11 +12,13 @@ export class RekapAbsensiQueryDto {
   @IsOptional()
   bulan?: number;
 
-  @Transform(({ value }) => parseInt(value, 10))
+  /** Wajib untuk periode bulanan. Untuk semester tidak dipakai (tanggal diambil dari tahun ajaran kelas). */
+  @Transform(({ value }) => (value !== undefined ? parseInt(value, 10) : undefined))
   @IsInt()
   @Min(2000)
   @Max(2100)
-  tahun: number;
+  @IsOptional()
+  tahun?: number;
 
   @IsEnum(['bulanan', 'semester'], {
     message: 'periode harus salah satu dari: bulanan, semester',
@@ -50,6 +52,12 @@ export interface RekapAbsensiResponse {
   tahun: number;
   periode: 'bulanan' | 'semester';
   total_hari_efektif: number | null;
-  hari_efektif_source: 'manual' | 'otomatis' | null;
+  hari_efektif_source: 'manual' | 'otomatis' | 'campuran' | null;
+  /** Rentang tanggal yang dihitung */
+  tanggal_mulai: string;
+  tanggal_selesai: string;
+  /** Diisi untuk periode semester */
+  semester: number | null;
+  tahun_ajaran_nama: string | null;
   data: RekapAbsensiItem[];
 }

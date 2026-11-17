@@ -29,7 +29,16 @@ interface RekapResponse {
   totalHariEfektif: number | null;
   periode: 'bulanan' | 'semester';
   data: RekapSiswa[];
-  hariEfektifSource?: 'manual' | 'otomatis' | null;
+  hariEfektifSource?: 'manual' | 'otomatis' | 'campuran' | null;
+  tanggalMulai: string;
+  tanggalSelesai: string;
+  semester: number | null;
+  tahunAjaranNama: string | null;
+}
+
+interface TahunAjaran {
+  status: string;
+  semester2Mulai: string;
 }
 
 const BULAN_LABELS = [
@@ -85,6 +94,28 @@ const selectedBulan = ref(new Date().getMonth() + 1);
 const selectedTahun = ref(new Date().getFullYear());
 const selectedSemester = ref(1);
 
+/** Semester yang sedang berjalan menurut tanggal di Tahun Ajaran aktif (menu Tahun Ajaran). */
+async function pilihSemesterBerjalan() {
+  try {
+    const { data } = await api.get<TahunAjaran[]>('/tahun-ajaran');
+    const aktif = data.find((t) => t.status === 'aktif');
+    if (aktif) {
+      const hariIni = new Date().toLocaleDateString('sv-SE'); // YYYY-MM-DD waktu lokal
+      selectedSemester.value = hariIni >= aktif.semester2Mulai ? 2 : 1;
+    }
+  } catch {
+    // biarkan default Semester 1
+  }
+}
+
+function formatTanggal(t: string): string {
+  return new Date(`${t}T00:00:00`).toLocaleDateString('id-ID', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+  });
+}
+
 // Computed
 const tahunOptions = computed(() => {
   const current = new Date().getFullYear();
@@ -116,7 +147,11 @@ const periodeLabel = computed(() => {
   if (selectedPeriode.value === 'bulanan') {
     return `${BULAN_LABELS[selectedBulan.value - 1]} ${selectedTahun.value}`;
   }
-  return `Semester ${selectedSemester.value} — ${selectedTahun.value}`;
+  const r = rekapData.value;
+  if (r?.semester && r.tahunAjaranNama) {
+    return `Semester ${r.semester} TA ${r.tahunAjaranNama} (${formatTanggal(r.tanggalMulai)} – ${formatTanggal(r.tanggalSelesai)})`;
+  }
+  return `Semester ${selectedSemester.value}`;
 });
 
 // Select options
@@ -161,12 +196,13 @@ async function fetchRekap() {
   try {
     const params: Record<string, string | number> = {
       kelas_id: selectedKelasId.value,
-      tahun: selectedTahun.value,
       periode: selectedPeriode.value,
     };
 
+    // Semester: tanggalnya diambil dari tahun ajaran kelas, jadi tidak perlu tahun
     if (selectedPeriode.value === 'bulanan') {
       params.bulan = selectedBulan.value;
+      params.tahun = selectedTahun.value;
     } else {
       params.semester = selectedSemester.value;
     }
@@ -189,12 +225,13 @@ async function exportRekap() {
   try {
     const params: Record<string, string | number> = {
       kelas_id: selectedKelasId.value,
-      tahun: selectedTahun.value,
       periode: selectedPeriode.value,
     };
 
+    // Semester: tanggalnya diambil dari tahun ajaran kelas, jadi tidak perlu tahun
     if (selectedPeriode.value === 'bulanan') {
       params.bulan = selectedBulan.value;
+      params.tahun = selectedTahun.value;
     } else {
       params.semester = selectedSemester.value;
     }
@@ -211,7 +248,7 @@ async function exportRekap() {
     const filename =
       selectedPeriode.value === 'bulanan'
         ? `rekap-absensi-${BULAN_LABELS[selectedBulan.value - 1]}-${selectedTahun.value}.xlsx`
-        : `rekap-absensi-semester-${selectedSemester.value}-${selectedTahun.value}.xlsx`;
+        : `rekap-absensi-semester-${selectedSemester.value}-${(rekapData.value?.tahunAjaranNama ?? '').replace('/', '-')}.xlsx`;
 
     link.setAttribute('download', filename);
     document.body.appendChild(link);
@@ -243,6 +280,7 @@ watch([selectedKelasId, selectedPeriode, selectedBulan, selectedTahun, selectedS
 // Init
 onMounted(() => {
   fetchKelasList();
+  pilihSemesterBerjalan();
 });
 </script>
 
@@ -298,7 +336,7 @@ onMounted(() => {
         />
       </div>
 
-      <div class="sm:min-w-[120px]">
+      <div v-if="selectedPeriode === 'bulanan'" class="sm:min-w-[120px]">
         <SearchSelect
           v-model="selectedTahun"
           :options="tahunSelectOptions"
@@ -352,7 +390,7 @@ onMounted(() => {
             v-if="rekapData.hariEfektifSource"
             class="text-[12px] sm:text-[13px] text-stone-400"
           >
-            ({{ rekapData.hariEfektifSource === 'manual' ? 'manual' : 'otomatis' }})
+            ({{ rekapData.hariEfektifSource }})
           </span>
         </div>
         <div v-if="averagePercentage !== null" class="flex items-center gap-2">

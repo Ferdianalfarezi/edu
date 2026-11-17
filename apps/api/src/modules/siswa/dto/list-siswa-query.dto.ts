@@ -1,7 +1,8 @@
 import { IsEnum, IsIn, IsInt, IsOptional, IsString, IsUUID, Min } from 'class-validator';
 import { Type } from 'class-transformer';
 
-const SISWA_STATUS_VALUES = ['aktif', 'pindah_sekolah', 'keluar', 'lulus'] as const;
+// 'nonaktif' = pindah_sekolah + keluar (dipakai filter di halaman admin)
+const SISWA_STATUS_VALUES = ['aktif', 'pindah_sekolah', 'keluar', 'lulus', 'nonaktif'] as const;
 type SiswaStatusValue = (typeof SISWA_STATUS_VALUES)[number];
 
 export class ListSiswaQueryDto {
@@ -38,4 +39,8 @@ export class ListSiswaQueryDto {
   @IsOptional()
   @IsUUID()
   tahun_ajaran_id?: string;
+
+  @IsOptional()
+  @IsIn(['L', 'P'], { message: 'jenis_kelamin harus L atau P' })
+  jenis_kelamin?: 'L' | 'P';
 }

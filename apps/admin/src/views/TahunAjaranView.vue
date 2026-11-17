@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, watch } from 'vue';
 import { api } from '@/api/client';
 import { PageHeader, BaseModal, ActionButton } from '@/components/ui';
 import { useToast } from '@/composables/useToast';
@@ -7,16 +7,22 @@ import { useToast } from '@/composables/useToast';
 interface TahunAjaran {
   id: string;
   nama: string;
-  tanggal_mulai: string;
-  tanggal_selesai: string;
+  tanggalMulai: string;
+  tanggalSelesai: string;
+  semester1Mulai: string;
+  semester1Selesai: string;
+  semester2Mulai: string;
+  semester2Selesai: string;
   status: 'disiapkan' | 'aktif' | 'nonaktif';
-  created_at: string;
+  createdAt: string;
 }
 
 interface TahunAjaranForm {
   nama: string;
   tanggal_mulai: string;
   tanggal_selesai: string;
+  semester_1_selesai: string;
+  semester_2_mulai: string;
   generate_kelas: boolean;
 }
 
@@ -35,8 +41,82 @@ const form = ref<TahunAjaranForm>({
   nama: '',
   tanggal_mulai: '',
   tanggal_selesai: '',
+  semester_1_selesai: '',
+  semester_2_mulai: '',
   generate_kelas: true,
 });
+
+// Modal atur semester
+const showSemesterModal = ref(false);
+const editingItem = ref<TahunAjaran | null>(null);
+const semesterForm = ref({ semester_1_selesai: '', semester_2_mulai: '' });
+const semesterError = ref('');
+const savingSemester = ref(false);
+
+/** 'YYYY-MM-DD' digeser n hari (tanpa efek zona waktu). */
+function geserHari(tanggal: string, hari: number): string {
+  const d = new Date(`${tanggal}T00:00:00Z`);
+  d.setUTCDate(d.getUTCDate() + hari);
+  return d.toISOString().slice(0, 10);
+}
+
+/** Sama dengan default di API: Semester 2 mulai 1 Januari, kalau tidak ada di dalam TA pakai tengahnya. */
+function hitungSemesterDefault(mulai: string, selesai: string) {
+  let semester2Mulai = `${Number(mulai.slice(0, 4)) + 1}-01-01`;
+  if (!(semester2Mulai > mulai && semester2Mulai <= selesai)) {
+    const totalHari = (Date.parse(selesai) - Date.parse(mulai)) / 86_400_000;
+    semester2Mulai = geserHari(mulai, Math.floor(totalHari / 2) + 1);
+  }
+  return { semester_1_selesai: geserHari(semester2Mulai, -1), semester_2_mulai: semester2Mulai };
+}
+
+// Isi otomatis batas semester begitu tanggal TA lengkap (admin tetap bisa ubah)
+watch(
+  () => [form.value.tanggal_mulai, form.value.tanggal_selesai],
+  ([mulai, selesai]) => {
+    if (mulai && selesai && mulai < selesai) {
+      Object.assign(form.value, hitungSemesterDefault(mulai, selesai));
+    }
+  },
+);
+
+function formatRentang(mulai: string, selesai: string): string {
+  const opsi: Intl.DateTimeFormatOptions = { day: 'numeric', month: 'short', year: 'numeric' };
+  const fmt = (t: string) => new Date(`${t}T00:00:00`).toLocaleDateString('id-ID', opsi);
+  return mulai && selesai ? `${fmt(mulai)} – ${fmt(selesai)}` : '-';
+}
+
+function getErrorMessage(error: unknown, fallback: string): string {
+  const msg = (error as { response?: { data?: { message?: string | string[] } } }).response?.data
+    ?.message;
+  return Array.isArray(msg) ? msg.join(', ') : msg || fallback;
+}
+
+function openSemesterForm(item: TahunAjaran) {
+  editingItem.value = item;
+  semesterForm.value = {
+    semester_1_selesai: item.semester1Selesai,
+    semester_2_mulai: item.semester2Mulai,
+  };
+  semesterError.value = '';
+  showSemesterModal.value = true;
+}
+
+async function saveSemester() {
+  if (!editingItem.value) return;
+  semesterError.value = '';
+  savingSemester.value = true;
+  try {
+    await api.patch(`/tahun-ajaran/${editingItem.value.id}/semester`, semesterForm.value);
+    showSemesterModal.value = false;
+    toast.success(`Tanggal semester ${editingItem.value.nama} disimpan.`);
+    await fetchItems();
+  } catch (error) {
+    semesterError.value = getErrorMessage(error, 'Gagal menyimpan tanggal semester.');
+  } finally {
+    savingSemester.value = false;
+  }
+}
 
 function statusLabel(status: string): string {
   switch (status) {
@@ -66,7 +146,7 @@ function statusClass(status: string): string {
 
 function formatDate(dateStr: string): string {
   if (!dateStr) return '-';
-  return new Date(dateStr).toLocaleDateString('id-ID', {
+  return new Date(`${dateStr}T00:00:00`).toLocaleDateString('id-ID', {
     day: 'numeric',
     month: 'long',
     year: 'numeric',
@@ -87,7 +167,14 @@ async function fetchItems() {
 
 function openCreateForm() {
   formError.value = '';
-  form.value = { nama: '', tanggal_mulai: '', tanggal_selesai: '', generate_kelas: true };
+  form.value = {
+    nama: '',
+    tanggal_mulai: '',
+    tanggal_selesai: '',
+    semester_1_selesai: '',
+    semester_2_mulai: '',
+    generate_kelas: true,
+  };
   showFormModal.value = true;
 }
 
@@ -103,6 +190,8 @@ async function saveTahunAjaran() {
     nama: form.value.nama,
     tanggal_mulai: form.value.tanggal_mulai,
     tanggal_selesai: form.value.tanggal_selesai,
+    semester_1_selesai: form.value.semester_1_selesai || undefined,
+    semester_2_mulai: form.value.semester_2_mulai || undefined,
     generate_kelas: form.value.generate_kelas,
   };
 
@@ -189,6 +278,11 @@ onMounted(fetchItems);
               <th
                 class="px-5 py-4 text-left font-bold text-text-secondary text-[13px] uppercase tracking-[0.04em] bg-surface-warm"
               >
+                Semester
+              </th>
+              <th
+                class="px-5 py-4 text-left font-bold text-text-secondary text-[13px] uppercase tracking-[0.04em] bg-surface-warm"
+              >
                 Status
               </th>
               <th
@@ -202,10 +296,20 @@ onMounted(fetchItems);
             <tr v-for="item in items" :key="item.id" class="hover:bg-primary-50 transition-colors">
               <td class="px-5 py-4 text-[15px] text-stone-800 font-medium">{{ item.nama }}</td>
               <td class="px-5 py-4 text-[15px] text-stone-600">
-                {{ formatDate(item.tanggal_mulai) }}
+                {{ formatDate(item.tanggalMulai) }}
               </td>
               <td class="px-5 py-4 text-[15px] text-stone-600">
-                {{ formatDate(item.tanggal_selesai) }}
+                {{ formatDate(item.tanggalSelesai) }}
+              </td>
+              <td class="px-5 py-4 text-[13px] text-stone-600 whitespace-nowrap">
+                <div>
+                  <span class="font-semibold text-stone-800">Sem 1</span>
+                  {{ formatRentang(item.semester1Mulai, item.semester1Selesai) }}
+                </div>
+                <div>
+                  <span class="font-semibold text-stone-800">Sem 2</span>
+                  {{ formatRentang(item.semester2Mulai, item.semester2Selesai) }}
+                </div>
               </td>
               <td class="px-5 py-4">
                 <span
@@ -218,19 +322,24 @@ onMounted(fetchItems);
                 </span>
               </td>
               <td class="px-5 py-4">
-                <ActionButton
-                  v-if="item.status === 'disiapkan'"
-                  variant="primary"
-                  icon="activate"
-                  @click="openActivateConfirm(item)"
-                  >Aktifkan</ActionButton
-                >
-                <span
-                  v-else-if="item.status === 'aktif'"
-                  class="text-[13px] text-success-700 font-semibold"
-                  >Sedang Aktif</span
-                >
-                <span v-else class="text-[13px] text-stone-400">Historis</span>
+                <div class="flex items-center gap-2 flex-wrap">
+                  <ActionButton variant="warning" icon="edit" @click="openSemesterForm(item)"
+                    >Atur Semester</ActionButton
+                  >
+                  <ActionButton
+                    v-if="item.status === 'disiapkan'"
+                    variant="primary"
+                    icon="activate"
+                    @click="openActivateConfirm(item)"
+                    >Aktifkan</ActionButton
+                  >
+                  <span
+                    v-else-if="item.status === 'aktif'"
+                    class="text-[13px] text-success-700 font-semibold"
+                    >Sedang Aktif</span
+                  >
+                  <span v-else class="text-[13px] text-stone-400">Historis</span>
+                </div>
               </td>
             </tr>
           </tbody>
@@ -309,6 +418,33 @@ onMounted(fetchItems);
             class="w-full px-3 py-2.5 text-[15px] border-2 border-stone-200 rounded-xs focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
           />
         </div>
+        <div v-if="form.tanggal_mulai && form.tanggal_selesai" class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-[15px] font-medium text-stone-800 mb-1.5"
+              >Akhir Semester 1</label
+            >
+            <input
+              v-model="form.semester_1_selesai"
+              type="date"
+              required
+              class="w-full px-3 py-2.5 text-[15px] border-2 border-stone-200 rounded-xs focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
+            />
+          </div>
+          <div>
+            <label class="block text-[15px] font-medium text-stone-800 mb-1.5"
+              >Awal Semester 2</label
+            >
+            <input
+              v-model="form.semester_2_mulai"
+              type="date"
+              required
+              class="w-full px-3 py-2.5 text-[15px] border-2 border-stone-200 rounded-xs focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
+            />
+          </div>
+          <p class="col-span-2 text-[13px] text-stone-500">
+            Terisi otomatis (Semester 2 mulai 1 Januari). Ubah kalau kalender sekolah berbeda.
+          </p>
+        </div>
         <div class="flex items-center gap-2">
           <input
             id="generate-kelas"
@@ -327,6 +463,52 @@ onMounted(fetchItems);
         <ActionButton variant="primary" type="submit" form="form-tahun-ajaran">
           Simpan
         </ActionButton>
+      </template>
+    </BaseModal>
+
+    <!-- Atur Semester Modal -->
+    <BaseModal
+      :show="showSemesterModal"
+      :title="`Atur Semester ${editingItem?.nama ?? ''}`"
+      @close="showSemesterModal = false"
+    >
+      <p class="text-[15px] text-stone-600 mb-4">
+        Semester 1 dimulai {{ formatDate(editingItem?.tanggalMulai ?? '') }} dan Semester 2 berakhir
+        {{ formatDate(editingItem?.tanggalSelesai ?? '') }} (sesuai tahun ajaran). Atur batas di
+        antaranya. Boleh ada jeda untuk libur semester.
+      </p>
+      <form id="form-semester" class="grid grid-cols-2 gap-3" @submit.prevent="saveSemester">
+        <div>
+          <label class="block text-[15px] font-medium text-stone-800 mb-1.5"
+            >Akhir Semester 1</label
+          >
+          <input
+            v-model="semesterForm.semester_1_selesai"
+            type="date"
+            required
+            :min="editingItem?.tanggalMulai"
+            :max="editingItem?.tanggalSelesai"
+            class="w-full px-3 py-2.5 text-[15px] border-2 border-stone-200 rounded-xs focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
+          />
+        </div>
+        <div>
+          <label class="block text-[15px] font-medium text-stone-800 mb-1.5">Awal Semester 2</label>
+          <input
+            v-model="semesterForm.semester_2_mulai"
+            type="date"
+            required
+            :min="editingItem?.tanggalMulai"
+            :max="editingItem?.tanggalSelesai"
+            class="w-full px-3 py-2.5 text-[15px] border-2 border-stone-200 rounded-xs focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
+          />
+        </div>
+        <p v-if="semesterError" class="col-span-2 text-[13px] text-danger-500">
+          {{ semesterError }}
+        </p>
+      </form>
+      <template #footer>
+        <ActionButton variant="neutral" @click="showSemesterModal = false"> Batal </ActionButton>
+        <ActionButton variant="primary" type="submit" form="form-semester"> Simpan </ActionButton>
       </template>
     </BaseModal>
 

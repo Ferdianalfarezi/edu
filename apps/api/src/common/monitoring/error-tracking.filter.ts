@@ -16,6 +16,8 @@ interface ErrorResponse {
   requestId: string;
   timestamp: string;
   path: string;
+  /** Data tambahan opsional dari exception, mis. daftar konflik import */
+  details?: unknown;
 }
 
 /**
@@ -42,6 +44,7 @@ export class ErrorTrackingFilter implements ExceptionFilter {
     let statusCode: number;
     let message: string | string[];
     let error: string;
+    let details: unknown;
 
     if (exception instanceof HttpException) {
       statusCode = exception.getStatus();
@@ -53,6 +56,7 @@ export class ErrorTrackingFilter implements ExceptionFilter {
         const body = responseBody as Record<string, unknown>;
         message = (body.message as string | string[]) || exception.message;
         error = (body.error as string) || exception.name;
+        details = body.details;
       }
     } else if (exception instanceof Error) {
       statusCode = HttpStatus.INTERNAL_SERVER_ERROR;
@@ -100,6 +104,7 @@ export class ErrorTrackingFilter implements ExceptionFilter {
       requestId,
       timestamp: new Date().toISOString(),
       path: request.url,
+      ...(details !== undefined && { details }),
     };
 
     response.status(statusCode).json(errorResponse);

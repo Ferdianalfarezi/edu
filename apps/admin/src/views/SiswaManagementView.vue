@@ -2,6 +2,7 @@
 import { ref, reactive, onMounted, watch, computed } from 'vue';
 import { StatusSiswa } from '@edu/shared';
 import { api } from '@/api/client';
+import { keysToCamel } from '@/api/case-transform';
 import {
   PageHeader,
   BaseModal,
@@ -26,6 +27,8 @@ interface Siswa {
   orangTuaNama?: string;
   orangTuaPhone?: string;
   status: StatusSiswa;
+  tanggalKeluar?: string | null;
+  alasanKeluar?: string | null;
   createdAt: string;
 }
 
@@ -38,6 +41,8 @@ interface SiswaForm {
   alamat: string;
   namaWali: string;
   teleponWali: string;
+  status: StatusTampil;
+  alasanKeluar: string;
 }
 
 interface Kelas {
@@ -50,12 +55,15 @@ interface TahunAjaran {
   nama: string;
   status: string;
 }
+// Konflik NISN dari API (preview / import). Satu konflik saja = import dibatalkan semua.
 interface ImportConflict {
-  row: number;
+  jenis: 'dobel_di_file' | 'sudah_terdaftar';
   nisn: string;
-  nama: string;
-  existingNama: string;
-  action: 'update' | 'skip';
+  baris: number[];
+  namaCsv: string[];
+  namaTerdaftar?: string;
+  kelasTerdaftar?: string | null;
+  statusTerdaftar?: StatusSiswa;
 }
 interface ImportPreviewRow {
   nama: string;
@@ -77,8 +85,9 @@ const { page, pageSize, search, filters, queryParams } = useTableUrlState({
   defaultPageSize: 15,
   filters: [
     { key: 'kelas_id', type: 'string' },
-    { key: 'status', type: 'enum', enumValues: ['aktif', 'pindah_sekolah', 'keluar', 'lulus'] },
+    { key: 'status', type: 'enum', enumValues: ['aktif', 'nonaktif', 'lulus'] },
     { key: 'tahun_ajaran_id', type: 'string' },
+    { key: 'jenis_kelamin', type: 'enum', enumValues: ['L', 'P'] },
   ],
 });
 
@@ -86,12 +95,11 @@ const { page, pageSize, search, filters, queryParams } = useTableUrlState({
 const filterKelas = filters['kelas_id'];
 const filterStatus = filters['status'];
 const filterTahunAjaran = filters['tahun_ajaran_id'];
+const filterJenisKelamin = filters['jenis_kelamin'];
 
 const showFormModal = ref(false);
-const showDeleteModal = ref(false);
 const showImportModal = ref(false);
 const editingSiswa = ref<Siswa | null>(null);
-const deletingSiswa = ref<Siswa | null>(null);
 
 const form = reactive<SiswaForm>({
   nama: '',
@@ -102,12 +110,11 @@ const form = reactive<SiswaForm>({
   alamat: '',
   namaWali: '',
   teleponWali: '',
+  status: 'aktif',
+  alasanKeluar: '',
 });
 const formErrors = ref<Record<string, string>>({});
 const saving = ref(false);
-
-const deleteReason = ref('');
-const deleteStatus = ref<StatusSiswa>(StatusSiswa.PINDAH_SEKOLAH);
 
 const importFile = ref<File | null>(null);
 const importPreview = ref<ImportPreviewRow[]>([]);
@@ -117,17 +124,28 @@ const importing = ref(false);
 const importStep = ref<'upload' | 'preview' | 'conflicts' | 'done'>('upload');
 const importResult = ref<{ created: number; updated: number; skipped: number } | null>(null);
 
+// Status yang tampil di layar: 3 pilihan. 'nonaktif' = pindah_sekolah atau keluar di database
+// (siswa baru yang dinonaktifkan disimpan sebagai 'keluar', detailnya di kolom alasan).
+type StatusTampil = 'aktif' | 'nonaktif' | 'lulus';
+
 const statusOptions: SelectOption[] = [
-  { value: StatusSiswa.AKTIF, label: 'Aktif' },
-  { value: StatusSiswa.PINDAH_SEKOLAH, label: 'Pindah Sekolah' },
-  { value: StatusSiswa.KELUAR, label: 'Keluar' },
-  { value: StatusSiswa.LULUS, label: 'Alumni/Lulus' },
+  { value: 'aktif', label: 'Aktif' },
+  { value: 'nonaktif', label: 'Nonaktif' },
+  { value: 'lulus', label: 'Lulus (Alumni)' },
 ];
 
-const deleteStatusOptions: SelectOption[] = [
-  { value: StatusSiswa.PINDAH_SEKOLAH, label: 'Pindah Sekolah' },
-  { value: StatusSiswa.KELUAR, label: 'Keluar' },
-];
+function toStatusTampil(status: StatusSiswa): StatusTampil {
+  if (status === StatusSiswa.AKTIF) return 'aktif';
+  if (status === StatusSiswa.LULUS) return 'lulus';
+  return 'nonaktif';
+}
+
+// Status untuk dikirim ke API. Kalau tetap nonaktif, status asli (pindah_sekolah/keluar) dipertahankan.
+function toStatusDb(tampil: StatusTampil, asli?: StatusSiswa): StatusSiswa {
+  if (tampil === 'aktif') return StatusSiswa.AKTIF;
+  if (tampil === 'lulus') return StatusSiswa.LULUS;
+  return asli === StatusSiswa.PINDAH_SEKOLAH ? StatusSiswa.PINDAH_SEKOLAH : StatusSiswa.KELUAR;
+}
 
 const jenisKelaminOptions: SelectOption[] = [
   { value: 'L', label: 'Laki-laki' },
@@ -179,7 +197,10 @@ async function fetchTahunAjaran() {
 }
 
 // Watch composable state changes to trigger fetch
-watch([page, pageSize, search, filterKelas, filterStatus, filterTahunAjaran], fetchSiswa);
+watch(
+  [page, pageSize, search, filterKelas, filterStatus, filterTahunAjaran, filterJenisKelamin],
+  fetchSiswa,
+);
 
 function validateForm(): boolean {
   formErrors.value = {};
@@ -205,6 +226,8 @@ function openCreateForm() {
     alamat: '',
     namaWali: '',
     teleponWali: '',
+    status: 'aktif',
+    alasanKeluar: '',
   });
   formErrors.value = {};
   showFormModal.value = true;
@@ -221,16 +244,11 @@ function openEditForm(siswa: Siswa) {
     alamat: siswa.alamat || '',
     namaWali: siswa.orangTuaNama || '',
     teleponWali: siswa.orangTuaPhone || '',
+    status: toStatusTampil(siswa.status),
+    alasanKeluar: siswa.alasanKeluar || '',
   });
   formErrors.value = {};
   showFormModal.value = true;
-}
-
-function openDeleteConfirm(siswa: Siswa) {
-  deletingSiswa.value = siswa;
-  deleteReason.value = '';
-  deleteStatus.value = StatusSiswa.PINDAH_SEKOLAH;
-  showDeleteModal.value = true;
 }
 
 async function saveSiswa() {
@@ -245,6 +263,8 @@ async function saveSiswa() {
     alamat: form.alamat.trim() || undefined,
     orangTuaNama: form.namaWali.trim(),
     orangTuaPhone: form.teleponWali.trim(),
+    status: toStatusDb(form.status, editingSiswa.value?.status),
+    alasanKeluar: form.status === 'nonaktif' ? form.alasanKeluar.trim() : undefined,
   };
   try {
     if (editingSiswa.value) await api.patch(`/siswa/${editingSiswa.value.id}`, payload);
@@ -253,25 +273,10 @@ async function saveSiswa() {
     await fetchSiswa();
   } catch (error) {
     if (error.response?.status === 409)
-      formErrors.value.nisn = 'NISN sudah terdaftar di sekolah ini';
+      formErrors.value.nisn = error.response?.data?.message || 'NISN sudah digunakan siswa lain';
     else console.error('Failed to save siswa:', error);
   } finally {
     saving.value = false;
-  }
-}
-
-async function deleteSiswa() {
-  if (!deletingSiswa.value) return;
-  try {
-    await api.patch(`/siswa/${deletingSiswa.value.id}/soft-delete`, {
-      status: deleteStatus.value,
-      alasanKeluar: deleteReason.value.trim() || undefined,
-    });
-    showDeleteModal.value = false;
-    deletingSiswa.value = null;
-    await fetchSiswa();
-  } catch (error) {
-    console.error('Failed to delete siswa:', error);
   }
 }
 
@@ -345,25 +350,34 @@ function handleFileSelect(event: Event) {
   reader.readAsText(file);
 }
 
+function showImportConflicts(conflicts: ImportConflict[]) {
+  importConflicts.value = conflicts;
+  importStep.value = 'conflicts';
+}
+
+function getImportErrorMessage(error: unknown, fallback: string): string[] {
+  const message = (error as { response?: { data?: { message?: string | string[] } } }).response
+    ?.data?.message;
+  if (Array.isArray(message)) return message;
+  return [message || fallback];
+}
+
 async function uploadCsvForImport() {
   if (!importFile.value) return;
   importing.value = true;
+  importErrors.value = [];
   try {
     const formData = new FormData();
     formData.append('file', importFile.value);
-    const { data } = await api.post<{
-      conflicts: ImportConflict[];
-      preview_count: number;
-      valid_count: number;
-    }>('/siswa/import-csv/preview', formData, {
-      headers: { 'Content-Type': 'multipart/form-data' },
-    });
-    if (data.conflicts && data.conflicts.length > 0) {
-      importConflicts.value = data.conflicts.map((c) => ({ ...c, action: 'skip' as const }));
-      importStep.value = 'conflicts';
-    } else await executeImport();
+    const { data } = await api.post<{ conflicts: ImportConflict[]; previewCount: number }>(
+      '/siswa/import-csv/preview',
+      formData,
+      { headers: { 'Content-Type': 'multipart/form-data' } },
+    );
+    if (data.conflicts && data.conflicts.length > 0) showImportConflicts(data.conflicts);
+    else await executeImport();
   } catch (error) {
-    importErrors.value = error.response?.data?.errors || ['Gagal memproses file CSV'];
+    importErrors.value = getImportErrorMessage(error, 'Gagal memproses file CSV');
   } finally {
     importing.value = false;
   }
@@ -375,8 +389,6 @@ async function executeImport() {
   try {
     const formData = new FormData();
     formData.append('file', importFile.value);
-    const resolutions = importConflicts.value.map((c) => ({ nisn: c.nisn, action: c.action }));
-    formData.append('resolutions', JSON.stringify(resolutions));
     const { data } = await api.post<{ created: number; updated: number; skipped: number }>(
       '/siswa/import-csv',
       formData,
@@ -386,17 +398,28 @@ async function executeImport() {
     importStep.value = 'done';
     await fetchSiswa();
   } catch (error) {
-    importErrors.value = error.response?.data?.errors || ['Gagal mengimport data siswa'];
+    // 409 = ada konflik NISN (mis. data berubah sejak preview): tampilkan daftarnya
+    const details = (error as { response?: { status?: number; data?: { details?: unknown } } })
+      .response;
+    const conflicts = (
+      keysToCamel(details?.data?.details ?? {}) as { conflicts?: ImportConflict[] }
+    ).conflicts;
+    if (details?.status === 409 && conflicts?.length) showImportConflicts(conflicts);
+    else importErrors.value = getImportErrorMessage(error, 'Gagal mengimport data siswa');
   } finally {
     importing.value = false;
   }
 }
 
-function setAllConflictActions(action: 'update' | 'skip') {
-  importConflicts.value = importConflicts.value.map((c) => ({ ...c, action }));
+function resetImportUpload() {
+  importFile.value = null;
+  importPreview.value = [];
+  importConflicts.value = [];
+  importErrors.value = [];
+  importStep.value = 'upload';
 }
 function getStatusLabel(status: StatusSiswa): string {
-  return statusOptions.find((o) => o.value === status)?.label || status;
+  return statusOptions.find((o) => o.value === toStatusTampil(status))?.label || status;
 }
 
 // Avatar helper functions for Data_Table name column
@@ -490,6 +513,15 @@ onMounted(() => {
           v-model="filterStatus"
           :options="statusOptions"
           placeholder="Semua Status"
+          clearable
+          :searchable="false"
+        />
+      </div>
+      <div class="w-44">
+        <SearchSelect
+          v-model="filterJenisKelamin"
+          :options="jenisKelaminOptions"
+          placeholder="Semua Jenis Kelamin"
           clearable
           :searchable="false"
         />
@@ -607,13 +639,6 @@ onMounted(() => {
                 <div class="flex items-center justify-end gap-1">
                   <ActionButton variant="warning" icon="edit" @click="openEditForm(siswa)"
                     >Edit</ActionButton
-                  >
-                  <ActionButton
-                    v-if="siswa.status === 'aktif'"
-                    variant="danger"
-                    icon="cancel"
-                    @click="openDeleteConfirm(siswa)"
-                    >Nonaktifkan</ActionButton
                   >
                 </div>
               </td>
@@ -749,6 +774,35 @@ onMounted(() => {
             />
           </div>
         </div>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <SearchSelect
+              v-model="form.status"
+              :options="statusOptions"
+              label="Status"
+              :required="true"
+              :searchable="false"
+            />
+          </div>
+          <div v-if="form.status === 'nonaktif'">
+            <label class="block text-sm font-medium text-text-primary mb-1.5"
+              >Alasan (opsional)</label
+            >
+            <input
+              v-model="form.alasanKeluar"
+              type="text"
+              maxlength="500"
+              placeholder="Contoh: pindah ke SDN 2 Bandung / mengundurkan diri"
+              class="w-full px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
+            />
+          </div>
+        </div>
+        <p
+          v-if="form.status !== 'aktif'"
+          class="text-xs text-warning-700 bg-warning-50 border border-warning-100 rounded-lg px-3 py-2"
+        >
+          Data Siswa yang tidak aktif akan tetap tersimpan untuk riwayat.
+        </p>
 
         <div class="border-t border-border pt-4 mt-4">
           <h3 class="text-sm font-semibold text-text-primary mb-3">Data Orang Tua / Wali</h3>
@@ -800,51 +854,6 @@ onMounted(() => {
       </template>
     </BaseModal>
 
-    <!-- Delete Modal -->
-    <BaseModal :show="showDeleteModal" title="Nonaktifkan Siswa" @close="showDeleteModal = false">
-      <div class="space-y-4">
-        <p class="text-sm text-text-secondary">
-          Anda akan menonaktifkan siswa
-          <strong class="text-text-primary">{{ deletingSiswa?.nama }}</strong
-          >. Data siswa tetap tersimpan untuk keperluan riwayat.
-        </p>
-        <div>
-          <SearchSelect
-            v-model="deleteStatus"
-            :options="deleteStatusOptions"
-            label="Status Baru"
-            :required="true"
-            :searchable="false"
-          />
-        </div>
-        <div>
-          <label class="block text-sm font-medium text-text-primary mb-1.5"
-            >Alasan (opsional)</label
-          >
-          <textarea
-            v-model="deleteReason"
-            rows="2"
-            class="w-full px-3 py-2 text-sm border border-border rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
-            placeholder="Alasan nonaktifkan..."
-          />
-        </div>
-      </div>
-      <template #footer>
-        <button
-          class="px-4 py-2 text-sm font-medium text-text-secondary bg-white border border-border rounded-lg hover:bg-surface-50 transition-colors"
-          @click="showDeleteModal = false"
-        >
-          Batal
-        </button>
-        <button
-          class="px-4 py-2 text-sm font-medium text-white bg-danger-500 rounded-lg hover:bg-danger-700 transition-colors"
-          @click="deleteSiswa"
-        >
-          Nonaktifkan
-        </button>
-      </template>
-    </BaseModal>
-
     <!-- Import CSV Modal -->
     <BaseModal
       :show="showImportModal"
@@ -864,7 +873,9 @@ onMounted(() => {
         <div
           class="flex items-center justify-between gap-3 p-3 rounded-lg border border-border bg-surface-50"
         >
-          <p class="text-sm text-text-secondary">Belum punya format? Unduh template lalu isi datanya.</p>
+          <p class="text-sm text-text-secondary">
+            Belum punya format? Unduh template lalu isi datanya.
+          </p>
           <button
             type="button"
             class="shrink-0 px-3 py-2 rounded-lg border border-border bg-white text-sm font-medium text-text-primary hover:bg-surface-100"
@@ -889,6 +900,9 @@ onMounted(() => {
 
       <!-- Preview Step -->
       <div v-if="importStep === 'preview'" class="space-y-4">
+        <div v-if="importErrors.length > 0" class="p-3 bg-danger-50 rounded-lg">
+          <p v-for="(err, i) in importErrors" :key="i" class="text-xs text-danger-700">{{ err }}</p>
+        </div>
         <h3 class="text-sm font-semibold text-text-primary">Preview (maks 10 baris pertama)</h3>
         <div class="overflow-x-auto border border-border rounded-lg">
           <table class="w-full text-sm">
@@ -914,55 +928,36 @@ onMounted(() => {
         </div>
       </div>
 
-      <!-- Conflicts Step -->
+      <!-- Conflicts Step: import dibatalkan semua -->
       <div v-if="importStep === 'conflicts'" class="space-y-4">
-        <div class="flex items-center justify-between">
-          <h3 class="text-sm font-semibold text-text-primary">Konflik NISN Ditemukan</h3>
-          <div class="flex gap-2">
-            <button
-              class="text-xs px-2 py-1 rounded border border-border hover:bg-surface-50"
-              @click="setAllConflictActions('update')"
-            >
-              Update Semua
-            </button>
-            <button
-              class="text-xs px-2 py-1 rounded border border-border hover:bg-surface-50"
-              @click="setAllConflictActions('skip')"
-            >
-              Lewati Semua
-            </button>
-          </div>
+        <div class="p-3 rounded-lg bg-danger-50 border border-danger-100">
+          <p class="text-sm font-semibold text-danger-700">
+            Import dibatalkan: {{ importConflicts.length }} konflik NISN ditemukan
+          </p>
+          <p class="text-xs text-danger-700 mt-1">
+            Tidak ada data yang disimpan. Perbaiki file CSV lalu upload ulang.
+          </p>
         </div>
-        <div class="overflow-x-auto border border-border rounded-lg">
-          <table class="w-full text-sm">
-            <thead>
-              <tr class="border-b border-border bg-surface-50">
-                <th class="px-3 py-2 text-left font-medium text-text-secondary">Baris</th>
-                <th class="px-3 py-2 text-left font-medium text-text-secondary">NISN</th>
-                <th class="px-3 py-2 text-left font-medium text-text-secondary">Nama (CSV)</th>
-                <th class="px-3 py-2 text-left font-medium text-text-secondary">Nama (Existing)</th>
-                <th class="px-3 py-2 text-left font-medium text-text-secondary">Aksi</th>
-              </tr>
-            </thead>
-            <tbody class="divide-y divide-border">
-              <tr v-for="(conflict, i) in importConflicts" :key="i">
-                <td class="px-3 py-2">{{ conflict.row }}</td>
-                <td class="px-3 py-2 font-mono text-xs">{{ conflict.nisn }}</td>
-                <td class="px-3 py-2">{{ conflict.nama }}</td>
-                <td class="px-3 py-2">{{ conflict.existingNama }}</td>
-                <td class="px-3 py-2">
-                  <select
-                    v-model="conflict.action"
-                    class="px-2 py-1 text-xs border border-border rounded"
-                  >
-                    <option value="update">Update</option>
-                    <option value="skip">Lewati</option>
-                  </select>
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
+        <ul class="divide-y divide-border border border-border rounded-lg max-h-80 overflow-y-auto">
+          <li v-for="(c, i) in importConflicts" :key="i" class="px-3 py-2.5 text-sm">
+            <p class="text-xs text-text-tertiary mb-0.5">
+              Baris {{ c.baris.join(', ') }} · {{ c.namaCsv.join(', ') }}
+            </p>
+            <p v-if="c.jenis === 'sudah_terdaftar'" class="text-text-primary">
+              NISN <span class="font-mono font-semibold">{{ c.nisn }}</span> telah digunakan oleh
+              <strong>{{ c.namaTerdaftar }}</strong>
+              <template v-if="c.kelasTerdaftar">
+                kelas <strong>{{ c.kelasTerdaftar }}</strong></template
+              >
+              dengan status
+              <strong>{{ c.statusTerdaftar ? getStatusLabel(c.statusTerdaftar) : '-' }}</strong>
+            </p>
+            <p v-else class="text-text-primary">
+              NISN <span class="font-mono font-semibold">{{ c.nisn }}</span> dipakai lebih dari
+              sekali di file ini (baris {{ c.baris.join(', ') }})
+            </p>
+          </li>
+        </ul>
       </div>
 
       <!-- Done Step -->
@@ -985,10 +980,6 @@ onMounted(() => {
           <div class="text-center">
             <p class="text-2xl font-semibold text-success-700">{{ importResult.created }}</p>
             <p class="text-xs text-text-tertiary">Ditambahkan</p>
-          </div>
-          <div class="text-center">
-            <p class="text-2xl font-semibold text-warning-700">{{ importResult.updated }}</p>
-            <p class="text-xs text-text-tertiary">Diperbarui</p>
           </div>
           <div class="text-center">
             <p class="text-2xl font-semibold text-text-tertiary">{{ importResult.skipped }}</p>
@@ -1022,11 +1013,10 @@ onMounted(() => {
         </button>
         <button
           v-if="importStep === 'conflicts'"
-          :disabled="importing"
-          class="px-4 py-2 text-sm font-medium text-white bg-primary-600 rounded-lg hover:bg-primary-700 disabled:opacity-50 transition-colors"
-          @click="executeImport"
+          class="px-4 py-2 text-sm font-medium text-white bg-primary-600 rounded-lg hover:bg-primary-700 transition-colors"
+          @click="resetImportUpload"
         >
-          {{ importing ? 'Mengimport...' : 'Konfirmasi Import' }}
+          Upload Ulang
         </button>
       </template>
     </BaseModal>

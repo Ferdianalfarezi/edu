@@ -43,6 +43,7 @@ export default defineConfig({
   },
   server: {
     port: 5002,
+    strictPort: true, // port bentrok -> error, jangan pindah ke port aplikasi lain
     proxy: {
       '/api': {
         target: 'http://localhost:3000',

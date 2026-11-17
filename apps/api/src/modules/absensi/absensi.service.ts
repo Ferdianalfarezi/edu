@@ -683,20 +683,11 @@ export class AbsensiService {
     query: RekapAbsensiQueryDto,
   ): Promise<RekapAbsensiResponse> {
     const db = this.drizzleService.db;
-    const { kelas_id, tahun, periode = 'bulanan' } = query;
-
-    // Derive bulan: for semester period, use semester field to determine start month
-    // Semester 1 = bulan 7 (Juli), Semester 2 = bulan 1 (Januari)
-    let bulan: number;
-    if (periode === 'semester' && query.semester) {
-      bulan = query.semester === 1 ? 7 : 1;
-    } else {
-      bulan = query.bulan ?? new Date().getMonth() + 1;
-    }
+    const { kelas_id, periode = 'bulanan' } = query;
 
     // Validate kelas exists
     const [kelasData] = await db
-      .select({ id: kelas.id, nama: kelas.nama })
+      .select({ id: kelas.id, nama: kelas.nama, tahunAjaranId: kelas.tahunAjaranId })
       .from(kelas)
       .where(and(eq(kelas.id, kelas_id), eq(kelas.tenantId, tenantId)));
 
@@ -704,8 +695,33 @@ export class AbsensiService {
       throw new NotFoundException('Kelas tidak ditemukan');
     }
 
-    // Determine date range based on period
-    const { startDate, endDate } = this.getDateRange(bulan, tahun, periode);
+    // Rentang tanggal:
+    // - bulanan: 1 bulan kalender (bulan + tahun)
+    // - semester: rentang Semester 1/2 dari tahun ajaran milik kelas ini (diatur di menu Tahun Ajaran)
+    let bulan: number;
+    let tahun: number;
+    let startDate: string;
+    let endDate: string;
+    let semester: number | null = null;
+    let tahunAjaranNama: string | null = null;
+    if (periode === 'semester') {
+      if (!query.semester) {
+        throw new BadRequestException('semester wajib diisi (1 atau 2) untuk periode semester');
+      }
+      const range = await this.getSemesterRange(tenantId, kelasData.tahunAjaranId, query.semester);
+      ({ startDate, endDate } = range);
+      semester = query.semester;
+      tahunAjaranNama = range.tahunAjaranNama;
+      bulan = Number(startDate.slice(5, 7));
+      tahun = Number(startDate.slice(0, 4));
+    } else {
+      if (!query.tahun) {
+        throw new BadRequestException('tahun wajib diisi untuk periode bulanan');
+      }
+      bulan = query.bulan ?? new Date().getMonth() + 1;
+      tahun = query.tahun;
+      ({ startDate, endDate } = this.getDateRange(bulan, tahun, 'bulanan'));
+    }
 
     // Get all active students in the class (include nisn)
     const students = await db
@@ -724,6 +740,10 @@ export class AbsensiService {
         periode,
         total_hari_efektif: null,
         hari_efektif_source: null,
+        tanggal_mulai: startDate,
+        tanggal_selesai: endDate,
+        semester,
+        tahun_ajaran_nama: tahunAjaranNama,
         data: [],
       };
     }
@@ -767,8 +787,11 @@ export class AbsensiService {
     }
 
     // Calculate hari efektif and determine source
-    const hariEfektif = await this.calculateHariEfektif(tenantId, bulan, tahun, periode);
-    const hariEfektifSource = await this.getHariEfektifSource(tenantId, bulan, tahun);
+    const { hariEfektif, source: hariEfektifSource } = await this.calculateHariEfektifRange(
+      tenantId,
+      startDate,
+      endDate,
+    );
 
     // Build result
     const data: RekapAbsensiItem[] = students.map((student) => {
@@ -799,6 +822,10 @@ export class AbsensiService {
       periode,
       total_hari_efektif: hariEfektif,
       hari_efektif_source: hariEfektifSource,
+      tanggal_mulai: startDate,
+      tanggal_selesai: endDate,
+      semester,
+      tahun_ajaran_nama: tahunAjaranNama,
       data,
     };
   }
@@ -820,7 +847,7 @@ export class AbsensiService {
     query: ExportRekapAbsensiQueryDto,
   ): Promise<ExportRekapAbsensiResponse> {
     const db = this.drizzleService.db;
-    const { kelas_id, bulan, tahun, periode = 'bulanan', format = 'xlsx' } = query;
+    const { kelas_id, bulan, tahun, semester, periode = 'bulanan', format = 'xlsx' } = query;
 
     // Validate kelas exists
     const [kelasData] = await db
@@ -838,6 +865,7 @@ export class AbsensiService {
       kelasId: kelas_id,
       bulan,
       tahun,
+      semester,
       periode,
       format,
       requestedBy: userId,
@@ -953,24 +981,119 @@ export class AbsensiService {
   }
 
   /**
-   * Determine whether hari efektif was sourced from manual config or auto-calculated.
+   * Rentang tanggal Semester 1 / 2 dari tahun ajaran (kolom semester_* di tabel tahun_ajaran).
    */
-  private async getHariEfektifSource(
+  private async getSemesterRange(
+    tenantId: string,
+    tahunAjaranId: string,
+    semester: number,
+  ): Promise<{ startDate: string; endDate: string; tahunAjaranNama: string }> {
+    const [ta] = await this.drizzleService.db
+      .select()
+      .from(tahunAjaran)
+      .where(and(eq(tahunAjaran.id, tahunAjaranId), eq(tahunAjaran.tenantId, tenantId)));
+
+    if (!ta) {
+      throw new NotFoundException('Tahun ajaran kelas ini tidak ditemukan');
+    }
+
+    return semester === 1
+      ? { startDate: ta.semester1Mulai, endDate: ta.semester1Selesai, tahunAjaranNama: ta.nama }
+      : { startDate: ta.semester2Mulai, endDate: ta.semester2Selesai, tahunAjaranNama: ta.nama };
+  }
+
+  /**
+   * Hari efektif untuk rentang tanggal sembarang (mis. satu semester).
+   * Per bulan yang tersentuh:
+   * - bulan yang seluruhnya masuk rentang dan punya setelan manual -> pakai angka manual
+   * - selain itu -> hitung otomatis (hari sekolah dikurangi hari libur) hanya di dalam rentang
+   */
+  async calculateHariEfektifRange(
+    tenantId: string,
+    startDate: string,
+    endDate: string,
+  ): Promise<{ hariEfektif: number | null; source: 'manual' | 'otomatis' | 'campuran' | null }> {
+    let total = 0;
+    let adaManual = false;
+    let adaOtomatis = false;
+
+    let tahun = Number(startDate.slice(0, 4));
+    let bulan = Number(startDate.slice(5, 7));
+    const tahunAkhir = Number(endDate.slice(0, 4));
+    const bulanAkhir = Number(endDate.slice(5, 7));
+
+    while (tahun < tahunAkhir || (tahun === tahunAkhir && bulan <= bulanAkhir)) {
+      const bulanPenuh = this.getDateRange(bulan, tahun, 'bulanan');
+      const awal = startDate > bulanPenuh.startDate ? startDate : bulanPenuh.startDate;
+      const akhir = endDate < bulanPenuh.endDate ? endDate : bulanPenuh.endDate;
+      const penuh = awal === bulanPenuh.startDate && akhir === bulanPenuh.endDate;
+
+      const manual = penuh ? await this.getHariEfektifManual(tenantId, bulan, tahun) : null;
+      if (manual !== null) {
+        total += manual;
+        adaManual = true;
+      } else {
+        total += await this.calculateHariEfektifAuto(tenantId, awal, akhir);
+        adaOtomatis = true;
+      }
+
+      bulan++;
+      if (bulan > 12) {
+        bulan = 1;
+        tahun++;
+      }
+    }
+
+    if (total <= 0) return { hariEfektif: null, source: null };
+    const source = adaManual && adaOtomatis ? 'campuran' : adaManual ? 'manual' : 'otomatis';
+    return { hariEfektif: total, source };
+  }
+
+  /** Angka hari efektif manual untuk satu bulan (menu Konfigurasi), atau null kalau tidak ada. */
+  private async getHariEfektifManual(
     tenantId: string,
     bulan: number,
     tahun: number,
-  ): Promise<'manual' | 'otomatis' | null> {
-    const manualKey = `hari_efektif_manual_${bulan}_${tahun}`;
+  ): Promise<number | null> {
     try {
-      const config = await this.konfigurasiService.getConfigByKey(tenantId, manualKey);
+      const config = await this.konfigurasiService.getConfigByKey(
+        tenantId,
+        `hari_efektif_manual_${bulan}_${tahun}`,
+      );
       const value = config.value?.value ?? config.value;
-      if (typeof value === 'number' && value > 0) {
-        return 'manual';
-      }
+      return typeof value === 'number' && value > 0 ? value : null;
     } catch {
-      // No manual override
+      return null; // tidak ada setelan manual
     }
-    return 'otomatis';
+  }
+
+  /** Hari sekolah (sesuai hari_kerja sekolah) dikurangi hari libur, di dalam rentang tanggal. */
+  private async calculateHariEfektifAuto(
+    tenantId: string,
+    startDate: string,
+    endDate: string,
+  ): Promise<number> {
+    const hariKerja = await this.tenantService.getHariKerja(tenantId);
+    const schoolDays = this.countSchoolDays(startDate, endDate, hariKerja);
+
+    const holidays = await this.drizzleService.db
+      .select({ tanggal: hariLibur.tanggal })
+      .from(hariLibur)
+      .where(
+        and(
+          eq(hariLibur.tenantId, tenantId),
+          gte(hariLibur.tanggal, startDate),
+          lte(hariLibur.tanggal, endDate),
+        ),
+      );
+
+    const maxDay = hariKerja === '5_hari' ? 5 : 6;
+    const liburDiHariSekolah = holidays.filter((h) => {
+      const day = new Date(`${h.tanggal}T00:00:00`).getDay();
+      return day >= 1 && day <= maxDay;
+    }).length;
+
+    return Math.max(schoolDays - liburDiHariSekolah, 0);
   }
 
   /**

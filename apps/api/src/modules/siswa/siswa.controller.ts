@@ -185,7 +185,7 @@ export class SiswaController {
 
   /**
    * POST /siswa/import-csv
-   * Execute CSV import with conflict resolutions.
+   * Simpan import CSV. Ditolak semua (409 + daftar konflik) kalau ada NISN bermasalah.
    */
   @Post('import-csv')
   @Roles(Role.ADMIN)
@@ -209,19 +209,12 @@ export class SiswaController {
     @TenantId() tenantId: string,
     @CurrentUser() currentUser: RequestUser,
     @UploadedFile() file: Express.Multer.File,
-    @Body('resolutions') resolutions?: string,
   ) {
     if (!file) {
       throw new BadRequestException('File CSV wajib diupload');
     }
     const csvContent = file.buffer.toString('utf-8');
-    const parsedResolutions = resolutions ? JSON.parse(resolutions) : [];
-    return this.siswaService.importCsvExecute(
-      tenantId,
-      csvContent,
-      currentUser.id,
-      parsedResolutions,
-    );
+    return this.siswaService.importCsvExecute(tenantId, csvContent, currentUser.id);
   }
 
   /**

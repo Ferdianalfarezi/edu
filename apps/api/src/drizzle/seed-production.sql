@@ -5,8 +5,8 @@
 BEGIN;
 
 -- ============ TAHUN AJARAN SEBELUMNYA (untuk riwayat kelas) ============
-INSERT INTO tahun_ajaran (id, tenant_id, nama, tanggal_mulai, tanggal_selesai, status) VALUES
-('b1000000-0000-4000-8000-000000000001', '430bf700-66e8-44b0-907b-1654fe3e6c72', '2025/2026', '2025-07-14', '2026-06-20', 'aktif');
+INSERT INTO tahun_ajaran (id, tenant_id, nama, tanggal_mulai, tanggal_selesai, semester_1_mulai, semester_1_selesai, semester_2_mulai, semester_2_selesai, status) VALUES
+('b1000000-0000-4000-8000-000000000001', '430bf700-66e8-44b0-907b-1654fe3e6c72', '2025/2026', '2025-07-14', '2026-06-20', '2025-07-14', '2025-12-31', '2026-01-01', '2026-06-20', 'aktif');
 
 -- ============ 5 MATA PELAJARAN ============
 INSERT INTO mata_pelajaran (id, tenant_id, nama, kode) VALUES

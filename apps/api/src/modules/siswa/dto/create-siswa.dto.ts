@@ -48,4 +48,15 @@ export class CreateSiswaDto {
   @IsString()
   @MaxLength(20)
   orangTuaPhone?: string;
+
+  @IsOptional()
+  @IsEnum(['aktif', 'pindah_sekolah', 'keluar', 'lulus'], {
+    message: 'Status harus aktif, pindah_sekolah, keluar, atau lulus',
+  })
+  status?: 'aktif' | 'pindah_sekolah' | 'keluar' | 'lulus';
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(500)
+  alasanKeluar?: string;
 }

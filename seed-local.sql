@@ -13,9 +13,11 @@ VALUES ('11111111-0000-4000-8000-000000000001', 'SD Contoh Lokal', 'Jl. Belajar 
 ON CONFLICT (id) DO NOTHING;
 
 -- ---------- Tahun ajaran aktif ----------
-INSERT INTO tahun_ajaran (id, tenant_id, nama, tanggal_mulai, tanggal_selesai, status)
+INSERT INTO tahun_ajaran (id, tenant_id, nama, tanggal_mulai, tanggal_selesai,
+                          semester_1_mulai, semester_1_selesai, semester_2_mulai, semester_2_selesai, status)
 VALUES ('22222222-0000-4000-8000-000000000001', '11111111-0000-4000-8000-000000000001',
-        '2026/2027', '2026-07-01', '2027-06-30', 'aktif')
+        '2026/2027', '2026-07-01', '2027-06-30',
+        '2026-07-01', '2026-12-31', '2027-01-01', '2027-06-30', 'aktif')
 ON CONFLICT (id) DO NOTHING;
 
 -- ---------- User staff sekolah ----------
