@@ -189,8 +189,9 @@ async function saveBarang() {
     deskripsi: form.deskripsi.trim() || undefined,
     jumlah: Number(form.jumlah),
     lokasi: form.lokasi.trim() || undefined,
-    kondisiBarang: form.kondisiBarang || undefined,
-    sumberDana: form.sumberDana || undefined,
+    // API DTO pakai snake_case (request tidak dikonversi otomatis, hanya response)
+    kondisi_barang: form.kondisiBarang || undefined,
+    sumber_dana: form.sumberDana || undefined,
     kategori: form.kategori || undefined,
   };
 

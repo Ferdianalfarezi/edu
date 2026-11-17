@@ -66,6 +66,23 @@ export interface TenantStats {
   active_tahun_ajaran: string | null;
 }
 
+export interface GenderCount {
+  laki_laki: number;
+  perempuan: number;
+  tidak_diketahui: number;
+}
+
+export interface GenderStatsPerKelas extends GenderCount {
+  kelas_id: string | null; // null = siswa belum punya kelas
+  kelas_nama: string;
+  tingkat: number | null;
+}
+
+export interface GenderStats {
+  total: GenderCount;
+  per_kelas: GenderStatsPerKelas[];
+}
+
 @Injectable()
 export class TenantService {
   constructor(
@@ -116,6 +133,62 @@ export class TenantService {
       total_teachers: Number(teacherCountResult.count),
       active_tahun_ajaran: activeTahunAjaran.length > 0 ? activeTahunAjaran[0].nama : null,
     };
+  }
+
+  /**
+   * Jumlah siswa aktif per jenis kelamin: total sekolah + rincian per kelas.
+   */
+  async getGenderStats(tenantId: string): Promise<GenderStats> {
+    const rows = await this.db
+      .select({
+        kelasId: siswa.kelasId,
+        kelasNama: kelas.nama,
+        tingkat: kelas.tingkat,
+        jenisKelamin: siswa.jenisKelamin,
+        count: count(siswa.id),
+      })
+      .from(siswa)
+      .leftJoin(kelas, eq(siswa.kelasId, kelas.id))
+      .where(and(eq(siswa.tenantId, tenantId), eq(siswa.status, 'aktif')))
+      .groupBy(siswa.kelasId, kelas.nama, kelas.tingkat, siswa.jenisKelamin);
+
+    const empty = (): GenderCount => ({ laki_laki: 0, perempuan: 0, tidak_diketahui: 0 });
+    const add = (target: GenderCount, jk: string | null, n: number) => {
+      if (jk === 'L') target.laki_laki += n;
+      else if (jk === 'P') target.perempuan += n;
+      else target.tidak_diketahui += n;
+    };
+
+    const total = empty();
+    const byKelas = new Map<string, GenderStatsPerKelas>();
+    for (const row of rows) {
+      const n = Number(row.count);
+      add(total, row.jenisKelamin, n);
+      const key = row.kelasId ?? '__none__';
+      let entry = byKelas.get(key);
+      if (!entry) {
+        entry = {
+          kelas_id: row.kelasId,
+          kelas_nama: row.kelasId ? (row.kelasNama ?? '-') : 'Belum ada kelas',
+          tingkat: row.tingkat ?? null,
+          ...empty(),
+        };
+        byKelas.set(key, entry);
+      }
+      add(entry, row.jenisKelamin, n);
+    }
+
+    // Urutkan per tingkat lalu nama; "Belum ada kelas" paling bawah
+    const per_kelas = [...byKelas.values()].sort((a, b) => {
+      if (a.kelas_id === null) return 1;
+      if (b.kelas_id === null) return -1;
+      return (
+        (a.tingkat ?? 0) - (b.tingkat ?? 0) ||
+        a.kelas_nama.localeCompare(b.kelas_nama, 'id', { numeric: true })
+      );
+    });
+
+    return { total, per_kelas };
   }
 
   /**

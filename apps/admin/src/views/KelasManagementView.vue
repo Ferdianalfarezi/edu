@@ -74,6 +74,21 @@ const tingkatOptions = computed<SelectOption[]>(() => {
     .map((t) => ({ value: String(t), label: `Tingkat ${t}` }));
 });
 
+// Jumlah tingkat sekolah (dari jenjang: SD = 6, SMP/SMA = 3) → pilihan tingkat di form
+const jumlahTingkat = ref(6);
+const formTingkatOptions = computed(() =>
+  Array.from({ length: jumlahTingkat.value }, (_, i) => i + 1),
+);
+
+async function fetchJumlahTingkat() {
+  try {
+    const { data } = await api.get<{ jumlahTingkat: number }>('/tenants/profile');
+    if (data?.jumlahTingkat) jumlahTingkat.value = data.jumlahTingkat;
+  } catch (error) {
+    console.error('Failed to fetch tenant profile:', error);
+  }
+}
+
 const tahunAjaranSelectOptions = computed<SelectOption[]>(() =>
   tahunAjaranList.value.map((ta) => ({
     value: ta.id,
@@ -209,7 +224,7 @@ function onTahunAjaranChange() {
 
 onMounted(async () => {
   await fetchTahunAjaran();
-  await Promise.all([fetchKelas(), fetchGuru()]);
+  await Promise.all([fetchKelas(), fetchGuru(), fetchJumlahTingkat()]);
 });
 </script>
 
@@ -382,15 +397,14 @@ onMounted(async () => {
         </div>
         <div class="mb-4">
           <label class="block text-[15px] font-medium text-text-primary mb-1.5">Tingkat</label>
-          <input
-            v-model="form.tingkat"
-            type="number"
+          <select
+            v-model.number="form.tingkat"
             required
-            min="1"
-            max="12"
-            class="w-full px-3 py-2.5 text-[15px] border-2 border-border rounded-xs focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-colors"
-            placeholder="1-12"
-          />
+            class="w-full px-3 py-2.5 text-[15px] border-2 border-border rounded-xs bg-white focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-colors"
+          >
+            <option value="" disabled>-- Pilih Tingkat --</option>
+            <option v-for="t in formTingkatOptions" :key="t" :value="t">Tingkat {{ t }}</option>
+          </select>
         </div>
         <div class="mb-4">
           <SearchSelect

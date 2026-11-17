@@ -42,10 +42,18 @@ async function removeFavorite(item: RppFavoriteItem) {
 }
 
 async function downloadRpp(item: RppFavoriteItem) {
+  // Buka tab dulu saat klik supaya tidak diblok popup blocker; API membungkus { data: { url } }
+  const tab = window.open('', '_blank');
   try {
-    const { data } = await api.get<{ url: string }>(`/rpp/${item.id}/download`);
-    window.open(data.url, '_blank');
+    const { data } = await api.get<{ data?: { url?: string }; url?: string }>(
+      `/rpp/${item.id}/download`,
+    );
+    const url = data.data?.url ?? data.url;
+    if (!url) throw new Error('URL file tidak ditemukan');
+    if (tab) tab.location.href = url;
+    else window.location.href = url;
   } catch (e) {
+    tab?.close();
     console.error('Failed to download RPP:', e);
   }
 }

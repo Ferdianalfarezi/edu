@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, watch } from 'vue';
 import { api } from '@/api/client';
 import { PageHeader, BaseModal, ActionButton } from '@/components/ui';
 import { useOnboardingForm } from '@/composables/useOnboardingForm';
@@ -33,6 +33,20 @@ interface TenantForm {
 const tenants = ref<Tenant[]>([]);
 const loading = ref(false);
 
+// Jenjang sekolah → jumlah tingkat (tingkat dihitung per jenjang: SD 1–6, SMP 1–3, SMA 1–3)
+const JENJANG_OPTIONS = [
+  { value: 'sd', label: 'SD / MI (Kelas 1–6)', jumlahTingkat: 6 },
+  { value: 'smp', label: 'SMP / MTs (Kelas 1–3)', jumlahTingkat: 3 },
+  { value: 'sma', label: 'SMA / SMK / MA (Kelas 1–3)', jumlahTingkat: 3 },
+] as const;
+type Jenjang = (typeof JENJANG_OPTIONS)[number]['value'];
+
+function jenjangLabel(jumlahTingkat: number): string {
+  if (jumlahTingkat === 6) return 'SD / MI (Kelas 1–6)';
+  if (jumlahTingkat === 3) return 'SMP / SMA (Kelas 1–3)';
+  return `${jumlahTingkat} tingkat`;
+}
+
 const {
   step,
   tenantForm,
@@ -49,6 +63,21 @@ const {
     fetchTenants();
   },
 });
+
+// Jenjang dipilih di form → set jumlah_tingkat yang dikirim ke API
+const jenjang = ref<Jenjang>('sd');
+watch(jenjang, (v) => {
+  const opt = JENJANG_OPTIONS.find((o) => o.value === v);
+  if (opt) tenantForm.value.jumlah_tingkat = opt.jumlahTingkat;
+});
+// Sinkron balik kalau form di-reset (default jumlah_tingkat = 6)
+watch(
+  () => tenantForm.value.jumlah_tingkat,
+  (n) => {
+    const current = JENJANG_OPTIONS.find((o) => o.value === jenjang.value);
+    if (current?.jumlahTingkat !== n) jenjang.value = n === 6 ? 'sd' : 'smp';
+  },
+);
 
 // File parsing error state for Step 2
 const parseError = ref<string | null>(null);
@@ -371,20 +400,21 @@ onMounted(fetchTenants);
               placeholder="admin@sekolah.sch.id"
             />
           </div>
-          <!-- Jumlah Tingkat -->
+          <!-- Jenjang (menentukan jumlah tingkat) -->
           <div class="mb-4">
-            <label class="block text-[14px] font-semibold text-stone-800 mb-1.5"
-              >Jumlah Tingkat</label
-            >
-            <input
-              v-model.number="tenantForm.jumlah_tingkat"
-              type="number"
-              min="1"
-              max="13"
+            <label class="block text-[14px] font-semibold text-stone-800 mb-1.5">Jenjang</label>
+            <select
+              v-model="jenjang"
               required
               class="w-full px-4 py-2.5 text-[15px] border-2 border-stone-200 rounded-xs focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-colors"
-            />
-            <p class="mt-1 text-[13px] text-stone-400">SD = 6, SMP/SMA = 3</p>
+            >
+              <option v-for="opt in JENJANG_OPTIONS" :key="opt.value" :value="opt.value">
+                {{ opt.label }}
+              </option>
+            </select>
+            <p class="mt-1 text-[13px] text-stone-400">
+              Tidak bisa diubah setelah sekolah dibuat.
+            </p>
           </div>
           <!-- Hari Kerja -->
           <div class="mb-4">
@@ -503,17 +533,14 @@ onMounted(fetchTenants);
               placeholder="admin@sekolah.sch.id"
             />
           </div>
-          <!-- Jumlah Tingkat (read-only in edit mode) -->
+          <!-- Jenjang (read-only in edit mode) -->
           <div class="mb-4">
-            <label class="block text-[14px] font-semibold text-stone-800 mb-1.5"
-              >Jumlah Tingkat</label
-            >
+            <label class="block text-[14px] font-semibold text-stone-800 mb-1.5">Jenjang</label>
             <div
               class="w-full px-4 py-2.5 text-[15px] border-2 border-stone-200 rounded-xs bg-surface-warm text-stone-500"
             >
-              {{ form.jumlahTingkat }}
+              {{ jenjangLabel(form.jumlahTingkat) }}
             </div>
-            <p class="mt-1 text-[13px] text-stone-400">SD = 6, SMP/SMA = 3</p>
           </div>
         </form>
       </template>

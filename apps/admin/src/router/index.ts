@@ -98,6 +98,12 @@ export const router = createRouter({
       meta: { roles: [Role.ADMIN] },
     },
     {
+      path: '/jadwal-saya',
+      name: 'jadwal-saya',
+      component: () => import('@/views/JadwalSayaView.vue'),
+      meta: { roles: [Role.GURU] },
+    },
+    {
       path: '/rapor/komponen',
       name: 'rapor-komponen',
       component: () => import('@/views/RaporKomponenView.vue'),
