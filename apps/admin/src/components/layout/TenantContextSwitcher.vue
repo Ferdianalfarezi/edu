@@ -2,7 +2,6 @@
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue';
 import { useAuthStore } from '@/stores/auth';
 import { useTenantContextStore } from '@/stores/tenant-context';
-import { useToast } from '@/composables/useToast';
 import { api } from '@/api/client';
 import { Role } from '@edu/shared';
 
@@ -14,7 +13,6 @@ interface TenantOption {
 
 const authStore = useAuthStore();
 const tenantContextStore = useTenantContextStore();
-const toast = useToast();
 
 const isSuperAdmin = computed(() => authStore.hasRole(Role.SUPER_ADMIN));
 
@@ -57,7 +55,7 @@ async function searchTenants(query: string) {
     const error = err as { response?: { status?: number } };
     if (error.response?.status === 400) {
       tenantContextStore.clearTenant();
-      toast.error('Tenant tidak tersedia atau tidak aktif');
+      // Toast error sudah ditampilkan otomatis oleh api client
     }
     tenantOptions.value = [];
     isOpen.value = false;

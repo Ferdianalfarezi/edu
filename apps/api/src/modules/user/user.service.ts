@@ -14,13 +14,14 @@ import * as crypto from 'crypto';
 import { Queue } from 'bull';
 import { DRIZZLE } from '@/drizzle/drizzle.module';
 import { user } from '@/drizzle/schema/user';
+import { guruProfil } from '@/drizzle/schema/guru-profil';
 import { tenant } from '@/drizzle/schema/tenant';
 import { jadwalPelajaran } from '@/drizzle/schema/jadwal';
 import { kelas } from '@/drizzle/schema/kelas';
 import { tahunAjaran } from '@/drizzle/schema/tahun-ajaran';
 import { QUEUE_NAMES } from '@/modules/queue';
 import { Role } from '@edu/shared';
-import { CreateUserDto, UpdateUserDto, ListUsersQueryDto } from './dto';
+import { CreateUserDto, UpdateUserDto, ListUsersQueryDto, UpdateProfilGuruDto } from './dto';
 import { paginate } from '@/common/utils/paginate';
 import { PaginatedResponse } from '@/common/interfaces/pagination.interface';
 
@@ -37,6 +38,7 @@ export interface ParsedCsvRow {
   nama: string;
   email: string;
   role: string;
+  telepon?: string;
 }
 
 export interface VacantJadwalSlot {
@@ -193,7 +195,17 @@ export class UserService {
    * Response shape: { data: GuruListResponse[] }
    */
   async listGuru(tenantId: string): Promise<{
-    data: { id: string; nama: string; email: string | null; telepon: string | null }[];
+    data: {
+      id: string;
+      nama: string;
+      email: string | null;
+      telepon: string | null;
+      nomorInduk: string | null;
+      tanggalLahir: string | null;
+      pendidikanTerakhir: string | null;
+      kampus: string | null;
+      alamat: string | null;
+    }[];
   }> {
     const results = await this.db
       .select({
@@ -201,12 +213,94 @@ export class UserService {
         nama: user.nama,
         email: user.email,
         telepon: user.phone,
+        nomorInduk: guruProfil.nomorInduk,
+        tanggalLahir: guruProfil.tanggalLahir,
+        pendidikanTerakhir: guruProfil.pendidikanTerakhir,
+        kampus: guruProfil.kampus,
+        alamat: guruProfil.alamat,
       })
       .from(user)
+      .leftJoin(guruProfil, eq(guruProfil.userId, user.id))
       .where(and(eq(user.tenantId, tenantId), eq(user.role, Role.GURU), eq(user.isActive, true)))
       .orderBy(asc(user.nama));
 
     return { data: results };
+  }
+
+  // ─── Profil Guru (dilengkapi dari halaman Guru) ──────────────
+
+  /**
+   * Lengkapi / ubah data guru: telepon (tabel user) + data tambahan (tabel guru_profil).
+   * Field yang tidak dikirim tidak berubah; string kosong = dikosongkan.
+   */
+  async updateProfilGuru(tenantId: string, userId: string, dto: UpdateProfilGuruDto) {
+    const [guru] = await this.db
+      .select({ id: user.id, role: user.role })
+      .from(user)
+      .where(and(eq(user.id, userId), eq(user.tenantId, tenantId)))
+      .limit(1);
+
+    if (!guru) {
+      throw new NotFoundException('Guru tidak ditemukan');
+    }
+    if (guru.role !== Role.GURU) {
+      throw new BadRequestException('Data tambahan hanya untuk pengguna ber-role guru');
+    }
+
+    const kosongJadiNull = (v: string | undefined) =>
+      v === undefined ? undefined : v.trim() === '' ? null : v.trim();
+
+    if (dto.telepon !== undefined) {
+      await this.db
+        .update(user)
+        .set({ phone: kosongJadiNull(dto.telepon), updatedAt: new Date() })
+        .where(eq(user.id, userId));
+    }
+
+    const profil = Object.fromEntries(
+      Object.entries({
+        nomorInduk: kosongJadiNull(dto.nomorInduk),
+        tanggalLahir: kosongJadiNull(dto.tanggalLahir),
+        pendidikanTerakhir: kosongJadiNull(dto.pendidikanTerakhir),
+        kampus: kosongJadiNull(dto.kampus),
+        alamat: kosongJadiNull(dto.alamat),
+      }).filter(([, v]) => v !== undefined),
+    );
+
+    await this.db
+      .insert(guruProfil)
+      .values({ userId, tenantId, ...profil })
+      .onConflictDoUpdate({
+        target: guruProfil.userId,
+        set: { ...profil, updatedAt: new Date() },
+      });
+
+    return this.getProfilGuru(tenantId, userId);
+  }
+
+  /** Data diri satu guru (dipakai halaman profil guru sendiri). */
+  async getProfilGuru(tenantId: string, userId: string) {
+    const [hasil] = await this.db
+      .select({
+        id: user.id,
+        nama: user.nama,
+        email: user.email,
+        telepon: user.phone,
+        nomorInduk: guruProfil.nomorInduk,
+        tanggalLahir: guruProfil.tanggalLahir,
+        pendidikanTerakhir: guruProfil.pendidikanTerakhir,
+        kampus: guruProfil.kampus,
+        alamat: guruProfil.alamat,
+      })
+      .from(user)
+      .leftJoin(guruProfil, eq(guruProfil.userId, user.id))
+      .where(and(eq(user.id, userId), eq(user.tenantId, tenantId), eq(user.role, Role.GURU)))
+      .limit(1);
+
+    if (!hasil) {
+      throw new NotFoundException('Guru tidak ditemukan');
+    }
+    return hasil;
   }
 
   // ─── List Users Cross-Tenant (SUPER_ADMIN) ────────────────────
@@ -320,6 +414,7 @@ export class UserService {
     if (dto.nama !== undefined) updateData.nama = dto.nama;
     if (dto.email !== undefined) updateData.email = dto.email;
     if (dto.role !== undefined) updateData.role = dto.role;
+    if (dto.phone !== undefined) updateData.phone = dto.phone.trim() || null;
 
     const [updated] = await this.db
       .update(user)
@@ -640,6 +735,7 @@ export class UserService {
         nama: row.nama.trim(),
         email: row.email.trim().toLowerCase(),
         role: row.role as Role,
+        telepon: row.telepon?.trim() || undefined,
       });
     }
 
@@ -687,6 +783,7 @@ export class UserService {
         nama: entry.nama,
         email: entry.email,
         role: entry.role as Role,
+        phone: entry.telepon || null,
         passwordHash: entry.passwordHash,
         isActive: true,
         mustChangePassword: true,
@@ -728,6 +825,7 @@ export class UserService {
     const namaIdx = header.findIndex((h) => h === 'nama');
     const emailIdx = header.findIndex((h) => h === 'email');
     const roleIdx = header.findIndex((h) => h === 'role');
+    const teleponIdx = header.findIndex((h) => ['telepon', 'phone', 'no_hp', 'hp'].includes(h));
 
     if (namaIdx === -1 || emailIdx === -1) {
       throw new BadRequestException('Format CSV tidak valid. Kolom wajib: nama, email, role');
@@ -740,6 +838,7 @@ export class UserService {
         nama: cols[namaIdx] || '',
         email: cols[emailIdx] || '',
         role: (roleIdx !== -1 ? cols[roleIdx] || '' : 'guru').toLowerCase().trim(),
+        telepon: teleponIdx !== -1 ? (cols[teleponIdx] ?? '').trim() : undefined,
       });
     }
 

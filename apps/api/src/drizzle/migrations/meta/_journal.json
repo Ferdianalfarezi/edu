@@ -85,6 +85,13 @@
       "when": 1794905848419,
       "tag": "0011_tahun_ajaran_semester",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "6",
+      "when": 1794917912385,
+      "tag": "0012_guru_profil",
+      "breakpoints": true
     }
   ]
 }

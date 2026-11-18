@@ -1,10 +1,17 @@
-import { BadRequestException, Inject, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  Inject,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import { eq, and, desc, sql } from 'drizzle-orm';
 import { DRIZZLE } from '@/drizzle/drizzle.module';
 import { tahunAjaran } from '@/drizzle/schema/tahun-ajaran';
+import { kelas } from '@/drizzle/schema/kelas';
 import { KelasService } from '@/modules/kelas/kelas.service';
-import { CreateTahunAjaranDto, UpdateSemesterDto } from './dto';
+import { CreateTahunAjaranDto, UpdateSemesterDto, UpdateTahunAjaranDto } from './dto';
 
 /** Tambah/kurang hari pada tanggal 'YYYY-MM-DD' (tanpa efek zona waktu). */
 function geserHari(tanggal: string, hari: number): string {
@@ -30,27 +37,39 @@ export function hitungSemesterDefault(tanggalMulai: string, tanggalSelesai: stri
   return { semester1Selesai: geserHari(semester2Mulai, -1), semester2Mulai };
 }
 
+interface RentangTahunAjaran {
+  tanggalMulai: string;
+  tanggalSelesai: string;
+  semester1Mulai: string;
+  semester1Selesai: string;
+  semester2Mulai: string;
+  semester2Selesai: string;
+}
+
 /**
- * Urutan wajib: mulai TA <= akhir Sem 1 < awal Sem 2 <= selesai TA
- * (Sem 1 minimal 1 hari, boleh ada jeda libur di antara dua semester).
+ * Urutan wajib:
+ * mulai TA <= awal Sem 1 <= akhir Sem 1 < awal Sem 2 <= akhir Sem 2 <= selesai TA
+ * (awal Sem 1 boleh setelah mulai TA, mis. KBM mulai 13 Juli; boleh ada jeda libur antar semester).
  */
-function validasiSemester(
-  tanggalMulai: string,
-  tanggalSelesai: string,
-  semester1Selesai: string,
-  semester2Mulai: string,
-) {
-  if (semester1Selesai < tanggalMulai || semester1Selesai >= tanggalSelesai) {
-    throw new BadRequestException(
-      'Akhir Semester 1 harus di antara tanggal mulai dan tanggal selesai tahun ajaran',
-    );
+export function validasiRentang(r: RentangTahunAjaran) {
+  if (r.tanggalMulai >= r.tanggalSelesai) {
+    throw new BadRequestException('Tanggal mulai harus sebelum tanggal selesai');
   }
-  if (semester2Mulai <= semester1Selesai) {
+  if (r.semester1Mulai < r.tanggalMulai) {
+    throw new BadRequestException('Awal Semester 1 tidak boleh sebelum tanggal mulai tahun ajaran');
+  }
+  if (r.semester1Selesai < r.semester1Mulai) {
+    throw new BadRequestException('Akhir Semester 1 harus setelah awal Semester 1');
+  }
+  if (r.semester2Mulai <= r.semester1Selesai) {
     throw new BadRequestException('Awal Semester 2 harus setelah akhir Semester 1');
   }
-  if (semester2Mulai > tanggalSelesai) {
+  if (r.semester2Selesai < r.semester2Mulai) {
+    throw new BadRequestException('Akhir Semester 2 harus setelah awal Semester 2');
+  }
+  if (r.semester2Selesai > r.tanggalSelesai) {
     throw new BadRequestException(
-      'Awal Semester 2 tidak boleh melewati tanggal selesai tahun ajaran',
+      'Akhir Semester 2 tidak boleh melewati tanggal selesai tahun ajaran',
     );
   }
 }
@@ -91,7 +110,17 @@ export class TahunAjaranService {
     const def = hitungSemesterDefault(dto.tanggal_mulai, dto.tanggal_selesai);
     const semester1Selesai = dto.semester_1_selesai ?? def.semester1Selesai;
     const semester2Mulai = dto.semester_2_mulai ?? def.semester2Mulai;
-    validasiSemester(dto.tanggal_mulai, dto.tanggal_selesai, semester1Selesai, semester2Mulai);
+    validasiRentang({
+      tanggalMulai: dto.tanggal_mulai,
+      tanggalSelesai: dto.tanggal_selesai,
+      semester1Mulai: dto.tanggal_mulai,
+      semester1Selesai,
+      semester2Mulai,
+      semester2Selesai: dto.tanggal_selesai,
+    });
+
+    // Nama tidak boleh dobel, tanggal tidak boleh tumpang tindih dengan TA lain
+    await this.cekBentrok(tenantId, dto.nama, dto.tanggal_mulai, dto.tanggal_selesai);
 
     // Create tahun ajaran with default status 'disiapkan'
     const [created] = await this.db
@@ -178,8 +207,122 @@ export class TahunAjaranService {
 
   /**
    * Ubah batas semester (akhir Semester 1 & awal Semester 2) sebuah tahun ajaran.
+   * (Endpoint lama; halaman admin sekarang pakai update().)
    */
   async updateSemester(tenantId: string, id: string, dto: UpdateSemesterDto) {
+    return this.update(tenantId, id, {
+      semester_1_selesai: dto.semester_1_selesai,
+      semester_2_mulai: dto.semester_2_mulai,
+    });
+  }
+
+  /**
+   * Edit tahun ajaran (nama, rentang TA, rentang semester). Field yang tidak dikirim tidak berubah.
+   */
+  async update(tenantId: string, id: string, dto: UpdateTahunAjaranDto) {
+    const ta = await this.getById(tenantId, id);
+
+    const nama = dto.nama?.trim() ?? ta.nama;
+    const rentang: RentangTahunAjaran = {
+      tanggalMulai: dto.tanggal_mulai ?? ta.tanggalMulai,
+      tanggalSelesai: dto.tanggal_selesai ?? ta.tanggalSelesai,
+      semester1Mulai: dto.semester_1_mulai ?? ta.semester1Mulai,
+      semester1Selesai: dto.semester_1_selesai ?? ta.semester1Selesai,
+      semester2Mulai: dto.semester_2_mulai ?? ta.semester2Mulai,
+      semester2Selesai: dto.semester_2_selesai ?? ta.semester2Selesai,
+    };
+    validasiRentang(rentang);
+    await this.cekBentrok(tenantId, nama, rentang.tanggalMulai, rentang.tanggalSelesai, id);
+
+    const [updated] = await this.db
+      .update(tahunAjaran)
+      .set({ nama, ...rentang })
+      .where(eq(tahunAjaran.id, id))
+      .returning();
+
+    return updated;
+  }
+
+  /**
+   * Hapus tahun ajaran yang salah input. Hanya untuk status 'disiapkan' (belum pernah aktif)
+   * dan belum dipakai data apa pun. Kelas kosong hasil generate ikut dihapus.
+   */
+  async remove(tenantId: string, id: string) {
+    const ta = await this.getById(tenantId, id);
+
+    if (ta.status !== 'disiapkan') {
+      throw new BadRequestException('Hanya tahun ajaran berstatus "Disiapkan" yang bisa dihapus');
+    }
+
+    const hitung = async (query: ReturnType<typeof sql>) => {
+      const res = await this.db.execute(query);
+      return Number((res.rows[0] as { n: string | number }).n);
+    };
+    const pemakaian: [string, number][] = [
+      [
+        'siswa',
+        await hitung(
+          sql`SELECT count(*) AS n FROM siswa s JOIN kelas k ON k.id = s.kelas_id WHERE k.tahun_ajaran_id = ${id}`,
+        ),
+      ],
+      [
+        'jadwal',
+        await hitung(sql`SELECT count(*) AS n FROM jadwal_pelajaran WHERE tahun_ajaran_id = ${id}`),
+      ],
+      ['rapor', await hitung(sql`SELECT count(*) AS n FROM rapor WHERE tahun_ajaran_id = ${id}`)],
+      [
+        'tagihan',
+        await hitung(sql`SELECT count(*) AS n FROM tagihan WHERE tahun_ajaran_id = ${id}`),
+      ],
+      [
+        'riwayat kelas',
+        await hitung(sql`SELECT count(*) AS n FROM riwayat_kelas WHERE tahun_ajaran_id = ${id}`),
+      ],
+    ];
+    // Tabel CBT ada di database yang sama, tapi bisa belum dibuat di database lokal/baru
+    const adaTabelCbt = await hitung(
+      sql`SELECT count(*) AS n FROM pg_class WHERE relname = 'cbt_pelaksanaan_ujian' AND relkind = 'r'`,
+    );
+    if (adaTabelCbt > 0) {
+      pemakaian.push([
+        'ujian CBT',
+        await hitung(
+          sql`SELECT count(*) AS n FROM cbt_pelaksanaan_ujian WHERE tahun_ajaran_id = ${id}`,
+        ),
+      ]);
+    }
+
+    const terpakai = pemakaian.filter(([, n]) => n > 0);
+    if (terpakai.length > 0) {
+      throw new BadRequestException(
+        `Tahun ajaran ${ta.nama} tidak bisa dihapus karena sudah dipakai: ` +
+          terpakai.map(([nama, n]) => `${n} ${nama}`).join(', '),
+      );
+    }
+
+    let kelasDihapus = 0;
+    try {
+      await this.db.transaction(async (tx) => {
+        const hapusKelas = await tx
+          .delete(kelas)
+          .where(and(eq(kelas.tenantId, tenantId), eq(kelas.tahunAjaranId, id)))
+          .returning({ id: kelas.id });
+        kelasDihapus = hapusKelas.length;
+        await tx.delete(tahunAjaran).where(eq(tahunAjaran.id, id));
+      });
+    } catch (error) {
+      if ((error as { code?: string }).code === '23503') {
+        throw new BadRequestException(
+          `Tahun ajaran ${ta.nama} tidak bisa dihapus karena kelasnya masih dipakai data lain`,
+        );
+      }
+      throw error;
+    }
+
+    return { id, nama: ta.nama, kelasDihapus };
+  }
+
+  private async getById(tenantId: string, id: string) {
     const [ta] = await this.db
       .select()
       .from(tahunAjaran)
@@ -188,26 +331,41 @@ export class TahunAjaranService {
     if (!ta) {
       throw new NotFoundException(`Tahun ajaran dengan id ${id} tidak ditemukan`);
     }
+    return ta;
+  }
 
-    validasiSemester(
-      ta.tanggalMulai,
-      ta.tanggalSelesai,
-      dto.semester_1_selesai,
-      dto.semester_2_mulai,
-    );
-
-    const [updated] = await this.db
-      .update(tahunAjaran)
-      .set({
-        semester1Mulai: ta.tanggalMulai,
-        semester1Selesai: dto.semester_1_selesai,
-        semester2Mulai: dto.semester_2_mulai,
-        semester2Selesai: ta.tanggalSelesai,
+  /**
+   * Tolak kalau nama sudah dipakai TA lain, atau rentang tanggalnya tumpang tindih dengan TA lain.
+   */
+  private async cekBentrok(
+    tenantId: string,
+    nama: string,
+    tanggalMulai: string,
+    tanggalSelesai: string,
+    kecualiId?: string,
+  ) {
+    const daftar = await this.db
+      .select({
+        id: tahunAjaran.id,
+        nama: tahunAjaran.nama,
+        tanggalMulai: tahunAjaran.tanggalMulai,
+        tanggalSelesai: tahunAjaran.tanggalSelesai,
       })
-      .where(eq(tahunAjaran.id, id))
-      .returning();
+      .from(tahunAjaran)
+      .where(eq(tahunAjaran.tenantId, tenantId));
 
-    return updated;
+    for (const lain of daftar) {
+      if (lain.id === kecualiId) continue;
+      if (lain.nama.trim().toLowerCase() === nama.trim().toLowerCase()) {
+        throw new ConflictException(`Nama tahun ajaran "${nama}" sudah dipakai`);
+      }
+      if (tanggalMulai <= lain.tanggalSelesai && tanggalSelesai >= lain.tanggalMulai) {
+        throw new ConflictException(
+          `Tanggal bertabrakan dengan tahun ajaran ${lain.nama} ` +
+            `(${lain.tanggalMulai} s.d. ${lain.tanggalSelesai})`,
+        );
+      }
+    }
   }
 
   /**

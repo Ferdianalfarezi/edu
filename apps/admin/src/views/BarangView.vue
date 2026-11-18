@@ -209,7 +209,7 @@ async function saveBarang() {
   } catch (err: any) {
     const msg = err.response?.data?.message;
     formError.value = Array.isArray(msg) ? msg.join(', ') : msg || 'Gagal menyimpan barang.';
-    toast.error(formError.value);
+    // Toast error sudah ditampilkan otomatis oleh api client
   } finally {
     saving.value = false;
   }
@@ -224,8 +224,8 @@ async function deleteBarang() {
     showDeleteModal.value = false;
     deletingBarang.value = null;
     await fetchBarang();
-  } catch (err: any) {
-    toast.error(err.response?.data?.message || 'Gagal menghapus barang');
+  } catch {
+    // Toast error sudah ditampilkan otomatis oleh api client
   } finally {
     deleting.value = false;
   }
@@ -249,7 +249,7 @@ async function exportXlsx() {
     a.remove();
     URL.revokeObjectURL(url);
   } catch {
-    toast.error('Gagal mengekspor data barang');
+    // Toast error sudah ditampilkan otomatis oleh api client
   } finally {
     exporting.value = false;
   }
@@ -284,9 +284,8 @@ async function handleImportFile(event: Event) {
     importResult.value = data;
     showImportResultModal.value = true;
     await fetchBarang();
-  } catch (err: any) {
-    const msg = err.response?.data?.message;
-    toast.error(Array.isArray(msg) ? msg.join(', ') : msg || 'Gagal mengimpor file');
+  } catch {
+    // Toast error sudah ditampilkan otomatis oleh api client
   } finally {
     importing.value = false;
   }

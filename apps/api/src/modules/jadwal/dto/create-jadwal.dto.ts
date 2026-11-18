@@ -45,13 +45,15 @@ export class CreateJadwalDto {
   @Max(10)
   jamKe: number;
 
-  @IsNotEmpty()
+  /** Opsional. Kalau kosong diisi dari tanggal semester di tahun ajaran. */
+  @IsOptional()
   @IsDateString()
-  tanggalMulaiBerlaku: string;
+  tanggalMulaiBerlaku?: string;
 
-  @IsNotEmpty()
+  /** Opsional. Kalau kosong diisi dari tanggal semester di tahun ajaran. */
+  @IsOptional()
   @IsDateString()
-  tanggalSelesaiBerlaku: string;
+  tanggalSelesaiBerlaku?: string;
 
   @IsOptional()
   @IsBoolean()

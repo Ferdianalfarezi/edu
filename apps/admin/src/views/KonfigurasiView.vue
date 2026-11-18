@@ -181,7 +181,7 @@ async function updateHariKerja() {
     toast.success('Hari kerja berhasil diperbarui');
   } catch (error) {
     console.error('Failed to update hari kerja:', error);
-    toast.error('Gagal memperbarui hari kerja');
+    // Toast error sudah ditampilkan otomatis oleh api client
   } finally {
     savingHariKerja.value = false;
   }

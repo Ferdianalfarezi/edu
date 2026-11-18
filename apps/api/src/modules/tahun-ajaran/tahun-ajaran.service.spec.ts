@@ -1,6 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { BadRequestException, NotFoundException } from '@nestjs/common';
-import { TahunAjaranService } from './tahun-ajaran.service';
+import { BadRequestException, ConflictException, NotFoundException } from '@nestjs/common';
+import { TahunAjaranService, validasiRentang } from './tahun-ajaran.service';
 import { DRIZZLE } from '@/drizzle/drizzle.module';
 import { KelasService } from '@/modules/kelas/kelas.service';
 
@@ -132,9 +132,11 @@ describe('TahunAjaranService', () => {
       const insertChain = createInsertChain([createdTahunAjaran]);
       mockDb.insert.mockReturnValue(insertChain);
 
-      // select for active tahun ajaran → found one
-      const selectChain = createSelectChain([activeTahunAjaran]);
-      mockDb.select.mockReturnValue(selectChain);
+      // select 1: cek bentrok nama/tanggal -> tidak ada TA lain
+      // select 2: cari TA sumber kelas -> ketemu
+      mockDb.select
+        .mockReturnValueOnce(createSelectChain([]))
+        .mockReturnValue(createSelectChain([activeTahunAjaran]));
 
       mockKelasService.duplicateClassStructure.mockResolvedValue({ duplicated: 5 });
 
@@ -191,6 +193,80 @@ describe('TahunAjaranService', () => {
       await service.create(TENANT_ID, createDto);
 
       expect(mockKelasService.duplicateClassStructure).not.toHaveBeenCalled();
+    });
+
+    it('should reject a duplicate nama', async () => {
+      mockDb.select.mockReturnValue(
+        createSelectChain([
+          {
+            id: 'ta-lain',
+            nama: '2024/2025',
+            tanggalMulai: '2020-07-01',
+            tanggalSelesai: '2021-06-30',
+          },
+        ]),
+      );
+
+      await expect(service.create(TENANT_ID, createDto)).rejects.toThrow(ConflictException);
+      await expect(service.create(TENANT_ID, createDto)).rejects.toThrow('sudah dipakai');
+      expect(mockDb.insert).not.toHaveBeenCalled();
+    });
+
+    it('should reject dates overlapping another tahun ajaran', async () => {
+      mockDb.select.mockReturnValue(
+        createSelectChain([
+          { id: 'ta-lain', nama: 'Lain', tanggalMulai: '2025-01-01', tanggalSelesai: '2025-12-31' },
+        ]),
+      );
+
+      await expect(service.create(TENANT_ID, createDto)).rejects.toThrow('bertabrakan');
+      expect(mockDb.insert).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('validasiRentang', () => {
+    const dasar = {
+      tanggalMulai: '2026-07-01',
+      tanggalSelesai: '2027-06-30',
+      semester1Mulai: '2026-07-13',
+      semester1Selesai: '2026-12-19',
+      semester2Mulai: '2027-01-05',
+      semester2Selesai: '2027-06-20',
+    };
+
+    it('allows Semester 1 to start after the tahun ajaran starts', () => {
+      expect(() => validasiRentang(dasar)).not.toThrow();
+    });
+
+    it('rejects Semester 1 starting before the tahun ajaran', () => {
+      expect(() => validasiRentang({ ...dasar, semester1Mulai: '2026-06-30' })).toThrow(
+        'Awal Semester 1',
+      );
+    });
+
+    it('rejects Semester 2 starting before Semester 1 ends', () => {
+      expect(() => validasiRentang({ ...dasar, semester2Mulai: '2026-12-10' })).toThrow(
+        'Awal Semester 2',
+      );
+    });
+
+    it('rejects Semester 2 ending after the tahun ajaran', () => {
+      expect(() => validasiRentang({ ...dasar, semester2Selesai: '2027-07-01' })).toThrow(
+        'Akhir Semester 2',
+      );
+    });
+  });
+
+  describe('remove', () => {
+    it('should refuse to delete a tahun ajaran that is not disiapkan', async () => {
+      mockDb.select.mockReturnValue(
+        createSelectChain([
+          { id: 'ta-1', tenantId: TENANT_ID, nama: '2026/2027', status: 'aktif' },
+        ]),
+      );
+
+      await expect(service.remove(TENANT_ID, 'ta-1')).rejects.toThrow(BadRequestException);
+      await expect(service.remove(TENANT_ID, 'ta-1')).rejects.toThrow('Disiapkan');
     });
   });
 

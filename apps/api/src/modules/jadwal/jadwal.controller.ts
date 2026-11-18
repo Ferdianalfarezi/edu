@@ -24,6 +24,8 @@ import {
   FilterJadwalSayaDto,
   CreateGuruPenggantiDto,
   FilterGuruPenggantiDto,
+  SalinSemesterDto,
+  JadwalSayaRentangDto,
 } from './dto';
 
 @Controller('jadwal')
@@ -71,6 +73,16 @@ export class JadwalController {
    *
    * Requirements: 28.1
    */
+  /**
+   * POST /jadwal/salin-semester
+   * Salin jadwal Semester 1 ke Semester 2 (semua kelas, atau satu kelas kalau kelasId diisi).
+   */
+  @Post('salin-semester')
+  @Roles(Role.ADMIN)
+  async salinSemester(@TenantId() tenantId: string, @Body() dto: SalinSemesterDto) {
+    return this.jadwalService.salinSemester(tenantId, dto);
+  }
+
   @Post('guru-pengganti')
   @Roles(Role.ADMIN)
   async createGuruPengganti(
@@ -126,6 +138,20 @@ export class JadwalController {
     @Query() filters: FilterJadwalSayaDto,
   ) {
     return this.jadwalService.getJadwalSaya(tenantId, guruId, filters);
+  }
+
+  /**
+   * GET /jadwal/saya/rentang?mulai=YYYY-MM-DD&selesai=YYYY-MM-DD
+   * Jadwal guru per tanggal (maks 62 hari), untuk halaman Jadwal Saya.
+   */
+  @Get('saya/rentang')
+  @Roles(Role.GURU)
+  async getJadwalSayaRentang(
+    @TenantId() tenantId: string,
+    @CurrentUser('id') guruId: string,
+    @Query() dto: JadwalSayaRentangDto,
+  ) {
+    return this.jadwalService.getJadwalSayaRentang(tenantId, guruId, dto);
   }
 
   // ─── Jadwal :id Param Routes ────────────────────────────────────────────

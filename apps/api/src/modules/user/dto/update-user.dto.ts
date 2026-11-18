@@ -18,4 +18,9 @@ export class UpdateUserDto {
     message: `Role must be one of: ${UPDATABLE_ROLES.join(', ')}`,
   })
   role?: (typeof UPDATABLE_ROLES)[number];
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(20)
+  phone?: string;
 }

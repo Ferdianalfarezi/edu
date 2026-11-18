@@ -8,6 +8,11 @@ import AppSidebar from '@/components/layout/AppSidebar.vue';
 import AppTopBar from '@/components/layout/AppTopBar.vue';
 import AppSubNav from '@/components/layout/AppSubNav.vue';
 import { api } from '@/api/client';
+import { Role } from '@edu/shared';
+import ProfilGuruModal from '@/components/guru/ProfilGuruModal.vue';
+import { useProfilSaya } from '@/composables/useProfilSaya';
+import { useToast } from '@/composables/useToast';
+import type { ProfilGuru } from '@/utils/kelengkapan-guru';
 
 const route = useRoute();
 const authStore = useAuthStore();
@@ -15,6 +20,40 @@ const tenantContextStore = useTenantContextStore();
 const { tabs } = useSubNavigation();
 
 const mobileMenuOpen = ref(false);
+
+// --- Profil guru: pengingat data diri belum lengkap + modal profil ---
+const toast = useToast();
+const profilSaya = useProfilSaya();
+const isGuru = computed(() => authStore.user?.role === Role.GURU);
+const KUNCI_TUTUP = 'profil-guru-banner-ditutup';
+const bannerDitutup = ref(false);
+try {
+  bannerDitutup.value = sessionStorage.getItem(KUNCI_TUTUP) === '1';
+} catch {
+  // sessionStorage tidak tersedia: banner tetap tampil
+}
+const tampilkanBanner = computed(
+  () => isGuru.value && profilSaya.belumLengkap.value && !bannerDitutup.value,
+);
+
+function tutupBanner() {
+  bannerDitutup.value = true;
+  try {
+    sessionStorage.setItem(KUNCI_TUTUP, '1');
+  } catch {
+    // abaikan
+  }
+}
+
+function onProfilSaved(data: ProfilGuru) {
+  profilSaya.profil.value = data;
+  profilSaya.showModal.value = false;
+  toast.success(
+    profilSaya.belumLengkap.value
+      ? 'Data diri disimpan.'
+      : 'Data diri sudah lengkap. Terima kasih!',
+  );
+}
 
 // Reactive tenant info fetched from API (used when auth response lacks tenant data)
 const fetchedTenantName = ref<string | null>(null);
@@ -150,11 +189,59 @@ const schoolLogoUrl = computed<string | null>(() => {
 
       <AppSubNav :tabs="tabs" :active-path="route.path" />
 
+      <!-- Pengingat data diri guru belum lengkap -->
+      <div
+        v-if="tampilkanBanner"
+        class="flex flex-wrap items-center gap-3 px-6 py-2.5 bg-warning-50 border-b border-warning-100 text-[14px] text-warning-700"
+      >
+        <span class="w-2 h-2 rounded-full bg-warning-500 shrink-0" />
+        <span class="flex-1 min-w-0">
+          Data diri Anda belum lengkap
+          <span class="text-warning-600">(kurang: {{ profilSaya.kurang.value.join(', ') }})</span>.
+        </span>
+        <button
+          type="button"
+          class="px-3 py-1.5 rounded-lg bg-warning-500 text-white text-[13px] font-semibold hover:bg-warning-600"
+          @click="profilSaya.showModal.value = true"
+        >
+          Lengkapi sekarang
+        </button>
+        <button
+          type="button"
+          class="p-1 rounded text-warning-600 hover:bg-warning-100"
+          title="Tutup (muncul lagi saat login berikutnya)"
+          aria-label="Tutup pengingat"
+          @click="tutupBanner"
+        >
+          <svg
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+          >
+            <path stroke-linecap="round" d="M6 6l12 12M18 6L6 18" />
+          </svg>
+        </button>
+      </div>
+
       <!-- Page content with scrollable area and custom scrollbar -->
       <main class="flex-1 overflow-y-auto scrollbar-custom">
         <slot />
       </main>
     </div>
+
+    <ProfilGuruModal
+      v-if="isGuru"
+      :show="profilSaya.showModal.value"
+      title="Profil Saya"
+      :profil="profilSaya.profil.value"
+      endpoint="/users/me/profil-guru"
+      :keterangan="`${profilSaya.profil.value?.nama ?? ''} · ${profilSaya.profil.value?.email ?? ''}. Nama dan email hanya bisa diubah oleh admin sekolah.`"
+      @close="profilSaya.showModal.value = false"
+      @saved="onProfilSaved"
+    />
   </div>
 </template>
 

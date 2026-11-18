@@ -1,11 +1,12 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
-import { eq, and, gte, lte, sql, SQL } from 'drizzle-orm';
+import { eq, and, gte, lte, sql, SQL, inArray, ne } from 'drizzle-orm';
 import { DrizzleService } from '@/drizzle/drizzle.service';
 import { jadwalPelajaran, guruPengganti } from '@/drizzle/schema/jadwal';
 import { kelas } from '@/drizzle/schema/kelas';
 import { mataPelajaran } from '@/drizzle/schema/mata-pelajaran';
 import { user } from '@/drizzle/schema/user';
 import { tahunAjaran } from '@/drizzle/schema/tahun-ajaran';
+import { hariLibur } from '@/drizzle/schema/konfigurasi';
 import { TenantService } from '@/modules/tenant/tenant.service';
 import {
   CreateJadwalDto,
@@ -14,7 +15,28 @@ import {
   FilterJadwalSayaDto,
   CreateGuruPenggantiDto,
   FilterGuruPenggantiDto,
+  SalinSemesterDto,
+  JadwalSayaRentangDto,
 } from './dto';
+
+export interface JadwalSayaItem {
+  id: string;
+  jamKe: number;
+  kelasNama: string;
+  mataPelajaranNama: string | null;
+  /** mengajar = jadwal sendiri; digantikan = diisi guru pengganti; menggantikan = jadi pengganti di kelas lain */
+  kategori: 'mengajar' | 'digantikan' | 'menggantikan';
+  /** nama guru pengganti (digantikan) atau guru asli (menggantikan) */
+  guruLain: string | null;
+}
+
+export interface JadwalSayaHari {
+  tanggal: string;
+  hari: string;
+  /** alasan libur (hari libur sekolah / akhir pekan), null kalau hari sekolah */
+  libur: string | null;
+  jadwal: JadwalSayaItem[];
+}
 
 @Injectable()
 export class JadwalService {
@@ -41,8 +63,13 @@ export class JadwalService {
       await this.validateTahunAjaran(tenantId, dto.tahunAjaranId);
     }
 
+    // Tanggal berlaku: kalau tidak dikirim, pakai rentang semester dari tahun ajaran
+    const rentang = await this.getRentangSemester(tenantId, dto.tahunAjaranId, dto.semester);
+    const tanggalMulaiBerlaku = dto.tanggalMulaiBerlaku ?? rentang.mulai;
+    const tanggalSelesaiBerlaku = dto.tanggalSelesaiBerlaku ?? rentang.selesai;
+
     // Validate tanggalSelesaiBerlaku > tanggalMulaiBerlaku
-    if (dto.tanggalSelesaiBerlaku <= dto.tanggalMulaiBerlaku) {
+    if (tanggalSelesaiBerlaku <= tanggalMulaiBerlaku) {
       throw new BadRequestException(
         'tanggalSelesaiBerlaku harus lebih besar dari tanggalMulaiBerlaku',
       );
@@ -59,13 +86,106 @@ export class JadwalService {
         semester: dto.semester,
         hari: dto.hari,
         jamKe: dto.jamKe,
-        tanggalMulaiBerlaku: dto.tanggalMulaiBerlaku,
-        tanggalSelesaiBerlaku: dto.tanggalSelesaiBerlaku,
+        tanggalMulaiBerlaku,
+        tanggalSelesaiBerlaku,
         isIstirahat: dto.isIstirahat || false,
       })
       .returning();
 
     return result;
+  }
+
+  /** Rentang tanggal Semester 1 / 2 dari tahun ajaran (menu Tahun Ajaran -> Atur Semester). */
+  private async getRentangSemester(tenantId: string, tahunAjaranId: string, semester: number) {
+    const [ta] = await this.drizzleService.db
+      .select()
+      .from(tahunAjaran)
+      .where(and(eq(tahunAjaran.id, tahunAjaranId), eq(tahunAjaran.tenantId, tenantId)));
+
+    if (!ta) {
+      throw new NotFoundException('Tahun ajaran tidak ditemukan');
+    }
+
+    return semester === 1
+      ? { mulai: ta.semester1Mulai, selesai: ta.semester1Selesai, nama: ta.nama }
+      : { mulai: ta.semester2Mulai, selesai: ta.semester2Selesai, nama: ta.nama };
+  }
+
+  /**
+   * Salin jadwal Semester 1 ke Semester 2 (tanggal berlaku = rentang Semester 2 tahun ajaran).
+   * Kelas yang sudah punya jadwal Semester 2 dilewati supaya tidak dobel.
+   */
+  async salinSemester(tenantId: string, dto: SalinSemesterDto) {
+    const db = this.drizzleService.db;
+    const semester2 = await this.getRentangSemester(tenantId, dto.tahunAjaranId, 2);
+
+    const kondisiKelas: SQL[] = [
+      eq(kelas.tenantId, tenantId),
+      eq(kelas.tahunAjaranId, dto.tahunAjaranId),
+    ];
+    if (dto.kelasId) kondisiKelas.push(eq(kelas.id, dto.kelasId));
+    const daftarKelas = await db
+      .select({ id: kelas.id, nama: kelas.nama })
+      .from(kelas)
+      .where(and(...kondisiKelas));
+
+    if (dto.kelasId && daftarKelas.length === 0) {
+      throw new NotFoundException('Kelas tidak ditemukan di tahun ajaran ini');
+    }
+
+    const hasil = {
+      jadwalDisalin: 0,
+      kelasDisalin: [] as string[],
+      kelasDilewati: [] as { kelas: string; alasan: string }[],
+    };
+
+    await db.transaction(async (tx) => {
+      for (const k of daftarKelas) {
+        const jadwalKelas = await tx
+          .select()
+          .from(jadwalPelajaran)
+          .where(
+            and(
+              eq(jadwalPelajaran.tenantId, tenantId),
+              eq(jadwalPelajaran.kelasId, k.id),
+              eq(jadwalPelajaran.tahunAjaranId, dto.tahunAjaranId),
+            ),
+          );
+
+        const sem1 = jadwalKelas.filter((j) => j.semester === 1);
+        const sudahAdaSem2 = jadwalKelas.some((j) => j.semester === 2);
+
+        if (sem1.length === 0) {
+          hasil.kelasDilewati.push({ kelas: k.nama, alasan: 'belum ada jadwal Semester 1' });
+          continue;
+        }
+        if (sudahAdaSem2) {
+          hasil.kelasDilewati.push({ kelas: k.nama, alasan: 'sudah punya jadwal Semester 2' });
+          continue;
+        }
+
+        await tx.insert(jadwalPelajaran).values(
+          sem1.map((j) => ({
+            tenantId,
+            kelasId: j.kelasId,
+            mataPelajaranId: j.mataPelajaranId,
+            guruId: j.guruId,
+            tahunAjaranId: j.tahunAjaranId,
+            semester: 2,
+            hari: j.hari,
+            jamKe: j.jamKe,
+            tanggalMulaiBerlaku: semester2.mulai,
+            tanggalSelesaiBerlaku: semester2.selesai,
+            isIstirahat: j.isIstirahat,
+            isVacant: j.isVacant,
+          })),
+        );
+        hasil.jadwalDisalin += sem1.length;
+        hasil.kelasDisalin.push(k.nama);
+      }
+    });
+
+    return hasil;
   }
 
   /**
@@ -554,6 +674,181 @@ export class JadwalService {
       tanggal,
       jadwal: results,
     };
+  }
+
+  /**
+   * Jadwal guru per tanggal dalam satu rentang (untuk halaman Jadwal Saya).
+   * Termasuk hari libur sekolah, akhir pekan, jam yang digantikan guru lain,
+   * dan jam di mana guru ini menjadi guru pengganti.
+   */
+  async getJadwalSayaRentang(
+    tenantId: string,
+    guruId: string,
+    dto: JadwalSayaRentangDto,
+  ): Promise<{ hariKerja: string; hari: JadwalSayaHari[] }> {
+    const { mulai, selesai } = dto;
+    const jumlahHari =
+      (Date.parse(`${selesai}T00:00:00Z`) - Date.parse(`${mulai}T00:00:00Z`)) / 86_400_000 + 1;
+    if (jumlahHari < 1 || jumlahHari > 62) {
+      throw new BadRequestException('Rentang tanggal harus 1 sampai 62 hari');
+    }
+
+    const db = this.drizzleService.db;
+    const hariKerja = await this.tenantService.getHariKerja(tenantId);
+
+    // Jadwal milik guru ini yang masa berlakunya bersinggungan dengan rentang
+    const milikSendiri = await db
+      .select({
+        id: jadwalPelajaran.id,
+        kelasId: jadwalPelajaran.kelasId,
+        kelasNama: kelas.nama,
+        mataPelajaranId: jadwalPelajaran.mataPelajaranId,
+        mataPelajaranNama: mataPelajaran.nama,
+        hari: jadwalPelajaran.hari,
+        jamKe: jadwalPelajaran.jamKe,
+        mulai: jadwalPelajaran.tanggalMulaiBerlaku,
+        selesai: jadwalPelajaran.tanggalSelesaiBerlaku,
+      })
+      .from(jadwalPelajaran)
+      .innerJoin(kelas, eq(jadwalPelajaran.kelasId, kelas.id))
+      .leftJoin(mataPelajaran, eq(jadwalPelajaran.mataPelajaranId, mataPelajaran.id))
+      .where(
+        and(
+          eq(jadwalPelajaran.tenantId, tenantId),
+          eq(jadwalPelajaran.guruId, guruId),
+          eq(jadwalPelajaran.isIstirahat, false),
+          lte(jadwalPelajaran.tanggalMulaiBerlaku, selesai),
+          gte(jadwalPelajaran.tanggalSelesaiBerlaku, mulai),
+        ),
+      );
+
+    // Penugasan guru pengganti dalam rentang
+    const pengganti = await db
+      .select({
+        kelasId: guruPengganti.kelasId,
+        mataPelajaranId: guruPengganti.mataPelajaranId,
+        tanggal: guruPengganti.tanggal,
+        guruPenggantiId: guruPengganti.guruPenggantiId,
+        guruPenggantiNama: user.nama,
+      })
+      .from(guruPengganti)
+      .innerJoin(user, eq(guruPengganti.guruPenggantiId, user.id))
+      .where(
+        and(
+          eq(guruPengganti.tenantId, tenantId),
+          gte(guruPengganti.tanggal, mulai),
+          lte(guruPengganti.tanggal, selesai),
+        ),
+      );
+    const kunciPengganti = (kelasId: string, mapelId: string | null, tanggal: string) =>
+      `${kelasId}|${mapelId}|${tanggal}`;
+    const penggantiPerSlot = new Map(
+      pengganti.map((p) => [
+        kunciPengganti(p.kelasId, p.mataPelajaranId, p.tanggal),
+        p.guruPenggantiNama,
+      ]),
+    );
+
+    // Jadwal guru lain yang digantikan oleh guru ini
+    const tugasPengganti = pengganti.filter((p) => p.guruPenggantiId === guruId);
+    const jadwalYangDigantikan =
+      tugasPengganti.length === 0
+        ? []
+        : await db
+            .select({
+              id: jadwalPelajaran.id,
+              kelasId: jadwalPelajaran.kelasId,
+              kelasNama: kelas.nama,
+              mataPelajaranId: jadwalPelajaran.mataPelajaranId,
+              mataPelajaranNama: mataPelajaran.nama,
+              hari: jadwalPelajaran.hari,
+              jamKe: jadwalPelajaran.jamKe,
+              mulai: jadwalPelajaran.tanggalMulaiBerlaku,
+              selesai: jadwalPelajaran.tanggalSelesaiBerlaku,
+              guruAsli: user.nama,
+            })
+            .from(jadwalPelajaran)
+            .innerJoin(kelas, eq(jadwalPelajaran.kelasId, kelas.id))
+            .leftJoin(mataPelajaran, eq(jadwalPelajaran.mataPelajaranId, mataPelajaran.id))
+            .leftJoin(user, eq(jadwalPelajaran.guruId, user.id))
+            .where(
+              and(
+                eq(jadwalPelajaran.tenantId, tenantId),
+                inArray(
+                  jadwalPelajaran.kelasId,
+                  tugasPengganti.map((t) => t.kelasId),
+                ),
+                ne(jadwalPelajaran.guruId, guruId),
+              ),
+            );
+
+    const libur = await db
+      .select({ tanggal: hariLibur.tanggal, keterangan: hariLibur.keterangan })
+      .from(hariLibur)
+      .where(
+        and(
+          eq(hariLibur.tenantId, tenantId),
+          gte(hariLibur.tanggal, mulai),
+          lte(hariLibur.tanggal, selesai),
+        ),
+      );
+    const liburPerTanggal = new Map(libur.map((l) => [l.tanggal, l.keterangan || 'Hari libur']));
+
+    const NAMA_HARI = ['minggu', 'senin', 'selasa', 'rabu', 'kamis', 'jumat', 'sabtu'];
+    const hasil: JadwalSayaHari[] = [];
+    for (let i = 0; i < jumlahHari; i++) {
+      const d = new Date(`${mulai}T00:00:00Z`);
+      d.setUTCDate(d.getUTCDate() + i);
+      const tanggal = d.toISOString().slice(0, 10);
+      const hari = NAMA_HARI[d.getUTCDay()];
+      const akhirPekan = hari === 'minggu' || (hari === 'sabtu' && hariKerja === '5_hari');
+      const liburHari = liburPerTanggal.get(tanggal) ?? (akhirPekan ? 'Akhir pekan' : null);
+
+      const jadwal: JadwalSayaItem[] = liburHari
+        ? []
+        : [
+            ...milikSendiri
+              .filter((j) => j.hari === hari && j.mulai <= tanggal && j.selesai >= tanggal)
+              .map((j) => {
+                const guruLain =
+                  penggantiPerSlot.get(kunciPengganti(j.kelasId, j.mataPelajaranId, tanggal)) ??
+                  null;
+                return {
+                  id: j.id,
+                  jamKe: j.jamKe,
+                  kelasNama: j.kelasNama,
+                  mataPelajaranNama: j.mataPelajaranNama,
+                  kategori: guruLain ? ('digantikan' as const) : ('mengajar' as const),
+                  guruLain,
+                };
+              }),
+            ...jadwalYangDigantikan
+              .filter(
+                (j) =>
+                  j.hari === hari &&
+                  j.mulai <= tanggal &&
+                  j.selesai >= tanggal &&
+                  tugasPengganti.some(
+                    (t) =>
+                      t.tanggal === tanggal &&
+                      t.kelasId === j.kelasId &&
+                      t.mataPelajaranId === j.mataPelajaranId,
+                  ),
+              )
+              .map((j) => ({
+                id: j.id,
+                jamKe: j.jamKe,
+                kelasNama: j.kelasNama,
+                mataPelajaranNama: j.mataPelajaranNama,
+                kategori: 'menggantikan' as const,
+                guruLain: j.guruAsli ?? null,
+              })),
+          ].sort((a, b) => a.jamKe - b.jamKe);
+
+      hasil.push({ tanggal, hari, libur: liburHari, jadwal });
+    }
+
+    return { hariKerja, hari: hasil };
   }
 
   // ─── Private Validation Methods ─────────────────────────────────────────

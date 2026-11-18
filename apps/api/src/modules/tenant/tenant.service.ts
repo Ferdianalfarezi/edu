@@ -1,7 +1,7 @@
 import { BadRequestException, Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectQueue } from '@nestjs/bull';
 import { NodePgDatabase } from 'drizzle-orm/node-postgres';
-import { eq, and, count, ilike, inArray } from 'drizzle-orm';
+import { eq, and, count, ilike, inArray, sql } from 'drizzle-orm';
 import * as bcrypt from 'bcrypt';
 import * as crypto from 'crypto';
 import { Queue } from 'bull';
@@ -60,7 +60,10 @@ export interface CreateTenantResult {
 
 export interface TenantStats {
   total_users: number;
+  /** Siswa berstatus aktif */
   total_students: number;
+  /** Siswa pindah sekolah, keluar, atau lulus */
+  total_students_tidak_aktif: number;
   total_classes: number;
   total_teachers: number;
   active_tahun_ajaran: string | null;
@@ -76,6 +79,34 @@ export interface GenderStatsPerKelas extends GenderCount {
   kelas_id: string | null; // null = siswa belum punya kelas
   kelas_nama: string;
   tingkat: number | null;
+}
+
+export interface SiswaPerSemester {
+  tahun_ajaran_id: string;
+  tahun_ajaran_nama: string;
+  semester: number;
+  tanggal_mulai: string;
+  tanggal_selesai: string;
+  /** true = semester ini sedang berjalan (angkanya masih bisa bertambah) */
+  berjalan: boolean;
+  /** false = semester belum dimulai (jumlah & jumlah_aktif = 0) */
+  sudah_mulai: boolean;
+  tahun_ajaran_status: 'disiapkan' | 'aktif' | 'nonaktif';
+  /** siswa terdaftar di semester ini */
+  jumlah: number;
+  /** dari yang terdaftar, yang statusnya masih aktif sekarang */
+  jumlah_aktif: number;
+}
+
+export interface SiswaPerTahunAjaran {
+  tahun_ajaran_id: string;
+  tahun_ajaran_nama: string;
+  jumlah: number;
+}
+
+export interface SiswaPerPeriodeStats {
+  per_semester: SiswaPerSemester[];
+  per_tahun_ajaran: SiswaPerTahunAjaran[];
 }
 
 export interface GenderStats {
@@ -107,6 +138,12 @@ export class TenantService {
       .from(siswa)
       .where(and(eq(siswa.tenantId, tenantId), eq(siswa.status, 'aktif')));
 
+    // Siswa tidak aktif: pindah sekolah, keluar, lulus
+    const [studentTidakAktifResult] = await this.db
+      .select({ count: count(siswa.id) })
+      .from(siswa)
+      .where(and(eq(siswa.tenantId, tenantId), sql`${siswa.status} <> 'aktif'`));
+
     // Count classes in this tenant
     const [classCountResult] = await this.db
       .select({ count: count(kelas.id) })
@@ -129,9 +166,78 @@ export class TenantService {
     return {
       total_users: Number(userCountResult.count),
       total_students: Number(studentCountResult.count),
+      total_students_tidak_aktif: Number(studentTidakAktifResult.count),
       total_classes: Number(classCountResult.count),
       total_teachers: Number(teacherCountResult.count),
       active_tahun_ajaran: activeTahunAjaran.length > 0 ? activeTahunAjaran[0].nama : null,
+    };
+  }
+
+  /**
+   * Jumlah siswa per semester dan per tahun ajaran (grafik dashboard).
+   *
+   * Siswa dihitung anggota suatu tahun ajaran kalau tercatat di riwayat_kelas TA itu
+   * ATAU kelasnya sekarang ada di TA itu (riwayat_kelas data lama tidak lengkap).
+   * Per semester: siswa yang keluar/lulus sebelum semester dimulai tidak dihitung.
+   * Per semester: semua semester dikirim (yang belum mulai jumlahnya 0, sudah_mulai = false).
+   * Per tahun ajaran: yang belum dimulai tidak dikirim.
+   */
+  async getSiswaPerPeriode(tenantId: string): Promise<SiswaPerPeriodeStats> {
+    const perSemester = await this.db.execute(sql`
+      WITH anggota AS (
+        SELECT r.tahun_ajaran_id, r.siswa_id
+        FROM riwayat_kelas r
+        WHERE r.tenant_id = ${tenantId}
+        UNION
+        SELECT k.tahun_ajaran_id, s.id
+        FROM siswa s JOIN kelas k ON k.id = s.kelas_id
+        WHERE s.tenant_id = ${tenantId}
+      ),
+      semester AS (
+        SELECT id, nama, status, 1 AS semester, semester_1_mulai AS mulai, semester_1_selesai AS selesai
+        FROM tahun_ajaran WHERE tenant_id = ${tenantId}
+        UNION ALL
+        SELECT id, nama, status, 2, semester_2_mulai, semester_2_selesai
+        FROM tahun_ajaran WHERE tenant_id = ${tenantId}
+      )
+      SELECT sm.id AS tahun_ajaran_id, sm.nama AS tahun_ajaran_nama,
+             sm.status::text AS tahun_ajaran_status, sm.semester,
+             sm.mulai::text AS tanggal_mulai, sm.selesai::text AS tanggal_selesai,
+             (CURRENT_DATE BETWEEN sm.mulai AND sm.selesai) AS berjalan,
+             (sm.mulai <= CURRENT_DATE) AS sudah_mulai,
+             (count(DISTINCT s.id) FILTER (WHERE sm.mulai <= CURRENT_DATE))::int AS jumlah,
+             (count(DISTINCT s.id) FILTER (WHERE sm.mulai <= CURRENT_DATE AND s.status = 'aktif'))::int
+               AS jumlah_aktif
+      FROM semester sm
+      LEFT JOIN anggota a ON a.tahun_ajaran_id = sm.id
+      LEFT JOIN siswa s ON s.id = a.siswa_id
+        AND (s.tanggal_keluar IS NULL OR s.tanggal_keluar >= sm.mulai)
+      GROUP BY sm.id, sm.nama, sm.status, sm.semester, sm.mulai, sm.selesai
+      ORDER BY sm.mulai
+    `);
+
+    const perTahunAjaran = await this.db.execute(sql`
+      WITH anggota AS (
+        SELECT r.tahun_ajaran_id, r.siswa_id
+        FROM riwayat_kelas r
+        WHERE r.tenant_id = ${tenantId}
+        UNION
+        SELECT k.tahun_ajaran_id, s.id
+        FROM siswa s JOIN kelas k ON k.id = s.kelas_id
+        WHERE s.tenant_id = ${tenantId}
+      )
+      SELECT ta.id AS tahun_ajaran_id, ta.nama AS tahun_ajaran_nama,
+             count(DISTINCT a.siswa_id)::int AS jumlah
+      FROM tahun_ajaran ta
+      LEFT JOIN anggota a ON a.tahun_ajaran_id = ta.id
+      WHERE ta.tenant_id = ${tenantId} AND ta.tanggal_mulai <= CURRENT_DATE
+      GROUP BY ta.id, ta.nama, ta.tanggal_mulai
+      ORDER BY ta.tanggal_mulai
+    `);
+
+    return {
+      per_semester: perSemester.rows as unknown as SiswaPerSemester[],
+      per_tahun_ajaran: perTahunAjaran.rows as unknown as SiswaPerTahunAjaran[],
     };
   }
 

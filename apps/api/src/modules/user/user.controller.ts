@@ -22,10 +22,17 @@ import { JwtAuthGuard } from '@/common/guards/jwt-auth.guard';
 import { RolesGuard } from '@/common/guards/roles.guard';
 import { Roles } from '@/common/decorators/roles.decorator';
 import { TenantId } from '@/common/decorators/tenant-id.decorator';
+import { CurrentUser } from '@/common/decorators/current-user.decorator';
 import { Auditable, AuditInterceptor } from '@/modules/audit-log';
 import { RequestUser } from '@/modules/auth/interfaces';
 import { UserService } from './user.service';
-import { CreateUserDto, UpdateUserDto, UpdateUserRoleDto, ListUsersQueryDto } from './dto';
+import {
+  CreateUserDto,
+  UpdateUserDto,
+  UpdateUserRoleDto,
+  ListUsersQueryDto,
+  UpdateProfilGuruDto,
+} from './dto';
 
 @Controller('users')
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -83,6 +90,31 @@ export class UserController {
   }
 
   /**
+   * GET /users/me/profil-guru
+   * Guru melihat data dirinya sendiri (untuk modal profil + penanda belum lengkap).
+   * Harus dideklarasikan sebelum GET /users/:id.
+   */
+  @Get('me/profil-guru')
+  @Roles(Role.GURU)
+  async getProfilGuruSaya(@TenantId() tenantId: string, @CurrentUser('id') userId: string) {
+    return this.userService.getProfilGuru(tenantId, userId);
+  }
+
+  /**
+   * PATCH /users/me/profil-guru
+   * Guru melengkapi data dirinya sendiri (field sama dengan PATCH /users/:id/profil-guru).
+   */
+  @Patch('me/profil-guru')
+  @Roles(Role.GURU)
+  async updateProfilGuruSaya(
+    @TenantId() tenantId: string,
+    @CurrentUser('id') userId: string,
+    @Body() dto: UpdateProfilGuruDto,
+  ) {
+    return this.userService.updateProfilGuru(tenantId, userId, dto);
+  }
+
+  /**
    * GET /users/:id
    * Get single user detail within the tenant.
    */
@@ -109,6 +141,20 @@ export class UserController {
    * Update user role (SUPER_ADMIN only).
    * Validates role is in allowed set; rejects SUPER_ADMIN assignment.
    */
+  /**
+   * PATCH /users/:id/profil-guru
+   * Lengkapi data guru (telepon, NUPTK/NIP, tanggal lahir, pendidikan, kampus, alamat).
+   */
+  @Patch(':id/profil-guru')
+  @Roles(Role.ADMIN)
+  async updateProfilGuru(
+    @TenantId() tenantId: string,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: UpdateProfilGuruDto,
+  ) {
+    return this.userService.updateProfilGuru(tenantId, id, dto);
+  }
+
   @Patch(':id/role')
   @Roles(Role.SUPER_ADMIN)
   @HttpCode(HttpStatus.OK)

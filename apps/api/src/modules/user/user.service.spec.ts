@@ -26,6 +26,7 @@ const createMockDb = () => {
     update: jest.fn(),
     set: jest.fn(),
     innerJoin: jest.fn(),
+    leftJoin: jest.fn(),
     // transaction: executes the callback immediately with a mock tx (same chainable mock)
     transaction: jest.fn(),
   };
@@ -41,6 +42,7 @@ const createMockDb = () => {
   mock.update.mockReturnValue(mock);
   mock.set.mockReturnValue(mock);
   mock.innerJoin.mockReturnValue(mock);
+  mock.leftJoin.mockReturnValue(mock);
   // transaction receives async (tx) => {...} and runs it with the same mock as tx
   mock.transaction.mockImplementation(async (cb: (tx: any) => Promise<any>) => cb(mock));
   return mock;

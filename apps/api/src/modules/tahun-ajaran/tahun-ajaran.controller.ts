@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   HttpCode,
   HttpStatus,
@@ -15,7 +16,7 @@ import { Roles } from '@/common/decorators/roles.decorator';
 import { TenantId } from '@/common/decorators/tenant-id.decorator';
 import { Role } from '@edu/shared';
 import { TahunAjaranService } from './tahun-ajaran.service';
-import { CreateTahunAjaranDto, UpdateSemesterDto } from './dto';
+import { CreateTahunAjaranDto, UpdateSemesterDto, UpdateTahunAjaranDto } from './dto';
 
 @Controller('tahun-ajaran')
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -56,6 +57,32 @@ export class TahunAjaranController {
   @HttpCode(HttpStatus.OK)
   async findOne(@TenantId() tenantId: string, @Param('id') id: string) {
     return this.tahunAjaranService.findOne(tenantId, id);
+  }
+
+  /**
+   * PATCH /tahun-ajaran/:id
+   * Edit nama, rentang tahun ajaran, dan rentang semester. Admin only.
+   */
+  @Patch(':id')
+  @Roles(Role.ADMIN)
+  @HttpCode(HttpStatus.OK)
+  async update(
+    @TenantId() tenantId: string,
+    @Param('id') id: string,
+    @Body() dto: UpdateTahunAjaranDto,
+  ) {
+    return this.tahunAjaranService.update(tenantId, id, dto);
+  }
+
+  /**
+   * DELETE /tahun-ajaran/:id
+   * Hapus tahun ajaran salah input (hanya status Disiapkan & belum dipakai data). Admin only.
+   */
+  @Delete(':id')
+  @Roles(Role.ADMIN)
+  @HttpCode(HttpStatus.OK)
+  async remove(@TenantId() tenantId: string, @Param('id') id: string) {
+    return this.tahunAjaranService.remove(tenantId, id);
   }
 
   /**

@@ -17,5 +17,17 @@ services:
     ports:
       - "6380:6379"   # 6380 biar tidak bentrok dengan Redis Laragon
 
+  # Penyimpanan file (RPP, logo, dll.), sama seperti SeaweedFS di VPS.
+  # Lokal tanpa s3.json = tanpa autentikasi, jadi kunci dummy di .env tetap jalan.
+  s3:
+    image: chrislusf/seaweedfs:latest
+    container_name: edu-s3
+    command: server -dir=/data -ip.bind=0.0.0.0 -master.volumeSizeLimitMB=100 -volume.max=0 -s3 -s3.port=9000
+    ports:
+      - "9000:9000"
+    volumes:
+      - edu_s3data:/data
+
 volumes:
   edu_pgdata:
+  edu_s3data:

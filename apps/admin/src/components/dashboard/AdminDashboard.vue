@@ -3,10 +3,12 @@ import { ref, onMounted } from 'vue';
 import { api } from '@/api/client';
 import { StatCard, QuickActionCard } from '@/components/ui';
 import GenderChartCard from './GenderChartCard.vue';
+import SiswaPerPeriodeCard from './SiswaPerPeriodeCard.vue';
 
 interface TenantStats {
   totalUsers: number;
   totalStudents: number;
+  totalStudentsTidakAktif: number;
   totalClasses: number;
   totalTeachers: number;
   activeTahunAjaran: string | null;
@@ -86,7 +88,8 @@ onMounted(fetchStats);
         />
         <StatCard
           label="Total Siswa"
-          :value="stats.totalStudents"
+          :value="stats.totalStudents + stats.totalStudentsTidakAktif"
+          :detail="`${stats.totalStudents} aktif · ${stats.totalStudentsTidakAktif} tidak aktif`"
           variant="green"
           icon="M12 14l9-5-9-5-9 5 9 5zm0 0l6.16-3.422a12.083 12.083 0 01.665 6.479A11.952 11.952 0 0012 20.055a11.952 11.952 0 00-6.824-2.998 12.078 12.078 0 01.665-6.479L12 14z"
         />
@@ -104,7 +107,11 @@ onMounted(fetchStats);
         />
       </div>
 
-      <GenderChartCard />
+      <!-- Gender & perkembangan jumlah siswa: kiri-kanan di layar lebar -->
+      <div class="grid grid-cols-1 xl:grid-cols-2 gap-6 mb-8 items-stretch">
+        <GenderChartCard />
+        <SiswaPerPeriodeCard />
+      </div>
 
       <!-- Quick Actions -->
       <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">

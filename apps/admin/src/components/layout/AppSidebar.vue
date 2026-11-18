@@ -1,9 +1,10 @@
 <script setup lang="ts">
-import { computed } from 'vue';
+import { computed, onMounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useAuthStore } from '@/stores/auth';
 import { Role } from '@edu/shared';
 import { router as appRouter } from '@/router';
+import { useProfilSaya } from '@/composables/useProfilSaya';
 
 const emit = defineEmits<{
   (e: 'navigate', path: string): void;
@@ -115,7 +116,15 @@ function isActive(item: SidebarItem): boolean {
   }
   // Match by section prefix
   const sectionPrefixes: Record<string, string[]> = {
-    akademik: ['/siswa', '/kelas', '/mata-pelajaran', '/jadwal', '/jadwal-saya', '/kenaikan-kelas', '/guru'],
+    akademik: [
+      '/siswa',
+      '/kelas',
+      '/mata-pelajaran',
+      '/jadwal',
+      '/jadwal-saya',
+      '/kenaikan-kelas',
+      '/guru',
+    ],
     absensi: ['/absensi'],
     rapor: ['/rapor'],
     rpp: ['/rpp'],
@@ -144,7 +153,15 @@ function navigateTo(item: SidebarItem) {
   // Find the first accessible route for this section by checking route meta roles
   const sectionTabPaths: Record<string, string[]> = {
     dashboard: ['/'],
-    akademik: ['/siswa', '/kelas', '/mata-pelajaran', '/jadwal', '/jadwal-saya', '/kenaikan-kelas', '/guru'],
+    akademik: [
+      '/siswa',
+      '/kelas',
+      '/mata-pelajaran',
+      '/jadwal',
+      '/jadwal-saya',
+      '/kenaikan-kelas',
+      '/guru',
+    ],
     absensi: ['/absensi/input', '/absensi/edit', '/absensi/rekap'],
     rapor: ['/rapor/komponen', '/rapor/input', '/rapor/finalize', '/rapor'],
     rpp: ['/rpp/portal', '/rpp/create', '/rpp/favorites'],
@@ -166,7 +183,19 @@ function navigateTo(item: SidebarItem) {
   emit('navigate', targetPath);
 }
 
+// Profil guru: kartu nama bisa diklik, bintik kuning kalau data diri belum lengkap
+const isGuru = computed(() => authStore.user?.role === Role.GURU);
+const profilSaya = useProfilSaya();
+onMounted(() => {
+  if (isGuru.value) profilSaya.muat();
+});
+
+function bukaProfil() {
+  if (isGuru.value) profilSaya.showModal.value = true;
+}
+
 function handleLogout() {
+  profilSaya.reset();
   authStore.logout();
   router.push('/login');
 }
@@ -311,13 +340,35 @@ const userInitial = computed(() => {
 
     <!-- User section -->
     <div class="sidebar__user">
-      <div class="sidebar__avatar">
-        <span class="sidebar__avatar-initial">{{ userInitial }}</span>
-      </div>
-      <div class="sidebar__user-info">
-        <p class="sidebar__user-name">{{ authStore.user?.name }}</p>
-        <p class="sidebar__user-role">{{ authStore.user?.role?.replace('_', ' ') }}</p>
-      </div>
+      <component
+        :is="isGuru ? 'button' : 'div'"
+        :type="isGuru ? 'button' : undefined"
+        :class="['sidebar__profile', { 'sidebar__profile--clickable': isGuru }]"
+        :title="
+          isGuru
+            ? profilSaya.belumLengkap.value
+              ? 'Data diri belum lengkap, klik untuk melengkapi'
+              : 'Lihat profil'
+            : undefined
+        "
+        @click="bukaProfil"
+      >
+        <div class="sidebar__avatar">
+          <span class="sidebar__avatar-initial">{{ userInitial }}</span>
+          <span
+            v-if="isGuru && profilSaya.belumLengkap.value"
+            class="sidebar__avatar-dot"
+            aria-label="Data diri belum lengkap"
+          />
+        </div>
+        <div class="sidebar__user-info">
+          <p class="sidebar__user-name">{{ authStore.user?.name }}</p>
+          <p v-if="isGuru && profilSaya.belumLengkap.value" class="sidebar__user-warn">
+            Lengkapi data diri
+          </p>
+          <p v-else class="sidebar__user-role">{{ authStore.user?.role?.replace('_', ' ') }}</p>
+        </div>
+      </component>
       <button class="sidebar__logout" title="Logout" @click="handleLogout">
         <svg
           width="20"
@@ -555,7 +606,67 @@ const userInitial = computed(() => {
   gap: 10px;
 }
 
+.sidebar__profile {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  min-width: 0;
+  flex: 0 0 auto;
+  padding: 0;
+  background: none;
+  border: none;
+  border-radius: 10px;
+  text-align: left;
+  font: inherit;
+}
+
+.sidebar:hover .sidebar__profile {
+  gap: 10px;
+  flex: 1;
+}
+
+.sidebar__profile--clickable {
+  cursor: pointer;
+}
+
+.sidebar:hover .sidebar__profile--clickable:hover {
+  background: rgba(255, 255, 255, 0.08);
+  margin: -6px;
+  padding: 6px;
+}
+
+.sidebar__avatar-dot {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--color-warning-500);
+  border: 2px solid var(--color-teal-darker);
+  animation: sidebar-dot-pulse 2s ease-in-out infinite;
+}
+
+@keyframes sidebar-dot-pulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.6);
+  }
+  50% {
+    box-shadow: 0 0 0 5px rgba(245, 158, 11, 0);
+  }
+}
+
+.sidebar__user-warn {
+  margin: 0;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--color-warning-500);
+  white-space: nowrap;
+}
+
 .sidebar__avatar {
+  position: relative;
   width: 44px;
   height: 44px;
   border-radius: 50%;

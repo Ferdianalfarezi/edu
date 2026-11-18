@@ -263,8 +263,8 @@ async function exportData(format: 'xlsx' | 'pdf') {
     const date = new Date().toISOString().slice(0, 10).replace(/-/g, '');
     const filename = `tagihan_list_${date}.${ext}`;
     downloadBlob(response.data, filename);
-  } catch (err) {
-    toast.error('Gagal mengekspor data tagihan');
+  } catch {
+    // Toast error sudah ditampilkan otomatis oleh api client
   } finally {
     exporting.value = false;
   }
@@ -356,7 +356,7 @@ async function confirmCancelTagihan() {
     showCancelModal.value = false;
     await fetchTagihanList();
   } catch (error) {
-    toast.error(error.response?.data?.message || 'Gagal membatalkan tagihan');
+    // Toast error sudah ditampilkan otomatis oleh api client
   } finally {
     cancelling.value = false;
   }

@@ -3,6 +3,7 @@ import { ref, computed, onMounted, watch } from 'vue';
 import { api } from '@/api/client';
 import { PageHeader, BaseModal, SearchSelect, ActionButton } from '@/components/ui';
 import type { SelectOption } from '@/components/ui';
+import { useToast } from '@/composables/useToast';
 
 // Types
 interface Kelas {
@@ -35,6 +36,22 @@ interface JadwalEntry {
   mataPelajaran?: MataPelajaran | null;
   guru?: Guru | null;
   guruPenggantiAktif?: GuruPenggantiInfo | null;
+}
+
+interface TahunAjaran {
+  id: string;
+  nama: string;
+  status: string;
+  semester1Mulai: string;
+  semester1Selesai: string;
+  semester2Mulai: string;
+  semester2Selesai: string;
+}
+
+interface HasilSalin {
+  jadwalDisalin: number;
+  kelasDisalin: string[];
+  kelasDilewati: { kelas: string; alasan: string }[];
 }
 
 interface GuruPenggantiInfo {
@@ -74,8 +91,82 @@ const kelasList = ref<Kelas[]>([]);
 const mataPelajaranList = ref<MataPelajaran[]>([]);
 const guruList = ref<Guru[]>([]);
 const jadwalEntries = ref<JadwalEntry[]>([]);
-const tahunAjaranList = ref<{ id: string; nama: string; status: string }[]>([]);
+const tahunAjaranList = ref<TahunAjaran[]>([]);
 const selectedTahunAjaranId = ref('');
+const selectedSemester = ref(1);
+const toast = useToast();
+const menyalin = ref(false);
+
+const SEMESTER_OPTIONS: SelectOption[] = [
+  { value: 1, label: 'Semester 1' },
+  { value: 2, label: 'Semester 2' },
+];
+
+const selectedTahunAjaran = computed(() =>
+  tahunAjaranList.value.find((ta) => ta.id === selectedTahunAjaranId.value),
+);
+
+function formatTanggal(t: string): string {
+  return new Date(`${t}T00:00:00`).toLocaleDateString('id-ID', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+  });
+}
+
+/** Rentang berlaku semester terpilih (diatur di menu Tahun Ajaran -> Edit). */
+const rentangSemesterLabel = computed(() => {
+  const ta = selectedTahunAjaran.value;
+  if (!ta) return '';
+  const [mulai, selesai] =
+    selectedSemester.value === 1
+      ? [ta.semester1Mulai, ta.semester1Selesai]
+      : [ta.semester2Mulai, ta.semester2Selesai];
+  return mulai && selesai ? `${formatTanggal(mulai)} – ${formatTanggal(selesai)}` : '';
+});
+
+/** TA aktif: semester yang sedang berjalan hari ini. TA lain: Semester 1. */
+function semesterDefault(ta: TahunAjaran | undefined): number {
+  if (!ta || ta.status !== 'aktif') return 1;
+  const hariIni = new Date().toLocaleDateString('sv-SE'); // YYYY-MM-DD waktu lokal
+  return hariIni >= ta.semester2Mulai ? 2 : 1;
+}
+
+async function salinDariSemester1(semuaKelas: boolean) {
+  if (!selectedTahunAjaran.value) return;
+  const target = semuaKelas
+    ? `SEMUA kelas di TA ${selectedTahunAjaran.value.nama}`
+    : `kelas ${kelasList.value.find((k) => k.id === selectedKelasId.value)?.nama ?? ''}`;
+  if (
+    !window.confirm(
+      `Salin jadwal Semester 1 ke Semester 2 untuk ${target}?\n\nKelas yang sudah punya jadwal Semester 2 akan dilewati.`,
+    )
+  )
+    return;
+
+  menyalin.value = true;
+  try {
+    const { data } = await api.post<HasilSalin>('/jadwal/salin-semester', {
+      tahunAjaranId: selectedTahunAjaranId.value,
+      ...(semuaKelas ? {} : { kelasId: selectedKelasId.value }),
+    });
+    if (data.jadwalDisalin > 0) {
+      toast.success(
+        `${data.jadwalDisalin} jadwal disalin ke Semester 2 (${data.kelasDisalin.join(', ')}).`,
+      );
+    }
+    if (data.kelasDilewati.length > 0) {
+      toast.info(
+        'Dilewati: ' + data.kelasDilewati.map((k) => `${k.kelas} (${k.alasan})`).join(', '),
+      );
+    }
+    await fetchJadwal();
+  } catch {
+    // Toast error sudah ditampilkan otomatis oleh api client
+  } finally {
+    menyalin.value = false;
+  }
+}
 
 const selectedKelasId = ref('');
 const loading = ref(false);
@@ -168,7 +259,7 @@ async function fetchDropdowns() {
     const [mapelRes, guruRes, taRes] = await Promise.all([
       api.get<{ data: MataPelajaran[] }>('/mata-pelajaran'),
       api.get<{ data: Guru[] }>('/users', { params: { role: 'guru' } }),
-      api.get<{ id: string; nama: string; status: string }[]>('/tahun-ajaran'),
+      api.get<TahunAjaran[]>('/tahun-ajaran'),
     ]);
     mataPelajaranList.value = mapelRes.data.data;
     guruList.value = guruRes.data.data;
@@ -189,7 +280,10 @@ async function fetchJadwal() {
   if (!selectedKelasId.value) return;
   loading.value = true;
   try {
-    const params: Record<string, string> = { kelasId: selectedKelasId.value };
+    const params: Record<string, string | number> = {
+      kelasId: selectedKelasId.value,
+      semester: selectedSemester.value,
+    };
     if (selectedTahunAjaranId.value) {
       params.tahunAjaranId = selectedTahunAjaranId.value;
     }
@@ -207,8 +301,13 @@ watch(selectedKelasId, () => {
 });
 
 watch(selectedTahunAjaranId, () => {
+  selectedSemester.value = semesterDefault(selectedTahunAjaran.value);
   selectedKelasId.value = '';
   fetchKelasList();
+});
+
+watch(selectedSemester, () => {
+  fetchJadwal();
 });
 
 // Cell click handler
@@ -298,16 +397,13 @@ async function saveJadwal() {
     return;
   }
 
-  const currentMonth = new Date().getMonth() + 1;
-
+  // Tanggal berlaku tidak dikirim: API mengisinya dari rentang semester di tahun ajaran
   const createPayload: Record<string, unknown> = {
     kelasId: selectedKelasId.value,
     tahunAjaranId: selectedTahunAjaranId.value,
-    semester: currentMonth >= 7 ? 1 : 2,
+    semester: selectedSemester.value,
     hari: selectedHari.value,
     jamKe: selectedJamKe.value,
-    tanggalMulaiBerlaku: '2026-07-01',
-    tanggalSelesaiBerlaku: '2027-06-30',
     isIstirahat: form.value.isIstirahat,
   };
 
@@ -317,12 +413,10 @@ async function saveJadwal() {
   }
 
   // UpdateJadwalDto only accepts: guruId, mataPelajaranId, jamKe, hari,
-  // tanggalMulaiBerlaku, tanggalSelesaiBerlaku
+  // tanggalMulaiBerlaku, tanggalSelesaiBerlaku (tanggal berlaku tidak diubah saat edit)
   const updatePayload: Record<string, unknown> = {
     hari: selectedHari.value,
     jamKe: selectedJamKe.value,
-    tanggalMulaiBerlaku: '2026-07-01',
-    tanggalSelesaiBerlaku: '2027-06-30',
   };
   if (!form.value.isIstirahat) {
     updatePayload.mataPelajaranId = form.value.mataPelajaranId;
@@ -444,6 +538,14 @@ onMounted(async () => {
           placeholder="Pilih Tahun Ajaran"
         />
       </div>
+      <div class="w-44">
+        <SearchSelect
+          v-model="selectedSemester"
+          label="Semester"
+          :options="SEMESTER_OPTIONS"
+          :searchable="false"
+        />
+      </div>
       <div class="w-48">
         <SearchSelect
           v-model="selectedKelasId"
@@ -451,6 +553,27 @@ onMounted(async () => {
           :options="kelasSelectOptions"
           placeholder="Pilih Kelas"
         />
+      </div>
+      <p v-if="rentangSemesterLabel" class="text-[13px] text-text-secondary pb-2.5">
+        Berlaku {{ rentangSemesterLabel }}
+      </p>
+    </div>
+
+    <!-- Semester 2 masih kosong: tawarkan salin dari Semester 1 -->
+    <div
+      v-if="selectedKelasId && selectedSemester === 2 && !loading && jadwalEntries.length === 0"
+      class="flex flex-wrap items-center justify-between gap-3 p-4 mb-4 rounded-[12px] border-2 border-warning-100 bg-warning-50"
+    >
+      <p class="text-[14px] text-warning-700">
+        Jadwal Semester 2 kelas ini masih kosong. Salin dari Semester 1 lalu ubah yang berbeda?
+      </p>
+      <div class="flex gap-2">
+        <ActionButton variant="neutral" :disabled="menyalin" @click="salinDariSemester1(false)">
+          Salin kelas ini
+        </ActionButton>
+        <ActionButton variant="primary" :disabled="menyalin" @click="salinDariSemester1(true)">
+          Salin semua kelas
+        </ActionButton>
       </div>
     </div>
 

@@ -141,7 +141,7 @@ async function fetchKonfigurasi() {
     konfigList.value = data;
   } catch (error) {
     console.error('Failed to fetch konfigurasi biaya:', error);
-    toast.error('Gagal memuat konfigurasi biaya');
+    // Toast error sudah ditampilkan otomatis oleh api client
   } finally {
     loading.value = false;
   }
@@ -198,9 +198,8 @@ async function saveKonfigurasi() {
     showFormModal.value = false;
     toast.success('Konfigurasi biaya berhasil disimpan.');
     await fetchKonfigurasi();
-  } catch (error) {
-    const message = error?.response?.data?.message;
-    toast.error(message || 'Gagal menyimpan konfigurasi biaya');
+  } catch {
+    // Toast error sudah ditampilkan otomatis oleh api client
   } finally {
     saving.value = false;
   }
@@ -220,7 +219,7 @@ async function confirmDelete() {
     toast.success('Override berhasil dihapus.');
     await fetchKonfigurasi();
   } catch (error) {
-    toast.error(error?.response?.data?.message || 'Gagal menghapus override');
+    // Toast error sudah ditampilkan otomatis oleh api client
   } finally {
     deletingId.value = null;
     deletingItem.value = null;

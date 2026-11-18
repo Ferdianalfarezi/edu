@@ -413,7 +413,7 @@ async function generateTagihan() {
     toast.success(`Berhasil! ${data.data.created} tagihan dibuat, ${data.data.skipped} dilewati.`);
   } catch (error) {
     generateError.value = error.response?.data?.message || 'Gagal men-generate tagihan';
-    toast.error(generateError.value);
+    // Toast error sudah ditampilkan otomatis oleh api client
   } finally {
     generating.value = false;
     // Remove the persistent info toast
@@ -492,7 +492,7 @@ async function verifyTransaksi(action: 'approve' | 'reject') {
     );
     await fetchVerifikasi();
   } catch (error) {
-    toast.error(error.response?.data?.message || 'Gagal memverifikasi');
+    // Toast error sudah ditampilkan otomatis oleh api client
   } finally {
     verifyingId.value = null;
   }
@@ -542,7 +542,7 @@ async function exportTunggakan() {
     window.URL.revokeObjectURL(url);
   } catch (error) {
     console.error('Failed to export:', error);
-    toast.error('Gagal mengekspor laporan');
+    // Toast error sudah ditampilkan otomatis oleh api client
   } finally {
     exporting.value = false;
   }
@@ -641,7 +641,7 @@ async function confirmCancelTagihan() {
     showCancelModal.value = false;
     await fetchTagihanList();
   } catch (error) {
-    toast.error(error.response?.data?.message || 'Gagal membatalkan tagihan');
+    // Toast error sudah ditampilkan otomatis oleh api client
   } finally {
     cancelling.value = false;
   }

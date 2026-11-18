@@ -93,7 +93,10 @@ const form = reactive<UserForm>({
 
 // CSV import state
 const importFile = ref<File | null>(null);
-const importPreview = ref<Array<{ nama: string; email: string; role: string }>>([]);
+const importPreview = ref<Array<{ nama: string; email: string; telepon: string; role: string }>>(
+  [],
+);
+const importDilewati = ref<Array<{ email: string; reason: string }>>([]);
 const importErrors = ref<string[]>([]);
 const importing = ref(false);
 
@@ -209,6 +212,7 @@ async function saveUser() {
       const updatePayload: Record<string, unknown> = {
         nama: form.nama,
         email: form.email,
+        phone: form.phone,
         role: form.role,
       };
       await api.patch(`/users/${editingUser.value.id}`, updatePayload);
@@ -256,7 +260,23 @@ function openImportModal() {
   importFile.value = null;
   importPreview.value = [];
   importErrors.value = [];
+  importDilewati.value = [];
   showImportModal.value = true;
+}
+
+// Template CSV import pengguna (semua role). Data tambahan guru dilengkapi di halaman Guru.
+function downloadImportTemplate() {
+  const csv = [
+    'nama,email,telepon,role',
+    'Budi Santoso,budi@sekolah.sch.id,081234567890,guru',
+    'Siti Aminah,siti@sekolah.sch.id,081298765432,bendahara',
+  ].join('\n');
+  const url = URL.createObjectURL(new Blob([csv + '\n'], { type: 'text/csv;charset=utf-8' }));
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'template_import_pengguna.csv';
+  a.click();
+  URL.revokeObjectURL(url);
 }
 
 function handleFileSelect(event: Event) {
@@ -278,6 +298,7 @@ function handleFileSelect(event: Event) {
     const namaIdx = header.indexOf('nama');
     const emailIdx = header.indexOf('email');
     const roleIdx = header.indexOf('role');
+    const teleponIdx = header.findIndex((h) => ['telepon', 'phone', 'no_hp', 'hp'].includes(h));
 
     if (namaIdx === -1 || emailIdx === -1 || roleIdx === -1) {
       importErrors.value = ['Kolom wajib: nama, email, role'];
@@ -290,6 +311,7 @@ function handleFileSelect(event: Event) {
       return {
         nama: cols[namaIdx] || '',
         email: cols[emailIdx] || '',
+        telepon: teleponIdx !== -1 ? cols[teleponIdx] || '' : '',
         role: cols[roleIdx] || '',
       };
     });
@@ -303,10 +325,17 @@ async function importCsv() {
   try {
     const formData = new FormData();
     formData.append('file', importFile.value);
-    await api.post('/users/bulk-import', formData, {
+    const { data } = await api.post<{
+      created: number;
+      skipped: Array<{ email: string; reason: string }>;
+      total: number;
+    }>('/users/bulk-import', formData, {
       headers: { 'Content-Type': 'multipart/form-data' },
     });
-    showImportModal.value = false;
+    if (data.created > 0) toast.success(`${data.created} pengguna ditambahkan.`);
+    // Baris yang dilewati ditampilkan di modal supaya bisa diperbaiki
+    importDilewati.value = data.skipped ?? [];
+    if (importDilewati.value.length === 0) showImportModal.value = false;
     cursorStack.value = [null];
     page.value = 1;
     await fetchUsers(null);
@@ -569,12 +598,14 @@ async function importCsv() {
       size="lg"
       @close="showImportModal = false"
     >
-      <p class="text-[15px] text-stone-600 mb-4">
-        Format CSV: kolom wajib
+      <p class="text-[15px] text-stone-600 mb-2">
+        Kolom wajib
         <code class="px-1.5 py-0.5 bg-surface-warm rounded text-[13px] font-semibold">nama</code>,
         <code class="px-1.5 py-0.5 bg-surface-warm rounded text-[13px] font-semibold">email</code>,
-        <code class="px-1.5 py-0.5 bg-surface-warm rounded text-[13px] font-semibold">role</code>.
-        Nilai role yang valid:
+        <code class="px-1.5 py-0.5 bg-surface-warm rounded text-[13px] font-semibold">role</code>;
+        opsional
+        <code class="px-1.5 py-0.5 bg-surface-warm rounded text-[13px] font-semibold">telepon</code
+        >. Role yang valid:
         <code class="px-1.5 py-0.5 bg-surface-warm rounded text-[13px] font-semibold">admin</code>,
         <code class="px-1.5 py-0.5 bg-surface-warm rounded text-[13px] font-semibold"
           >kepala_sekolah</code
@@ -584,6 +615,23 @@ async function importCsv() {
           >bendahara</code
         >.
       </p>
+      <p class="text-[14px] text-stone-500 mb-4">
+        Data tambahan guru (tanggal lahir, pendidikan, alamat, dll.) dilengkapi di halaman Guru.
+      </p>
+      <div
+        class="flex items-center justify-between gap-3 p-3 mb-4 rounded-lg border border-border bg-surface-50"
+      >
+        <p class="text-sm text-text-secondary">
+          Belum punya format? Unduh template lalu isi datanya.
+        </p>
+        <button
+          type="button"
+          class="shrink-0 px-3 py-2 rounded-lg border border-border bg-white text-sm font-medium text-text-primary hover:bg-surface-100"
+          @click="downloadImportTemplate"
+        >
+          Unduh Template CSV
+        </button>
+      </div>
 
       <div class="mb-4">
         <label class="block text-[15px] font-medium text-stone-800 mb-1.5">Pilih File CSV</label>
@@ -600,6 +648,14 @@ async function importCsv() {
         class="p-4 bg-danger-50 border-2 border-danger-500/20 rounded-xs text-[15px] text-danger-700 mb-4"
       >
         <p v-for="(err, i) in importErrors" :key="i">{{ err }}</p>
+      </div>
+
+      <div
+        v-if="importDilewati.length > 0"
+        class="p-4 bg-warning-50 border-2 border-warning-100 rounded-xs text-[14px] text-warning-700 mb-4"
+      >
+        <p class="font-semibold mb-1">{{ importDilewati.length }} baris tidak diimport:</p>
+        <p v-for="(d, i) in importDilewati" :key="i">{{ d.email }}: {{ d.reason }}</p>
       </div>
 
       <div v-if="importPreview.length > 0" class="mt-4">
@@ -621,6 +677,11 @@ async function importCsv() {
                 <th
                   class="px-5 py-4 text-left font-bold text-text-secondary text-[13px] uppercase tracking-[0.04em] bg-surface-warm"
                 >
+                  Telepon
+                </th>
+                <th
+                  class="px-5 py-4 text-left font-bold text-text-secondary text-[13px] uppercase tracking-[0.04em] bg-surface-warm"
+                >
                   Role
                 </th>
               </tr>
@@ -633,6 +694,7 @@ async function importCsv() {
               >
                 <td class="px-5 py-4 text-[15px] text-stone-800">{{ row.nama }}</td>
                 <td class="px-5 py-4 text-[15px] text-stone-600">{{ row.email }}</td>
+                <td class="px-5 py-4 text-[15px] text-stone-600">{{ row.telepon || '-' }}</td>
                 <td class="px-5 py-4 text-[15px] text-stone-600">{{ row.role }}</td>
               </tr>
             </tbody>

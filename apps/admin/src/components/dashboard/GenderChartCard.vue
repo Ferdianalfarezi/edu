@@ -85,7 +85,7 @@ const segments = computed(() => {
 </script>
 
 <template>
-  <div class="bg-white border-2 border-stone-200 rounded-2xl p-5.5 mb-8">
+  <div class="bg-white border-2 border-stone-200 rounded-2xl p-5.5 h-full">
     <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-5">
       <div>
         <h3 class="text-[17px] font-bold text-text-primary">Siswa Laki-laki &amp; Perempuan</h3>
@@ -231,14 +231,8 @@ const segments = computed(() => {
               {{ k.kelasNama }}
             </span>
             <span class="flex-1 flex h-3 rounded-full overflow-hidden bg-stone-100">
-              <span
-                class="bg-sky-500"
-                :style="{ width: pct(k.lakiLaki, totalOf(k)) + '%' }"
-              />
-              <span
-                class="bg-pink-500"
-                :style="{ width: pct(k.perempuan, totalOf(k)) + '%' }"
-              />
+              <span class="bg-sky-500" :style="{ width: pct(k.lakiLaki, totalOf(k)) + '%' }" />
+              <span class="bg-pink-500" :style="{ width: pct(k.perempuan, totalOf(k)) + '%' }" />
             </span>
             <span class="w-20 shrink-0 text-right text-[13px] text-text-secondary">
               {{ k.lakiLaki }} L · {{ k.perempuan }} P

@@ -109,7 +109,7 @@ async function verifyTransaksi(action: 'approve' | 'reject') {
     );
     await fetchVerifikasi();
   } catch (error) {
-    toast.error(error.response?.data?.message || 'Gagal memverifikasi');
+    // Toast error sudah ditampilkan otomatis oleh api client
   } finally {
     verifyingId.value = null;
   }

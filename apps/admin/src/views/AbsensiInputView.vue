@@ -9,7 +9,7 @@ import type { SelectOption } from '@/components/ui';
 interface Kelas {
   id: string;
   nama: string;
-  tingkat: number;
+  tingkat?: number;
 }
 
 interface Siswa {
@@ -114,10 +114,12 @@ const statusSummary = computed(() => {
 async function fetchKelasList() {
   try {
     if (isGuru.value) {
-      const { data } = await api.get<{ data: Kelas[] }>('/absensi/kelas-hari-ini', {
-        params: { tanggal: selectedTanggal.value },
-      });
-      kelasList.value = data.data || (data as unknown as Kelas[]);
+      // API mengembalikan { tanggal, hari, kelas: [{ kelasId, kelasNama }] }
+      const { data } = await api.get<{ kelas: Array<{ kelasId: string; kelasNama: string }> }>(
+        '/absensi/kelas-hari-ini',
+        { params: { tanggal: selectedTanggal.value } },
+      );
+      kelasList.value = (data.kelas ?? []).map((k) => ({ id: k.kelasId, nama: k.kelasNama }));
     } else {
       const { data } = await api.get<{ data: Kelas[] }>('/kelas');
       kelasList.value = data.data;

@@ -285,20 +285,42 @@ onMounted(fetchPengumuman);
                 {{ formatDate(item.createdAt) }}
               </td>
               <td class="px-5 py-4">
+                <!--
+                  status 'gagal' = notifikasi HP tidak sampai (umumnya penerima belum memasang /
+                  login aplikasi mobile). Pengumumannya sendiri tetap tersimpan, jadi tidak
+                  ditampilkan sebagai "Gagal" merah.
+                -->
                 <span
                   :class="[
-                    'inline-flex items-center px-2.5 py-1 rounded-xs text-[13px] font-semibold',
+                    'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xs text-[13px] font-semibold whitespace-nowrap',
                     item.status === 'terkirim' ? 'bg-success-50 text-success-700' : '',
                     item.status === 'draft' ? 'bg-stone-100 text-text-secondary' : '',
-                    item.status === 'gagal' ? 'bg-danger-50 text-danger-700' : '',
+                    item.status === 'gagal' ? 'bg-stone-100 text-stone-600' : '',
                   ]"
+                  :title="
+                    item.status === 'gagal'
+                      ? 'Pengumuman tersimpan, tapi notifikasi belum sampai ke HP penerima karena aplikasi mobile belum dipasang / belum login.'
+                      : undefined
+                  "
                 >
+                  <svg
+                    v-if="item.status === 'gagal'"
+                    width="14"
+                    height="14"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                  >
+                    <rect x="6" y="2" width="12" height="20" rx="2" />
+                    <path stroke-linecap="round" d="M11 18h2" />
+                  </svg>
                   {{
                     item.status === 'terkirim'
                       ? 'Terkirim'
                       : item.status === 'draft'
                         ? 'Draft'
-                        : 'Gagal'
+                        : 'Belum ada aplikasi HP'
                   }}
                 </span>
               </td>

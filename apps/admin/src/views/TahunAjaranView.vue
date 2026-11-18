@@ -47,11 +47,25 @@ const form = ref<TahunAjaranForm>({
 });
 
 // Modal atur semester
-const showSemesterModal = ref(false);
+const showEditModal = ref(false);
 const editingItem = ref<TahunAjaran | null>(null);
-const semesterForm = ref({ semester_1_selesai: '', semester_2_mulai: '' });
-const semesterError = ref('');
-const savingSemester = ref(false);
+const editForm = ref({
+  nama: '',
+  tanggal_mulai: '',
+  tanggal_selesai: '',
+  semester_1_mulai: '',
+  semester_1_selesai: '',
+  semester_2_mulai: '',
+  semester_2_selesai: '',
+});
+const editError = ref('');
+const savingEdit = ref(false);
+
+// Modal hapus (hanya TA berstatus Disiapkan)
+const showDeleteModal = ref(false);
+const deletingItem = ref<TahunAjaran | null>(null);
+const deleteError = ref('');
+const deleting = ref(false);
 
 /** 'YYYY-MM-DD' digeser n hari (tanpa efek zona waktu). */
 function geserHari(tanggal: string, hari: number): string {
@@ -92,36 +106,68 @@ function getErrorMessage(error: unknown, fallback: string): string {
   return Array.isArray(msg) ? msg.join(', ') : msg || fallback;
 }
 
-function openSemesterForm(item: TahunAjaran) {
+function openEditForm(item: TahunAjaran) {
   editingItem.value = item;
-  semesterForm.value = {
+  editForm.value = {
+    nama: item.nama,
+    tanggal_mulai: item.tanggalMulai,
+    tanggal_selesai: item.tanggalSelesai,
+    semester_1_mulai: item.semester1Mulai,
     semester_1_selesai: item.semester1Selesai,
     semester_2_mulai: item.semester2Mulai,
+    semester_2_selesai: item.semester2Selesai,
   };
-  semesterError.value = '';
-  showSemesterModal.value = true;
+  editError.value = '';
+  showEditModal.value = true;
 }
 
-async function saveSemester() {
+async function saveEdit() {
   if (!editingItem.value) return;
-  semesterError.value = '';
-  savingSemester.value = true;
+  editError.value = '';
+  savingEdit.value = true;
   try {
-    await api.patch(`/tahun-ajaran/${editingItem.value.id}/semester`, semesterForm.value);
-    showSemesterModal.value = false;
-    toast.success(`Tanggal semester ${editingItem.value.nama} disimpan.`);
+    await api.patch(`/tahun-ajaran/${editingItem.value.id}`, editForm.value);
+    showEditModal.value = false;
+    toast.success(`Tahun ajaran ${editForm.value.nama} disimpan.`);
     await fetchItems();
   } catch (error) {
-    semesterError.value = getErrorMessage(error, 'Gagal menyimpan tanggal semester.');
+    editError.value = getErrorMessage(error, 'Gagal menyimpan tahun ajaran.');
   } finally {
-    savingSemester.value = false;
+    savingEdit.value = false;
+  }
+}
+
+function openDeleteConfirm(item: TahunAjaran) {
+  deletingItem.value = item;
+  deleteError.value = '';
+  showDeleteModal.value = true;
+}
+
+async function deleteTahunAjaran() {
+  if (!deletingItem.value) return;
+  deleteError.value = '';
+  deleting.value = true;
+  try {
+    const { data } = await api.delete<{ nama: string; kelasDihapus: number }>(
+      `/tahun-ajaran/${deletingItem.value.id}`,
+    );
+    showDeleteModal.value = false;
+    toast.success(
+      `Tahun ajaran ${data.nama} dihapus` +
+        (data.kelasDihapus > 0 ? ` beserta ${data.kelasDihapus} kelas kosong.` : '.'),
+    );
+    await fetchItems();
+  } catch (error) {
+    deleteError.value = getErrorMessage(error, 'Gagal menghapus tahun ajaran.');
+  } finally {
+    deleting.value = false;
   }
 }
 
 function statusLabel(status: string): string {
   switch (status) {
     case 'aktif':
-      return 'Aktif';
+      return 'Sedang Aktif';
     case 'disiapkan':
       return 'Disiapkan';
     case 'nonaktif':
@@ -157,7 +203,10 @@ async function fetchItems() {
   loading.value = true;
   try {
     const { data } = await api.get<TahunAjaran[]>('/tahun-ajaran');
-    items.value = data;
+    // TA yang sedang aktif selalu paling atas, sisanya tetap urut tanggal mulai
+    items.value = [...data].sort(
+      (a, b) => Number(b.status === 'aktif') - Number(a.status === 'aktif'),
+    );
   } catch (error) {
     console.error('Failed to fetch tahun ajaran:', error);
   } finally {
@@ -212,11 +261,9 @@ async function saveTahunAjaran() {
     }
 
     await fetchItems();
-  } catch (error: any) {
-    const msg = error.response?.data?.message;
-    const errorMsg = Array.isArray(msg) ? msg.join(', ') : msg || 'Gagal membuat tahun ajaran.';
-    formError.value = errorMsg;
-    toast.error(errorMsg);
+  } catch (error) {
+    // Toast error sudah ditampilkan otomatis oleh api client; di sini cukup pesan di form
+    formError.value = getErrorMessage(error, 'Gagal membuat tahun ajaran.');
   }
 }
 
@@ -323,8 +370,8 @@ onMounted(fetchItems);
               </td>
               <td class="px-5 py-4">
                 <div class="flex items-center gap-2 flex-wrap">
-                  <ActionButton variant="warning" icon="edit" @click="openSemesterForm(item)"
-                    >Atur Semester</ActionButton
+                  <ActionButton variant="warning" icon="edit" @click="openEditForm(item)"
+                    >Edit</ActionButton
                   >
                   <ActionButton
                     v-if="item.status === 'disiapkan'"
@@ -333,12 +380,13 @@ onMounted(fetchItems);
                     @click="openActivateConfirm(item)"
                     >Aktifkan</ActionButton
                   >
-                  <span
-                    v-else-if="item.status === 'aktif'"
-                    class="text-[13px] text-success-700 font-semibold"
-                    >Sedang Aktif</span
+                  <ActionButton
+                    v-if="item.status === 'disiapkan'"
+                    variant="danger"
+                    icon="delete"
+                    @click="openDeleteConfirm(item)"
+                    >Hapus</ActionButton
                   >
-                  <span v-else class="text-[13px] text-stone-400">Historis</span>
                 </div>
               </td>
             </tr>
@@ -466,49 +514,140 @@ onMounted(fetchItems);
       </template>
     </BaseModal>
 
-    <!-- Atur Semester Modal -->
+    <!-- Edit Tahun Ajaran Modal -->
     <BaseModal
-      :show="showSemesterModal"
-      :title="`Atur Semester ${editingItem?.nama ?? ''}`"
-      @close="showSemesterModal = false"
+      :show="showEditModal"
+      :title="`Edit Tahun Ajaran ${editingItem?.nama ?? ''}`"
+      @close="showEditModal = false"
     >
-      <p class="text-[15px] text-stone-600 mb-4">
-        Semester 1 dimulai {{ formatDate(editingItem?.tanggalMulai ?? '') }} dan Semester 2 berakhir
-        {{ formatDate(editingItem?.tanggalSelesai ?? '') }} (sesuai tahun ajaran). Atur batas di
-        antaranya. Boleh ada jeda untuk libur semester.
-      </p>
-      <form id="form-semester" class="grid grid-cols-2 gap-3" @submit.prevent="saveSemester">
+      <form id="form-edit-ta" class="space-y-4" @submit.prevent="saveEdit">
         <div>
-          <label class="block text-[15px] font-medium text-stone-800 mb-1.5"
-            >Akhir Semester 1</label
-          >
+          <label class="block text-[15px] font-medium text-stone-800 mb-1.5">Nama Periode</label>
           <input
-            v-model="semesterForm.semester_1_selesai"
-            type="date"
+            v-model="editForm.nama"
+            type="text"
             required
-            :min="editingItem?.tanggalMulai"
-            :max="editingItem?.tanggalSelesai"
+            maxlength="50"
             class="w-full px-3 py-2.5 text-[15px] border-2 border-stone-200 rounded-xs focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
           />
         </div>
-        <div>
-          <label class="block text-[15px] font-medium text-stone-800 mb-1.5">Awal Semester 2</label>
-          <input
-            v-model="semesterForm.semester_2_mulai"
-            type="date"
-            required
-            :min="editingItem?.tanggalMulai"
-            :max="editingItem?.tanggalSelesai"
-            class="w-full px-3 py-2.5 text-[15px] border-2 border-stone-200 rounded-xs focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
-          />
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-[15px] font-medium text-stone-800 mb-1.5">Tanggal Mulai</label>
+            <input
+              v-model="editForm.tanggal_mulai"
+              type="date"
+              required
+              class="w-full px-3 py-2.5 text-[15px] border-2 border-stone-200 rounded-xs focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
+            />
+          </div>
+          <div>
+            <label class="block text-[15px] font-medium text-stone-800 mb-1.5"
+              >Tanggal Selesai</label
+            >
+            <input
+              v-model="editForm.tanggal_selesai"
+              type="date"
+              required
+              class="w-full px-3 py-2.5 text-[15px] border-2 border-stone-200 rounded-xs focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
+            />
+          </div>
         </div>
-        <p v-if="semesterError" class="col-span-2 text-[13px] text-danger-500">
-          {{ semesterError }}
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-[15px] font-medium text-stone-800 mb-1.5"
+              >Awal Semester 1</label
+            >
+            <input
+              v-model="editForm.semester_1_mulai"
+              type="date"
+              required
+              :min="editForm.tanggal_mulai"
+              :max="editForm.tanggal_selesai"
+              class="w-full px-3 py-2.5 text-[15px] border-2 border-stone-200 rounded-xs focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
+            />
+          </div>
+          <div>
+            <label class="block text-[15px] font-medium text-stone-800 mb-1.5"
+              >Akhir Semester 1</label
+            >
+            <input
+              v-model="editForm.semester_1_selesai"
+              type="date"
+              required
+              :min="editForm.tanggal_mulai"
+              :max="editForm.tanggal_selesai"
+              class="w-full px-3 py-2.5 text-[15px] border-2 border-stone-200 rounded-xs focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
+            />
+          </div>
+          <div>
+            <label class="block text-[15px] font-medium text-stone-800 mb-1.5"
+              >Awal Semester 2</label
+            >
+            <input
+              v-model="editForm.semester_2_mulai"
+              type="date"
+              required
+              :min="editForm.tanggal_mulai"
+              :max="editForm.tanggal_selesai"
+              class="w-full px-3 py-2.5 text-[15px] border-2 border-stone-200 rounded-xs focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
+            />
+          </div>
+          <div>
+            <label class="block text-[15px] font-medium text-stone-800 mb-1.5"
+              >Akhir Semester 2</label
+            >
+            <input
+              v-model="editForm.semester_2_selesai"
+              type="date"
+              required
+              :min="editForm.tanggal_mulai"
+              :max="editForm.tanggal_selesai"
+              class="w-full px-3 py-2.5 text-[15px] border-2 border-stone-200 rounded-xs focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
+            />
+          </div>
+        </div>
+        <p class="text-[13px] text-stone-500">
+          Semester harus berada di dalam tahun ajaran. Boleh ada jeda libur di antara dua semester.
         </p>
+        <p
+          v-if="editingItem?.status === 'aktif'"
+          class="text-[13px] text-warning-700 bg-warning-50 border border-warning-100 rounded-lg px-3 py-2"
+        >
+          Tahun ajaran ini sedang aktif. Perubahan tanggal semester langsung memengaruhi rekap
+          absensi. Jadwal yang sudah ada tetap memakai tanggal berlaku lamanya.
+        </p>
+        <p v-if="editError" class="text-[13px] text-danger-500">{{ editError }}</p>
       </form>
       <template #footer>
-        <ActionButton variant="neutral" @click="showSemesterModal = false"> Batal </ActionButton>
-        <ActionButton variant="primary" type="submit" form="form-semester"> Simpan </ActionButton>
+        <ActionButton variant="neutral" @click="showEditModal = false"> Batal </ActionButton>
+        <ActionButton variant="primary" type="submit" form="form-edit-ta"> Simpan </ActionButton>
+      </template>
+    </BaseModal>
+
+    <!-- Hapus Tahun Ajaran Modal -->
+    <BaseModal :show="showDeleteModal" title="Hapus Tahun Ajaran" @close="showDeleteModal = false">
+      <p class="text-[15px] text-stone-800 mb-2">
+        Hapus tahun ajaran <strong>{{ deletingItem?.nama }}</strong> ({{
+          formatDate(deletingItem?.tanggalMulai ?? '')
+        }}
+        – {{ formatDate(deletingItem?.tanggalSelesai ?? '') }})?
+      </p>
+      <p class="text-[15px] text-stone-600">
+        Kelas kosong yang ikut dibuat untuk tahun ajaran ini juga dihapus. Tahun ajaran yang sudah
+        berisi siswa, jadwal, rapor, atau tagihan tidak bisa dihapus.
+      </p>
+      <p v-if="deleteError" class="text-[13px] text-danger-500 mt-2">{{ deleteError }}</p>
+      <template #footer>
+        <ActionButton variant="neutral" @click="showDeleteModal = false"> Batal </ActionButton>
+        <ActionButton
+          variant="danger"
+          icon="delete"
+          :disabled="deleting"
+          @click="deleteTahunAjaran"
+        >
+          Hapus
+        </ActionButton>
       </template>
     </BaseModal>
 

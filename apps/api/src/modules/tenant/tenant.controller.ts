@@ -23,7 +23,13 @@ import { PaginationQueryDto } from '@/common/dto/pagination.dto';
 import { Role } from '@edu/shared';
 import { Auditable, AuditInterceptor } from '@/modules/audit-log';
 import { StorageService } from '@/modules/storage/storage.service';
-import { TenantService, CreateTenantResult, TenantStats, GenderStats } from './tenant.service';
+import {
+  TenantService,
+  CreateTenantResult,
+  TenantStats,
+  GenderStats,
+  SiswaPerPeriodeStats,
+} from './tenant.service';
 import { CreateTenantDto, UpdateHariKerjaDto, UpdateTenantDto } from './dto';
 
 @Controller('tenants')
@@ -68,6 +74,17 @@ export class TenantController {
   @HttpCode(HttpStatus.OK)
   async getGenderStats(@TenantId() tenantId: string): Promise<GenderStats> {
     return this.tenantService.getGenderStats(tenantId);
+  }
+
+  /**
+   * GET /tenants/stats/siswa-per-periode
+   * Jumlah siswa per semester & per tahun ajaran (grafik dashboard admin).
+   */
+  @Get('stats/siswa-per-periode')
+  @Roles(Role.ADMIN, Role.KEPALA_SEKOLAH)
+  @HttpCode(HttpStatus.OK)
+  async getSiswaPerPeriode(@TenantId() tenantId: string): Promise<SiswaPerPeriodeStats> {
+    return this.tenantService.getSiswaPerPeriode(tenantId);
   }
 
   /**

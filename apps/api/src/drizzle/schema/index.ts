@@ -4,6 +4,7 @@ export * from './enums';
 // Tables
 export * from './tenant';
 export * from './user';
+export * from './guru-profil';
 export * from './tahun-ajaran';
 export * from './kelas';
 export * from './siswa';

@@ -4,7 +4,6 @@ import { useRouter, useRoute } from 'vue-router';
 import { api } from '@/api/client';
 import { useAuthStore } from '@/stores/auth';
 import { BaseModal, ActionButton } from '@/components/ui';
-import { useToast } from '@/composables/useToast';
 
 interface RppDetail {
   id: string;
@@ -35,8 +34,6 @@ const error = ref('');
 const showDeleteModal = ref(false);
 
 const isOwner = computed(() => rpp.value?.guru?.id === authStore.user?.id);
-
-const toast = useToast();
 
 // ===== Preview file =====
 const showPreview = ref(false);
@@ -106,9 +103,9 @@ async function downloadRpp() {
     const url = await getFileUrl();
     if (tab) tab.location.href = url;
     else window.location.href = url;
-  } catch (e) {
+  } catch {
     tab?.close();
-    toast.error(e.response?.data?.message || 'Gagal mengunduh file RPP.');
+    // Toast error sudah ditampilkan otomatis oleh api client
   }
 }
 
@@ -326,7 +323,14 @@ onMounted(fetchDetail);
     >
       <div v-if="previewLoading" class="py-16 text-center">
         <svg class="w-6 h-6 animate-spin text-primary-500 mx-auto" viewBox="0 0 24 24" fill="none">
-          <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
+          <circle
+            class="opacity-25"
+            cx="12"
+            cy="12"
+            r="10"
+            stroke="currentColor"
+            stroke-width="4"
+          />
           <path
             class="opacity-75"
             fill="currentColor"

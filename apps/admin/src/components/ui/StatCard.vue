@@ -16,10 +16,13 @@ interface Props {
   variant: StatCardVariant;
   icon: string;
   change?: string;
+  /** Teks rincian kecil di bawah label, mis. "14 aktif · 1 tidak aktif" */
+  detail?: string;
 }
 
 withDefaults(defineProps<Props>(), {
   change: undefined,
+  detail: undefined,
 });
 </script>
 
@@ -43,6 +46,7 @@ withDefaults(defineProps<Props>(), {
     <div class="stat-card__content">
       <span class="stat-card__value">{{ value }}</span>
       <span class="stat-card__label">{{ label }}</span>
+      <span v-if="detail" class="stat-card__detail">{{ detail }}</span>
 
       <!-- Change indicator badge -->
       <span v-if="change" :class="['stat-card__change', `stat-card__change--${variant}`]">
@@ -142,6 +146,11 @@ withDefaults(defineProps<Props>(), {
 .stat-card__label {
   font-size: 14px;
   font-weight: 600;
+  color: var(--color-text-secondary);
+}
+
+.stat-card__detail {
+  font-size: 13px;
   color: var(--color-text-secondary);
 }
 

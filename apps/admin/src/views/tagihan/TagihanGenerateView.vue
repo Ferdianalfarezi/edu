@@ -189,7 +189,7 @@ async function generateTagihan() {
     toast.success(`Berhasil! ${data.data.created} tagihan dibuat, ${data.data.skipped} dilewati.`);
   } catch (error) {
     generateError.value = error.response?.data?.message || 'Gagal men-generate tagihan';
-    toast.error(generateError.value);
+    // Toast error sudah ditampilkan otomatis oleh api client
   } finally {
     generating.value = false;
     const infoToast = toast.toasts.value.find(

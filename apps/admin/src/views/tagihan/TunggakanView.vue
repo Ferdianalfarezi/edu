@@ -3,10 +3,7 @@ import { ref, reactive, onMounted, watch, computed } from 'vue';
 import { api } from '@/api/client';
 import { PageHeader, SearchSelect, ActionButton } from '@/components/ui';
 import type { SelectOption } from '@/components/ui';
-import { useToast } from '@/composables/useToast';
 import { useTableUrlState } from '@/composables/useTableUrlState';
-
-const toast = useToast();
 
 // ===== Types =====
 type StatusTagihan = 'belum_bayar' | 'cicilan' | 'lunas' | 'dibatalkan';
@@ -191,7 +188,7 @@ async function fetchTunggakan() {
     tunggakanTotal.value = data.totalTunggakan;
   } catch (error) {
     console.error('Failed to fetch tunggakan:', error);
-    toast.error('Gagal memuat data tunggakan');
+    // Toast error sudah ditampilkan otomatis oleh api client
   } finally {
     loading.value = false;
   }
@@ -215,7 +212,7 @@ async function exportData(format: 'xlsx' | 'pdf') {
     const ext = format === 'xlsx' ? 'xlsx' : 'pdf';
     downloadBlob(response.data, `tagihan_tunggakan_${date}.${ext}`);
   } catch {
-    toast.error('Gagal mengekspor data tunggakan');
+    // Toast error sudah ditampilkan otomatis oleh api client
   } finally {
     exporting.value = false;
   }
