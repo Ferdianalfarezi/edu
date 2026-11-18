@@ -254,6 +254,37 @@ export const router = createRouter({
  * 2. Protected routes — redirect to login if not authenticated
  * 3. Role-restricted routes — check if user's role is allowed
  */
+// Setelah ada deploy baru, file halaman versi lama sudah tidak ada di server.
+// Tab yang masih terbuka gagal membuka menu (tidak terjadi apa-apa saat diklik).
+// Solusinya: muat ulang halaman sekali ke menu tujuan supaya memakai versi terbaru.
+function isChunkLoadError(err: unknown): boolean {
+  const msg = err instanceof Error ? `${err.name} ${err.message}` : String(err);
+  return /Failed to fetch dynamically imported module|Importing a module script failed|error loading dynamically imported module|ChunkLoadError|Unable to preload CSS/i.test(
+    msg,
+  );
+}
+
+function muatUlangSekali(tujuan: string) {
+  const KUNCI = 'muat-ulang-versi-baru';
+  try {
+    const terakhir = Number(sessionStorage.getItem(KUNCI) || 0);
+    if (Date.now() - terakhir < 10_000) return; // cegah reload berulang
+    sessionStorage.setItem(KUNCI, String(Date.now()));
+  } catch {
+    // sessionStorage tidak tersedia: tetap muat ulang
+  }
+  window.location.assign(tujuan);
+}
+
+router.onError((err, to) => {
+  if (isChunkLoadError(err)) muatUlangSekali(to.fullPath);
+});
+
+window.addEventListener('vite:preloadError', (event) => {
+  event.preventDefault();
+  muatUlangSekali(window.location.href);
+});
+
 router.beforeEach((to: RouteLocationNormalized) => {
   const authStore = useAuthStore();
 

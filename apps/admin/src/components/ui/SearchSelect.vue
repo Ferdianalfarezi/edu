@@ -68,21 +68,24 @@ const filteredOptions = computed(() => {
 
 function updateDropdownPosition() {
   if (!triggerRef.value) return;
+  // Dropdown memakai position: fixed, jadi cukup koordinat layar (tanpa scrollX/scrollY)
   const rect = triggerRef.value.getBoundingClientRect();
   dropdownStyle.value = {
-    top: `${rect.bottom + window.scrollY}px`,
-    left: `${rect.left + window.scrollX}px`,
+    top: `${rect.bottom}px`,
+    left: `${rect.left}px`,
     width: `${rect.width}px`,
   };
 }
 
 function open() {
   if (props.disabled) return;
+  // Hitung posisi SEBELUM dropdown tampil; kalau sesudahnya, dropdown pertama kali
+  // muncul dari pojok kiri atas (0,0) lalu "terbang" ke tempatnya.
+  updateDropdownPosition();
   isOpen.value = true;
   searchQuery.value = '';
   highlightedIndex.value = -1;
   nextTick(() => {
-    updateDropdownPosition();
     inputRef.value?.focus();
     window.addEventListener('scroll', updateDropdownPosition, true);
     window.addEventListener('resize', updateDropdownPosition);
@@ -263,10 +266,10 @@ onUnmounted(() => {
     <!-- Dropdown — teleported to body so it escapes overflow:hidden ancestors (e.g. BaseModal) -->
     <Teleport to="body">
       <Transition
-        enter-active-class="transition-all duration-150 ease-out"
+        enter-active-class="transition-[opacity,transform] duration-150 ease-out"
         enter-from-class="opacity-0 translate-y-1"
         enter-to-class="opacity-100 translate-y-0"
-        leave-active-class="transition-all duration-100 ease-in"
+        leave-active-class="transition-[opacity,transform] duration-100 ease-in"
         leave-from-class="opacity-100 translate-y-0"
         leave-to-class="opacity-0 translate-y-1"
       >
